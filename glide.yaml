@@ -1,2 +1,6 @@
 package: github.com/tcncloud/protoc-gen-persist
-import: []
+import:
+- package: github.com/golang/protobuf
+  subpackages:
+  - protoc-gen-go/plugin
+  - proto
