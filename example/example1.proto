@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package example1;
+
+import "persist/options.proto";
+
+message ExampleTable1 {
+    int32 table_id = 1;
+    string key = 2;
+    string value = 3;
+}
+
+
+service ExampleService1 {
+    rpc UnaryExample1(ExampleTable1) returns (ExampleTable1) {
+        option (persist.ql) = {
+            query: "SELECT * FROM test_table WHERE id = $1"
+            arguments: ["table_id"]
+        };
+    }
+
+}
