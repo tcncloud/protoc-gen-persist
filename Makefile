@@ -1,7 +1,10 @@
 
 all: build
 
-generate: deps
+generate: deps persist/options.pb.go
+
+
+persist/options.pb.go: persist/options.proto
 	protoc -I/usr/local/include -I. -I$$GOPATH/src --go_out=Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src ./persist/options.proto
 
 build: generate 
@@ -14,8 +17,7 @@ install: build
 test: deps
 	ginkgo -r 
 
-deps: $(GOPATH)/bin/protoc-gen-go \
-	$(GOPATH)/bin/ginkgo 
+deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo 
 
 
 $(GOPATH)/bin/protoc-gen-go:
