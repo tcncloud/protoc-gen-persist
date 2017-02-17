@@ -8,43 +8,7 @@ option go_package="github.com/tcncloud/protoc-gen-persist/persist;persist";
 
 
 extend google.protobuf.MethodOptions {
-    RPCImpl rpc = 560560;
     QLImpl ql = 560565;
-}
-
-extend google.protobuf.FieldOptions {
-  bool pk = 560561;
-  bool auto_gen = 560562;
-}
-
-extend google.protobuf.MessageOptions {
-  Table table = 560563;
-}
-
-extend google.protobuf.ServiceOptions {
-    bool rpc_enabled = 560564;
-}
-
-
-enum PersistenceType {
-    POSTGRES = 0;
-    MONGO = 1; // it's unimplemented
-}
-
-message Table {
-    string name = 1;
-    PersistenceType storage = 2;
-}
-
-enum TemplateType {
-    INSERT = 0;
-    READ = 1;
-    BATCH_INSERT = 2;
-    BATCH_READ = 3;
-}
-message RPCImpl {
-
-    TemplateType template = 1;
 }
 
 
