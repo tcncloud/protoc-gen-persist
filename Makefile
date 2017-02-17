@@ -5,6 +5,7 @@ generate: deps
 	protoc -I/usr/local/include -I. -I$$GOPATH/src --go_out=Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src ./persist/options.proto
 
 build: generate
+	glide install
 	go build 
 
 install: build
