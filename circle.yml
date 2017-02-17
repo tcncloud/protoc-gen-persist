@@ -1,13 +1,15 @@
 dependencies:
     override:
-        - sudo add-apt-repository ppa:masterminds/glide -y
-        - sudo apt-get update
-        - sudo apt-get install glide -y
+        - go get -u -v github.com/Masterminds/glide
+        - go get -u -v github.com/golang/protobuf/protoc-gen-go
+        - go get github.com/onsi/ginkgo/ginkgo
+        - go get github.com/onsi/gomega  
+        - glide install 
 
 compile:
     override:
-        - make 
+        - go build
 
 test:
     override:
-        - make test
+        - ginkgo -r 
