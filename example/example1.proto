@@ -14,7 +14,7 @@ message ExampleTable1 {
 service ExampleService1 {
     rpc UnaryExample1(ExampleTable1) returns (ExampleTable1) {
         option (persist.ql) = {
-            query: "SELECT * FROM test_table WHERE id = $1"
+            query: "SELECT id AS table_id, key, value FROM test_table WHERE id = $1"
             arguments: ["table_id"]
         };
     }
