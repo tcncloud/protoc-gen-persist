@@ -1,0 +1,13 @@
+dependencies:
+    override:
+        - sudo add-apt-repository ppa:masterminds/glide -y
+        - sudo apt-get update
+        - sudo apt-get install glide -y
+
+compile:
+    override:
+        - make 
+
+test:
+    override:
+        - make test
