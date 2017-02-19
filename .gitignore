@@ -26,3 +26,4 @@ _testmain.go
 protoc-gen-persist
 vendor
 src
+.wercker
