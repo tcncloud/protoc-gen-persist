@@ -1,5 +1,5 @@
 # protoc-gen-persist
-[![CircleCI](https://circleci.com/gh/tcncloud/protoc-gen-persist.svg?style=svg)](https://circleci.com/gh/tcncloud/protoc-gen-persist) [![Build Status](https://travis-ci.org/tcncloud/protoc-gen-persist.svg?branch=master)](https://travis-ci.org/tcncloud/protoc-gen-persist)
+[![wercker status](https://app.wercker.com/status/17256e7e44980466f184c85f4bf14166/m/ "wercker status")](https://app.wercker.com/project/byKey/17256e7e44980466f184c85f4bf14166)
 
 Protobuf plugin that generate a persistence layer backed by SQL database
 
