@@ -1,7 +1,8 @@
 box: golang
 build:
   steps:
-    - setup-go-workspace
+    - setup-go-workspace:
+        package-dir: github.com/tcncloud/protoc-gen-persist
 
     # Gets the dependencies
     - script:

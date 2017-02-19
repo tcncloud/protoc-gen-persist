@@ -39,8 +39,12 @@ extend google.protobuf.MethodOptions {
     QLImpl ql = 560565;
 }
 
+enum PersistenceOptions {
+    POSTGRES = 0;
+}
 
 message QLImpl {
     string query = 1;
     repeated string arguments = 2;
+    PersistenceOptions persist = 3;
 }
