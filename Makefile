@@ -45,12 +45,15 @@ install: build
 test: deps
 	ginkgo -r 
 
-deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo 
+deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/glide
 
 
 $(GOPATH)/bin/protoc-gen-go:
 	go get -u github.com/golang/protobuf/protoc-gen-go
 
 $(GOPATH)/bin/ginkgo:	
-	go get github.com/onsi/ginkgo/ginkgo
-	go get github.com/onsi/gomega  
+	go get -u github.com/onsi/ginkgo/ginkgo
+	go get -u github.com/onsi/gomega  
+
+$(GOPATH)/bin/glide:
+	go get -u github.com/Masterminds/glide
