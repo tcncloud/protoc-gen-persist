@@ -40,7 +40,6 @@ import (
 	"github.com/tcncloud/protoc-gen-persist/generator"
 
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"testing"
 )
@@ -67,8 +66,6 @@ var _ = Describe("IsServicePersistEnabled", func() {
 
 			err = proto.Unmarshal(buf, &descr)
 			Expect(err).To(BeNil())
-
-			fmt.Printf(">> DATA >> %+v\n", descr)
 
 			Expect(generator.IsServicePersistEnabled(descr.Service[0])).To(Equal(true))
 		})
