@@ -28,7 +28,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 syntax = "proto3";
 
-package example1;
+package examples;
+
+option go_package="github.com/tcncloud/protoc-gen-persist/examples;examples";
 
 import "persist/options.proto";
 
