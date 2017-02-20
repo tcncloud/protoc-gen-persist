@@ -3,10 +3,13 @@
 
 Protobuf plugin that generate a persistence layer backed by SQL database
 
-# NOTE: This project is under development and is not usable yet!
+## NOTE: This project is under development and is not usable yet!
+
+## Authors
+ * Florin Stan (@namtzigla)
 
 
-# License
+## License
 Copyright 2017, TCN Inc.
 All rights reserved.
 

@@ -4,3 +4,8 @@ import:
   subpackages:
   - protoc-gen-go/plugin
   - proto
+  - protoc-gen-go/descriptor
+- package: github.com/onsi/ginkgo
+  version: ^1.2.0
+- package: github.com/onsi/gomega
+  version: ^1.0.0
