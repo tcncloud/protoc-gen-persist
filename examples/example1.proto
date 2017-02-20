@@ -49,4 +49,6 @@ service ExampleService1 {
         };
     }
 
+    rpc RandomMethod(ExampleTable1) returns (ExampleTable1);
+
 }

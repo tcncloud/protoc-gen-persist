@@ -26,6 +26,7 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 package generator_test
 
 import (
@@ -37,7 +38,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	_ "github.com/tcncloud/protoc-gen-persist/examples"
-	"github.com/tcncloud/protoc-gen-persist/generator"
 
 	"bytes"
 	"io/ioutil"
@@ -66,14 +66,4 @@ var _ = BeforeSuite(func() {
 	err = proto.Unmarshal(buf, &descr)
 	Expect(err).To(BeNil())
 
-})
-
-var _ = Describe("IsServicePersistEnabled", func() {
-	Describe("for a service that implement custom extension persist.ql", func() {
-		It("should return true", func() {
-
-			Expect(generator.IsServicePersistEnabled(descr.Service[0])).To(Equal(true))
-		})
-
-	})
 })

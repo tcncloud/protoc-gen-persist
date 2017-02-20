@@ -29,27 +29,38 @@
 
 package generator
 
-import "github.com/golang/protobuf/protoc-gen-go/plugin"
+import (
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/tcncloud/protoc-gen-persist/persist"
+)
 
-type Generator struct {
-	Files           []*string
-	OriginalRequest *plugin_go.CodeGeneratorRequest
+func IsMethodEnabled(method *descriptor.MethodDescriptorProto) bool {
+	if method != nil && method.GetOptions() != nil && proto.HasExtension(method.Options, persist.E_Ql) {
+		return true
+	}
+	return false
 }
 
-func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
-	ret := new(Generator)
-	ret.OriginalRequest = request
-	return ret
+func GetMethodExtensionData(method *descriptor.MethodDescriptorProto) *persist.QLImpl {
+	if IsMethodEnabled(method) {
+		ex, err := proto.GetExtension(method.Options, persist.E_Ql)
+		if err != nil {
+			return nil
+		}
+		return ex.(*persist.QLImpl)
+	}
+	return nil
 }
 
-// Process the request
-func (g *Generator) ProcessRequest() {
-	for _, file := range g.OriginalRequest.ProtoFile {
-		for _, service := range file.Service {
-			if IsServicePersistEnabled(service) {
-				// we need to generate code for this service
-
+// check if a service has at least one method that has the persist.ql extension defined
+func IsServicePersistEnabled(service *descriptor.ServiceDescriptorProto) bool {
+	if service.Method != nil {
+		for _, method := range service.Method {
+			if IsMethodEnabled(method) {
+				return true
 			}
 		}
 	}
+	return false
 }

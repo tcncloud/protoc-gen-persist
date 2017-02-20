@@ -27,29 +27,49 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package generator
+package generator_test
 
-import "github.com/golang/protobuf/protoc-gen-go/plugin"
+import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/tcncloud/protoc-gen-persist/generator"
+)
 
-type Generator struct {
-	Files           []*string
-	OriginalRequest *plugin_go.CodeGeneratorRequest
-}
+var _ = Describe("IsServicePersistEnabled", func() {
+	Describe("for a service that implement custom extension persist.ql", func() {
+		It("should return true", func() {
+			Expect(generator.IsServicePersistEnabled(descr.Service[0])).To(Equal(true))
+		})
+	})
+})
 
-func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
-	ret := new(Generator)
-	ret.OriginalRequest = request
-	return ret
-}
+var _ = Describe("IsMethodEnabled", func() {
+	Describe("For a method that implement persist.ql", func() {
+		It("should return true", func() {
+			Expect(generator.IsMethodEnabled(descr.Service[0].Method[0])).To(Equal(true))
+		})
+	})
+	Describe("For a method that does not implement persist.ql", func() {
+		It("should return false", func() {
+			Expect(generator.IsMethodEnabled(descr.Service[0].Method[1])).To(Equal(false))
+		})
+	})
+	Describe("For a nil parameter", func() {
+		It("should return false", func() {
+			Expect(generator.IsMethodEnabled(descr.Service[0].Method[1])).To(Equal(false))
+		})
+	})
+})
 
-// Process the request
-func (g *Generator) ProcessRequest() {
-	for _, file := range g.OriginalRequest.ProtoFile {
-		for _, service := range file.Service {
-			if IsServicePersistEnabled(service) {
-				// we need to generate code for this service
-
-			}
-		}
-	}
-}
+var _ = Describe("GetMethodExtensionData", func() {
+	Describe("For UnaryExample1 method", func() {
+		It("should return a structure", func() {
+			Expect(generator.GetMethodExtensionData(descr.Service[0].Method[0])).ToNot(BeNil())
+		})
+	})
+	Describe("For RandomMethod method", func() {
+		It("should return nil", func() {
+			Expect(generator.GetMethodExtensionData(descr.Service[0].Method[1])).To(BeNil())
+		})
+	})
+})
