@@ -27,13 +27,22 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+PROTO_FILES:= persist/options.proto examples/example1.proto
+
 all: build
 
-generate: deps persist/options.pb.go
+generate: deps proto-persist proto-examples
 
+proto-persist:
+	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		persist/options.proto
 
-persist/options.pb.go: persist/options.proto
-	protoc -I/usr/local/include -I. -I$$GOPATH/src --go_out=Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src ./persist/options.proto
+proto-examples:
+	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/example1.proto
 
 build: generate 
 	glide install
