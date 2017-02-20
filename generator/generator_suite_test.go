@@ -37,6 +37,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	_ "github.com/golang/protobuf/ptypes/timestamp"
 	_ "github.com/tcncloud/protoc-gen-persist/examples"
 
 	"bytes"
@@ -49,21 +50,25 @@ func TestGenerator(t *testing.T) {
 	RunSpecs(t, "Generator Suite")
 }
 
-var descr descriptor.FileDescriptorProto
+var files []*descriptor.FileDescriptorProto
 
-var _ = BeforeSuite(func() {
-	bReader, err := gzip.NewReader(bytes.NewReader(proto.FileDescriptor("examples/example1.proto")))
+func LoadDescriptor(file string) *descriptor.FileDescriptorProto {
+
+	bReader, err := gzip.NewReader(bytes.NewReader(proto.FileDescriptor(file)))
 	defer bReader.Close()
-	if err != nil {
-		Fail("Fatal error loading file descriptor")
-	}
-
-	buf, err := ioutil.ReadAll(bReader)
-	if err != nil {
-		Fail("Can' decompress file descriptor data")
-	}
-
-	err = proto.Unmarshal(buf, &descr)
 	Expect(err).To(BeNil())
 
+	buf, err := ioutil.ReadAll(bReader)
+	Expect(err).To(BeNil())
+
+	var descr descriptor.FileDescriptorProto
+	err = proto.Unmarshal(buf, &descr)
+	Expect(err).To(BeNil())
+	return &descr
+
+}
+
+var _ = BeforeSuite(func() {
+	files = append(files, LoadDescriptor("examples/example1.proto"))
+	files = append(files, LoadDescriptor("github.com/golang/protobuf/ptypes/timestamp/timestamp.proto"))
 })

@@ -38,7 +38,7 @@ import (
 var _ = Describe("IsServicePersistEnabled", func() {
 	Describe("for a service that implement custom extension persist.ql", func() {
 		It("should return true", func() {
-			Expect(generator.IsServicePersistEnabled(descr.Service[0])).To(Equal(true))
+			Expect(generator.IsServicePersistEnabled(files[0].Service[0])).To(Equal(true))
 		})
 	})
 })
@@ -46,17 +46,17 @@ var _ = Describe("IsServicePersistEnabled", func() {
 var _ = Describe("IsMethodEnabled", func() {
 	Describe("For a method that implement persist.ql", func() {
 		It("should return true", func() {
-			Expect(generator.IsMethodEnabled(descr.Service[0].Method[0])).To(Equal(true))
+			Expect(generator.IsMethodEnabled(files[0].Service[0].Method[0])).To(Equal(true))
 		})
 	})
 	Describe("For a method that does not implement persist.ql", func() {
 		It("should return false", func() {
-			Expect(generator.IsMethodEnabled(descr.Service[0].Method[1])).To(Equal(false))
+			Expect(generator.IsMethodEnabled(files[0].Service[0].Method[1])).To(Equal(false))
 		})
 	})
 	Describe("For a nil parameter", func() {
 		It("should return false", func() {
-			Expect(generator.IsMethodEnabled(descr.Service[0].Method[1])).To(Equal(false))
+			Expect(generator.IsMethodEnabled(files[0].Service[0].Method[1])).To(Equal(false))
 		})
 	})
 })
@@ -64,12 +64,32 @@ var _ = Describe("IsMethodEnabled", func() {
 var _ = Describe("GetMethodExtensionData", func() {
 	Describe("For UnaryExample1 method", func() {
 		It("should return a structure", func() {
-			Expect(generator.GetMethodExtensionData(descr.Service[0].Method[0])).ToNot(BeNil())
+			Expect(generator.GetMethodExtensionData(files[0].Service[0].Method[0])).ToNot(BeNil())
 		})
 	})
 	Describe("For RandomMethod method", func() {
 		It("should return nil", func() {
-			Expect(generator.GetMethodExtensionData(descr.Service[0].Method[1])).To(BeNil())
+			Expect(generator.GetMethodExtensionData(files[0].Service[0].Method[1])).To(BeNil())
 		})
 	})
+})
+
+var _ = Describe("FindMessage", func() {
+
+	Describe("Find InputType for UnaryExample1 method", func() {
+		It("should return a value", func() {
+			Expect(generator.FindMessage(files, files[0].Service[0].Method[0].GetInputType())).ToNot(BeNil())
+		})
+	})
+	Describe("For an unknown type", func() {
+		It("should return nil", func() {
+			Expect(generator.FindMessage(files, ".test.test")).To(BeNil())
+		})
+	})
+	Describe("For type .google.protobuf.Timestamp", func() {
+		It("should return a structure", func() {
+			Expect(generator.FindMessage(files, ".google.protobuf.Timestamp")).ToNot(BeNil())
+		})
+	})
+	// TODO add tests for cases where types are not following the protobuf format
 })

@@ -30,6 +30,8 @@
 package generator
 
 import (
+	"strings"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/tcncloud/protoc-gen-persist/persist"
@@ -63,4 +65,24 @@ func IsServicePersistEnabled(service *descriptor.ServiceDescriptorProto) bool {
 		}
 	}
 	return false
+}
+
+func splitType(typ string) (string, string) {
+	typeName := typ[strings.LastIndex(typ, ".")+1 : len(typ)]
+	pkgName := typ[1:strings.LastIndex(typ, ".")]
+	return typeName, pkgName
+}
+
+func FindMessage(files []*descriptor.FileDescriptorProto, typeString string) *descriptor.DescriptorProto {
+	typeName, pkgName := splitType(typeString)
+	for _, file := range files {
+		if pkgName == file.GetPackage() {
+			for _, message := range file.MessageType {
+				if typeName == message.GetName() {
+					return message
+				}
+			}
+		}
+	}
+	return nil
 }

@@ -33,11 +33,16 @@ package examples;
 option go_package="github.com/tcncloud/protoc-gen-persist/examples;examples";
 
 import "persist/options.proto";
+import "google/protobuf/timestamp.proto";
 
 message ExampleTable1 {
     int32 table_id = 1;
     string key = 2;
     string value = 3;
+}
+
+message ExternalTypeTestMessage {
+    google.protobuf.Timestamp time = 1;
 }
 
 
