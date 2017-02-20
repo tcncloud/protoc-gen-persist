@@ -27,3 +27,4 @@ protoc-gen-persist
 vendor
 src
 .wercker
+examples/*.pb.go
