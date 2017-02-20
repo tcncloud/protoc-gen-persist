@@ -49,23 +49,28 @@ func TestGenerator(t *testing.T) {
 	RunSpecs(t, "Generator Suite")
 }
 
+var descr descriptor.FileDescriptorProto
+
+var _ = BeforeSuite(func() {
+	bReader, err := gzip.NewReader(bytes.NewReader(proto.FileDescriptor("examples/example1.proto")))
+	defer bReader.Close()
+	if err != nil {
+		Fail("Fatal error loading file descriptor")
+	}
+
+	buf, err := ioutil.ReadAll(bReader)
+	if err != nil {
+		Fail("Can' decompress file descriptor data")
+	}
+
+	err = proto.Unmarshal(buf, &descr)
+	Expect(err).To(BeNil())
+
+})
+
 var _ = Describe("IsServicePersistEnabled", func() {
 	Describe("for a service that implement custom extension persist.ql", func() {
 		It("should return true", func() {
-			var descr descriptor.FileDescriptorProto
-			bReader, err := gzip.NewReader(bytes.NewReader(proto.FileDescriptor("examples/example1.proto")))
-			defer bReader.Close()
-			if err != nil {
-				Fail("Fatal error loading file descriptor")
-			}
-
-			buf, err := ioutil.ReadAll(bReader)
-			if err != nil {
-				Fail("Can' decompress file descriptor data")
-			}
-
-			err = proto.Unmarshal(buf, &descr)
-			Expect(err).To(BeNil())
 
 			Expect(generator.IsServicePersistEnabled(descr.Service[0])).To(Equal(true))
 		})
