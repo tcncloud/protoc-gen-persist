@@ -36,7 +36,16 @@ option go_package="github.com/tcncloud/protoc-gen-persist/examples;examples";
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
 
+enum TestEnum {
+    OPTION_0 = 0;
+    OPTION_1 = 1;
+}
+
 message ExampleTable1 {
+    enum InnerEnum {
+        OP_0 = 0;
+        OP_1 = 1;
+    }
     int32 table_id = 1;
     string key = 2;
     string value = 3;
