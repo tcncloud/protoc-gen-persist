@@ -34,6 +34,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
 )
@@ -65,6 +66,7 @@ func main() {
 		Return(res)
 		return
 	}
+	logrus.WithField("params", req.GetParameter()).Info("Parameters")
 	// DO processing
 
 	// Send back the results.
