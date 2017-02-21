@@ -34,9 +34,17 @@ import (
 	"log"
 	"os"
 
-	"github.com/tcncloud/protobuf/proto"
-	"github.com/tcncloud/protobuf/protoc-gen-go/plugin"
+	"github.com/Sirupsen/logrus"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	"github.com/tcncloud/protoc-gen-persist/generator"
 )
+
+func init() {
+	if os.Getenv("DEBUG") != "" {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+}
 
 func Return(response *plugin_go.CodeGeneratorResponse) {
 	data, err := proto.Marshal(response)
@@ -66,6 +74,8 @@ func main() {
 		return
 	}
 	// DO processing
+	g := generator.NewGenerator(&req)
+	g.ProcessRequest()
 
 	// Send back the results.
 	Return(res)
