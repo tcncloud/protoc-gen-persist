@@ -30,17 +30,15 @@
 package generator
 
 import "github.com/golang/protobuf/protoc-gen-go/plugin"
-import "github.com/Sirupsen/logrus"
 
 type Generator struct {
+	Files           []*string
 	OriginalRequest *plugin_go.CodeGeneratorRequest
-	Response        *plugin_go.CodeGeneratorResponse
 }
 
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret := new(Generator)
 	ret.OriginalRequest = request
-	ret.Response = new(plugin_go.CodeGeneratorResponse)
 	return ret
 }
 
@@ -49,17 +47,8 @@ func (g *Generator) ProcessRequest() {
 	for _, file := range g.OriginalRequest.ProtoFile {
 		for _, service := range file.Service {
 			if IsServicePersistEnabled(service) {
-				for _, method := range service.Method {
-					data := GetMethodExtensionData(method)
-					if data != nil {
-						logrus.WithFields(logrus.Fields{
-							"method":             method.GetName(),
-							"Query":              data.GetQuery(),
-							"Arguments":          data.GetArguments(),
-							"Persistence Module": data.GetPersist(),
-						}).Debug("implementing method")
-					}
-				}
+				// we need to generate code for this service
+
 			}
 		}
 	}

@@ -55,7 +55,7 @@ test: deps
 	ginkgo -r 
 
 test-compile: build
-	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
+	protoc -I/usr/local/include -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
 		--persist_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 		examples/*.proto

@@ -43,8 +43,15 @@ enum PersistenceOptions {
     SQL = 0;
 }
 
+enum VariableMapping {
+    PG_SQL = 0;
+    NONE = 100; 
+
+}
+
 message QLImpl {
     string query = 1;
     repeated string arguments = 2;
     PersistenceOptions persist = 3;
+    VariableMapping mapping = 4;
 }
