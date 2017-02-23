@@ -34,6 +34,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
 type Generator struct {
@@ -182,11 +183,7 @@ func (g *Generator) ProcessAllStructures() {
 	}
 }
 
-// Process the request
-func (g *Generator) ProcessRequest() {
-	g.ProcessAllStructures()
-	g.ProcessStructs()
-	// implement only structures that are members in the method input/output types
+func (g *Generator) ProcessServices() {
 
 	for _, file := range g.OriginalRequest.ProtoFile {
 		if !g.IsDependency(file) {
@@ -197,46 +194,37 @@ func (g *Generator) ProcessRequest() {
 			for _, service := range file.Service {
 				g.currentService = service
 				if IsServicePersistEnabled(service) {
-					for _, method := range service.Method {
-						data := GetMethodExtensionData(method)
-						if data != nil {
-							logrus.WithFields(logrus.Fields{
-								"method":             method.GetName(),
-								"Query":              data.GetQuery(),
-								"Arguments":          data.GetArguments(),
-								"Persistence Module": data.GetPersist(),
-								"Variable Mapping":   data.GetMapping(),
-							}).Debug("implementing method")
-							if msg := g.AllStructures.GetEntry(method.GetInputType()); msg != nil {
-								// we need to check if we are in the same file
-								g.ImplementedStructures.AddStruct(msg)
-							} else {
-								logrus.Fatalf("Input type %s for method %s in file %s is missing!", method.GetInputType(), method.GetName(), file.GetName())
-							}
-							if msg := g.AllStructures.GetEntry(method.GetOutputType()); msg != nil {
-								// we need to check if we are in the same file
-								g.ImplementedStructures.AddStruct(msg)
-							} else {
-								logrus.Fatalf("Output type %s for method %s in file %s is missing!", method.GetOutputType(), method.GetName(), file.GetName())
-							}
-
-							// implement function body
-							switch {
-							// unary function
-							case !method.GetClientStreaming() && !method.GetServerStreaming():
-							// client streaming function
-							case method.GetClientStreaming() && !method.GetServerStreaming():
-							// server streaming function
-							case !method.GetClientStreaming() && method.GetServerStreaming():
-							// both streaming
-							case method.GetClientStreaming() && method.GetServerStreaming():
-
-							}
-						}
+					for _, _ = range service.Method {
 					}
 				}
 			}
 
 		}
 	}
+}
+
+// check if a service has at least one method that has the persist.ql extension defined
+func IsServicePersistEnabled(service *descriptor.ServiceDescriptorProto) bool {
+	if service.Method != nil {
+		for _, method := range service.Method {
+			if IsMethodEnabled(method) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func IsMethodEnabled(method *descriptor.MethodDescriptorProto) bool {
+	if method != nil && method.GetOptions() != nil && proto.HasExtension(method.Options, persist.E_Ql) {
+		return true
+	}
+	return false
+}
+
+// Process the request
+func (g *Generator) ProcessRequest() {
+	g.ProcessAllStructures()
+	g.ProcessStructs()
+	g.ProcessServices()
 }
