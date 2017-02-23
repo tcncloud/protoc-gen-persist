@@ -33,6 +33,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"fmt"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
@@ -49,6 +51,10 @@ func Return(response *plugin_go.CodeGeneratorResponse) {
 }
 
 func main() {
+	if len(os.Args) > 1 {
+		fmt.Println("This executable is ment to be used by protoc!\nGo to http://github.com/tcncloud/protoc-gen-persist for more info")
+		os.Exit(-1)
+	}
 	var req plugin_go.CodeGeneratorRequest
 
 	data, err := ioutil.ReadAll(os.Stdin)
