@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package examples.test;
+
+option go_package = "github.com/tcncloud/protoc-gen-persist/examples/test;test";
+
+message Test {
+    int32 id = 1;
+    string name = 2;
+}
