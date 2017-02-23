@@ -28,3 +28,4 @@ vendor
 src
 .wercker
 examples/*.go
+examples/test/*.go
