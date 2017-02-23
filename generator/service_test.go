@@ -33,17 +33,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/Sirupsen/logrus"
 	_ "github.com/golang/protobuf/ptypes/timestamp"
 	_ "github.com/tcncloud/protoc-gen-persist/examples"
-	"github.com/tcncloud/protoc-gen-persist/generator"
 )
 
-var _ = Describe("Method Struct", func() {
+var _ = Describe("Method Service", func() {
 	Describe("", func() {
 		It("should ", func() {
-			m := &generator.Method{}
-			logrus.Info(m.Generate())
+			// m := &generator.Method{}
+			// logrus.Info(m.Generate())
 			Expect(true).To(BeTrue())
 		})
 	})
