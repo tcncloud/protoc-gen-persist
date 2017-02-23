@@ -110,7 +110,6 @@ func (g *Generator) ProcessType(typ string) {
 						}
 					}
 				}
-				logrus.WithField("Is:", g.ImplementedStructures).Info("Status")
 				// process inner messages
 				for _, m := range struc.MessageDescriptor.GetNestedType() {
 					if mStruct := g.AllStructures.GetMessage(m, struc.MessageDescriptor, struc.File); mStruct != nil {
@@ -121,10 +120,8 @@ func (g *Generator) ProcessType(typ string) {
 						}
 					}
 				}
-				logrus.WithField("Is:", g.ImplementedStructures).Info("Status")
 				// process fields
 				for _, f := range struc.MessageDescriptor.GetField() {
-					logrus.WithField("Field", f).Info("processing field")
 					if f.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM ||
 						f.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
 						if t := g.AllStructures.GetEntry(f.GetTypeName()); t != nil {
@@ -139,7 +136,6 @@ func (g *Generator) ProcessType(typ string) {
 						}
 					}
 				}
-				logrus.WithField("Is:", g.ImplementedStructures).Info("Status")
 			} else {
 				// don't process structures that are not messages
 			}
@@ -187,18 +183,15 @@ func (g *Generator) ProcessServices() {
 
 	for _, file := range g.OriginalRequest.ProtoFile {
 		if !g.IsDependency(file) {
-			// outFile := g.files.NewOrGetFile(file)
-			g.currentFile = file
-			// implement file
+			outFile := g.files.NewOrGetFile(file)
 
 			for _, service := range file.Service {
 				g.currentService = service
 				if IsServicePersistEnabled(service) {
-					for _, _ = range service.Method {
-					}
+					srv := NewService(service, file, g.AllStructures, g.files)
+					outFile.P(srv.Generate())
 				}
 			}
-
 		}
 	}
 }
@@ -220,6 +213,15 @@ func IsMethodEnabled(method *descriptor.MethodDescriptorProto) bool {
 		return true
 	}
 	return false
+}
+
+func GetMethodOption(method *descriptor.MethodDescriptorProto) *persist.QLImpl {
+	if IsMethodEnabled(method) {
+		if ret, err := proto.GetExtension(method.Options, persist.E_Ql); err == nil {
+			return ret.(*persist.QLImpl)
+		}
+	}
+	return nil
 }
 
 // Process the request
