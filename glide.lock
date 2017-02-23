@@ -1,14 +1,20 @@
 hash: 05fe4e50ca1cbd9b00a68bfeb558d8956dc98475b6991c1e67c6850e385c4730
-updated: 2017-02-22T22:06:39.667117499-07:00
+updated: 2017-02-23T12:11:01.335020327-07:00
 imports:
 - name: github.com/golang/protobuf
   version: 8ee79997227bf9b34611aee7946ae64735e6fd93
   subpackages:
-  - jsonpb
   - proto
   - protoc-gen-go/descriptor
   - protoc-gen-go/plugin
+  - ptypes
+  - ptypes/any
+  - ptypes/duration
   - ptypes/timestamp
+- name: github.com/lib/pq
+  version: 0477eb88c5ca4009cb281f13c90633375b6a9987
+  subpackages:
+  - oid
 - name: github.com/onsi/ginkgo
   version: 462326b1628e124b23f42e87a8f2750e3c4e2d24
   subpackages:
@@ -42,7 +48,7 @@ imports:
 - name: github.com/Sirupsen/logrus
   version: c078b1e43f58d563c74cebe63c85789e76ddb627
 - name: golang.org/x/net
-  version: 45e771701b814666a7eb299e6c7a57d0b1799e91
+  version: 61557ac0112b576429a0df080e1c2cef5dfbb642
   subpackages:
   - context
   - http2
@@ -52,7 +58,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: d75a52659825e75fff6158388dddc6a5b04f9ba5
+  version: aaabbdc969c3935a2a7f61efac801e7163c73a2a
   subpackages:
   - unix
 - name: golang.org/x/tools
