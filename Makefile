@@ -37,12 +37,15 @@ generate: deps proto-persist proto-examples
 proto-persist:
 	protoc -I/usr/local/include -I. -I$$GOPATH/src \
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-		persist/options.proto
+		persist/*.proto
 
 proto-examples:
 	protoc -I/usr/local/include -I. -I$$GOPATH/src \
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-		examples/example1.proto
+		examples/*.proto
+	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/test/*.proto
 
 build: generate 
 	glide install
