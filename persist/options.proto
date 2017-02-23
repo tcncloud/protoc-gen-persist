@@ -53,5 +53,5 @@ message QLImpl {
     string query = 1;
     repeated string arguments = 2;
     PersistenceOptions persist = 3;
-    VariableMapping mapping = 4;
+    VariableMapping mapping = 4; 
 }

@@ -36,6 +36,8 @@ option go_package="github.com/tcncloud/protoc-gen-persist/examples;examples";
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
 
+import "examples/test/test.proto";
+
 enum TestEnum {
     OPTION_0 = 0;
     OPTION_1 = 1;
@@ -63,6 +65,13 @@ message ExternalTypeTestMessage {
 
 service ExampleService1 {
     rpc UnaryExample1(ExampleTable1.InnerMessage) returns (ExampleTable1) {
+        option (persist.ql) = {
+            query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
+            arguments: ["id"]
+        };
+    }
+
+    rpc UnaryExample2(examples.test.Test) returns (ExampleTable1) {
         option (persist.ql) = {
             query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
             arguments: ["id"]

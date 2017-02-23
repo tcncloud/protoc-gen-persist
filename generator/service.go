@@ -30,15 +30,18 @@
 package generator
 
 import (
-	"fmt"
 	"bytes"
 	"text/template"
 	"os"
 
 	"strings"
 
+	"fmt"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
+	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
 var (
@@ -55,7 +58,7 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.Ge
 		{{range $key, $value := .GetSafeResponseFields}}
 		{{$key}} {{$value}} {{end}}
 	)
-	err := s.db.QueryRow(
+	err := s.DB.QueryRow(
 		"{{.GetQuery}}",{{range $qParam := .GetQueryParams}}
 		ToSafeType(req.{{$qParam}}),
 		{{end}}).
@@ -74,7 +77,7 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.Ge
 `
 	server = `
 func (s *{{.GetServiceImplName}}) {{.GetMethod}}(req *{{.GetInputType}}, stream {{.GetStreamType}}), error {
-	rows, err := s.db.Query("{{.GetQuery}}", {{range $qParam := .GetQueryParams}}
+	rows, err := s.DB.Query("{{.GetQuery}}", {{range $qParam := .GetQueryParams}}
 		ToSafeType(req.{{$qParam}}),
 	{{end}})
 	if err != nil {
@@ -110,7 +113,7 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(req *{{.GetInputType}}, stream 
 `
 	client = `
 func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), error {
-	stmt, err := s.db.Prepare("{{.GetQuery}}")
+	stmt, err := s.DB.Prepare("{{.GetQuery}}")
 	if err != nil {
 		return ConvertError(err, nil)
 	}
@@ -155,7 +158,7 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), err
 `
 	bidir  = `
 func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), error {
-	stmt, err := s.db.Prepare("{{.GetQuery}}")
+	stmt, err := s.DB.Prepare("{{.GetQuery}}")
 	if err != nil {
 		return ConvertError(err, nil)
 	}
@@ -235,23 +238,121 @@ func printTemplates() {
 }
 
 type Service struct {
-	Desc *descriptor.ServiceDescriptorProto
+	Desc      *descriptor.ServiceDescriptorProto
+	File      *descriptor.FileDescriptorProto
+	AllStruct *StructList
+	Files     *FileList
+	Methods   []*Method
+}
+
+func NewService(service *descriptor.ServiceDescriptorProto,
+	file *descriptor.FileDescriptorProto, allStruct *StructList, files *FileList) *Service {
+	s := &Service{
+		Desc:      service,
+		File:      file,
+		AllStruct: allStruct,
+		Files:     files,
+	}
+	return s
+
+}
+
+func (s *Service) AddMethod(m *Method) {
+	if s.Methods == nil {
+		s.Methods = []*Method{
+			m,
+		}
+	} else {
+		s.Methods = append(s.Methods, m)
+	}
+}
+
+func (s *Service) Generate() string {
+	ret := fmt.Sprintf(`type %sImpl struct {
+		DB *sql.DB
+	}`, s.Desc.GetName())
+
+	for _, method := range s.Desc.GetMethod() {
+		if opt := GetMethodOption(method); opt != nil {
+			m := NewMethod(method, s.Desc, opt, s.File, s.AllStruct, s.Files)
+			ret += m.Generate()
+			s.AddMethod(m)
+		}
+	}
+	return ret
 }
 
 type Method struct {
-	Desc *descriptor.MethodDescriptorProto
+	Desc       *descriptor.MethodDescriptorProto
+	Service    *descriptor.ServiceDescriptorProto
+	Options    *persist.QLImpl
+	File       *descriptor.FileDescriptorProto
+	AllStruct  *StructList
+	ImportList map[string]string
+	Files      *FileList
 }
 
+func NewMethod(method *descriptor.MethodDescriptorProto,
+	service *descriptor.ServiceDescriptorProto,
+	opt *persist.QLImpl,
+	file *descriptor.FileDescriptorProto,
+	allStruct *StructList,
+	files *FileList) *Method {
+
+	m := &Method{
+		Desc:      method,
+		Service:   service,
+		Options:   opt,
+		File:      file,
+		AllStruct: allStruct,
+		Files:     files,
+	}
+	m.ImportList = make(map[string]string)
+	return m
+}
 func (m *Method) GetServiceImplName() string {
-	return "TestServiceImpl"
+	return _gen.CamelCase(m.Service.GetName() + "Impl")
 }
 
 func (m *Method) GetMethod() string {
-	return "TestMethod"
+	return _gen.CamelCase(m.Desc.GetName())
+}
+
+func (m *Method) GetType(typ string) string {
+	if struc := m.AllStruct.GetEntry(typ); struc != nil {
+		if m.File.GetName() == struc.File.GetName() {
+			// same package
+			return struc.GetGoName()
+		} else {
+			// we have to determine the import path
+			var name string
+			if struc.File.GetOptions() != nil && struc.File.GetOptions().GoPackage != nil {
+				if idx := strings.LastIndex(struc.File.GetOptions().GetGoPackage(), ";"); idx >= 0 {
+					name = struc.File.GetOptions().GetGoPackage()[idx+1:]
+					pkg := struc.File.GetOptions().GetGoPackage()[0:idx]
+					name = m.Files.NewOrGetFile(m.File).AddImport(name, pkg, struc.File)
+				} else if idx := strings.LastIndex(struc.File.GetOptions().GetGoPackage(), "/"); idx >= 0 {
+					pkg := struc.File.GetOptions().GetGoPackage()[0:idx]
+					name = struc.File.GetOptions().GetGoPackage()[idx+1:]
+					name = m.Files.NewOrGetFile(m.File).AddImport(name, pkg, struc.File)
+				} else {
+					name = struc.File.GetOptions().GetGoPackage()
+					pkg := struc.File.GetOptions().GetGoPackage()
+					name = m.Files.NewOrGetFile(m.File).AddImport(name, pkg, struc.File)
+				}
+				return name + "." + struc.GetGoName()
+			} else {
+				// TODO add this to import paths
+				return strings.Replace(struc.File.GetPackage(), ".", "_", -1) + "." + struc.GetGoName()
+			}
+		}
+
+	}
+	return ""
 }
 
 func (m *Method) GetInputType() string {
-	return "InputType"
+	return m.GetType(m.Desc.GetInputType())
 }
 
 func (m *Method) GetStreamType() string {
@@ -267,7 +368,7 @@ func (m *Method) GetNumRowsFieldName() string {
 }
 
 func (m *Method) GetOutputType() string {
-	return "OutputType"
+	return m.GetType(m.Desc.GetOutputType())
 }
 
 
@@ -288,7 +389,7 @@ func (m *Method) GetResponseFieldsMap() map[string]string {
 }
 
 func (m *Method) GetQuery() string {
-	return strings.Replace(strings.Replace("SQL \"test\"", "\\", "\\\\", -1), "\"", "\\\"", -1)
+	return strings.Replace(strings.Replace(m.Options.GetQuery(), "\\", "\\\\", -1), "\"", "\\\"", -1)
 }
 
 func (m *Method) GetQueryParams() []string {

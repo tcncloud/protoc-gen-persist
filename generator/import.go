@@ -27,22 +27,19 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package generator_test
+package generator
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	_ "github.com/golang/protobuf/ptypes/timestamp"
-	_ "github.com/tcncloud/protoc-gen-persist/examples"
+	"strconv"
 )
 
-var _ = Describe("Method Service", func() {
-	Describe("", func() {
-		It("should ", func() {
-			// m := &generator.Method{}
-			// logrus.Info(m.Generate())
-			Expect(true).To(BeTrue())
-		})
-	})
-})
+type Import struct {
+	ProtoFileName    string
+	ProtoPackageName string
+	GoPackageName    string
+	GoImportPath     string
+}
+
+func (i *Import) GetImportString() string {
+	return i.GoPackageName + " " + strconv.Quote(i.GoImportPath)
+}

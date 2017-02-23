@@ -36,6 +36,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 )
 
 var (
@@ -161,15 +162,16 @@ func (s *Struct) GetName() string {
 func (s *Struct) GetGoName() string {
 	if s.ParentDescriptor != nil {
 		if s.IsMessage() {
-			return s.ParentDescriptor.GetName() + "_" + s.MessageDescriptor.GetName()
+
+			return _gen.CamelCaseSlice([]string{s.ParentDescriptor.GetName(), s.MessageDescriptor.GetName()})
 		} else {
-			return s.ParentDescriptor.GetName() + "_" + s.EnumDescriptor.GetName()
+			return _gen.CamelCaseSlice([]string{s.ParentDescriptor.GetName(), s.EnumDescriptor.GetName()})
 		}
 	} else {
 		if s.IsMessage() {
-			return s.MessageDescriptor.GetName()
+			return _gen.CamelCase(s.MessageDescriptor.GetName())
 		} else {
-			return s.EnumDescriptor.GetName()
+			return _gen.CamelCase(s.EnumDescriptor.GetName())
 		}
 	}
 }
