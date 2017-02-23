@@ -86,3 +86,17 @@ func FindMessage(files []*descriptor.FileDescriptorProto, typeString string) *de
 	}
 	return nil
 }
+
+func FindEnum(files []*descriptor.FileDescriptorProto, enumString string) *descriptor.EnumDescriptorProto {
+	enumName, pkgName := splitType(enumString)
+	for _, file := range files {
+		if pkgName == file.GetPackage() {
+			for _, enum := range file.GetEnumType() {
+				if enumName == enum.GetName() {
+					return enum
+				}
+			}
+		}
+	}
+	return nil
+}
