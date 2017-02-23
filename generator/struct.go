@@ -189,6 +189,34 @@ func NewStructList() *StructList {
 	return new(StructList)
 }
 
+func (sl *StructList) GetMessage(msg, parent *descriptor.DescriptorProto, file *descriptor.FileDescriptorProto) *Struct {
+	for _, m := range sl.List {
+		if m.IsMessage() {
+			if (m.ParentDescriptor == nil && parent == nil) || (m.ParentDescriptor.GetName() == parent.GetName()) {
+				if msg.GetName() == m.MessageDescriptor.GetName() &&
+					file.GetPackage() == m.File.GetPackage() {
+					return m
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (sl *StructList) GetEnum(enum *descriptor.EnumDescriptorProto, parent *descriptor.DescriptorProto, file *descriptor.FileDescriptorProto) *Struct {
+	for _, m := range sl.List {
+		if m.IsEnum() {
+			if (m.ParentDescriptor == nil && parent == nil) || (m.ParentDescriptor.GetName() == parent.GetName()) {
+				if enum.GetName() == m.EnumDescriptor.GetName() &&
+					file.GetPackage() == m.File.GetPackage() {
+					return m
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (sl *StructList) ContainMessage(msg, parent *descriptor.DescriptorProto, file *descriptor.FileDescriptorProto) bool {
 	for _, m := range sl.List {
 		if m.IsMessage() {
@@ -247,10 +275,12 @@ func (sl *StructList) GetEntry(name string) *Struct {
 }
 
 func (sl *StructList) AddStruct(s *Struct) {
+	logrus.WithField("structure", s).Debug("adding structure")
 	for _, x := range sl.List {
 		if x.Equal(s) {
 			return
 		}
 	}
 	sl.List = append(sl.List, s)
+	logrus.Debug("added!")
 }

@@ -92,8 +92,76 @@ func (g *Generator) IsDependency(file *descriptor.FileDescriptorProto) bool {
 	return false
 }
 
-// Process the request
-func (g *Generator) ProcessRequest() {
+func (g *Generator) ProcessType(typ string) {
+	struc := g.AllStructures.GetEntry(typ)
+	if struc != nil {
+		// if the structure is not defined into a dependency file
+		if !g.IsDependency(struc.File) {
+			outFile := g.files.NewOrGetFile(struc.File)
+			if struc.IsMessage() {
+				// process inner enums
+				for _, e := range struc.MessageDescriptor.GetEnumType() {
+					if eStruct := g.AllStructures.GetEnum(e, struc.MessageDescriptor, struc.File); eStruct != nil {
+						if !g.ImplementedStructures.ContainEnum(eStruct.EnumDescriptor, eStruct.ParentDescriptor, eStruct.File) {
+							outFile.P(eStruct.GetValueFunction())
+							outFile.P(eStruct.GetScanFunction())
+							g.ImplementedStructures.AddStruct(eStruct)
+						}
+					}
+				}
+				logrus.WithField("Is:", g.ImplementedStructures).Info("Status")
+				// process inner messages
+				for _, m := range struc.MessageDescriptor.GetNestedType() {
+					if mStruct := g.AllStructures.GetMessage(m, struc.MessageDescriptor, struc.File); mStruct != nil {
+						if !g.ImplementedStructures.ContainMessage(mStruct.MessageDescriptor, mStruct.ParentDescriptor, mStruct.File) {
+							outFile.P(mStruct.GetValueFunction())
+							outFile.P(mStruct.GetScanFunction())
+							g.ImplementedStructures.AddStruct(mStruct)
+						}
+					}
+				}
+				logrus.WithField("Is:", g.ImplementedStructures).Info("Status")
+				// process fields
+				for _, f := range struc.MessageDescriptor.GetField() {
+					logrus.WithField("Field", f).Info("processing field")
+					if f.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM ||
+						f.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
+						if t := g.AllStructures.GetEntry(f.GetTypeName()); t != nil {
+							if g.ImplementedStructures.GetEntry(f.GetTypeName()) == nil {
+								if !g.IsDependency(t.File) {
+									out := g.files.NewOrGetFile(t.File)
+									out.P(t.GetValueFunction())
+									out.P(t.GetScanFunction())
+									g.ImplementedStructures.AddStruct(t)
+								}
+							}
+						}
+					}
+				}
+				logrus.WithField("Is:", g.ImplementedStructures).Info("Status")
+			} else {
+				// don't process structures that are not messages
+			}
+		}
+	}
+}
+
+// process input and output types from service method signatures and implement Value() and Scan() mathods
+// for messages and enums used inside of those types
+func (g *Generator) ProcessStructs() {
+	for _, file := range g.OriginalRequest.ProtoFile {
+		if !g.IsDependency(file) {
+			for _, service := range file.Service {
+				for _, method := range service.GetMethod() {
+					g.ProcessType(method.GetInputType())
+					g.ProcessType(method.GetOutputType())
+				}
+			}
+		}
+	}
+}
+
+func (g *Generator) ProcessAllStructures() {
 	for _, file := range g.OriginalRequest.ProtoFile {
 		g.currentFile = file
 		// scan all messages
@@ -112,20 +180,19 @@ func (g *Generator) ProcessRequest() {
 			g.AllStructures.AddEnum(e, nil, file)
 		}
 	}
+}
 
-	logrus.WithField("All Structures", g.AllStructures).Debug("All structures found")
+// Process the request
+func (g *Generator) ProcessRequest() {
+	g.ProcessAllStructures()
+	g.ProcessStructs()
+	// implement only structures that are members in the method input/output types
+
 	for _, file := range g.OriginalRequest.ProtoFile {
 		if !g.IsDependency(file) {
-			outFile := g.files.NewOrGetFile(file)
+			// outFile := g.files.NewOrGetFile(file)
 			g.currentFile = file
 			// implement file
-			for _, str := range g.AllStructures.List {
-				if str.File.GetName() == file.GetName() {
-					logrus.WithField("Structure", str).Debug("Implementing structure")
-					outFile.P(str.GetValueFunction())
-					outFile.P(str.GetScanFunction())
-				}
-			}
 
 			for _, service := range file.Service {
 				g.currentService = service
