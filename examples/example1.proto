@@ -46,9 +46,14 @@ message ExampleTable1 {
         OP_0 = 0;
         OP_1 = 1;
     }
+    message InnerMessage {
+        int32 id = 1;
+    }
     int32 table_id = 1;
     string key = 2;
     string value = 3;
+    InnerMessage inner_message = 4;
+    InnerEnum inner_enum = 5;
 }
 
 message ExternalTypeTestMessage {
@@ -57,10 +62,10 @@ message ExternalTypeTestMessage {
 
 
 service ExampleService1 {
-    rpc UnaryExample1(ExampleTable1) returns (ExampleTable1) {
+    rpc UnaryExample1(ExampleTable1.InnerMessage) returns (ExampleTable1) {
         option (persist.ql) = {
-            query: "SELECT id AS table_id, key, value FROM test_table WHERE id = $1"
-            arguments: ["table_id"]
+            query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
+            arguments: ["id"]
         };
     }
 
