@@ -26,17 +26,18 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 package utils_test
 
 import (
 	"testing"
 	"time"
-	utils "github.com/tcncloud/protoc-gen-persist/utils"
+
 	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/lib/pq"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	utils "github.com/tcncloud/protoc-gen-persist/utils"
 )
 
 func TestConversion(t *testing.T) {
