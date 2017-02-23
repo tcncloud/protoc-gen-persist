@@ -29,27 +29,147 @@
 
 package generator
 
-import "github.com/golang/protobuf/protoc-gen-go/plugin"
+import (
+	"github.com/Sirupsen/logrus"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/golang/protobuf/protoc-gen-go/plugin"
+)
 
 type Generator struct {
-	Files           []*string
 	OriginalRequest *plugin_go.CodeGeneratorRequest
+	// Response        *plugin_go.CodeGeneratorResponse
+
+	// structures that need Value() and Scan() implementation
+	ImplementedStructures *StructList
+	AllStructures         *StructList
+
+	currentFile    *descriptor.FileDescriptorProto    // current processing file
+	currentService *descriptor.ServiceDescriptorProto // current processing service
+
+	files *FileList
 }
 
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret := new(Generator)
 	ret.OriginalRequest = request
+	// ret.Response = new(plugin_go.CodeGeneratorResponse)
+	ret.ImplementedStructures = NewStructList()
+	ret.AllStructures = NewStructList()
+	ret.files = NewFileList()
 	return ret
+}
+
+func (g *Generator) GetResponse() *plugin_go.CodeGeneratorResponse {
+	ret := new(plugin_go.CodeGeneratorResponse)
+	for _, fileStruct := range g.files.List {
+		// format file Content
+
+		ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
+			Content: proto.String(fileStruct.GetContent()),
+			Name:    proto.String(fileStruct.Name),
+		})
+		ret.Error = proto.String(func() string {
+			if ret.Error == nil {
+				return fileStruct.ErrorList
+			} else {
+				return *ret.Error + "\n" + fileStruct.ErrorList
+			}
+		}())
+	}
+	logrus.WithField("response", ret).Debug("result")
+	return ret
+}
+
+func (g *Generator) IsDependency(file *descriptor.FileDescriptorProto) bool {
+	for _, f := range g.OriginalRequest.ProtoFile {
+		for _, name := range f.GetDependency() {
+			if name == file.GetName() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Process the request
 func (g *Generator) ProcessRequest() {
 	for _, file := range g.OriginalRequest.ProtoFile {
-		for _, service := range file.Service {
-			if IsServicePersistEnabled(service) {
-				// we need to generate code for this service
-
+		g.currentFile = file
+		// scan all messages
+		for _, m := range file.GetMessageType() {
+			for _, im := range m.GetNestedType() {
+				g.AllStructures.AddMessage(im, m, file)
 			}
+			for _, ie := range m.GetEnumType() {
+				g.AllStructures.AddEnum(ie, m, file)
+			}
+			g.AllStructures.AddMessage(m, nil, file)
+
+		}
+		// scan all enums
+		for _, e := range file.GetEnumType() {
+			g.AllStructures.AddEnum(e, nil, file)
+		}
+	}
+
+	logrus.WithField("All Structures", g.AllStructures).Debug("All structures found")
+	for _, file := range g.OriginalRequest.ProtoFile {
+		if !g.IsDependency(file) {
+			outFile := g.files.NewOrGetFile(file)
+			g.currentFile = file
+			// implement file
+			for _, str := range g.AllStructures.List {
+				if str.File.GetName() == file.GetName() {
+					logrus.WithField("Structure", str).Debug("Implementing structure")
+					outFile.P(str.GetValueFunction())
+					outFile.P(str.GetScanFunction())
+				}
+			}
+
+			for _, service := range file.Service {
+				g.currentService = service
+				if IsServicePersistEnabled(service) {
+					for _, method := range service.Method {
+						data := GetMethodExtensionData(method)
+						if data != nil {
+							logrus.WithFields(logrus.Fields{
+								"method":             method.GetName(),
+								"Query":              data.GetQuery(),
+								"Arguments":          data.GetArguments(),
+								"Persistence Module": data.GetPersist(),
+								"Variable Mapping":   data.GetMapping(),
+							}).Debug("implementing method")
+							if msg := g.AllStructures.GetEntry(method.GetInputType()); msg != nil {
+								// we need to check if we are in the same file
+								g.ImplementedStructures.AddStruct(msg)
+							} else {
+								logrus.Fatalf("Input type %s for method %s in file %s is missing!", method.GetInputType(), method.GetName(), file.GetName())
+							}
+							if msg := g.AllStructures.GetEntry(method.GetOutputType()); msg != nil {
+								// we need to check if we are in the same file
+								g.ImplementedStructures.AddStruct(msg)
+							} else {
+								logrus.Fatalf("Output type %s for method %s in file %s is missing!", method.GetOutputType(), method.GetName(), file.GetName())
+							}
+
+							// implement function body
+							switch {
+							// unary function
+							case !method.GetClientStreaming() && !method.GetServerStreaming():
+							// client streaming function
+							case method.GetClientStreaming() && !method.GetServerStreaming():
+							// server streaming function
+							case !method.GetClientStreaming() && method.GetServerStreaming():
+							// both streaming
+							case method.GetClientStreaming() && method.GetServerStreaming():
+
+							}
+						}
+					}
+				}
+			}
+
 		}
 	}
 }
