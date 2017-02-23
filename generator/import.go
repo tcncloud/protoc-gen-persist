@@ -26,32 +26,20 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-syntax = "proto3";
 
-package persist;
+package generator
 
-import "google/protobuf/descriptor.proto";
+import (
+	"strconv"
+)
 
-option go_package="github.com/tcncloud/protoc-gen-persist/persist;persist";
-
-
-extend google.protobuf.MethodOptions {
-    QLImpl ql = 560000;
+type Import struct {
+	ProtoFileName    string
+	ProtoPackageName string
+	GoPackageName    string
+	GoImportPath     string
 }
 
-enum PersistenceOptions {
-    SQL = 0;
-}
-
-enum VariableMapping {
-    PG_SQL = 0;
-    NONE = 100; 
-
-}
-
-message QLImpl {
-    string query = 1;
-    repeated string arguments = 2;
-    PersistenceOptions persist = 3;
-    VariableMapping mapping = 4; 
+func (i *Import) GetImportString() string {
+	return i.GoPackageName + " " + strconv.Quote(i.GoImportPath)
 }
