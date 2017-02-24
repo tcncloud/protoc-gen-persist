@@ -31,8 +31,8 @@ package generator
 
 import (
 	"bytes"
-	"text/template"
 	"os"
+	"text/template"
 
 	"strings"
 
@@ -55,14 +55,14 @@ const (
 	unary = `
 func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
-		{{range $key, $value := .GetSafeResponseFields}}
-		{{$key}} {{$value}} {{end}}
+		{{range $field := .GetSafeResponseFields}}
+		{{$field.K}} {{$field.V}} {{end}}
 	)
 	err := s.DB.QueryRow(
 		"{{.GetQuery}}",{{range $qParam := .GetQueryParams}}
 		ToSafeType(req.{{$qParam}}),
 		{{end}}).
-		Scan({{range $key, $value := .GetSafeResponseFields}} &{{$key}},
+		Scan({{range $field := .GetSafeResponseFields}} &{{$field.K}},
 		{{end}})
 
 	if err != nil {
@@ -93,12 +93,12 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(req *{{.GetInputType}}, stream 
 		}
 
 		var (
-			{{range $key, $value := .GetSafeResponseFields}}
-			{{$key}} {{$value}} {{end}}
+			{{range $field := .GetSafeResponseFields}}
+			{{$field.K}} {{$field.V}} {{end}}
 		)
 
-		err := rows.Scan({{range $key, $value := .GetSafeResponseFields}}
-			&{{$key}},{{end}}
+		err := rows.Scan({{range $field := .GetSafeResponseFields}}
+			&{{$field.K}},{{end}}
 		)
 		if err != nil {
 			return ConvertError(err, req)
@@ -156,7 +156,7 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), err
 	return nil
 }
 `
-	bidir  = `
+	bidir = `
 func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), error {
 	stmt, err := s.DB.Prepare("{{.GetQuery}}")
 	if err != nil {
@@ -173,8 +173,8 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), err
 		if err != nil {
 			return ConvertError(err, nil)
 		}
-		var( {{range $key,$type := .GetSafeResponseFields}}
-			{{$key}} {{$type}} {{end}}
+		var( {{range $field := .GetSafeResponseFields}}
+			{{$field.K}} {{$field.V}} {{end}}
 		)
 
 		err = stmt.QueryRow({{range $local := .GetQueryParams}}
@@ -371,20 +371,81 @@ func (m *Method) GetOutputType() string {
 	return m.GetType(m.Desc.GetOutputType())
 }
 
+func (m *Method) GetSafeType(field *descriptor.FieldDescriptorProto) string {
+	logrus.WithField("field", field).Debug("info")
+	switch {
+	// string
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_STRING && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
+		fallthrough
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_BYTES && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
+		return "string"
+	// string array
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_STRING && field.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED:
+		fallthrough
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_BYTES && field.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED:
+		return "*pg.StringArray"
+	// int64 array
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_INT64 && field.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED:
+		return "*pq.Int64Array"
+	// float array
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_FLOAT && field.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED:
+		return "*pq.Float64Array"
+	// time
+	case field.GetTypeName() == ".google.protobuf.Timestamp" && field.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE:
+		return "*time.Time"
+	// enum
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM:
+		return m.GetType(field.GetTypeName())
+	// message
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE:
+		return m.GetType(field.GetTypeName())
+	// int32
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_INT32 && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
+		return "int32"
+	// int64
+	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_INT64 && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
+		return "int64"
+	// float
+	case (field.GetType() == descriptor.FieldDescriptorProto_TYPE_FLOAT || field.GetType() == descriptor.FieldDescriptorProto_TYPE_DOUBLE) && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
+		return "float"
+	default:
+		return field.GetTypeName()
+	}
+}
 
-func (m *Method) GetSafeResponseFields() map[string]string {
-	var ret map[string]string
-	ret = make(map[string]string)
-	ret["id"] = "int32"
-	ret["val"] = "string"
+type Tuple struct {
+	K string
+	V string
+}
+
+func (m *Method) GetSafeResponseFields() []*Tuple {
+	var ret []*Tuple = nil
+	outType := m.AllStruct.GetEntry(m.Desc.GetOutputType())
+	for _, field := range outType.MessageDescriptor.Field {
+		if ret == nil {
+			ret = []*Tuple{
+				&Tuple{
+					K: field.GetName(),
+					V: m.GetSafeType(field),
+				},
+			}
+		} else {
+			ret = append(ret, &Tuple{
+				K: field.GetName(),
+				V: m.GetSafeType(field),
+			})
+		}
+	}
 	return ret
 }
 
 func (m *Method) GetResponseFieldsMap() map[string]string {
 	var ret map[string]string
 	ret = make(map[string]string)
-	ret["id"] = "Id"
-	ret["val"] = "Val"
+	outType := m.AllStruct.GetEntry(m.Desc.GetOutputType())
+	for _, field := range outType.MessageDescriptor.Field {
+		ret[field.GetName()] = _gen.CamelCase(field.GetName())
+	}
 	return ret
 }
 
@@ -393,7 +454,7 @@ func (m *Method) GetQuery() string {
 }
 
 func (m *Method) GetQueryParams() []string {
-	return []string{"id"}
+	return m.Options.Arguments
 }
 
 func (m *Method) Generate() string {
