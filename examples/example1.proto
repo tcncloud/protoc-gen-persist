@@ -35,6 +35,8 @@ option go_package="github.com/tcncloud/protoc-gen-persist/examples;examples";
 
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/descriptor.proto";
+
 
 import "examples/test/test.proto";
 
@@ -66,6 +68,17 @@ message ExternalTypeTestMessage {
 
 
 service ExampleService1 {
+    option (persist.mapping) = {
+        types: [
+            {
+                    proto_type_name: ".google.protobuf.Timestamp"
+                    proto_type:  TYPE_MESSAGE
+                    proto_label: LABEL_OPTIONAL
+                    go_type: "*time.Time"
+                    go_package: "github.com/protobuf/types/time"
+            }
+        ]
+    };
     rpc UnaryExample1(ExampleTable1.InnerMessage) returns (ExampleTable1) {
         option (persist.ql) = {
             query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
