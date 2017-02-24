@@ -56,6 +56,8 @@ message ExampleTable1 {
     string value = 3;
     InnerMessage inner_message = 4;
     InnerEnum inner_enum = 5;
+    repeated string string_array = 6;
+    bytes bytes_field = 7;
 }
 
 message ExternalTypeTestMessage {
