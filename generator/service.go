@@ -32,6 +32,7 @@ package generator
 import (
 	"bytes"
 	"text/template"
+	"os"
 
 	"strings"
 
@@ -58,7 +59,7 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.Ge
 		{{$key}} {{$value}} {{end}}
 	)
 	err := s.DB.QueryRow(
-		"{{.GetQuery}}",{{range $qParam := .GetQueryParams}} 
+		"{{.GetQuery}}",{{range $qParam := .GetQueryParams}}
 		ToSafeType(req.{{$qParam}}),
 		{{end}}).
 		Scan({{range $key, $value := .GetSafeResponseFields}} &{{$key}},
@@ -68,39 +69,172 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.Ge
 		return nil, ConvertError(err, req)
 	}
 	result := &{{.GetOutputType}}{}
-	{{ range $local, $go := .GetResponseFieldsMap}}
-	AssingTo(&result.{{$go}}, {{$local}})
-	{{end}}
+	{{range $local, $go := .GetResponseFieldsMap}}
+	AssignTo(&result.{{$go}}, {{$local}}) {{end}}
 
 	return result, nil
 }
 `
-	server = ``
-	client = ``
-	bidir  = ``
+	server = `
+func (s *{{.GetServiceImplName}}) {{.GetMethod}}(req *{{.GetInputType}}, stream {{.GetStreamType}}), error {
+	rows, err := s.DB.Query("{{.GetQuery}}", {{range $qParam := .GetQueryParams}}
+		ToSafeType(req.{{$qParam}}),
+	{{end}})
+	if err != nil {
+		return ConvertError(err, req)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		err = rows.Err()
+		if err != nil {
+			return ConvertError(err, req)
+		}
+
+		var (
+			{{range $key, $value := .GetSafeResponseFields}}
+			{{$key}} {{$value}} {{end}}
+		)
+
+		err := rows.Scan({{range $key, $value := .GetSafeResponseFields}}
+			&{{$key}},{{end}}
+		)
+		if err != nil {
+			return ConvertError(err, req)
+		}
+
+		result := &{{.GetOutputType}}{}
+		{{ range $local, $go := .GetResponseFieldsMap}}
+		AssignTo(&result.{{$go}}, {{$local}}) {{end}}
+	}
+	return result, nil
+}
+`
+	client = `
+func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), error {
+	stmt, err := s.DB.Prepare("{{.GetQuery}}")
+	if err != nil {
+		return ConvertError(err, nil)
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return ConvertError(err, nil)
+	}
+	totalAffected := int64(0)
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			tx.Rollback()
+			return ConvertError(err, req)
+		}
+
+		affected, err := tx.Stmt(stmt).Exec({{range $local := .GetQueryParams}}
+		ToSafeType(req.{{$local}}),
+		{{end}})
+		if err != nil {
+			tx.Rollback()
+			return ConvertError(err, req)
+		}
+		num, err := affected.RowsAffected()
+		if err != nil {
+			tx.Rollback()
+			return ConvertError(err, req)
+		}
+		totalAffected += num
+	}
+	err = tx.Commit()
+	if err != nil {
+		fmt.Errorf("Commiting transaction failed, rolling back...")
+		return ConvertError(err, nil)
+	}
+	stream.SendAndClose(&{{.GetNumRowsMessageName}} { {{.GetNumRowsFieldName}}: totalAffected })
+	return nil
+}
+`
+	bidir  = `
+func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), error {
+	stmt, err := s.DB.Prepare("{{.GetQuery}}")
+	if err != nil {
+		return ConvertError(err, nil)
+	}
+
+	defer stmt.Close()
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return ConvertError(err, nil)
+		}
+		var( {{range $key,$type := .GetSafeResponseFields}}
+			{{$key}} {{$type}} {{end}}
+		)
+
+		err = stmt.QueryRow({{range $local := .GetQueryParams}}
+			ToSafeType(req.{{$local}}),
+		{{end}}).
+		Scan({{range $key := .GetQueryParams}}
+			&{{$key}},
+		{{end}})
+
+		result := &{{.GetOutputType}}{}
+
+		{{range $local, $go := .GetResponseFieldsMap}}
+		AssignTo(result.{{$go}}, {{$local}}){{end}}
+
+		if err := stream.Send(result); err != nil {
+			return ConvertError(err, req)
+		}
+	}
+	return nil
+}
+`
 )
 
 func init() {
 	var err error
 	unaryTemplate, err = template.New("unaryTemplate").Parse(unary)
 	if err != nil {
-		logrus.Fatal("Error parsing unary template!")
+		logrus.WithError(err).Fatal("Error parsing unary template!")
 	}
 	serverStreamTemplate, err = template.New("serverTemplate").Parse(server)
 	if err != nil {
-		logrus.Fatal("Error parsing server stream template!")
+		logrus.WithError(err).Fatal("Error parsing server stream template!")
 	}
 
 	clientStreamTemplate, err = template.New("clientTemplate").Parse(client)
 	if err != nil {
-		logrus.Fatal("Error parsing client stream template!")
+		logrus.WithError(err).Fatal("Error parsing client stream template!")
 	}
 
 	bidirStreamTemplate, err = template.New("bidirTemplate").Parse(bidir)
 	if err != nil {
-		logrus.Fatal("Error parsing bidirectional stream template!")
+		logrus.WithError(err).Fatal("Error parsing bidirectional stream template!")
 	}
+	//printTemplates()
+}
 
+func printTemplates() {
+	logrus.Info("UNARY")
+	unaryTemplate.Execute(os.Stdout, &Method{})
+	fmt.Printf("\n")
+	logrus.Info("SERVER")
+	serverStreamTemplate.Execute(os.Stdout, &Method{})
+	fmt.Printf("\n")
+	logrus.Info("CLIENT")
+	clientStreamTemplate.Execute(os.Stdout, &Method{})
+	fmt.Printf("\n")
+	logrus.Info("BIDI")
+	bidirStreamTemplate.Execute(os.Stdout, &Method{})
+	fmt.Printf("\n")
+	logrus.Info("////////////////////////")
 }
 
 type Service struct {
@@ -221,9 +355,22 @@ func (m *Method) GetInputType() string {
 	return m.GetType(m.Desc.GetInputType())
 }
 
+func (m *Method) GetStreamType() string {
+	return "Service_TestMethodServer"
+}
+
+func (m *Method) GetNumRowsMessageName() string {
+	return "NumRows"
+}
+
+func (m *Method) GetNumRowsFieldName() string {
+	return "Count"
+}
+
 func (m *Method) GetOutputType() string {
 	return m.GetType(m.Desc.GetOutputType())
 }
+
 
 func (m *Method) GetSafeResponseFields() map[string]string {
 	var ret map[string]string
