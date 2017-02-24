@@ -1,4 +1,4 @@
-box: golang
+box: golang:1.8
 build:
   steps:
     - setup-go-workspace:
