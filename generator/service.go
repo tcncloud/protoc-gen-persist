@@ -39,7 +39,9 @@ import (
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
@@ -60,7 +62,7 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.Ge
 	)
 	err := s.DB.QueryRow(
 		"{{.GetQuery}}",{{range $qParam := .GetQueryParams}}
-		ToSafeType(req.{{$qParam}}),
+		_utils.ToSafeType(req.{{$qParam}}),
 		{{end}}).
 		Scan({{range $field := .GetSafeResponseFields}} &{{$field.K}},
 		{{end}})
@@ -70,7 +72,7 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.Ge
 	}
 	result := &{{.GetOutputType}}{}
 	{{range $local, $go := .GetResponseFieldsMap}}
-	AssignTo(&result.{{$go}}, {{$local}}) {{end}}
+	_utils.AssignTo(&result.{{$go}}, {{$local}}) {{end}}
 
 	return result, nil
 }
@@ -238,20 +240,22 @@ func printTemplates() {
 }
 
 type Service struct {
-	Desc      *descriptor.ServiceDescriptorProto
-	File      *descriptor.FileDescriptorProto
-	AllStruct *StructList
-	Files     *FileList
-	Methods   []*Method
+	Desc              *descriptor.ServiceDescriptorProto
+	File              *descriptor.FileDescriptorProto
+	AllStruct         *StructList
+	ImplementedStruct *StructList
+	Files             *FileList
+	Methods           []*Method
 }
 
 func NewService(service *descriptor.ServiceDescriptorProto,
-	file *descriptor.FileDescriptorProto, allStruct *StructList, files *FileList) *Service {
+	file *descriptor.FileDescriptorProto, allStruct *StructList, implStruct *StructList, files *FileList) *Service {
 	s := &Service{
-		Desc:      service,
-		File:      file,
-		AllStruct: allStruct,
-		Files:     files,
+		Desc:              service,
+		File:              file,
+		AllStruct:         allStruct,
+		ImplementedStruct: implStruct,
+		Files:             files,
 	}
 	return s
 
@@ -274,7 +278,7 @@ func (s *Service) Generate() string {
 
 	for _, method := range s.Desc.GetMethod() {
 		if opt := GetMethodOption(method); opt != nil {
-			m := NewMethod(method, s.Desc, opt, s.File, s.AllStruct, s.Files)
+			m := NewMethod(method, s.Desc, opt, s.File, s.AllStruct, s.ImplementedStruct, s.Files)
 			ret += m.Generate()
 			s.AddMethod(m)
 		}
@@ -283,13 +287,14 @@ func (s *Service) Generate() string {
 }
 
 type Method struct {
-	Desc       *descriptor.MethodDescriptorProto
-	Service    *descriptor.ServiceDescriptorProto
-	Options    *persist.QLImpl
-	File       *descriptor.FileDescriptorProto
-	AllStruct  *StructList
-	ImportList map[string]string
-	Files      *FileList
+	Desc              *descriptor.MethodDescriptorProto
+	Service           *descriptor.ServiceDescriptorProto
+	Options           *persist.QLImpl
+	File              *descriptor.FileDescriptorProto
+	AllStruct         *StructList
+	ImplementedStruct *StructList
+	ImportList        map[string]string
+	Files             *FileList
 }
 
 func NewMethod(method *descriptor.MethodDescriptorProto,
@@ -297,15 +302,17 @@ func NewMethod(method *descriptor.MethodDescriptorProto,
 	opt *persist.QLImpl,
 	file *descriptor.FileDescriptorProto,
 	allStruct *StructList,
+	implStruct *StructList,
 	files *FileList) *Method {
 
 	m := &Method{
-		Desc:      method,
-		Service:   service,
-		Options:   opt,
-		File:      file,
-		AllStruct: allStruct,
-		Files:     files,
+		Desc:              method,
+		Service:           service,
+		Options:           opt,
+		File:              file,
+		AllStruct:         allStruct,
+		ImplementedStruct: implStruct,
+		Files:             files,
 	}
 	m.ImportList = make(map[string]string)
 	return m
@@ -371,46 +378,160 @@ func (m *Method) GetOutputType() string {
 	return m.GetType(m.Desc.GetOutputType())
 }
 
+func (m *Method) GetServiceTypeMapping() *persist.TypeMapping {
+	if proto.HasExtension(m.Service.Options, persist.E_Mapping) {
+		e, err := proto.GetExtension(m.Service.Options, persist.E_Mapping)
+		if err == nil {
+			return e.(*persist.TypeMapping)
+		}
+	}
+	return nil
+}
+
+func (m *Method) GetServiceFile() *FileStruct {
+	return m.Files.GetFileByDesc(m.File)
+}
+
+func (m *Method) GetMethodTypeMapping() *persist.TypeMapping {
+	return m.Options.Mapping
+}
+
+// GetUserSafeType is processing a field against the method or service defined options
+// and process and register the necessary imports
+func (m *Method) GetUserSafeType(field *descriptor.FieldDescriptorProto) string {
+	logrus.WithField("field", field).Debug("checking field")
+	list := func() *persist.TypeMapping {
+		if mp := m.GetMethodTypeMapping(); mp != nil {
+			return mp
+		}
+		if mp := m.GetServiceTypeMapping(); mp != nil {
+			return mp
+		}
+		return nil
+	}()
+	logrus.WithField("list", list).Debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+	if list != nil {
+		for _, mp := range list.Types {
+			logrus.WithField("mapping", mp).Debug("User defined mapping")
+			// we have a message mapping where we map a message like
+			// .google.protobuf.Timestamp to a go structure
+			if mp.ProtoTypeName != nil &&
+				(mp.ProtoType == nil ||
+					mp.GetProtoType() == descriptor.FieldDescriptorProto_TYPE_ENUM ||
+					mp.GetProtoType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE) {
+
+				if field.GetTypeName() == mp.GetProtoTypeName() &&
+					mp.GetProtoType() == field.GetType() &&
+					((mp.ProtoLabel == nil && field.Label == nil) ||
+						(mp.GetProtoLabel() == field.GetLabel())) {
+					pkg, url := GetGoPackageAndPathFromURL(mp.GetGoPackage())
+					// register package with the method file
+					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
+					// return go_type
+					return pkg + "." + mp.GetGoType()
+				}
+			}
+			// we map a builtin type int33, int64, string with a given
+			// label (REPEATED mainly) to a db type
+			if mp.ProtoTypeName == nil &&
+				(mp.ProtoType != nil ||
+					mp.GetProtoType() != descriptor.FieldDescriptorProto_TYPE_ENUM ||
+					mp.GetProtoType() != descriptor.FieldDescriptorProto_TYPE_MESSAGE ||
+					mp.GetProtoType() != descriptor.FieldDescriptorProto_TYPE_GROUP) {
+				if mp.GetProtoLabel() == field.GetLabel() &&
+					mp.GetProtoType() == field.GetType() {
+					pkg, url := GetGoPackageAndPathFromURL(mp.GetGoPackage())
+					// register package with the method file
+					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
+					// return go_type
+					return pkg + "." + mp.GetGoType()
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
 func (m *Method) GetSafeType(field *descriptor.FieldDescriptorProto) string {
 	logrus.WithField("field", field).Debug("info")
-	switch {
-	// string
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_STRING && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
-		fallthrough
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_BYTES && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
-		return "string"
-	// string array
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_STRING && field.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED:
-		fallthrough
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_BYTES && field.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED:
-		return "*pg.StringArray"
-	// int64 array
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_INT64 && field.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED:
-		return "*pq.Int64Array"
-	// float array
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_FLOAT && field.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED:
-		return "*pq.Float64Array"
-	// time
-	case field.GetTypeName() == ".google.protobuf.Timestamp" && field.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE:
-		return "*time.Time"
-	// enum
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM:
-		return m.GetType(field.GetTypeName())
-	// message
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE:
-		return m.GetType(field.GetTypeName())
-	// int32
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_INT32 && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
-		return "int32"
-	// int64
-	case field.GetType() == descriptor.FieldDescriptorProto_TYPE_INT64 && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
-		return "int64"
-	// float
-	case (field.GetType() == descriptor.FieldDescriptorProto_TYPE_FLOAT || field.GetType() == descriptor.FieldDescriptorProto_TYPE_DOUBLE) && field.GetLabel() != descriptor.FieldDescriptorProto_LABEL_REPEATED:
-		return "float"
-	default:
-		return field.GetTypeName()
+
+	if ret := m.GetUserSafeType(field); ret != "" {
+		return ret
 	}
+
+	switch field.GetType() {
+	case descriptor.FieldDescriptorProto_TYPE_DOUBLE:
+		return "float64"
+	case descriptor.FieldDescriptorProto_TYPE_FLOAT:
+		return "float32"
+	case descriptor.FieldDescriptorProto_TYPE_INT64:
+		return "int64"
+	case descriptor.FieldDescriptorProto_TYPE_UINT64:
+		return "uint64"
+	case descriptor.FieldDescriptorProto_TYPE_INT32:
+		return "int32"
+	case descriptor.FieldDescriptorProto_TYPE_UINT32:
+		return "uint32"
+	case descriptor.FieldDescriptorProto_TYPE_FIXED64:
+		return "uint64"
+	case descriptor.FieldDescriptorProto_TYPE_FIXED32:
+		return "uint32"
+	case descriptor.FieldDescriptorProto_TYPE_BOOL:
+		return "bool"
+	case descriptor.FieldDescriptorProto_TYPE_STRING:
+		return "string"
+	case descriptor.FieldDescriptorProto_TYPE_GROUP:
+		logrus.Fatalf("Groups/Oneof are not supported yet")
+	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
+		if stru := m.AllStruct.GetEntry(field.GetTypeName()); stru != nil {
+			// find if is one of the structures that we've implemented Value and Scan Methods
+			if s := m.ImplementedStruct.GetEntry(field.GetTypeName()); s != nil {
+				if s.File.GetPackage() == m.File.GetPackage() {
+					return field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
+				} else {
+					pkg, url := GetGoPackageAndPathFromURL(s.GetGoPath())
+					// register package with the method file
+					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
+					return pkg + "." + field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
+				}
+			}
+		} else {
+			logrus.Fatalf("Can't find message structure for %+v", field)
+		}
+	case descriptor.FieldDescriptorProto_TYPE_BYTES:
+		return "[]byte"
+	case descriptor.FieldDescriptorProto_TYPE_ENUM:
+		if stru := m.AllStruct.GetEntry(field.GetTypeName()); stru != nil {
+			// find if is one of the structures that we've implemented Value and Scan Methods
+			if s := m.ImplementedStruct.GetEntry(field.GetTypeName()); s != nil {
+				if s.File.GetPackage() == m.File.GetPackage() {
+					return field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
+				} else {
+					pkg, url := GetGoPackageAndPathFromURL(s.GetGoPath())
+					// register package with the method file
+					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
+					return pkg + "." + field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
+				}
+			}
+		} else {
+			logrus.Fatalf("Can't find enum structure for %+v", field)
+		}
+	// 	desc := g.ObjectNamed(field.GetTypeName())
+	// 	typ, wire = g.TypeName(desc), "varint"
+	case descriptor.FieldDescriptorProto_TYPE_SFIXED32:
+		return "int32"
+	case descriptor.FieldDescriptorProto_TYPE_SFIXED64:
+		return "int64"
+	case descriptor.FieldDescriptorProto_TYPE_SINT32:
+		return "int32"
+	case descriptor.FieldDescriptorProto_TYPE_SINT64:
+		return "int64"
+	default:
+		logrus.Fatalf("Unknown mapping for %+v", field)
+
+	}
+	return ""
 }
 
 type Tuple struct {

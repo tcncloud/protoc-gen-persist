@@ -137,6 +137,8 @@ func AssignTo(key interface{}, val interface{}) bool {
 		}
 	default:
 		logrus.WithField("key", key).WithField("val", val).Warn("val contained an unknown type")
+		key = val
+		return true
 	}
 	logrus.WithField("key", key).Warn("could not assign to key, doing nothing!")
 	return false

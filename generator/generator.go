@@ -188,7 +188,7 @@ func (g *Generator) ProcessServices() {
 			for _, service := range file.Service {
 				g.currentService = service
 				if IsServicePersistEnabled(service) {
-					srv := NewService(service, file, g.AllStructures, g.files)
+					srv := NewService(service, file, g.AllStructures, g.ImplementedStructures, g.files)
 					outFile.P(srv.Generate())
 				}
 			}

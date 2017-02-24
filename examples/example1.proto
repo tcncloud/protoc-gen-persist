@@ -60,6 +60,7 @@ message ExampleTable1 {
     InnerEnum inner_enum = 5;
     repeated string string_array = 6;
     bytes bytes_field = 7;
+    google.protobuf.Timestamp start_time = 10;
 }
 
 message ExternalTypeTestMessage {
@@ -73,8 +74,7 @@ service ExampleService1 {
             {
                     proto_type_name: ".google.protobuf.Timestamp"
                     proto_type:  TYPE_MESSAGE
-                    proto_label: LABEL_OPTIONAL
-                    go_type: "*time.Time"
+                    go_type: "Time"
                     go_package: "github.com/protobuf/types/time"
             }
         ]

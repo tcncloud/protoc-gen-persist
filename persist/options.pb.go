@@ -120,10 +120,11 @@ func (m *TypeMapping) GetTypes() []*TypeMapping_TypeDescriptor {
 }
 
 type TypeMapping_TypeDescriptor struct {
-	// if this is not setup the proto_type  must be on of the built-in types
+	// if this is not setup the proto_type must be one of the built-in types
 	ProtoTypeName *string `protobuf:"bytes,1,opt,name=proto_type_name,json=protoTypeName" json:"proto_type_name,omitempty"`
 	// If proto_type_name is set, this need not be set.  If both this and proto_type_name
-	// are set, this must be one of TYPE_ENUM, TYPE_MESSAGE or TYPE_GROUP.
+	// are set, this must be one of TYPE_ENUM, TYPE_MESSAGE
+	// TYPE_GROUP is not supported
 	ProtoType *google_protobuf.FieldDescriptorProto_Type `protobuf:"varint,2,opt,name=proto_type,json=protoType,enum=google.protobuf.FieldDescriptorProto_Type" json:"proto_type,omitempty"`
 	// if proto_label is not setup we consider any option except LABAEL_REPEATED
 	ProtoLabel       *google_protobuf.FieldDescriptorProto_Label `protobuf:"varint,3,opt,name=proto_label,json=protoLabel,enum=google.protobuf.FieldDescriptorProto_Label" json:"proto_label,omitempty"`
