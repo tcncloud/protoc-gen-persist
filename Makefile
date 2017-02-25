@@ -54,7 +54,7 @@ build: generate
 install: build
 	go install
 
-test: deps
+test: deps build
 	ginkgo -r 
 
 test-compile: build
