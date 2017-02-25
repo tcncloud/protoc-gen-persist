@@ -6,7 +6,7 @@ Protobuf plugin that generate a persistence layer backed by SQL database
 ## NOTE: This project is under development and is not usable yet!
 
 ## Roadmap
- 1. type mapping 
+ 1. ~~type mapping ~~
  1. before & after callback function
  1. add tests, lots of tests
  1. mongo query language 
