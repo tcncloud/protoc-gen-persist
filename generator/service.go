@@ -31,8 +31,6 @@ package generator
 
 import (
 	"bytes"
-	"os"
-	"text/template"
 
 	"strings"
 
@@ -45,199 +43,6 @@ import (
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
-
-var (
-	unaryTemplate        *template.Template
-	serverStreamTemplate *template.Template
-	clientStreamTemplate *template.Template
-	bidirStreamTemplate  *template.Template
-)
-
-const (
-	unary = `
-func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
-	var (
-		{{range $field := .GetSafeResponseFields}}
-		{{$field.K}} {{$field.V}} {{end}}
-	)
-	err := s.DB.QueryRow(
-		"{{.GetQuery}}",{{range $qParam := .GetQueryParams}}
-		_utils.ToSafeType(req.{{$qParam}}),
-		{{end}}).
-		Scan({{range $field := .GetSafeResponseFields}} &{{$field.K}},
-		{{end}})
-
-	if err != nil {
-		return nil, ConvertError(err, req)
-	}
-	result := &{{.GetOutputType}}{}
-	{{range $local, $go := .GetResponseFieldsMap}}
-	_utils.AssignTo(&result.{{$go}}, {{$local}}) {{end}}
-
-	return result, nil
-}
-`
-	server = `
-func (s *{{.GetServiceImplName}}) {{.GetMethod}}(req *{{.GetInputType}}, stream {{.GetStreamType}}), error {
-	rows, err := s.DB.Query("{{.GetQuery}}", {{range $qParam := .GetQueryParams}}
-		ToSafeType(req.{{$qParam}}),
-	{{end}})
-	if err != nil {
-		return ConvertError(err, req)
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		err = rows.Err()
-		if err != nil {
-			return ConvertError(err, req)
-		}
-
-		var (
-			{{range $field := .GetSafeResponseFields}}
-			{{$field.K}} {{$field.V}} {{end}}
-		)
-
-		err := rows.Scan({{range $field := .GetSafeResponseFields}}
-			&{{$field.K}},{{end}}
-		)
-		if err != nil {
-			return ConvertError(err, req)
-		}
-
-		result := &{{.GetOutputType}}{}
-		{{ range $local, $go := .GetResponseFieldsMap}}
-		AssignTo(&result.{{$go}}, {{$local}}) {{end}}
-	}
-	return result, nil
-}
-`
-	client = `
-func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), error {
-	stmt, err := s.DB.Prepare("{{.GetQuery}}")
-	if err != nil {
-		return ConvertError(err, nil)
-	}
-	tx, err := s.db.Begin()
-	if err != nil {
-		return ConvertError(err, nil)
-	}
-	totalAffected := int64(0)
-
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			tx.Rollback()
-			return ConvertError(err, req)
-		}
-
-		affected, err := tx.Stmt(stmt).Exec({{range $local := .GetQueryParams}}
-		ToSafeType(req.{{$local}}),
-		{{end}})
-		if err != nil {
-			tx.Rollback()
-			return ConvertError(err, req)
-		}
-		num, err := affected.RowsAffected()
-		if err != nil {
-			tx.Rollback()
-			return ConvertError(err, req)
-		}
-		totalAffected += num
-	}
-	err = tx.Commit()
-	if err != nil {
-		fmt.Errorf("Commiting transaction failed, rolling back...")
-		return ConvertError(err, nil)
-	}
-	stream.SendAndClose(&{{.GetNumRowsMessageName}} { {{.GetNumRowsFieldName}}: totalAffected })
-	return nil
-}
-`
-	bidir = `
-func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), error {
-	stmt, err := s.DB.Prepare("{{.GetQuery}}")
-	if err != nil {
-		return ConvertError(err, nil)
-	}
-
-	defer stmt.Close()
-
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return ConvertError(err, nil)
-		}
-		var( {{range $field := .GetSafeResponseFields}}
-			{{$field.K}} {{$field.V}} {{end}}
-		)
-
-		err = stmt.QueryRow({{range $local := .GetQueryParams}}
-			ToSafeType(req.{{$local}}),
-		{{end}}).
-		Scan({{range $key := .GetQueryParams}}
-			&{{$key}},
-		{{end}})
-
-		result := &{{.GetOutputType}}{}
-
-		{{range $local, $go := .GetResponseFieldsMap}}
-		AssignTo(result.{{$go}}, {{$local}}){{end}}
-
-		if err := stream.Send(result); err != nil {
-			return ConvertError(err, req)
-		}
-	}
-	return nil
-}
-`
-)
-
-func init() {
-	var err error
-	unaryTemplate, err = template.New("unaryTemplate").Parse(unary)
-	if err != nil {
-		logrus.WithError(err).Fatal("Error parsing unary template!")
-	}
-	serverStreamTemplate, err = template.New("serverTemplate").Parse(server)
-	if err != nil {
-		logrus.WithError(err).Fatal("Error parsing server stream template!")
-	}
-
-	clientStreamTemplate, err = template.New("clientTemplate").Parse(client)
-	if err != nil {
-		logrus.WithError(err).Fatal("Error parsing client stream template!")
-	}
-
-	bidirStreamTemplate, err = template.New("bidirTemplate").Parse(bidir)
-	if err != nil {
-		logrus.WithError(err).Fatal("Error parsing bidirectional stream template!")
-	}
-	//printTemplates()
-}
-
-func printTemplates() {
-	logrus.Info("UNARY")
-	unaryTemplate.Execute(os.Stdout, &Method{})
-	fmt.Printf("\n")
-	logrus.Info("SERVER")
-	serverStreamTemplate.Execute(os.Stdout, &Method{})
-	fmt.Printf("\n")
-	logrus.Info("CLIENT")
-	clientStreamTemplate.Execute(os.Stdout, &Method{})
-	fmt.Printf("\n")
-	logrus.Info("BIDI")
-	bidirStreamTemplate.Execute(os.Stdout, &Method{})
-	fmt.Printf("\n")
-	logrus.Info("////////////////////////")
-}
 
 type Service struct {
 	Desc              *descriptor.ServiceDescriptorProto
@@ -387,7 +192,6 @@ func (m *Method) GetServiceTypeMapping() *persist.TypeMapping {
 	}
 	return nil
 }
-
 func (m *Method) GetServiceFile() *FileStruct {
 	return m.Files.GetFileByDesc(m.File)
 }
@@ -580,8 +384,26 @@ func (m *Method) GetQueryParams() []string {
 
 func (m *Method) Generate() string {
 	var tpl bytes.Buffer
-	if err := unaryTemplate.Execute(&tpl, m); err != nil {
-		logrus.Fatal("Error processing value function temaplate")
+	switch {
+	case !m.Desc.GetClientStreaming() && !m.Desc.GetServerStreaming():
+		if err := UnaryTemplate[m.Options.GetPersist()].Execute(&tpl, m); err != nil {
+			logrus.Fatal("Error processing value function temaplate")
+		}
+	case m.Desc.GetClientStreaming() && !m.Desc.GetServerStreaming():
+		if err := ClientStreamTemplate[m.Options.GetPersist()].Execute(&tpl, m); err != nil {
+			logrus.Fatal("Error processing value function temaplate")
+		}
+	case !m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming():
+		if err := ServerStreamTemplate[m.Options.GetPersist()].Execute(&tpl, m); err != nil {
+			logrus.Fatal("Error processing value function temaplate")
+		}
+	case m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming():
+		if err := BidirStreamTemplate[m.Options.GetPersist()].Execute(&tpl, m); err != nil {
+			logrus.Fatal("Error processing value function temaplate")
+		}
+
+	default:
+		logrus.Fatal("This should never happen")
 	}
 	return tpl.String()
 }
