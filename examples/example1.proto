@@ -93,6 +93,12 @@ service ExampleService1 {
         };
     }
 
+    rpc UnaryMongoExample1(examples.test.Test) returns (ExampleTable1) {
+        option (persist.ql) = {
+            query: "Find(bson.M{\"id\": req.Id}"
+        }
+    }
+
     rpc RandomMethod(ExampleTable1) returns (ExampleTable1);
 
 }
