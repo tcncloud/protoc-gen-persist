@@ -78,7 +78,7 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.Ge
 	return result, nil
 }
 `
-	ClientTmplateString[persist.PersistenceOptions_SQL] = `
+	ClientTemplateString[persist.PersistenceOptions_SQL] = `
 func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
 		{{range $field := .GetSafeResponseFields}}
@@ -122,5 +122,15 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.Ge
 
 	return result, nil
 }
+`
+	MongoUnaryTemplateString[persit.PersistenceOptions_MONGO]  = `
+	func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx, context.Context, req {{.GetRequestType}}), ({{.GetResponseType}, error) {
+		resultBson := mgo.DB("{{.GetDbName}}").Collection("{{.GetCollection}}").{{.GetQuery}}.One()
+
+		res := &{{.GetResponseType}}{}
+
+		utils.FromMongo(res, resultBson, {{.GetMongoMap}})
+		return res, nil
+	}
 `
 }
