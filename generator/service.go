@@ -196,6 +196,16 @@ func (s *{{.GetServiceImplName}}) {{.GetMethod}}(stream {{.GetStreamType}}), err
 	return nil
 }
 `
+	mongoUnary = `
+	func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx, context.Context, req {{.GetRequestType}}), ({{.GetResponseType}, error) {
+		resultBson := mgo.DB("{{.GetDbName}}").Collection("{{.GetCollection}}").{{.GetQuery}}.One()
+
+		res := &{{.GetResponseType}}{}
+
+		utils.FromMongo(res, resultBson, {{.GetMongoMap}})
+		return res, nil
+	}
+`
 )
 
 func init() {
