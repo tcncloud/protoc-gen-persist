@@ -37,15 +37,16 @@ import (
 )
 
 var (
-	UnaryTemplateString  = map[persist.PersistenceOptions]string{}
-	ServerTemplateString = map[persist.PersistenceOptions]string{}
-	ClientTmplateString  = map[persist.PersistenceOptions]string{}
-	BidirTemplateString  = map[persist.PersistenceOptions]string{}
+	UnaryTemplateString       = map[persist.PersistenceOptions]string{}
+	ServerTemplateString      = map[persist.PersistenceOptions]string{}
+	ClientTmplateString       = map[persist.PersistenceOptions]string{}
+	BidirTemplateString       = map[persist.PersistenceOptions]string{}
+	MongoUnaryTemplateString  = map[persist.PersistenceOptions]string{}
 
 	UnaryTemplate        map[persist.PersistenceOptions]*template.Template
 	ServerStreamTemplate map[persist.PersistenceOptions]*template.Template
 	ClientStreamTemplate map[persist.PersistenceOptions]*template.Template
-	BidirStreamTemplate  map[persist.PersistenceOptions]*template.Template
+	MongoUnaryTemplate   map[persist.PersistenceOPtions]*tempmlate.Template
 )
 
 func LoadTemplates() {
