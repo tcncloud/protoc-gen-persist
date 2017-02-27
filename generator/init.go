@@ -30,7 +30,7 @@
 package generator
 
 func init() {
-	SetupTemplates()
+	SetupSQLTemplates()
 	SetupStructTemplates()
 	LoadTemplates()
 }

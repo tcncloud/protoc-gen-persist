@@ -31,7 +31,7 @@ package generator
 
 import "github.com/tcncloud/protoc-gen-persist/persist"
 
-func SetupTemplates() {
+func SetupSQLTemplates() {
 	UnaryTemplateString[persist.PersistenceOptions_SQL] = `
 func (s *{{.GetServiceImplName}}) {{.GetMethod}}(ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
