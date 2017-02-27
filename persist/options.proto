@@ -26,7 +26,7 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-syntax = "proto3";
+syntax = "proto2";
 
 package persist;
 
@@ -36,22 +36,71 @@ option go_package="github.com/tcncloud/protoc-gen-persist/persist;persist";
 
 
 extend google.protobuf.MethodOptions {
-    QLImpl ql = 560000;
+    optional QLImpl ql = 560000;
+}
+
+extend google.protobuf.ServiceOptions {
+    optional TypeMapping mapping = 560001;
 }
 
 enum PersistenceOptions {
     SQL = 0;
 }
 
-enum VariableMapping {
-    PG_SQL = 0;
-    NONE = 100; 
-
-}
 
 message QLImpl {
-    string query = 1;
+    // the query string with numeric placeholders for parameters
+    required string query = 1;
+
+    // in order list of argument names that will be used as parameters for the query 
+    // the list of arguments represents the field names of the input type message
     repeated string arguments = 2;
-    PersistenceOptions persist = 3;
-    VariableMapping mapping = 4; 
+
+    // persistence option, right now it has only one option, SQL 
+    // more options will be added when new query languages will be supported
+    optional PersistenceOptions persist = 3;
+
+    // method level type mapping, if this does not exist it will be 
+    // used the type mapping at the service level, if that one will not exist 
+    // it will be used the default one, the code can be found 
+    // generator/service.go function GetSafeType()
+    optional TypeMapping mapping = 4;
+
+    // Callback definition function 
+    // define the name and the package of a function with the signature
+    // func CallbackFunction(message pb.Message) (pb.Message, error)
+    message CallbackFunction {
+        // function name 
+        required string name = 1;
+        // function go package name in the following formats 
+        // github.com/repo;package
+        // github.com/package
+        // dir/package
+        // package
+        required string package = 2;
+    }
+    // the before function will be called before running any sql code for 
+    // every input data element and if the return will be not empty/nil and 
+    // the error will be nil the data returned by this function will be 
+    // returned by the function skipping the code execution
+    optional CallbackFunction before = 10;
+    // the after function will be called after running any sql code for 
+    // every output data element, the return data of this function will be ignored
+    optional CallbackFunction after = 11;
+}
+
+message TypeMapping {
+    message TypeDescriptor {
+        // if this is not setup the proto_type must be one of the built-in types
+        optional string proto_type_name =1;
+        // If proto_type_name is set, this need not be set.  If both this and proto_type_name
+        // are set, this must be one of TYPE_ENUM, TYPE_MESSAGE 
+        // TYPE_GROUP is not supported
+        optional google.protobuf.FieldDescriptorProto.Type proto_type= 2;
+        // if proto_label is not setup we consider any option except LABAEL_REPEATED
+        optional google.protobuf.FieldDescriptorProto.Label proto_label = 3;
+        required string go_type = 4;
+        required string go_package = 5;
+    }
+    repeated TypeDescriptor types = 1;
 }

@@ -34,6 +34,9 @@ import (
 
 	"bytes"
 
+	"fmt"
+	"strings"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
@@ -87,7 +90,7 @@ return fmt.Errorf("can't convert %+v to {{.GetGoName}}",src)
 }`
 )
 
-func init() {
+func SetupStructTemplates() {
 	var err error
 	valueTemplate, err = template.New("valueFunc").Parse(valueFuncTemplate)
 	if err != nil {
@@ -125,6 +128,16 @@ func (s *Struct) String() string {
 		return "FATAL ERROR"
 	}
 
+}
+
+func (s *Struct) GetGoPath() string {
+	if s.File.Options != nil && s.File.GetOptions().GoPackage != nil {
+		return s.File.GetOptions().GetGoPackage()
+	} else {
+		return fmt.Sprintf("%s;%s",
+			s.File.GetName()[0:strings.LastIndex(s.File.GetName(), "/")],
+			strings.Replace(s.File.GetPackage(), ".", "_", -1))
+	}
 }
 
 func (s *Struct) IsInnerType() bool {

@@ -64,6 +64,7 @@ func NewFileStruct(proto *descriptor.FileDescriptorProto) *FileStruct {
 		&Import{ProtoFileName: "", ProtoPackageName: "", GoPackageName: "sql", GoImportPath: "database/sql"},
 		&Import{ProtoFileName: "", ProtoPackageName: "", GoPackageName: "driver", GoImportPath: "database/sql/driver"},
 		&Import{ProtoFileName: "", ProtoPackageName: "", GoPackageName: "jsonpb", GoImportPath: "github.com/golang/protobuf/jsonpb"},
+		&Import{ProtoFileName: "", ProtoPackageName: "", GoPackageName: "_utils", GoImportPath: "github.com/tcncloud/protoc-gen-persist/utils"},
 	}
 
 	return ret

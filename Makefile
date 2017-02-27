@@ -54,7 +54,7 @@ build: generate
 install: build
 	go install
 
-test: deps
+test: deps build
 	ginkgo -r 
 
 test-compile: build
@@ -75,3 +75,6 @@ $(GOPATH)/bin/ginkgo:
 
 $(GOPATH)/bin/glide:
 	go get -u github.com/Masterminds/glide
+
+clean:
+	rm -f examples/*.pb.go examples/*.persist.go examples/test/*.pb.go
