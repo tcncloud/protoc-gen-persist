@@ -88,7 +88,7 @@ return fmt.Errorf("can't convert %+v to {{.GetGoName}}",src)
 }`
 )
 
-func init() {
+func SetupStructTemplates() {
 	var err error
 	valueTemplate, err = template.New("valueFunc").Parse(valueFuncTemplate)
 	if err != nil {
