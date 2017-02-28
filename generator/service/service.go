@@ -27,34 +27,41 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package generator
+package service
 
 import (
 	"bytes"
+	"text/template"
 
 	"strings"
-
-	"fmt"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
+	"github.com/tcncloud/protoc-gen-persist/generator/file"
+	"github.com/tcncloud/protoc-gen-persist/generator/structures"
+	"github.com/tcncloud/protoc-gen-persist/generator/utils"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
+
+const serviceTempalteString = `type {{.GetServiceImplName}} struct {
+	{{if .IsSql}} DB *sql.DB {{end}}
+	{{if .IsMongo}} Session *mgo.Session {{end}}
+}`
 
 type Service struct {
 	Desc              *descriptor.ServiceDescriptorProto
 	File              *descriptor.FileDescriptorProto
-	AllStruct         *StructList
-	ImplementedStruct *StructList
-	Files             *FileList
+	AllStruct         *structures.StructList
+	ImplementedStruct *structures.StructList
+	Files             *file.FileList
 	Methods           []*Method
 }
 
 func NewService(service *descriptor.ServiceDescriptorProto,
-	file *descriptor.FileDescriptorProto, allStruct *StructList, implStruct *StructList, files *FileList) *Service {
+	file *descriptor.FileDescriptorProto, allStruct *structures.StructList, implStruct *structures.StructList, files *file.FileList) *Service {
 	s := &Service{
 		Desc:              service,
 		File:              file,
@@ -76,13 +83,43 @@ func (s *Service) AddMethod(m *Method) {
 	}
 }
 
+func (s *Service) GenTypeStruct() string {
+	t, err := template.New("type_struct").Parse(serviceTempalteString)
+	if err != nil {
+		logrus.WithError(err).Fatal("Fatal error parsing inline template")
+	}
+	var b bytes.Buffer
+	err = t.Execute(&b, s)
+	if err != nil {
+		logrus.WithError(err).Error("error processing tempalte")
+	}
+
+	return b.String()
+}
+
+func (s *Service) IsSql() bool {
+	for _, method := range s.Desc.GetMethod() {
+		if opt := utils.GetMethodOption(method); opt.GetPersist() == persist.PersistenceOptions_SQL {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) IsMongo() bool {
+	for _, method := range s.Desc.GetMethod() {
+		if opt := utils.GetMethodOption(method); opt.GetPersist() == persist.PersistenceOptions_MONGO {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Service) Generate() string {
-	ret := fmt.Sprintf(`type %sImpl struct {
-		DB *sql.DB
-	}`, s.Desc.GetName())
+	ret := s.GenTypeStruct()
 
 	for _, method := range s.Desc.GetMethod() {
-		if opt := GetMethodOption(method); opt != nil {
+		if opt := utils.GetMethodOption(method); opt != nil {
 			m := NewMethod(method, s.Desc, opt, s.File, s.AllStruct, s.ImplementedStruct, s.Files)
 			ret += m.Generate()
 			s.AddMethod(m)
@@ -90,25 +127,28 @@ func (s *Service) Generate() string {
 	}
 	return ret
 }
+func (s *Service) GetServiceImplName() string {
+	return _gen.CamelCase(s.Desc.GetName() + "Impl")
+}
 
 type Method struct {
 	Desc              *descriptor.MethodDescriptorProto
 	Service           *descriptor.ServiceDescriptorProto
 	Options           *persist.QLImpl
 	File              *descriptor.FileDescriptorProto
-	AllStruct         *StructList
-	ImplementedStruct *StructList
+	AllStruct         *structures.StructList
+	ImplementedStruct *structures.StructList
 	ImportList        map[string]string
-	Files             *FileList
+	Files             *file.FileList
 }
 
 func NewMethod(method *descriptor.MethodDescriptorProto,
 	service *descriptor.ServiceDescriptorProto,
 	opt *persist.QLImpl,
 	file *descriptor.FileDescriptorProto,
-	allStruct *StructList,
-	implStruct *StructList,
-	files *FileList) *Method {
+	allStruct *structures.StructList,
+	implStruct *structures.StructList,
+	files *file.FileList) *Method {
 
 	m := &Method{
 		Desc:              method,
@@ -192,7 +232,7 @@ func (m *Method) GetServiceTypeMapping() *persist.TypeMapping {
 	}
 	return nil
 }
-func (m *Method) GetServiceFile() *FileStruct {
+func (m *Method) GetServiceFile() *file.FileStruct {
 	return m.Files.GetFileByDesc(m.File)
 }
 
@@ -203,7 +243,6 @@ func (m *Method) GetMethodTypeMapping() *persist.TypeMapping {
 // GetUserSafeType is processing a field against the method or service defined options
 // and process and register the necessary imports
 func (m *Method) GetUserSafeType(field *descriptor.FieldDescriptorProto) string {
-	logrus.WithField("field", field).Debug("checking field")
 	list := func() *persist.TypeMapping {
 		if mp := m.GetMethodTypeMapping(); mp != nil {
 			return mp
@@ -213,10 +252,8 @@ func (m *Method) GetUserSafeType(field *descriptor.FieldDescriptorProto) string 
 		}
 		return nil
 	}()
-	logrus.WithField("list", list).Debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	if list != nil {
 		for _, mp := range list.Types {
-			logrus.WithField("mapping", mp).Debug("User defined mapping")
 			// we have a message mapping where we map a message like
 			// .google.protobuf.Timestamp to a go structure
 			if mp.ProtoTypeName != nil &&
@@ -228,7 +265,7 @@ func (m *Method) GetUserSafeType(field *descriptor.FieldDescriptorProto) string 
 					mp.GetProtoType() == field.GetType() &&
 					((mp.ProtoLabel == nil && field.Label == nil) ||
 						(mp.GetProtoLabel() == field.GetLabel())) {
-					pkg, url := GetGoPackageAndPathFromURL(mp.GetGoPackage())
+					pkg, url := utils.GetGoPackageAndPathFromURL(mp.GetGoPackage())
 					// register package with the method file
 					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
 					// return go_type
@@ -244,7 +281,7 @@ func (m *Method) GetUserSafeType(field *descriptor.FieldDescriptorProto) string 
 					mp.GetProtoType() != descriptor.FieldDescriptorProto_TYPE_GROUP) {
 				if mp.GetProtoLabel() == field.GetLabel() &&
 					mp.GetProtoType() == field.GetType() {
-					pkg, url := GetGoPackageAndPathFromURL(mp.GetGoPackage())
+					pkg, url := utils.GetGoPackageAndPathFromURL(mp.GetGoPackage())
 					// register package with the method file
 					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
 					// return go_type
@@ -263,6 +300,8 @@ func (m *Method) GetSafeType(field *descriptor.FieldDescriptorProto) string {
 	if ret := m.GetUserSafeType(field); ret != "" {
 		return ret
 	}
+
+	logrus.Debug("Checking in default list ")
 
 	switch field.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_DOUBLE:
@@ -294,10 +333,10 @@ func (m *Method) GetSafeType(field *descriptor.FieldDescriptorProto) string {
 				if s.File.GetPackage() == m.File.GetPackage() {
 					return field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
 				} else {
-					pkg, url := GetGoPackageAndPathFromURL(s.GetGoPath())
+					pkg, url := utils.GetGoPackageAndPathFromURL(s.GetGoPath())
 					// register package with the method file
 					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
-					return pkg + "." + field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
+					return pkg + "." + s.GetGoName()
 				}
 			}
 		} else {
@@ -312,10 +351,10 @@ func (m *Method) GetSafeType(field *descriptor.FieldDescriptorProto) string {
 				if s.File.GetPackage() == m.File.GetPackage() {
 					return field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
 				} else {
-					pkg, url := GetGoPackageAndPathFromURL(s.GetGoPath())
+					pkg, url := utils.GetGoPackageAndPathFromURL(s.GetGoPath())
 					// register package with the method file
 					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
-					return pkg + "." + field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
+					return pkg + "." + s.GetGoName()
 				}
 			}
 		} else {
@@ -379,7 +418,16 @@ func (m *Method) GetQuery() string {
 }
 
 func (m *Method) GetQueryParams() []string {
-	return m.Options.Arguments
+	var ret []string
+	inputTyp := m.AllStruct.GetEntry(m.Desc.GetInputType())
+	for _, a := range m.Options.Arguments {
+		arg, err := inputTyp.GetGoFieldNameByProtoName(a)
+		if err != nil {
+			logrus.WithError(err).Fatalf("unknown argument %s !", a)
+		}
+		ret = append(ret, arg)
+	}
+	return ret
 }
 
 func (m *Method) Generate() string {

@@ -27,12 +27,11 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package generator
+package structures
 
 import (
-	"text/template"
-
 	"bytes"
+	"html/template"
 
 	"fmt"
 	"strings"
@@ -55,7 +54,6 @@ func (s {{.GetGoName}}) Value() (driver.Value, error) {
 	buf, err := marshaler.MarshalToString(&s)
 	if err != nil {
 		return driver.Value(""), fmt.Errorf("Can't serialize to json structure %+v", s)
-
 	}
 	return driver.Value(buf), nil
 {{end}}
@@ -90,7 +88,7 @@ return fmt.Errorf("can't convert %+v to {{.GetGoName}}",src)
 }`
 )
 
-func SetupStructTemplates() {
+func init() {
 	var err error
 	valueTemplate, err = template.New("valueFunc").Parse(valueFuncTemplate)
 	if err != nil {
@@ -128,6 +126,20 @@ func (s *Struct) String() string {
 		return "FATAL ERROR"
 	}
 
+}
+
+func (s *Struct) GetGoFieldNameByProtoName(name string) (string, error) {
+	if s.IsMessage() {
+		for _, f := range s.MessageDescriptor.GetField() {
+			if f.GetName() == name {
+				return _gen.CamelCase(f.GetName()), nil
+			}
+		}
+		return "", fmt.Errorf("Can't find field %s in %s", name, s.GetName())
+
+	} else {
+		return "", fmt.Errorf("structure %s is not a message!", s.GetName())
+	}
 }
 
 func (s *Struct) GetGoPath() string {
@@ -173,12 +185,17 @@ func (s *Struct) GetName() string {
 }
 
 func (s *Struct) GetGoName() string {
-	if s.ParentDescriptor != nil {
+	if s.IsInnerType() {
 		if s.IsMessage() {
-
-			return _gen.CamelCaseSlice([]string{s.ParentDescriptor.GetName(), s.MessageDescriptor.GetName()})
+			return strings.Join([]string{
+				_gen.CamelCase(s.ParentDescriptor.GetName()),
+				_gen.CamelCase(s.MessageDescriptor.GetName()),
+			}, "_")
 		} else {
-			return _gen.CamelCaseSlice([]string{s.ParentDescriptor.GetName(), s.EnumDescriptor.GetName()})
+			return strings.Join([]string{
+				_gen.CamelCase(s.ParentDescriptor.GetName()),
+				_gen.CamelCase(s.EnumDescriptor.GetName()),
+			}, "_")
 		}
 	} else {
 		if s.IsMessage() {

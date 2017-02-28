@@ -27,15 +27,21 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package generator
+package utils
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/tcncloud/protoc-gen-persist/persist"
+)
 
 // GetGoPackageAndPathFromURL returns go package name & path from a go path url
 // url formats supported
 //  - github.com/package;package_go -> package_go, github.com/package
 //  - github.com/package -> package, github.com/package
-//  - pacakge/test -> test, package/pacakge
+//  - pacakge/test -> test, package/test
 //  - package -> package, package
 func GetGoPackageAndPathFromURL(goURL string) (string, string) {
 	if idx := strings.LastIndex(goURL, ";"); idx >= 0 {
@@ -49,4 +55,32 @@ func GetGoPackageAndPathFromURL(goURL string) (string, string) {
 	} else {
 		return goURL, goURL
 	}
+}
+
+// check if a service has at least one method that has the persist.ql extension defined
+func IsServicePersistEnabled(service *descriptor.ServiceDescriptorProto) bool {
+	if service.Method != nil {
+		for _, method := range service.Method {
+			if IsMethodEnabled(method) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func IsMethodEnabled(method *descriptor.MethodDescriptorProto) bool {
+	if method != nil && method.GetOptions() != nil && proto.HasExtension(method.Options, persist.E_Ql) {
+		return true
+	}
+	return false
+}
+
+func GetMethodOption(method *descriptor.MethodDescriptorProto) *persist.QLImpl {
+	if IsMethodEnabled(method) {
+		if ret, err := proto.GetExtension(method.Options, persist.E_Ql); err == nil {
+			return ret.(*persist.QLImpl)
+		}
+	}
+	return nil
 }

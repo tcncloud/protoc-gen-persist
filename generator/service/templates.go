@@ -27,7 +27,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package generator
+package service
 
 import (
 	"text/template"
@@ -48,7 +48,10 @@ var (
 	BidirStreamTemplate  map[persist.PersistenceOptions]*template.Template
 )
 
-func LoadTemplates() {
+func init() {
+	SetupMongoTemplates()
+	SetupSQLTemplates()
+
 	var err error
 	UnaryTemplate, err = InitTemplates("unary", UnaryTemplateString)
 	if err != nil {

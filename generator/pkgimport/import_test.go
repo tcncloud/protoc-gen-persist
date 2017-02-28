@@ -27,19 +27,49 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package generator
+package pkgimport_test
 
 import (
-	"strconv"
+	. "github.com/tcncloud/protoc-gen-persist/generator/pkgimport"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-type Import struct {
-	ProtoFileName    string
-	ProtoPackageName string
-	GoPackageName    string
-	GoImportPath     string
-}
+var _ = Describe("Import", func() {
 
-func (i *Import) GetImportString() string {
-	return i.GoPackageName + " " + strconv.Quote(i.GoImportPath)
-}
+})
+
+var _ = Describe("Imports", func() {
+	il := NewImports()
+	Describe("function Exist()", func() {
+		Describe("for fmt import path", func() {
+			It("should return true", func() {
+				Expect(il.Exist("fmt")).To(Equal(true))
+			})
+		})
+		Describe("for github.com/tcncloud", func() {
+			It("should return false", func() {
+				Expect(il.Exist("github.com/tcncloud")).To(Equal(false))
+			})
+		})
+	})
+	Describe("function Append", func() {
+		Describe("append github.com/namtzigla import", func() {
+			It("should succeed", func() {
+				il.Append(&Import{GoPackageName: "nam", GoImportPath: "github.com/nam"})
+				Expect(il.Exist("github.com/nam")).To(Equal(true))
+			})
+		})
+
+	})
+	Describe("funcion Generate()", func() {
+		Describe("for a new Imports structure", func() {
+			It("should return a valid import statement", func() {
+				i := NewImports()
+				expectString := "import(\n \"fmt\" fmt \n \"sql\" database/sql \n \"driver\" database/sql/driver \n \"jsonpb\" github.com/golang/protobuf/jsonpb \n\n)"
+				Expect(i.Generate()).To(Equal(expectString))
+			})
+		})
+	})
+})

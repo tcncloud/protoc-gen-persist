@@ -34,36 +34,43 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/tcncloud/protoc-gen-persist/persist"
+	"github.com/tcncloud/protoc-gen-persist/generator/file"
+	"github.com/tcncloud/protoc-gen-persist/generator/service"
+	"github.com/tcncloud/protoc-gen-persist/generator/structures"
+	"github.com/tcncloud/protoc-gen-persist/generator/utils"
 )
+
+type GeneratorStruct interface {
+	Generate() string
+}
 
 type Generator struct {
 	OriginalRequest *plugin_go.CodeGeneratorRequest
 	// Response        *plugin_go.CodeGeneratorResponse
 
 	// structures that need Value() and Scan() implementation
-	ImplementedStructures *StructList
-	AllStructures         *StructList
+	ImplementedStructures *structures.StructList
+	AllStructures         *structures.StructList
 
 	currentFile    *descriptor.FileDescriptorProto    // current processing file
 	currentService *descriptor.ServiceDescriptorProto // current processing service
 
-	files *FileList
+	files *file.FileList
 }
 
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret := new(Generator)
 	ret.OriginalRequest = request
 	// ret.Response = new(plugin_go.CodeGeneratorResponse)
-	ret.ImplementedStructures = NewStructList()
-	ret.AllStructures = NewStructList()
-	ret.files = NewFileList()
+	ret.ImplementedStructures = structures.NewStructList()
+	ret.AllStructures = structures.NewStructList()
+	ret.files = file.NewFileList()
 	return ret
 }
 
 func (g *Generator) GetResponse() *plugin_go.CodeGeneratorResponse {
 	ret := new(plugin_go.CodeGeneratorResponse)
-	for _, fileStruct := range g.files.List {
+	for _, fileStruct := range *g.files {
 		// format file Content
 
 		ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
@@ -185,43 +192,15 @@ func (g *Generator) ProcessServices() {
 		if !g.IsDependency(file) {
 			outFile := g.files.NewOrGetFile(file)
 
-			for _, service := range file.Service {
-				g.currentService = service
-				if IsServicePersistEnabled(service) {
-					srv := NewService(service, file, g.AllStructures, g.ImplementedStructures, g.files)
-					outFile.P(srv.Generate())
+			for _, srv := range file.Service {
+				g.currentService = srv
+				if utils.IsServicePersistEnabled(srv) {
+					s := service.NewService(srv, file, g.AllStructures, g.ImplementedStructures, g.files)
+					outFile.P(s.Generate())
 				}
 			}
 		}
 	}
-}
-
-// check if a service has at least one method that has the persist.ql extension defined
-func IsServicePersistEnabled(service *descriptor.ServiceDescriptorProto) bool {
-	if service.Method != nil {
-		for _, method := range service.Method {
-			if IsMethodEnabled(method) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func IsMethodEnabled(method *descriptor.MethodDescriptorProto) bool {
-	if method != nil && method.GetOptions() != nil && proto.HasExtension(method.Options, persist.E_Ql) {
-		return true
-	}
-	return false
-}
-
-func GetMethodOption(method *descriptor.MethodDescriptorProto) *persist.QLImpl {
-	if IsMethodEnabled(method) {
-		if ret, err := proto.GetExtension(method.Options, persist.E_Ql); err == nil {
-			return ret.(*persist.QLImpl)
-		}
-	}
-	return nil
 }
 
 // Process the request

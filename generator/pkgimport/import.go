@@ -27,53 +27,79 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package pkgimport
 
 import (
-	"io/ioutil"
-	"os"
+	"strconv"
+	"text/template"
 
-	"fmt"
+	"bytes"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/tcncloud/protoc-gen-persist/generator"
 )
 
-func init() {
-	if os.Getenv("DEBUG") != "" {
-		logrus.SetLevel(logrus.DebugLevel)
+const importStringTemplate = `import(
+{{range $imp := .}} "{{$imp.GoPackageName}}" {{ $imp.GoImportPath}} 
+{{end}}
+)`
+
+var importTemplate *template.Template
+
+func InitImports() {
+	var err error
+	importTemplate, err = template.New("ImportTemplate").Parse(importStringTemplate)
+	if err != nil {
+		logrus.WithError(err).Fatal("Fail to parse the embedded import template")
 	}
 }
 
-func main() {
-	if len(os.Args) > 1 {
-		fmt.Println("This executable is ment to be used by protoc!\nGo to http://github.com/tcncloud/protoc-gen-persist for more info")
-		os.Exit(-1)
-	}
-	var req plugin_go.CodeGeneratorRequest
+type Import struct {
+	GoPackageName string
+	GoImportPath  string
+}
 
-	data, err := ioutil.ReadAll(os.Stdin)
+func (i *Import) GetImportString() string {
+	return i.GoPackageName + " " + strconv.Quote(i.GoImportPath)
+}
+
+func (i *Import) EqGoPackagePath(pkg string) bool {
+	return pkg == i.GoImportPath
+}
+
+func (i *Import) EqGoPackageName(name string) bool {
+	return i.GoPackageName == name
+}
+
+type Imports []*Import
+
+func NewImports() *Imports {
+	return &Imports{
+		&Import{GoPackageName: "fmt", GoImportPath: "fmt"},
+		&Import{GoPackageName: "sql", GoImportPath: "database/sql"},
+		&Import{GoPackageName: "driver", GoImportPath: "database/sql/driver"},
+		&Import{GoPackageName: "jsonpb", GoImportPath: "github.com/golang/protobuf/jsonpb"},
+	}
+}
+
+func (is *Imports) Append(imp *Import) error {
+	*is = append(*is, imp)
+	return nil
+}
+
+func (is *Imports) Exist(goPath string) bool {
+	for _, im := range *is {
+		if im.EqGoPackagePath(goPath) {
+			return true
+		}
+	}
+	return false
+}
+
+func (is *Imports) Generate() string {
+	var buf bytes.Buffer
+	err := importTemplate.Execute(&buf, is)
 	if err != nil {
-		logrus.Fatal("Can't read the stdin!")
+		logrus.WithError(err).Fatal("Fatal error processing import tempalte")
 	}
-
-	if err := proto.Unmarshal(data, &req); err != nil {
-		logrus.Fatal("Error parsing data!")
-	}
-	// DO processing
-	g := generator.NewGenerator(&req)
-	g.ProcessRequest()
-
-	// Send back the results.
-	data, err = proto.Marshal(g.GetResponse())
-	if err != nil {
-		logrus.Fatal("I can't serialize response")
-	}
-	_, err = os.Stdout.Write(data)
-	if err != nil {
-		logrus.Fatal("Can't send data to stdout!")
-	}
-
+	return buf.String()
 }
