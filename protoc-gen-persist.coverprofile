@@ -1,0 +1,13 @@
+mode: atomic
+github.com/tcncloud/protoc-gen-persist/main.go:44.13,45.30 1 1
+github.com/tcncloud/protoc-gen-persist/main.go:45.30,47.3 1 0
+github.com/tcncloud/protoc-gen-persist/main.go:50.13,51.22 1 0
+github.com/tcncloud/protoc-gen-persist/main.go:55.2,58.16 3 0
+github.com/tcncloud/protoc-gen-persist/main.go:62.2,62.52 1 0
+github.com/tcncloud/protoc-gen-persist/main.go:66.2,71.16 4 0
+github.com/tcncloud/protoc-gen-persist/main.go:74.2,75.16 2 0
+github.com/tcncloud/protoc-gen-persist/main.go:51.22,54.3 2 0
+github.com/tcncloud/protoc-gen-persist/main.go:58.16,60.3 1 0
+github.com/tcncloud/protoc-gen-persist/main.go:62.52,64.3 1 0
+github.com/tcncloud/protoc-gen-persist/main.go:71.16,73.3 1 0
+github.com/tcncloud/protoc-gen-persist/main.go:75.16,77.3 1 0

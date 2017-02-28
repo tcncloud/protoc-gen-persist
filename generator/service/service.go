@@ -31,10 +31,7 @@ package service
 
 import (
 	"bytes"
-<<<<<<< HEAD:generator/service/service.go
 	"text/template"
-=======
->>>>>>> 5b939a9d643bc2221c32c6177055d4d393c5b8b4:generator/service.go
 
 	"strings"
 
@@ -49,14 +46,11 @@ import (
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
-<<<<<<< HEAD:generator/service/service.go
 const serviceTempalteString = `type {{.GetServiceImplName}} struct {
 	{{if .IsSql}} DB *sql.DB {{end}}
 	{{if .IsMongo}} Session *mgo.Session {{end}}
 }`
 
-=======
->>>>>>> 5b939a9d643bc2221c32c6177055d4d393c5b8b4:generator/service.go
 type Service struct {
 	Desc              *descriptor.ServiceDescriptorProto
 	File              *descriptor.FileDescriptorProto
@@ -238,11 +232,7 @@ func (m *Method) GetServiceTypeMapping() *persist.TypeMapping {
 	}
 	return nil
 }
-<<<<<<< HEAD:generator/service/service.go
 func (m *Method) GetServiceFile() *file.FileStruct {
-=======
-func (m *Method) GetServiceFile() *FileStruct {
->>>>>>> 5b939a9d643bc2221c32c6177055d4d393c5b8b4:generator/service.go
 	return m.Files.GetFileByDesc(m.File)
 }
 
