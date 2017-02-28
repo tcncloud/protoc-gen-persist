@@ -30,15 +30,10 @@
 package structures
 
 import (
-	"bytes"
 	"html/template"
 
-	"fmt"
-	"strings"
-
 	"github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
+	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 )
 
 var (
@@ -88,231 +83,58 @@ return fmt.Errorf("can't convert %+v to {{.GetGoName}}",src)
 }`
 )
 
-func SetupStructTemplates() {
+func init() {
 	var err error
-	valueTemplate, err = template.New("valueFunc").Parse(valueFuncTemplate)
+	valueTemplate, err = template.New("ValueFunc").Parse(valueFuncTemplate)
 	if err != nil {
 		logrus.Fatal("Error parsing value function template!")
 	}
-	scanTemplate, err = template.New("scanFunc").Parse(scanFuncTemplate)
+	scanTemplate, err = template.New("ScanFunc").Parse(scanFuncTemplate)
 	if err != nil {
 		logrus.Fatal("Error parsing scan function template!")
 	}
 
 }
 
+type GenericDescriptor interface {
+	GetName() string
+}
+
 type Struct struct {
-	EnumDescriptor    *descriptor.EnumDescriptorProto
-	MessageDescriptor *descriptor.DescriptorProto
-	ParentDescriptor  *descriptor.DescriptorProto
-	File              *descriptor.FileDescriptorProto
+	Descriptor       GenericDescriptor
+	Package          string
+	ParentDescriptor *Struct
+	IsMessage        bool
+	IsInnerType      bool
 }
 
-func (s *Struct) String() string {
-	if s.EnumDescriptor == nil {
-		if s.ParentDescriptor != nil {
-			return "." + s.File.GetPackage() + "." + s.ParentDescriptor.GetName() + "." + s.MessageDescriptor.GetName()
-		} else {
-			return "." + s.File.GetPackage() + "." + s.MessageDescriptor.GetName()
-		}
-
-	} else if s.MessageDescriptor == nil {
-		if s.ParentDescriptor != nil {
-			return "." + s.File.GetPackage() + "." + s.ParentDescriptor.GetName() + "." + s.EnumDescriptor.GetName()
-		} else {
-			return "." + s.File.GetPackage() + "." + s.EnumDescriptor.GetName()
-		}
-	} else {
-		return "FATAL ERROR"
-	}
-
-}
-
-func (s *Struct) GetGoFieldNameByProtoName(name string) (string, error) {
-	if s.IsMessage() {
-		for _, f := range s.MessageDescriptor.GetField() {
-			if f.GetName() == name {
-				return _gen.CamelCase(f.GetName()), nil
-			}
-		}
-		return "", fmt.Errorf("Can't find field %s in %s", name, s.GetName())
-
-	} else {
-		return "", fmt.Errorf("structure %s is not a message!", s.GetName())
-	}
-}
-
-func (s *Struct) GetGoPath() string {
-	if s.File.Options != nil && s.File.GetOptions().GoPackage != nil {
-		return s.File.GetOptions().GetGoPackage()
-	} else {
-		return fmt.Sprintf("%s;%s",
-			s.File.GetName()[0:strings.LastIndex(s.File.GetName(), "/")],
-			strings.Replace(s.File.GetPackage(), ".", "_", -1))
-	}
-}
-
-func (s *Struct) IsInnerType() bool {
-	return (s.ParentDescriptor != nil)
-}
-
-func (s *Struct) GetValueFunction() string {
-	var tpl bytes.Buffer
-	if err := valueTemplate.Execute(&tpl, s); err != nil {
-		logrus.Fatal("Error processing value function temaplate")
-	}
-	return tpl.String()
-}
-
-func (s *Struct) GetScanFunction() string {
-	var tpl bytes.Buffer
-	if err := scanTemplate.Execute(&tpl, s); err != nil {
-		logrus.Fatal("Error processing scan function temaplate")
-	}
-	return tpl.String()
-}
-
-func (s *Struct) IsMessage() bool {
-	return s.MessageDescriptor != nil && s.EnumDescriptor == nil
-}
-
-func (s *Struct) IsEnum() bool {
-	return s.MessageDescriptor == nil && s.EnumDescriptor != nil
-}
-
-func (s *Struct) GetName() string {
-	return s.String()
-}
-
-func (s *Struct) GetGoName() string {
-	if s.IsInnerType() {
-		if s.IsMessage() {
-			return strings.Join([]string{
-				_gen.CamelCase(s.ParentDescriptor.GetName()),
-				_gen.CamelCase(s.MessageDescriptor.GetName()),
-			}, "_")
-		} else {
-			return strings.Join([]string{
-				_gen.CamelCase(s.ParentDescriptor.GetName()),
-				_gen.CamelCase(s.EnumDescriptor.GetName()),
-			}, "_")
-		}
-	} else {
-		if s.IsMessage() {
-			return _gen.CamelCase(s.MessageDescriptor.GetName())
-		} else {
-			return _gen.CamelCase(s.EnumDescriptor.GetName())
-		}
-	}
-}
-
-func (s *Struct) Equal(obj *Struct) bool {
-	return ((s.ParentDescriptor == nil && obj.ParentDescriptor == nil) || (s.ParentDescriptor.GetName() == obj.ParentDescriptor.GetName())) &&
-		((s.EnumDescriptor == nil && obj.EnumDescriptor == nil) || (s.EnumDescriptor.GetName() == obj.EnumDescriptor.GetName())) &&
-		((s.MessageDescriptor == nil && obj.MessageDescriptor == nil) || (s.MessageDescriptor.GetName() == obj.MessageDescriptor.GetName())) &&
-		(s.File.GetName() == obj.File.GetName())
-}
-
-type StructList struct {
-	List []*Struct
-}
+type StructList []*Struct
 
 func NewStructList() *StructList {
-	return new(StructList)
+	return &StructList{}
 }
 
-func (sl *StructList) GetMessage(msg, parent *descriptor.DescriptorProto, file *descriptor.FileDescriptorProto) *Struct {
-	for _, m := range sl.List {
-		if m.IsMessage() {
-			if (m.ParentDescriptor == nil && parent == nil) || (m.ParentDescriptor.GetName() == parent.GetName()) {
-				if msg.GetName() == m.MessageDescriptor.GetName() &&
-					file.GetPackage() == m.File.GetPackage() {
-					return m
-				}
-			}
-		}
+func (s *StructList) AddEnum(enum *desc.EnumDescriptorProto, parent *Struct, pkg string) *Struct {
+	str := &Struct{
+		IsMessage:        false,
+		IsInnerType:      (parent != nil),
+		Descriptor:       enum,
+		ParentDescriptor: parent,
+		Package:          pkg,
 	}
-	return nil
-}
 
-func (sl *StructList) GetEnum(enum *descriptor.EnumDescriptorProto, parent *descriptor.DescriptorProto, file *descriptor.FileDescriptorProto) *Struct {
-	for _, m := range sl.List {
-		if m.IsEnum() {
-			if (m.ParentDescriptor == nil && parent == nil) || (m.ParentDescriptor.GetName() == parent.GetName()) {
-				if enum.GetName() == m.EnumDescriptor.GetName() &&
-					file.GetPackage() == m.File.GetPackage() {
-					return m
-				}
-			}
-		}
-	}
-	return nil
+	*s = append(*s, str)
+	return str
 }
-
-func (sl *StructList) ContainMessage(msg, parent *descriptor.DescriptorProto, file *descriptor.FileDescriptorProto) bool {
-	for _, m := range sl.List {
-		if m.IsMessage() {
-			if (m.ParentDescriptor == nil && parent == nil) || (m.ParentDescriptor.GetName() == parent.GetName()) {
-				if msg.GetName() == m.MessageDescriptor.GetName() &&
-					file.GetPackage() == m.File.GetPackage() {
-					return true
-				}
-			}
-		}
+func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, pkg string) *Struct {
+	str := &Struct{
+		IsMessage:        true,
+		IsInnerType:      (parent != nil),
+		Descriptor:       message,
+		ParentDescriptor: parent,
+		Package:          pkg,
 	}
-	return false
-}
 
-func (sl *StructList) ContainEnum(enum *descriptor.EnumDescriptorProto, parent *descriptor.DescriptorProto, file *descriptor.FileDescriptorProto) bool {
-	for _, m := range sl.List {
-		if m.IsEnum() {
-			if (m.ParentDescriptor == nil && parent == nil) || (m.ParentDescriptor.GetName() == parent.GetName()) {
-				if enum.GetName() == m.EnumDescriptor.GetName() &&
-					file.GetPackage() == m.File.GetPackage() {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
-func (sl *StructList) AddMessage(msg, parent *descriptor.DescriptorProto, file *descriptor.FileDescriptorProto) {
-	if !sl.ContainMessage(msg, parent, file) {
-		sl.List = append(sl.List, &Struct{
-			MessageDescriptor: msg,
-			ParentDescriptor:  parent,
-			File:              file,
-		})
-	}
-}
-
-func (sl *StructList) AddEnum(enum *descriptor.EnumDescriptorProto, parent *descriptor.DescriptorProto, file *descriptor.FileDescriptorProto) {
-	if !sl.ContainEnum(enum, parent, file) {
-		sl.List = append(sl.List, &Struct{
-			EnumDescriptor:   enum,
-			ParentDescriptor: parent,
-			File:             file,
-		})
-	}
-}
-
-func (sl *StructList) GetEntry(name string) *Struct {
-	for _, entry := range sl.List {
-		if entry.GetName() == name {
-			return entry
-		}
-	}
-	return nil
-}
-
-func (sl *StructList) AddStruct(s *Struct) {
-	logrus.WithField("structure", s).Debug("adding structure")
-	for _, x := range sl.List {
-		if x.Equal(s) {
-			return
-		}
-	}
-	sl.List = append(sl.List, s)
-	logrus.Debug("added!")
+	*s = append(*s, str)
+	return str
 }

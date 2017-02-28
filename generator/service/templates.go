@@ -49,7 +49,9 @@ var (
 )
 
 func init() {
+	// initialize mongo templates
 	SetupMongoTemplates()
+	// initialize sql templates
 	SetupSQLTemplates()
 
 	var err error
@@ -75,7 +77,6 @@ func init() {
 func InitTemplates(class string, templateStrings map[persist.PersistenceOptions]string) (map[persist.PersistenceOptions]*template.Template, error) {
 	ret := make(map[persist.PersistenceOptions]*template.Template)
 	for k, v := range templateStrings {
-		logrus.WithField(class, k).Info("-------")
 		r, err := template.New(class + "_" + k.String()).Parse(v)
 		if err != nil {
 			return nil, err

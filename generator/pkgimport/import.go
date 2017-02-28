@@ -29,77 +29,13 @@
 
 package pkgimport
 
-import (
-	"strconv"
-	"text/template"
-
-	"bytes"
-
-	"github.com/Sirupsen/logrus"
-)
-
-const importStringTemplate = `import(
-{{range $imp := .}} "{{$imp.GoPackageName}}" {{ $imp.GoImportPath}} 
-{{end}}
-)`
-
-var importTemplate *template.Template
-
-func InitImports() {
-	var err error
-	importTemplate, err = template.New("ImportTemplate").Parse(importStringTemplate)
-	if err != nil {
-		logrus.WithError(err).Fatal("Fail to parse the embedded import template")
-	}
-}
-
 type Import struct {
 	GoPackageName string
 	GoImportPath  string
 }
 
-func (i *Import) GetImportString() string {
-	return i.GoPackageName + " " + strconv.Quote(i.GoImportPath)
-}
-
-func (i *Import) EqGoPackagePath(pkg string) bool {
-	return pkg == i.GoImportPath
-}
-
-func (i *Import) EqGoPackageName(name string) bool {
-	return i.GoPackageName == name
-}
-
 type Imports []*Import
 
-func NewImports() *Imports {
-	return &Imports{
-		&Import{GoPackageName: "fmt", GoImportPath: "fmt"},
-		&Import{GoPackageName: "sql", GoImportPath: "database/sql"},
-		&Import{GoPackageName: "driver", GoImportPath: "database/sql/driver"},
-		&Import{GoPackageName: "jsonpb", GoImportPath: "github.com/golang/protobuf/jsonpb"},
-	}
-}
-
-func (is *Imports) Append(imp *Import) error {
-	*is = append(*is, imp)
-	return nil
-}
-
-func (is *Imports) Exist(goPath string) bool {
-	for _, im := range *is {
-		if im.EqGoPackagePath(goPath) {
-			return true
-		}
-	}
-	return false
-}
-
-func (is *Imports) Generate() string {
-	var buf bytes.Buffer
-	err := importTemplate.Execute(&buf, is)
-	if err != nil {
-		logrus.WithError(err).Fatal("Fatal error processing import tempalte")
-	}
-	return buf.String()
+func Empty() *Imports {
+	return &Imports{}
 }

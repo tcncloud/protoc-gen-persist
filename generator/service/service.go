@@ -30,19 +30,8 @@
 package service
 
 import (
-	"bytes"
-	"text/template"
-
-	"strings"
-
-	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-
-	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
-	"github.com/tcncloud/protoc-gen-persist/generator/file"
-	"github.com/tcncloud/protoc-gen-persist/generator/structures"
-	"github.com/tcncloud/protoc-gen-persist/generator/utils"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
@@ -52,406 +41,72 @@ const serviceTempalteString = `type {{.GetServiceImplName}} struct {
 }`
 
 type Service struct {
-	Desc              *descriptor.ServiceDescriptorProto
-	File              *descriptor.FileDescriptorProto
-	AllStruct         *structures.StructList
-	ImplementedStruct *structures.StructList
-	Files             *file.FileList
-	Methods           []*Method
+	Desc    *descriptor.ServiceDescriptorProto
+	Methods *Methods
 }
 
-func NewService(service *descriptor.ServiceDescriptorProto,
-	file *descriptor.FileDescriptorProto, allStruct *structures.StructList, implStruct *structures.StructList, files *file.FileList) *Service {
-	s := &Service{
-		Desc:              service,
-		File:              file,
-		AllStruct:         allStruct,
-		ImplementedStruct: implStruct,
-		Files:             files,
+func (s *Service) ProcessMethods() {
+	for _, m := range s.Desc.GetMethod() {
+		s.Methods.AddMethod(m)
 	}
-	return s
-
 }
 
-func (s *Service) AddMethod(m *Method) {
-	if s.Methods == nil {
-		s.Methods = []*Method{
-			m,
+func (s *Service) GetName() string {
+	return s.Desc.GetName()
+}
+
+func (s *Service) GetServiceOption() *persist.TypeMapping {
+	if s.Desc.Options != nil && proto.HasExtension(s.Desc.Options, persist.E_Mapping) {
+		ext, err := proto.GetExtension(s.Desc.Options, persist.E_Mapping)
+		if err == nil {
+			return ext.(*persist.TypeMapping)
 		}
-	} else {
-		s.Methods = append(s.Methods, m)
 	}
+	return nil
 }
 
-func (s *Service) GenTypeStruct() string {
-	t, err := template.New("type_struct").Parse(serviceTempalteString)
-	if err != nil {
-		logrus.WithError(err).Fatal("Fatal error parsing inline template")
-	}
-	var b bytes.Buffer
-	err = t.Execute(&b, s)
-	if err != nil {
-		logrus.WithError(err).Error("error processing tempalte")
-	}
-
-	return b.String()
-}
-
-func (s *Service) IsSql() bool {
-	for _, method := range s.Desc.GetMethod() {
-		if opt := utils.GetMethodOption(method); opt.GetPersist() == persist.PersistenceOptions_SQL {
-			return true
+func (s *Service) IsSQL() bool {
+	for _, m := range *s.Methods {
+		if opt := m.GetMethodOption(); opt != nil {
+			if opt.GetPersist() == persist.PersistenceOptions_SQL {
+				return true
+			}
 		}
 	}
 	return false
 }
 
 func (s *Service) IsMongo() bool {
-	for _, method := range s.Desc.GetMethod() {
-		if opt := utils.GetMethodOption(method); opt.GetPersist() == persist.PersistenceOptions_MONGO {
+	for _, m := range *s.Methods {
+		if opt := m.GetMethodOption(); opt != nil {
+			if opt.GetPersist() == persist.PersistenceOptions_MONGO {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s *Service) IsServiceEnabled() bool {
+	if s.GetServiceOption() != nil {
+		return true
+	}
+	for _, m := range *s.Methods {
+		if m.GetMethodOption() != nil {
 			return true
 		}
 	}
 	return false
 }
 
-func (s *Service) Generate() string {
-	ret := s.GenTypeStruct()
+type Services []*Service
 
-	for _, method := range s.Desc.GetMethod() {
-		if opt := utils.GetMethodOption(method); opt != nil {
-			m := NewMethod(method, s.Desc, opt, s.File, s.AllStruct, s.ImplementedStruct, s.Files)
-			ret += m.Generate()
-			s.AddMethod(m)
-		}
+func (s *Services) AddService(desc *descriptor.ServiceDescriptorProto) *Service {
+	ret := &Service{
+		Desc:    desc,
+		Methods: &Methods{},
 	}
+	ret.ProcessMethods()
+	*s = append(*s, ret)
 	return ret
-}
-func (s *Service) GetServiceImplName() string {
-	return _gen.CamelCase(s.Desc.GetName() + "Impl")
-}
-
-type Method struct {
-	Desc              *descriptor.MethodDescriptorProto
-	Service           *descriptor.ServiceDescriptorProto
-	Options           *persist.QLImpl
-	File              *descriptor.FileDescriptorProto
-	AllStruct         *structures.StructList
-	ImplementedStruct *structures.StructList
-	ImportList        map[string]string
-	Files             *file.FileList
-}
-
-func NewMethod(method *descriptor.MethodDescriptorProto,
-	service *descriptor.ServiceDescriptorProto,
-	opt *persist.QLImpl,
-	file *descriptor.FileDescriptorProto,
-	allStruct *structures.StructList,
-	implStruct *structures.StructList,
-	files *file.FileList) *Method {
-
-	m := &Method{
-		Desc:              method,
-		Service:           service,
-		Options:           opt,
-		File:              file,
-		AllStruct:         allStruct,
-		ImplementedStruct: implStruct,
-		Files:             files,
-	}
-	m.ImportList = make(map[string]string)
-	return m
-}
-func (m *Method) GetServiceImplName() string {
-	return _gen.CamelCase(m.Service.GetName() + "Impl")
-}
-
-func (m *Method) GetMethod() string {
-	return _gen.CamelCase(m.Desc.GetName())
-}
-
-func (m *Method) GetType(typ string) string {
-	if struc := m.AllStruct.GetEntry(typ); struc != nil {
-		if m.File.GetName() == struc.File.GetName() {
-			// same package
-			return struc.GetGoName()
-		} else {
-			// we have to determine the import path
-			var name string
-			if struc.File.GetOptions() != nil && struc.File.GetOptions().GoPackage != nil {
-				if idx := strings.LastIndex(struc.File.GetOptions().GetGoPackage(), ";"); idx >= 0 {
-					name = struc.File.GetOptions().GetGoPackage()[idx+1:]
-					pkg := struc.File.GetOptions().GetGoPackage()[0:idx]
-					name = m.Files.NewOrGetFile(m.File).AddImport(name, pkg, struc.File)
-				} else if idx := strings.LastIndex(struc.File.GetOptions().GetGoPackage(), "/"); idx >= 0 {
-					pkg := struc.File.GetOptions().GetGoPackage()[0:idx]
-					name = struc.File.GetOptions().GetGoPackage()[idx+1:]
-					name = m.Files.NewOrGetFile(m.File).AddImport(name, pkg, struc.File)
-				} else {
-					name = struc.File.GetOptions().GetGoPackage()
-					pkg := struc.File.GetOptions().GetGoPackage()
-					name = m.Files.NewOrGetFile(m.File).AddImport(name, pkg, struc.File)
-				}
-				return name + "." + struc.GetGoName()
-			} else {
-				// TODO add this to import paths
-				return strings.Replace(struc.File.GetPackage(), ".", "_", -1) + "." + struc.GetGoName()
-			}
-		}
-
-	}
-	return ""
-}
-
-func (m *Method) GetInputType() string {
-	return m.GetType(m.Desc.GetInputType())
-}
-
-func (m *Method) GetStreamType() string {
-	return "Service_TestMethodServer"
-}
-
-func (m *Method) GetNumRowsMessageName() string {
-	return "NumRows"
-}
-
-func (m *Method) GetNumRowsFieldName() string {
-	return "Count"
-}
-
-func (m *Method) GetOutputType() string {
-	return m.GetType(m.Desc.GetOutputType())
-}
-
-func (m *Method) GetServiceTypeMapping() *persist.TypeMapping {
-	if proto.HasExtension(m.Service.Options, persist.E_Mapping) {
-		e, err := proto.GetExtension(m.Service.Options, persist.E_Mapping)
-		if err == nil {
-			return e.(*persist.TypeMapping)
-		}
-	}
-	return nil
-}
-func (m *Method) GetServiceFile() *file.FileStruct {
-	return m.Files.GetFileByDesc(m.File)
-}
-
-func (m *Method) GetMethodTypeMapping() *persist.TypeMapping {
-	return m.Options.Mapping
-}
-
-// GetUserSafeType is processing a field against the method or service defined options
-// and process and register the necessary imports
-func (m *Method) GetUserSafeType(field *descriptor.FieldDescriptorProto) string {
-	list := func() *persist.TypeMapping {
-		if mp := m.GetMethodTypeMapping(); mp != nil {
-			return mp
-		}
-		if mp := m.GetServiceTypeMapping(); mp != nil {
-			return mp
-		}
-		return nil
-	}()
-	if list != nil {
-		for _, mp := range list.Types {
-			// we have a message mapping where we map a message like
-			// .google.protobuf.Timestamp to a go structure
-			if mp.ProtoTypeName != nil &&
-				(mp.ProtoType == nil ||
-					mp.GetProtoType() == descriptor.FieldDescriptorProto_TYPE_ENUM ||
-					mp.GetProtoType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE) {
-
-				if field.GetTypeName() == mp.GetProtoTypeName() &&
-					mp.GetProtoType() == field.GetType() &&
-					((mp.ProtoLabel == nil && field.Label == nil) ||
-						(mp.GetProtoLabel() == field.GetLabel())) {
-					pkg, url := utils.GetGoPackageAndPathFromURL(mp.GetGoPackage())
-					// register package with the method file
-					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
-					// return go_type
-					return pkg + "." + mp.GetGoType()
-				}
-			}
-			// we map a builtin type int33, int64, string with a given
-			// label (REPEATED mainly) to a db type
-			if mp.ProtoTypeName == nil &&
-				(mp.ProtoType != nil ||
-					mp.GetProtoType() != descriptor.FieldDescriptorProto_TYPE_ENUM ||
-					mp.GetProtoType() != descriptor.FieldDescriptorProto_TYPE_MESSAGE ||
-					mp.GetProtoType() != descriptor.FieldDescriptorProto_TYPE_GROUP) {
-				if mp.GetProtoLabel() == field.GetLabel() &&
-					mp.GetProtoType() == field.GetType() {
-					pkg, url := utils.GetGoPackageAndPathFromURL(mp.GetGoPackage())
-					// register package with the method file
-					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
-					// return go_type
-					return pkg + "." + mp.GetGoType()
-				}
-			}
-		}
-	}
-
-	return ""
-}
-
-func (m *Method) GetSafeType(field *descriptor.FieldDescriptorProto) string {
-	logrus.WithField("field", field).Debug("info")
-
-	if ret := m.GetUserSafeType(field); ret != "" {
-		return ret
-	}
-
-	logrus.Debug("Checking in default list ")
-
-	switch field.GetType() {
-	case descriptor.FieldDescriptorProto_TYPE_DOUBLE:
-		return "float64"
-	case descriptor.FieldDescriptorProto_TYPE_FLOAT:
-		return "float32"
-	case descriptor.FieldDescriptorProto_TYPE_INT64:
-		return "int64"
-	case descriptor.FieldDescriptorProto_TYPE_UINT64:
-		return "uint64"
-	case descriptor.FieldDescriptorProto_TYPE_INT32:
-		return "int32"
-	case descriptor.FieldDescriptorProto_TYPE_UINT32:
-		return "uint32"
-	case descriptor.FieldDescriptorProto_TYPE_FIXED64:
-		return "uint64"
-	case descriptor.FieldDescriptorProto_TYPE_FIXED32:
-		return "uint32"
-	case descriptor.FieldDescriptorProto_TYPE_BOOL:
-		return "bool"
-	case descriptor.FieldDescriptorProto_TYPE_STRING:
-		return "string"
-	case descriptor.FieldDescriptorProto_TYPE_GROUP:
-		logrus.Fatalf("Groups/Oneof are not supported yet")
-	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
-		if stru := m.AllStruct.GetEntry(field.GetTypeName()); stru != nil {
-			// find if is one of the structures that we've implemented Value and Scan Methods
-			if s := m.ImplementedStruct.GetEntry(field.GetTypeName()); s != nil {
-				if s.File.GetPackage() == m.File.GetPackage() {
-					return field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
-				} else {
-					pkg, url := utils.GetGoPackageAndPathFromURL(s.GetGoPath())
-					// register package with the method file
-					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
-					return pkg + "." + s.GetGoName()
-				}
-			}
-		} else {
-			logrus.Fatalf("Can't find message structure for %+v", field)
-		}
-	case descriptor.FieldDescriptorProto_TYPE_BYTES:
-		return "[]byte"
-	case descriptor.FieldDescriptorProto_TYPE_ENUM:
-		if stru := m.AllStruct.GetEntry(field.GetTypeName()); stru != nil {
-			// find if is one of the structures that we've implemented Value and Scan Methods
-			if s := m.ImplementedStruct.GetEntry(field.GetTypeName()); s != nil {
-				if s.File.GetPackage() == m.File.GetPackage() {
-					return field.GetTypeName()[strings.LastIndex(field.GetTypeName(), ".")+1:]
-				} else {
-					pkg, url := utils.GetGoPackageAndPathFromURL(s.GetGoPath())
-					// register package with the method file
-					pkg = m.GetServiceFile().AddImport(pkg, url, m.File)
-					return pkg + "." + s.GetGoName()
-				}
-			}
-		} else {
-			logrus.Fatalf("Can't find enum structure for %+v", field)
-		}
-	// 	desc := g.ObjectNamed(field.GetTypeName())
-	// 	typ, wire = g.TypeName(desc), "varint"
-	case descriptor.FieldDescriptorProto_TYPE_SFIXED32:
-		return "int32"
-	case descriptor.FieldDescriptorProto_TYPE_SFIXED64:
-		return "int64"
-	case descriptor.FieldDescriptorProto_TYPE_SINT32:
-		return "int32"
-	case descriptor.FieldDescriptorProto_TYPE_SINT64:
-		return "int64"
-	default:
-		logrus.Fatalf("Unknown mapping for %+v", field)
-
-	}
-	return ""
-}
-
-type Tuple struct {
-	K string
-	V string
-}
-
-func (m *Method) GetSafeResponseFields() []*Tuple {
-	var ret []*Tuple = nil
-	outType := m.AllStruct.GetEntry(m.Desc.GetOutputType())
-	for _, field := range outType.MessageDescriptor.Field {
-		if ret == nil {
-			ret = []*Tuple{
-				&Tuple{
-					K: field.GetName(),
-					V: m.GetSafeType(field),
-				},
-			}
-		} else {
-			ret = append(ret, &Tuple{
-				K: field.GetName(),
-				V: m.GetSafeType(field),
-			})
-		}
-	}
-	return ret
-}
-
-func (m *Method) GetResponseFieldsMap() map[string]string {
-	var ret map[string]string
-	ret = make(map[string]string)
-	outType := m.AllStruct.GetEntry(m.Desc.GetOutputType())
-	for _, field := range outType.MessageDescriptor.Field {
-		ret[field.GetName()] = _gen.CamelCase(field.GetName())
-	}
-	return ret
-}
-
-func (m *Method) GetQuery() string {
-	return strings.Replace(strings.Replace(m.Options.GetQuery(), "\\", "\\\\", -1), "\"", "\\\"", -1)
-}
-
-func (m *Method) GetQueryParams() []string {
-	var ret []string
-	inputTyp := m.AllStruct.GetEntry(m.Desc.GetInputType())
-	for _, a := range m.Options.Arguments {
-		arg, err := inputTyp.GetGoFieldNameByProtoName(a)
-		if err != nil {
-			logrus.WithError(err).Fatalf("unknown argument %s !", a)
-		}
-		ret = append(ret, arg)
-	}
-	return ret
-}
-
-func (m *Method) Generate() string {
-	var tpl bytes.Buffer
-	switch {
-	case !m.Desc.GetClientStreaming() && !m.Desc.GetServerStreaming():
-		if err := UnaryTemplate[m.Options.GetPersist()].Execute(&tpl, m); err != nil {
-			logrus.Fatal("Error processing value function temaplate")
-		}
-	case m.Desc.GetClientStreaming() && !m.Desc.GetServerStreaming():
-		if err := ClientStreamTemplate[m.Options.GetPersist()].Execute(&tpl, m); err != nil {
-			logrus.Fatal("Error processing value function temaplate")
-		}
-	case !m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming():
-		if err := ServerStreamTemplate[m.Options.GetPersist()].Execute(&tpl, m); err != nil {
-			logrus.Fatal("Error processing value function temaplate")
-		}
-	case m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming():
-		if err := BidirStreamTemplate[m.Options.GetPersist()].Execute(&tpl, m); err != nil {
-			logrus.Fatal("Error processing value function temaplate")
-		}
-
-	default:
-		logrus.Fatal("This should never happen")
-	}
-	return tpl.String()
 }
