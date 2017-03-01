@@ -27,48 +27,86 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package generator_test
+package service
 
 import (
-	"compress/gzip"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	_ "github.com/golang/protobuf/ptypes/timestamp"
-	_ "github.com/tcncloud/protoc-gen-persist/examples"
-
-	"bytes"
-	"io/ioutil"
-	"testing"
+	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
-func TestGenerator(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Generator Suite")
+const serviceTempalteString = `type {{.GetServiceImplName}} struct {
+	{{if .IsSql}} DB *sql.DB {{end}}
+	{{if .IsMongo}} Session *mgo.Session {{end}}
+}`
+
+type Service struct {
+	Desc    *descriptor.ServiceDescriptorProto
+	Methods *Methods
 }
 
-var files []*descriptor.FileDescriptorProto
-
-func LoadDescriptor(file string) *descriptor.FileDescriptorProto {
-
-	bReader, err := gzip.NewReader(bytes.NewReader(proto.FileDescriptor(file)))
-	defer bReader.Close()
-	Expect(err).To(BeNil())
-
-	buf, err := ioutil.ReadAll(bReader)
-	Expect(err).To(BeNil())
-
-	var descr descriptor.FileDescriptorProto
-	err = proto.Unmarshal(buf, &descr)
-	Expect(err).To(BeNil())
-	return &descr
-
+func (s *Service) ProcessMethods() {
+	for _, m := range s.Desc.GetMethod() {
+		s.Methods.AddMethod(m, s)
+	}
 }
 
-var _ = BeforeSuite(func() {
-	files = append(files, LoadDescriptor("examples/example1.proto"))
-	files = append(files, LoadDescriptor("github.com/golang/protobuf/ptypes/timestamp/timestamp.proto"))
-})
+func (s *Service) GetName() string {
+	return s.Desc.GetName()
+}
+
+func (s *Service) GetServiceOption() *persist.TypeMapping {
+	if s.Desc.Options != nil && proto.HasExtension(s.Desc.Options, persist.E_Mapping) {
+		ext, err := proto.GetExtension(s.Desc.Options, persist.E_Mapping)
+		if err == nil {
+			return ext.(*persist.TypeMapping)
+		}
+	}
+	return nil
+}
+
+func (s *Service) IsSQL() bool {
+	for _, m := range *s.Methods {
+		if opt := m.GetMethodOption(); opt != nil {
+			if opt.GetPersist() == persist.PersistenceOptions_SQL {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s *Service) IsMongo() bool {
+	for _, m := range *s.Methods {
+		if opt := m.GetMethodOption(); opt != nil {
+			if opt.GetPersist() == persist.PersistenceOptions_MONGO {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s *Service) IsServiceEnabled() bool {
+	if s.GetServiceOption() != nil {
+		return true
+	}
+	for _, m := range *s.Methods {
+		if m.GetMethodOption() != nil {
+			return true
+		}
+	}
+	return false
+}
+
+type Services []*Service
+
+func (s *Services) AddService(desc *descriptor.ServiceDescriptorProto) *Service {
+	ret := &Service{
+		Desc:    desc,
+		Methods: &Methods{},
+	}
+	ret.ProcessMethods()
+	*s = append(*s, ret)
+	return ret
+}

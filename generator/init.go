@@ -29,8 +29,11 @@
 
 package generator
 
+// init initialize the data structures
 func init() {
-	SetupTemplates()
-	SetupStructTemplates()
-	LoadTemplates()
+	// InitImports()
+	// SetupSQLTemplates()
+	// SetupMongoTemplates()
+	// SetupStructTemplates()
+	// LoadTemplates()
 }
