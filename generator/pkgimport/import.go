@@ -29,6 +29,28 @@
 
 package pkgimport
 
+import "text/template"
+import "github.com/Sirupsen/logrus"
+
+var importTemplate *template.Template
+
+const importTemplateString = `
+// import template
+import(
+	{{range $import := .}}
+	{{$import.GoPackageName}} "{{$import.GoImportPath}}"
+	{{end}}
+)`
+
+func init() {
+	logrus.Debug("Import init()")
+	var err error
+	importTemplate, err = template.New("import_template").Parse(importTemplateString)
+	if err != nil {
+		logrus.WithError(err).Fatal("Fail to parse import template")
+	}
+}
+
 type Import struct {
 	GoPackageName string
 	GoImportPath  string
@@ -37,5 +59,8 @@ type Import struct {
 type Imports []*Import
 
 func Empty() *Imports {
-	return &Imports{}
+	return &Imports{
+		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
+		&Import{GoImportPath: "database/sql", GoPackageName: "sql"},
+	}
 }

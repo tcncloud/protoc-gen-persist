@@ -106,6 +106,33 @@ type Struct struct {
 	ParentDescriptor *Struct
 	IsMessage        bool
 	IsInnerType      bool
+	IsUsedAsField    bool
+	FileOptions      *desc.FileOptions
+	EnumDesc         *desc.EnumDescriptorProto
+	MsgDesc          *desc.DescriptorProto
+}
+
+func (s *Struct) GetProtoName() string {
+	if s.ParentDescriptor == nil {
+		return "." + s.Package + "." + s.Descriptor.GetName()
+	} else {
+		return s.ParentDescriptor.GetProtoName() + "." + s.Descriptor.GetName()
+	}
+}
+
+func (s *Struct) ProcessFieldUsage(allStructures *StructList) {
+	for _, str := range *allStructures {
+		if str.IsMessage {
+			// check if one of the message fileds uses our s Struct as type
+			for _, field := range str.MsgDesc.GetField() {
+				if (field.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE ||
+					field.GetType() == desc.FieldDescriptorProto_TYPE_ENUM ||
+					field.GetType() == desc.FieldDescriptorProto_TYPE_GROUP) && s.GetProtoName() == field.GetTypeName() {
+					s.IsUsedAsField = true
+				}
+			}
+		}
+	}
 }
 
 type StructList []*Struct
@@ -114,25 +141,40 @@ func NewStructList() *StructList {
 	return &StructList{}
 }
 
-func (s *StructList) AddEnum(enum *desc.EnumDescriptorProto, parent *Struct, pkg string) *Struct {
+func (s *StructList) GetStructByProtoName(name string) *Struct {
+	for _, str := range *s {
+		if str.GetProtoName() == name {
+			return str
+		}
+	}
+	return nil
+}
+
+func (s *StructList) AddEnum(enum *desc.EnumDescriptorProto, parent *Struct, pkg string, opts *desc.FileOptions) *Struct {
 	str := &Struct{
 		IsMessage:        false,
 		IsInnerType:      (parent != nil),
 		Descriptor:       enum,
 		ParentDescriptor: parent,
 		Package:          pkg,
+		FileOptions:      opts,
+		MsgDesc:          nil,
+		EnumDesc:         enum,
 	}
 
 	*s = append(*s, str)
 	return str
 }
-func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, pkg string) *Struct {
+func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, pkg string, opts *desc.FileOptions) *Struct {
 	str := &Struct{
 		IsMessage:        true,
 		IsInnerType:      (parent != nil),
 		Descriptor:       message,
 		ParentDescriptor: parent,
 		Package:          pkg,
+		FileOptions:      opts,
+		MsgDesc:          message,
+		EnumDesc:         nil,
 	}
 
 	*s = append(*s, str)

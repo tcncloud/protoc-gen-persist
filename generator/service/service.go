@@ -47,7 +47,7 @@ type Service struct {
 
 func (s *Service) ProcessMethods() {
 	for _, m := range s.Desc.GetMethod() {
-		s.Methods.AddMethod(m)
+		s.Methods.AddMethod(m, s)
 	}
 }
 

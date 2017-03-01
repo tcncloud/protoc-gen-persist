@@ -101,27 +101,32 @@ func (g *Generator) ProcessRequest() {
 		if dependency {
 			file := g.Files.GetOrCreateFile(f)
 			logrus.WithField("new file name", file.GetFileName()).Debug("new file name")
+			file.Process()
 		}
 		for _, m := range f.GetMessageType() {
-			g.ProcessMessage(m, nil)
+			g.ProcessMessage(m, nil, f.GetOptions())
 		}
 		for _, e := range f.GetEnumType() {
-			g.ProcessEnum(e, nil)
+			g.ProcessEnum(e, nil, f.GetOptions())
 		}
+	}
+	for _, x := range *g.AllStructures {
+		x.ProcessFieldUsage(g.AllStructures)
+		logrus.Debugf("%s inner %b", x.GetProtoName(), x.IsInnerType)
 	}
 }
 
-func (g *Generator) ProcessMessage(msg *descriptor.DescriptorProto, parent *structures.Struct) {
+func (g *Generator) ProcessMessage(msg *descriptor.DescriptorProto, parent *structures.Struct, opts *descriptor.FileOptions) {
 	// add the current message to the list
-	m := g.AllStructures.AddMessage(msg, parent, g.crtFile.GetPackage())
+	m := g.AllStructures.AddMessage(msg, parent, g.crtFile.GetPackage(), opts)
 	for _, message := range msg.GetNestedType() {
-		g.ProcessMessage(message, m)
+		g.ProcessMessage(message, m, opts)
 	}
 	for _, enum := range msg.GetEnumType() {
-		g.ProcessEnum(enum, m)
+		g.ProcessEnum(enum, m, opts)
 	}
 }
-func (g *Generator) ProcessEnum(enum *descriptor.EnumDescriptorProto, parent *structures.Struct) {
+func (g *Generator) ProcessEnum(enum *descriptor.EnumDescriptorProto, parent *structures.Struct, opts *descriptor.FileOptions) {
 	// add the current message to the list
-	g.AllStructures.AddEnum(enum, parent, g.crtFile.GetPackage())
+	g.AllStructures.AddEnum(enum, parent, g.crtFile.GetPackage(), opts)
 }

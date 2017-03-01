@@ -7,7 +7,8 @@ import (
 )
 
 type Method struct {
-	Desc *descriptor.MethodDescriptorProto
+	Desc    *descriptor.MethodDescriptorProto
+	Service *Service
 }
 
 func (m *Method) GetMethodOption() *persist.QLImpl {
@@ -20,8 +21,55 @@ func (m *Method) GetMethodOption() *persist.QLImpl {
 	return nil
 }
 
+func (m *Method) GetName() string {
+	return m.Desc.GetName()
+}
+
+func (m *Method) IsEnabled() bool {
+	if m.GetMethodOption() != nil {
+		return true
+	}
+	return false
+}
+
+func (m *Method) IsSQL() bool {
+	if opt := m.GetMethodOption(); opt != nil {
+		return opt.GetPersist() == persist.PersistenceOptions_SQL
+	}
+	return false
+}
+
+func (m *Method) IsMongo() bool {
+	if opt := m.GetMethodOption(); opt != nil {
+		return opt.GetPersist() == persist.PersistenceOptions_MONGO
+	}
+	return false
+}
+
+func (m *Method) IsSpanner() bool {
+	if opt := m.GetMethodOption(); opt != nil {
+		return opt.GetPersist() == persist.PersistenceOptions_SPANNER
+	}
+	return false
+}
+
+func (m *Method) IsUnary() bool {
+	return !m.Desc.GetClientStreaming() && !m.Desc.GetServerStreaming()
+}
+
+func (m *Method) IsClientStreaming() bool {
+	return m.Desc.GetClientStreaming() && !m.Desc.GetServerStreaming()
+}
+
+func (m *Method) IsServerStreaming() bool {
+	return !m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming()
+}
+func (m *Method) IsBidiStreaming() bool {
+	return m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming()
+}
+
 type Methods []*Method
 
-func (m *Methods) AddMethod(desc *descriptor.MethodDescriptorProto) {
-	*m = append(*m, &Method{Desc: desc})
+func (m *Methods) AddMethod(desc *descriptor.MethodDescriptorProto, service *Service) {
+	*m = append(*m, &Method{Desc: desc, Service: service})
 }
