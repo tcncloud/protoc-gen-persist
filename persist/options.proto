@@ -44,8 +44,12 @@ extend google.protobuf.ServiceOptions {
 }
 
 enum PersistenceOptions {
+    // SQL Query
     SQL = 0;
+    // Mongo query
     MONGO = 1;
+    // Spanner query
+    SPANNER = 2;
 }
 
 

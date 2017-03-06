@@ -34,199 +34,99 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/tcncloud/protoc-gen-persist/persist"
+	"github.com/tcncloud/protoc-gen-persist/generator/files"
+	"github.com/tcncloud/protoc-gen-persist/generator/structures"
 )
+
+type GeneratorStruct interface {
+	Generate() string
+}
 
 type Generator struct {
 	OriginalRequest *plugin_go.CodeGeneratorRequest
-	// Response        *plugin_go.CodeGeneratorResponse
+	AllStructures   *structures.StructList // all structures present in the files
+	Files           *files.FileList
 
-	// structures that need Value() and Scan() implementation
-	ImplementedStructures *StructList
-	AllStructures         *StructList
-
-	currentFile    *descriptor.FileDescriptorProto    // current processing file
-	currentService *descriptor.ServiceDescriptorProto // current processing service
-
-	files *FileList
+	crtFile *descriptor.FileDescriptorProto
 }
 
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret := new(Generator)
 	ret.OriginalRequest = request
-	// ret.Response = new(plugin_go.CodeGeneratorResponse)
-	ret.ImplementedStructures = NewStructList()
-	ret.AllStructures = NewStructList()
-	ret.files = NewFileList()
+	ret.AllStructures = structures.NewStructList()
+	ret.Files = files.NewFileList()
 	return ret
 }
 
 func (g *Generator) GetResponse() *plugin_go.CodeGeneratorResponse {
 	ret := new(plugin_go.CodeGeneratorResponse)
-	for _, fileStruct := range g.files.List {
+	for _, fileStruct := range *g.Files {
 		// format file Content
 
 		ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
-			Content: proto.String(fileStruct.GetContent()),
-			Name:    proto.String(fileStruct.Name),
+			Content: proto.String(fileStruct.Generate()),
+			Name:    proto.String(fileStruct.GetFileName()),
 		})
-		ret.Error = proto.String(func() string {
-			if ret.Error == nil {
-				return fileStruct.ErrorList
-			} else {
-				return *ret.Error + "\n" + fileStruct.ErrorList
-			}
-		}())
+		// ret.Error = proto.String(func() string {
+		// 	if ret.Error == nil {
+		// 		return fileStruct.ErrorList
+		// 	} else {
+		// 		return *ret.Error + "\n" + fileStruct.ErrorList
+		// 	}
+		// }())
 	}
 	logrus.WithField("response", ret).Debug("result")
 	return ret
 }
 
-func (g *Generator) IsDependency(file *descriptor.FileDescriptorProto) bool {
-	for _, f := range g.OriginalRequest.ProtoFile {
-		for _, name := range f.GetDependency() {
-			if name == file.GetName() {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func (g *Generator) ProcessType(typ string) {
-	struc := g.AllStructures.GetEntry(typ)
-	if struc != nil {
-		// if the structure is not defined into a dependency file
-		if !g.IsDependency(struc.File) {
-			outFile := g.files.NewOrGetFile(struc.File)
-			if struc.IsMessage() {
-				// process inner enums
-				for _, e := range struc.MessageDescriptor.GetEnumType() {
-					if eStruct := g.AllStructures.GetEnum(e, struc.MessageDescriptor, struc.File); eStruct != nil {
-						if !g.ImplementedStructures.ContainEnum(eStruct.EnumDescriptor, eStruct.ParentDescriptor, eStruct.File) {
-							outFile.P(eStruct.GetValueFunction())
-							outFile.P(eStruct.GetScanFunction())
-							g.ImplementedStructures.AddStruct(eStruct)
-						}
-					}
-				}
-				// process inner messages
-				for _, m := range struc.MessageDescriptor.GetNestedType() {
-					if mStruct := g.AllStructures.GetMessage(m, struc.MessageDescriptor, struc.File); mStruct != nil {
-						if !g.ImplementedStructures.ContainMessage(mStruct.MessageDescriptor, mStruct.ParentDescriptor, mStruct.File) {
-							outFile.P(mStruct.GetValueFunction())
-							outFile.P(mStruct.GetScanFunction())
-							g.ImplementedStructures.AddStruct(mStruct)
-						}
-					}
-				}
-				// process fields
-				for _, f := range struc.MessageDescriptor.GetField() {
-					if f.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM ||
-						f.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
-						if t := g.AllStructures.GetEntry(f.GetTypeName()); t != nil {
-							if g.ImplementedStructures.GetEntry(f.GetTypeName()) == nil {
-								if !g.IsDependency(t.File) {
-									out := g.files.NewOrGetFile(t.File)
-									out.P(t.GetValueFunction())
-									out.P(t.GetScanFunction())
-									g.ImplementedStructures.AddStruct(t)
-								}
-							}
-						}
-					}
-				}
-			} else {
-				// don't process structures that are not messages
-			}
-		}
-	}
-}
-
-// process input and output types from service method signatures and implement Value() and Scan() mathods
-// for messages and enums used inside of those types
-func (g *Generator) ProcessStructs() {
-	for _, file := range g.OriginalRequest.ProtoFile {
-		if !g.IsDependency(file) {
-			for _, service := range file.Service {
-				for _, method := range service.GetMethod() {
-					g.ProcessType(method.GetInputType())
-					g.ProcessType(method.GetOutputType())
-				}
-			}
-		}
-	}
-}
-
-func (g *Generator) ProcessAllStructures() {
-	for _, file := range g.OriginalRequest.ProtoFile {
-		g.currentFile = file
-		// scan all messages
-		for _, m := range file.GetMessageType() {
-			for _, im := range m.GetNestedType() {
-				g.AllStructures.AddMessage(im, m, file)
-			}
-			for _, ie := range m.GetEnumType() {
-				g.AllStructures.AddEnum(ie, m, file)
-			}
-			g.AllStructures.AddMessage(m, nil, file)
-
-		}
-		// scan all enums
-		for _, e := range file.GetEnumType() {
-			g.AllStructures.AddEnum(e, nil, file)
-		}
-	}
-}
-
-func (g *Generator) ProcessServices() {
-
-	for _, file := range g.OriginalRequest.ProtoFile {
-		if !g.IsDependency(file) {
-			outFile := g.files.NewOrGetFile(file)
-
-			for _, service := range file.Service {
-				g.currentService = service
-				if IsServicePersistEnabled(service) {
-					srv := NewService(service, file, g.AllStructures, g.ImplementedStructures, g.files)
-					outFile.P(srv.Generate())
-				}
-			}
-		}
-	}
-}
-
-// check if a service has at least one method that has the persist.ql extension defined
-func IsServicePersistEnabled(service *descriptor.ServiceDescriptorProto) bool {
-	if service.Method != nil {
-		for _, method := range service.Method {
-			if IsMethodEnabled(method) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func IsMethodEnabled(method *descriptor.MethodDescriptorProto) bool {
-	if method != nil && method.GetOptions() != nil && proto.HasExtension(method.Options, persist.E_Ql) {
-		return true
-	}
-	return false
-}
-
-func GetMethodOption(method *descriptor.MethodDescriptorProto) *persist.QLImpl {
-	if IsMethodEnabled(method) {
-		if ret, err := proto.GetExtension(method.Options, persist.E_Ql); err == nil {
-			return ret.(*persist.QLImpl)
-		}
-	}
-	return nil
-}
-
 // Process the request
 func (g *Generator) ProcessRequest() {
-	g.ProcessAllStructures()
-	g.ProcessStructs()
-	g.ProcessServices()
+	// create a list of structures
+	// g.ProcessStructs()
+	// g.ProcessServices()
+	// create structures
+	for _, f := range g.OriginalRequest.ProtoFile {
+		logrus.WithField("f", f.GetName()).Debug("Processing file")
+		g.crtFile = f
+		// determine if this file is just imported
+		dependency := func() bool {
+			for _, fileName := range g.OriginalRequest.FileToGenerate {
+				if fileName == f.GetName() {
+					return true
+				}
+			}
+			return false
+		}()
+
+		if dependency {
+			file := g.Files.GetOrCreateFile(f)
+			logrus.WithField("new file name", file.GetFileName()).Debug("new file name")
+			file.Process()
+		}
+		for _, m := range f.GetMessageType() {
+			g.ProcessMessage(m, nil, f.GetOptions())
+		}
+		for _, e := range f.GetEnumType() {
+			g.ProcessEnum(e, nil, f.GetOptions())
+		}
+	}
+	for _, x := range *g.AllStructures {
+		x.ProcessFieldUsage(g.AllStructures)
+		logrus.Debugf("%s inner %b", x.GetProtoName(), x.IsInnerType)
+	}
+}
+
+func (g *Generator) ProcessMessage(msg *descriptor.DescriptorProto, parent *structures.Struct, opts *descriptor.FileOptions) {
+	// add the current message to the list
+	m := g.AllStructures.AddMessage(msg, parent, g.crtFile.GetPackage(), opts)
+	for _, message := range msg.GetNestedType() {
+		g.ProcessMessage(message, m, opts)
+	}
+	for _, enum := range msg.GetEnumType() {
+		g.ProcessEnum(enum, m, opts)
+	}
+}
+func (g *Generator) ProcessEnum(enum *descriptor.EnumDescriptorProto, parent *structures.Struct, opts *descriptor.FileOptions) {
+	// add the current message to the list
+	g.AllStructures.AddEnum(enum, parent, g.crtFile.GetPackage(), opts)
 }

@@ -27,22 +27,40 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package generator_test
+package pkgimport
 
-import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+import "text/template"
+import "github.com/Sirupsen/logrus"
 
-	_ "github.com/golang/protobuf/ptypes/timestamp"
-	_ "github.com/tcncloud/protoc-gen-persist/examples"
-)
+var importTemplate *template.Template
 
-var _ = Describe("Method Service", func() {
-	Describe("", func() {
-		It("should ", func() {
-			// m := &generator.Method{}
-			// logrus.Info(m.Generate())
-			Expect(true).To(BeTrue())
-		})
-	})
-})
+const importTemplateString = `
+// import template
+import(
+	{{range $import := .}}
+	{{$import.GoPackageName}} "{{$import.GoImportPath}}"
+	{{end}}
+)`
+
+func init() {
+	logrus.Debug("Import init()")
+	var err error
+	importTemplate, err = template.New("import_template").Parse(importTemplateString)
+	if err != nil {
+		logrus.WithError(err).Fatal("Fail to parse import template")
+	}
+}
+
+type Import struct {
+	GoPackageName string
+	GoImportPath  string
+}
+
+type Imports []*Import
+
+func Empty() *Imports {
+	return &Imports{
+		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
+		&Import{GoImportPath: "database/sql", GoPackageName: "sql"},
+	}
+}

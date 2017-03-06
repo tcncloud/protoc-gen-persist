@@ -75,7 +75,7 @@ service ExampleService1 {
                     proto_type_name: ".google.protobuf.Timestamp"
                     proto_type:  TYPE_MESSAGE
                     go_type: "Time"
-                    go_package: "github.com/protobuf/types/time"
+                    go_package: "github.com/tcncloud/protoc-gen-persist/examples/time"
             }
         ]
     };
@@ -101,4 +101,8 @@ service ExampleService1 {
 
     rpc RandomMethod(ExampleTable1) returns (ExampleTable1);
 
+}
+
+service NotEnabledService{
+    
 }

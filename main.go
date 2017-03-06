@@ -45,9 +45,7 @@ func init() {
 	if os.Getenv("DEBUG") != "" {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-}
-
-func Return(response *plugin_go.CodeGeneratorResponse) {
+	logrus.Debug("main init()")
 }
 
 func main() {
