@@ -107,16 +107,6 @@ func (f *FileStruct) ProcessImports() {
 				logrus.Fatalf("Can't find structure %s", m.Desc.GetInputType())
 			}
 		}
-
-	}
-
-}
-
-func (f *FileStruct) Process() {
-	// build up the service list
-	for _, srv := range f.Desc.GetService() {
-		logrus.WithField("service", srv).Debug("service")
-		f.ServiceList.AddService(f.GetPackageName(), srv, f.AllStructures)
 	}
 
 	for _, m := range f.Desc.GetMessageType() {

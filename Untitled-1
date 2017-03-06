@@ -1,0 +1,41 @@
+
+func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTable1_InnerMessage) (*ExampleTable1, error) {
+	var (
+		table_id      int32
+		key           string
+		value         string
+		inner_message ExampleTable1_InnerMessage
+		inner_enum    ExampleTable1_InnerEnum
+		string_array  pq.StringArray
+		bytes_field   []byte
+		start_time    time.Time
+	)
+	err := s.DB.QueryRow(
+		"SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1",
+		req.Id,
+	).
+		Scan(&table_id,
+			&key,
+			&value,
+			&inner_message,
+			&inner_enum,
+			&string_array,
+			&bytes_field,
+			&start_time,
+		)
+
+	if err != nil {
+		return nil, err
+	}
+	result := &ExampleTable1{}
+	result.BytesField = bytes_field
+	result.InnerEnum = inner_enum
+	result.InnerMessage = &inner_message
+	result.Key = key
+	result.StartTime = start_time.Get()
+	result.StringArray = string_array
+	result.TableId = table_id
+	result.Value = value
+
+	return result, nil
+}

@@ -101,7 +101,7 @@ func (g *Generator) ProcessRequest() {
 		if dependency {
 			file := g.Files.GetOrCreateFile(f, g.AllStructures)
 			logrus.WithField("new file name", file.GetFileName()).Debug("new file name")
-			file.Process()
+			//file.Process()
 		}
 		for _, m := range f.GetMessageType() {
 			g.ProcessMessage(m, nil, f.GetOptions())
