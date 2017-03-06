@@ -99,7 +99,7 @@ func (g *Generator) ProcessRequest() {
 		}()
 
 		if dependency {
-			file := g.Files.GetOrCreateFile(f)
+			file := g.Files.GetOrCreateFile(f, g.AllStructures)
 			logrus.WithField("new file name", file.GetFileName()).Debug("new file name")
 			file.Process()
 		}
@@ -114,10 +114,14 @@ func (g *Generator) ProcessRequest() {
 		x.ProcessFieldUsage(g.AllStructures)
 		logrus.Debugf("%s inner %b", x.GetProtoName(), x.IsInnerType)
 	}
+	for _, file := range *g.Files {
+		file.ProcessImports()
+	}
 }
 
 func (g *Generator) ProcessMessage(msg *descriptor.DescriptorProto, parent *structures.Struct, opts *descriptor.FileOptions) {
 	// add the current message to the list
+	logrus.WithField("message", msg.GetName()).Debug("processing message")
 	m := g.AllStructures.AddMessage(msg, parent, g.crtFile.GetPackage(), opts)
 	for _, message := range msg.GetNestedType() {
 		g.ProcessMessage(message, m, opts)

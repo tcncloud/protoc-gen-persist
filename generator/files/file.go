@@ -40,19 +40,21 @@ import (
 )
 
 type FileStruct struct {
-	Desc        *descriptor.FileDescriptorProto
-	ImportList  *pkgimport.Imports
-	Dependency  bool                   // if is dependency
-	Structures  *structures.StructList // all structures in the file
-	ServiceList *service.Services
+	Desc          *descriptor.FileDescriptorProto
+	ImportList    *pkgimport.Imports
+	Dependency    bool                   // if is dependency
+	Structures    *structures.StructList // all structures in the file
+	AllStructures *structures.StructList // all structures in all the files
+	ServiceList   *service.Services
 }
 
-func NewFileStruct(desc *descriptor.FileDescriptorProto) *FileStruct {
+func NewFileStruct(desc *descriptor.FileDescriptorProto, allStructs *structures.StructList) *FileStruct {
 	ret := &FileStruct{
-		Desc:        desc,
-		ImportList:  pkgimport.Empty(),
-		Structures:  &structures.StructList{},
-		ServiceList: &service.Services{},
+		Desc:          desc,
+		ImportList:    pkgimport.Empty(),
+		Structures:    &structures.StructList{},
+		ServiceList:   &service.Services{},
+		AllStructures: allStructs,
 	}
 	return ret
 }
@@ -73,11 +75,48 @@ func (f *FileStruct) GetServices() *service.Services {
 	return f.ServiceList
 }
 
+func (f *FileStruct) GetGoPackage() string {
+	if f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
+		switch {
+		case strings.Contains(f.Desc.GetOptions().GetGoPackage(), ";"):
+			idx := strings.LastIndex(f.Desc.GetOptions().GetGoPackage(), ";")
+			return f.Desc.GetOptions().GetGoPackage()[idx+1:]
+		case strings.Contains(f.Desc.GetOptions().GetGoPackage(), "/"):
+			idx := strings.LastIndex(f.Desc.GetOptions().GetGoPackage(), "/")
+			return f.Desc.GetOptions().GetGoPackage()[idx+1:]
+		default:
+			return f.Desc.GetOptions().GetGoPackage()
+		}
+
+	} else {
+		return strings.Replace(f.Desc.GetPackage(), ".", "_", -1)
+	}
+}
+
+func (f *FileStruct) ProcessImports() {
+	for _, srv := range *f.ServiceList {
+		for _, m := range *srv.Methods {
+			if s := f.AllStructures.GetStructByProtoName(m.Desc.GetInputType()); s != nil {
+				if s.Package == f.Desc.GetPackage() {
+					// same file
+				} else {
+					// s.GoPackage = f.ImportList.GetOrAddImport()
+				}
+
+			} else {
+				logrus.Fatalf("Can't find structure %s", m.Desc.GetInputType())
+			}
+		}
+
+	}
+
+}
+
 func (f *FileStruct) Process() {
 	// build up the service list
 	for _, srv := range f.Desc.GetService() {
 		logrus.WithField("service", srv).Debug("service")
-		f.ServiceList.AddService(srv)
+		f.ServiceList.AddService(f.GetPackageName(), srv, f.AllStructures)
 	}
 
 	for _, m := range f.Desc.GetMessageType() {
@@ -88,7 +127,6 @@ func (f *FileStruct) Process() {
 		logrus.WithField("enum", e).Debug("enum")
 		f.Structures.AddEnum(e, nil, f.Desc.GetPackage(), f.Desc.GetOptions())
 	}
-
 }
 
 func (f *FileStruct) Generate() string {
@@ -113,11 +151,11 @@ func (fl *FileList) FindFile(desc *descriptor.FileDescriptorProto) *FileStruct {
 	return nil
 }
 
-func (fl *FileList) GetOrCreateFile(desc *descriptor.FileDescriptorProto) *FileStruct {
+func (fl *FileList) GetOrCreateFile(desc *descriptor.FileDescriptorProto, allStructs *structures.StructList) *FileStruct {
 	if f := fl.FindFile(desc); f != nil {
 		return f
 	}
-	f := NewFileStruct(desc)
+	f := NewFileStruct(desc, allStructs)
 	*fl = append(*fl, f)
 	return f
 }

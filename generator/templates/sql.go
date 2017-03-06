@@ -27,61 +27,31 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package pkgimport
+package templates
 
-import "text/template"
-import "github.com/Sirupsen/logrus"
-
-var importTemplate *template.Template
-
-const importTemplateString = `
-// import template
-import(
-	{{range $import := .}}
-	{{$import.GoPackageName}} "{{$import.GoImportPath}}"
-	{{end}}
-)`
-
-func init() {
-	logrus.Debug("Import init()")
-	var err error
-	importTemplate, err = template.New("import_template").Parse(importTemplateString)
+const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}} unimplemented
+func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
+{{/*	var (
+		{{range $field := .GetSafeResponseFields}}
+		{{$field.K}} {{$field.V}} {{end}}
+	)
+	err := s.DB.QueryRow(
+		"{{.GetQuery}}",{{range $qParam := .GetQueryParams}}
+		_utils.ToSafeType(req.{{$qParam}}),
+		{{end}}).
+		Scan({{range $field := .GetSafeResponseFields}} &{{$field.K}},
+		{{end}})
 	if err != nil {
-		logrus.WithError(err).Fatal("Fail to parse import template")
+		return nil, ConvertError(err, req)
 	}
+	result := &{{.GetOutputType}}{}
+	{{range $local, $go := .GetResponseFieldsMap}}
+	_utils.AssignTo(&result.{{$go}}, {{$local}}) {{end}}
+	return result, nil
+*/}}
 }
 
-type Import struct {
-	GoPackageName string
-	GoImportPath  string
-}
-
-type Imports []*Import
-
-func Empty() *Imports {
-	return &Imports{
-		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
-		&Import{GoImportPath: "database/sql", GoPackageName: "sql"},
-	}
-}
-func (il *Imports) Exist(pkg string) bool {
-	for _, i := range *il {
-		if i.GoPackageName == pkg {
-			return true
-		}
-	}
-	return false
-}
-
-func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
-	for _, i := range *il {
-		if i.GoImportPath == goPath {
-			return i.GoPackageName
-		}
-	}
-	for il.Exist(goPkg) {
-		goPkg = "_" + goPkg
-	}
-	*il = append(*il, &Import{GoPackageName: goPkg, GoImportPath: goPath})
-	return goPkg
-}
+{{end}}`
+const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}} unimplemented{{end}}`
+const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"}}// sql server streaming {{.GetName}} unimplemented{{end}}`
+const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}} unimplemented{{end}}`

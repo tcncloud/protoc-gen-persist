@@ -32,6 +32,7 @@ package service
 import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/tcncloud/protoc-gen-persist/generator/structures"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
@@ -41,8 +42,10 @@ const serviceTempalteString = `type {{.GetServiceImplName}} struct {
 }`
 
 type Service struct {
-	Desc    *descriptor.ServiceDescriptorProto
-	Methods *Methods
+	Desc       *descriptor.ServiceDescriptorProto
+	Methods    *Methods
+	Package    string // protobuf package
+	AllStructs *structures.StructList
 }
 
 func (s *Service) ProcessMethods() {
@@ -101,10 +104,12 @@ func (s *Service) IsServiceEnabled() bool {
 
 type Services []*Service
 
-func (s *Services) AddService(desc *descriptor.ServiceDescriptorProto) *Service {
+func (s *Services) AddService(pkg string, desc *descriptor.ServiceDescriptorProto, allStructs *structures.StructList) *Service {
 	ret := &Service{
-		Desc:    desc,
-		Methods: &Methods{},
+		Package:    pkg,
+		Desc:       desc,
+		Methods:    &Methods{},
+		AllStructs: allStructs,
 	}
 	ret.ProcessMethods()
 	*s = append(*s, ret)

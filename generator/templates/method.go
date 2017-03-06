@@ -27,61 +27,35 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package pkgimport
+package templates
 
-import "text/template"
-import "github.com/Sirupsen/logrus"
+const MethodTemplate = `{{define "implement_method"}}
+{{if .IsUnary}} {{template "unary_method" .}} {{end}}
+{{if .IsClientStreaming}} {{template "client_streaming_method" .}} {{end}}
+{{if .IsServerStreaming}} {{template "server_streaming_method" .}} {{end}}
+{{if .IsBidiStreaming}} {{template "bidi_method" .}} {{end}}
+{{end}}`
 
-var importTemplate *template.Template
+const UnaryMethodTemplate = `{{define "unary_method"}}
+{{if .IsSQL}}{{template "sql_unary_method" .}}{{end}}
+{{if .IsMongo}}{{template "mongo_unary_method" .}}{{end}}
+{{if .IsSpanner}}{{template "spanner_unary_method" .}}{{end}}
+{{end}}`
 
-const importTemplateString = `
-// import template
-import(
-	{{range $import := .}}
-	{{$import.GoPackageName}} "{{$import.GoImportPath}}"
-	{{end}}
-)`
+const ClientStreamingMethodTemplate = `{{define "client_streaming_method"}}
+{{if .IsSQL}}{{template "sql_client_streaming_method" .}}{{end}}
+{{if .IsMongo}}{{template "mongo_client_streaming_method" .}}{{end}}
+{{if .IsSpanner}}{{template "spanner_client_streaming_method" .}}{{end}}
+{{end}}`
 
-func init() {
-	logrus.Debug("Import init()")
-	var err error
-	importTemplate, err = template.New("import_template").Parse(importTemplateString)
-	if err != nil {
-		logrus.WithError(err).Fatal("Fail to parse import template")
-	}
-}
+const ServerStreamingMethodTemplate = `{{define "server_streaming_method"}}
+{{if .IsSQL}}{{template "sql_server_streaming_method" .}}{{end}}
+{{if .IsMongo}}{{template "mongo_server_streaming_method" .}}{{end}}
+{{if .IsSpanner}}{{template "spanner_server_streaming_method" .}}{{end}}
+{{end}}`
 
-type Import struct {
-	GoPackageName string
-	GoImportPath  string
-}
-
-type Imports []*Import
-
-func Empty() *Imports {
-	return &Imports{
-		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
-		&Import{GoImportPath: "database/sql", GoPackageName: "sql"},
-	}
-}
-func (il *Imports) Exist(pkg string) bool {
-	for _, i := range *il {
-		if i.GoPackageName == pkg {
-			return true
-		}
-	}
-	return false
-}
-
-func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
-	for _, i := range *il {
-		if i.GoImportPath == goPath {
-			return i.GoPackageName
-		}
-	}
-	for il.Exist(goPkg) {
-		goPkg = "_" + goPkg
-	}
-	*il = append(*il, &Import{GoPackageName: goPkg, GoImportPath: goPath})
-	return goPkg
-}
+const BidiStreamingMethodTemplate = `{{define "bidi_method"}}
+{{if .IsSQL}}{{template "sql_bidi_streaming_method" .}}{{end}}
+{{if .IsMongo}}{{template "mongo_bidi_streaming_method" .}}{{end}}
+{{if .IsSpanner}}{{template "spanner_bidi_streaming_method" .}}{{end}}
+{{end}}`

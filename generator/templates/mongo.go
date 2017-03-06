@@ -27,61 +27,9 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package pkgimport
+package templates
 
-import "text/template"
-import "github.com/Sirupsen/logrus"
-
-var importTemplate *template.Template
-
-const importTemplateString = `
-// import template
-import(
-	{{range $import := .}}
-	{{$import.GoPackageName}} "{{$import.GoImportPath}}"
-	{{end}}
-)`
-
-func init() {
-	logrus.Debug("Import init()")
-	var err error
-	importTemplate, err = template.New("import_template").Parse(importTemplateString)
-	if err != nil {
-		logrus.WithError(err).Fatal("Fail to parse import template")
-	}
-}
-
-type Import struct {
-	GoPackageName string
-	GoImportPath  string
-}
-
-type Imports []*Import
-
-func Empty() *Imports {
-	return &Imports{
-		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
-		&Import{GoImportPath: "database/sql", GoPackageName: "sql"},
-	}
-}
-func (il *Imports) Exist(pkg string) bool {
-	for _, i := range *il {
-		if i.GoPackageName == pkg {
-			return true
-		}
-	}
-	return false
-}
-
-func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
-	for _, i := range *il {
-		if i.GoImportPath == goPath {
-			return i.GoPackageName
-		}
-	}
-	for il.Exist(goPkg) {
-		goPkg = "_" + goPkg
-	}
-	*il = append(*il, &Import{GoPackageName: goPkg, GoImportPath: goPath})
-	return goPkg
-}
+const MongoUnaryMethodTemplate = `{{define "mongo_unary_method"}}// mongo unary {{.GetName}} unimplemented{{end}}`
+const MongoClientStreamingMethodTemplate = `{{define "mongo_client_streaming_method"}}// mongo client streaming {{.GetName}} unimplemented{{end}}`
+const MongoServerStreamingMethodTemplate = `{{define "mongo_server_streaming_method"}}// mongo server streaming {{.GetName}} unimplemented{{end}}`
+const MongoBidiStreamingMethodTemplate = `{{define "mongo_bidi_streaming_method"}}// mongo bidi streaming {{.GetName}} unimplemented{{end}}`

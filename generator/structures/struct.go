@@ -30,71 +30,10 @@
 package structures
 
 import (
-	"html/template"
-
 	"github.com/Sirupsen/logrus"
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	gen "github.com/golang/protobuf/protoc-gen-go/generator"
 )
-
-var (
-	valueTemplate *template.Template
-	scanTemplate  *template.Template
-)
-
-const (
-	valueFuncTemplate = `
-func (s {{.GetGoName}}) Value() (driver.Value, error) {
-{{if .IsMessage}}
-	marshaler := jsonpb.Marshaler{}
-	buf, err := marshaler.MarshalToString(&s)
-	if err != nil {
-		return driver.Value(""), fmt.Errorf("Can't serialize to json structure %+v", s)
-	}
-	return driver.Value(buf), nil
-{{end}}
-{{if .IsEnum}}
-return driver.Value(int32(s)), nil
-{{end}}
-}`
-
-	scanFuncTemplate = `
-func (s *{{.GetGoName}}) Scan(src interface{}) error {
-{{if .IsMessage}}
-switch src.(type) {
-case string:
-	err := jsonpb.UnmarshalString(src.(string), s)
-	return err
-case []byte:
-	err := jsonpb.UnmarshalString(string(src.([]byte)), s)
-	return err
-default:
-	return fmt.Errorf("Unsupported type for %+v deserializing {{.GetGoName}}", src)
-}
-{{end}}
-{{if .IsEnum}}
-switch src.(type) {
-case int32:
-*s = src.({{.GetGoName}})
-return nil
-default:
-return fmt.Errorf("can't convert %+v to {{.GetGoName}}",src)
-}
-{{end}}
-}`
-)
-
-func init() {
-	var err error
-	valueTemplate, err = template.New("ValueFunc").Parse(valueFuncTemplate)
-	if err != nil {
-		logrus.Fatal("Error parsing value function template!")
-	}
-	scanTemplate, err = template.New("ScanFunc").Parse(scanFuncTemplate)
-	if err != nil {
-		logrus.Fatal("Error parsing scan function template!")
-	}
-
-}
 
 type GenericDescriptor interface {
 	GetName() string
@@ -103,6 +42,7 @@ type GenericDescriptor interface {
 type Struct struct {
 	Descriptor       GenericDescriptor
 	Package          string
+	GoPackage        string
 	ParentDescriptor *Struct
 	IsMessage        bool
 	IsInnerType      bool
@@ -112,6 +52,14 @@ type Struct struct {
 	MsgDesc          *desc.DescriptorProto
 }
 
+func (s *Struct) GetGoName() string {
+	if s.IsMessage {
+		return gen.CamelCase(s.MsgDesc.GetName())
+	} else {
+		return gen.CamelCase(s.EnumDesc.GetName())
+	}
+}
+
 func (s *Struct) GetProtoName() string {
 	if s.ParentDescriptor == nil {
 		return "." + s.Package + "." + s.Descriptor.GetName()
@@ -119,7 +67,6 @@ func (s *Struct) GetProtoName() string {
 		return s.ParentDescriptor.GetProtoName() + "." + s.Descriptor.GetName()
 	}
 }
-
 func (s *Struct) ProcessFieldUsage(allStructures *StructList) {
 	for _, str := range *allStructures {
 		if str.IsMessage {
@@ -143,6 +90,7 @@ func NewStructList() *StructList {
 
 func (s *StructList) GetStructByProtoName(name string) *Struct {
 	for _, str := range *s {
+		logrus.WithField("StructName", str.GetProtoName()).Debug("Checking with structure")
 		if str.GetProtoName() == name {
 			return str
 		}
