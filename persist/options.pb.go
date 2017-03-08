@@ -201,10 +201,12 @@ type TypeMapping_TypeDescriptor struct {
 	// TYPE_GROUP is not supported
 	ProtoType *google_protobuf.FieldDescriptorProto_Type `protobuf:"varint,2,opt,name=proto_type,json=protoType,enum=google.protobuf.FieldDescriptorProto_Type" json:"proto_type,omitempty"`
 	// if proto_label is not setup we consider any option except LABAEL_REPEATED
-	ProtoLabel       *google_protobuf.FieldDescriptorProto_Label `protobuf:"varint,3,opt,name=proto_label,json=protoLabel,enum=google.protobuf.FieldDescriptorProto_Label" json:"proto_label,omitempty"`
-	GoType           *string                                     `protobuf:"bytes,4,req,name=go_type,json=goType" json:"go_type,omitempty"`
-	GoPackage        *string                                     `protobuf:"bytes,5,req,name=go_package,json=goPackage" json:"go_package,omitempty"`
-	XXX_unrecognized []byte                                      `json:"-"`
+	ProtoLabel *google_protobuf.FieldDescriptorProto_Label `protobuf:"varint,3,opt,name=proto_label,json=protoLabel,enum=google.protobuf.FieldDescriptorProto_Label" json:"proto_label,omitempty"`
+	// go type name that will be used in the method implementation
+	GoType *string `protobuf:"bytes,4,req,name=go_type,json=goType" json:"go_type,omitempty"`
+	// go package path
+	GoPackage        *string `protobuf:"bytes,5,req,name=go_package,json=goPackage" json:"go_package,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
 }
 
 func (m *TypeMapping_TypeDescriptor) Reset()                    { *m = TypeMapping_TypeDescriptor{} }

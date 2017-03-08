@@ -53,6 +53,7 @@ func main() {
 		fmt.Println("This executable is ment to be used by protoc!\nGo to http://github.com/tcncloud/protoc-gen-persist for more info")
 		os.Exit(-1)
 	}
+	
 	var req plugin_go.CodeGeneratorRequest
 
 	data, err := ioutil.ReadAll(os.Stdin)
@@ -65,7 +66,7 @@ func main() {
 	}
 	// DO processing
 	g := generator.NewGenerator(&req)
-	g.ProcessRequest()
+	g.Process()
 
 	// Send back the results.
 	data, err = proto.Marshal(g.GetResponse())

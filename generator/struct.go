@@ -27,10 +27,11 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package structures
+package generator
 
 import (
-	"github.com/Sirupsen/logrus"
+	"strings"
+
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	gen "github.com/golang/protobuf/protoc-gen-go/generator"
 )
@@ -40,23 +41,60 @@ type GenericDescriptor interface {
 }
 
 type Struct struct {
-	Descriptor       GenericDescriptor
-	Package          string
-	GoPackage        string
+	Descriptor GenericDescriptor
+	Package    string
+	// GoPackage        string
 	ParentDescriptor *Struct
 	IsMessage        bool
 	IsInnerType      bool
 	IsUsedAsField    bool
-	FileOptions      *desc.FileOptions
+	File             *FileStruct // for determine go import path and go package
 	EnumDesc         *desc.EnumDescriptorProto
 	MsgDesc          *desc.DescriptorProto
 }
 
+func (s *Struct) GetGoPath() string {
+	if s.File.Desc.Options != nil {
+		if s.File.Desc.GetOptions().GoPackage != nil {
+			pkg := s.File.Desc.GetOptions().GetGoPackage()
+			if strings.Contains(pkg, ";") {
+				idx := strings.LastIndex(pkg, ";")
+				return pkg[0:idx]
+			} else if strings.Contains(pkg, "/") {
+				return pkg
+			} else {
+				return strings.Replace(pkg, ".", "_", -1)
+			}
+		} else {
+			// return the package name
+			return strings.Replace(s.Package, ".", "_", -1)
+		}
+	} else {
+		return "__unknown__path__error__"
+	}
+}
+
+func (s *Struct) GetFieldType(field string) *desc.FieldDescriptorProto {
+	for _, f := range s.MsgDesc.Field {
+		if f.GetName() == field {
+			return f
+		}
+	}
+	return nil
+}
 func (s *Struct) GetGoName() string {
 	if s.IsMessage {
-		return gen.CamelCase(s.MsgDesc.GetName())
+		if s.IsInnerType {
+			return s.ParentDescriptor.GetGoName() + "_" + gen.CamelCase(s.MsgDesc.GetName())
+		} else {
+			return gen.CamelCase(s.MsgDesc.GetName())
+		}
 	} else {
-		return gen.CamelCase(s.EnumDesc.GetName())
+		if s.IsInnerType {
+			return s.ParentDescriptor.GetGoName() + "_" + gen.CamelCase(s.EnumDesc.GetName())
+		} else {
+			return gen.CamelCase(s.EnumDesc.GetName())
+		}
 	}
 }
 
@@ -67,19 +105,18 @@ func (s *Struct) GetProtoName() string {
 		return s.ParentDescriptor.GetProtoName() + "." + s.Descriptor.GetName()
 	}
 }
-func (s *Struct) ProcessFieldUsage(allStructures *StructList) {
-	for _, str := range *allStructures {
-		if str.IsMessage {
-			// check if one of the message fileds uses our s Struct as type
-			for _, field := range str.MsgDesc.GetField() {
-				if (field.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE ||
-					field.GetType() == desc.FieldDescriptorProto_TYPE_ENUM ||
-					field.GetType() == desc.FieldDescriptorProto_TYPE_GROUP) && s.GetProtoName() == field.GetTypeName() {
-					s.IsUsedAsField = true
-				}
+
+func (s *Struct) GetImportedFiles() *FileList {
+	fl := NewFileList()
+	fl.Append(s.File)
+	if s.IsMessage {
+		for _, field := range s.MsgDesc.GetField() {
+			if str := s.File.AllStructures.GetStructByProtoName(field.GetName()); str != nil {
+				fl.Append(str.File)
 			}
 		}
 	}
+	return fl
 }
 
 type StructList []*Struct
@@ -90,7 +127,6 @@ func NewStructList() *StructList {
 
 func (s *StructList) GetStructByProtoName(name string) *Struct {
 	for _, str := range *s {
-		logrus.WithField("StructName", str.GetProtoName()).Debug("Checking with structure")
 		if str.GetProtoName() == name {
 			return str
 		}
@@ -98,33 +134,44 @@ func (s *StructList) GetStructByProtoName(name string) *Struct {
 	return nil
 }
 
-func (s *StructList) AddEnum(enum *desc.EnumDescriptorProto, parent *Struct, pkg string, opts *desc.FileOptions) *Struct {
+func (s *StructList) AddEnum(enum *desc.EnumDescriptorProto, parent *Struct, pkg string, file *FileStruct) *Struct {
 	str := &Struct{
 		IsMessage:        false,
 		IsInnerType:      (parent != nil),
 		Descriptor:       enum,
 		ParentDescriptor: parent,
 		Package:          pkg,
-		FileOptions:      opts,
 		MsgDesc:          nil,
 		EnumDesc:         enum,
+		File:             file,
 	}
 
 	*s = append(*s, str)
 	return str
 }
-func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, pkg string, opts *desc.FileOptions) *Struct {
+
+func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, pkg string, file *FileStruct) *Struct {
 	str := &Struct{
 		IsMessage:        true,
 		IsInnerType:      (parent != nil),
 		Descriptor:       message,
 		ParentDescriptor: parent,
 		Package:          pkg,
-		FileOptions:      opts,
 		MsgDesc:          message,
 		EnumDesc:         nil,
+		File:             file,
 	}
 
 	*s = append(*s, str)
+	for _, innerMessage := range message.GetNestedType() {
+		s.AddMessage(innerMessage, str, pkg, file)
+	}
+	for _, innerEnum := range message.GetEnumType() {
+		s.AddEnum(innerEnum, str, pkg, file)
+	}
 	return str
+}
+
+func (s *StructList) Append(struc *Struct) {
+	*s = append(*s, struc)
 }

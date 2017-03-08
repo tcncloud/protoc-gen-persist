@@ -27,18 +27,64 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package templates
+package generator
 
-const ServicesTemplate = `{{define "implement_services"}}
-{{range $srv := .}}
-{{if $srv.IsServiceEnabled}}
-type {{$srv.GetName}}Impl struct {
-	{{if $srv.IsSQL}}SqlDB *sql.DB{{end}}
-	{{if $srv.IsMongo}}MongoDB *mgo.DB{{end}}
+import (
+	"github.com/Sirupsen/logrus"
+)
+
+type Import struct {
+	GoPackageName string
+	GoImportPath  string
 }
-{{range $method := $srv.Methods}}
-{{template "implement_method" $method}}
-{{end}}
-{{end}}
-{{end}}
-{{end}}`
+
+type Imports []*Import
+
+func EmptyImportList() *Imports {
+	return &Imports{
+		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
+		&Import{GoImportPath: "database/sql", GoPackageName: "sql"},
+	}
+}
+func (il *Imports) Exist(pkg string) bool {
+	for _, i := range *il {
+		if i.GoPackageName == pkg {
+			return true
+		}
+	}
+	return false
+}
+
+func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
+	for _, i := range *il {
+		if i.GoImportPath == goPath {
+			return i.GoPackageName
+		}
+	}
+	for il.Exist(goPkg) {
+		goPkg = "_" + goPkg
+	}
+	*il = append(*il, &Import{GoPackageName: goPkg, GoImportPath: goPath})
+	return goPkg
+}
+
+func (il *Imports) GetGoNameByStruct(str *Struct) *Import {
+	for _, i := range *il {
+		logrus.WithField("import", *i).WithField("str", str.GetGoPath()).Debug("import path")
+		if i.GoImportPath == str.GetGoPath() {
+			return i
+		}
+	}
+	return nil
+}
+
+func (il *Imports) GetImportPkgForPath(path string) string {
+	logrus.Infof("import path %s", path)
+	for _, i := range *il {
+		logrus.Infof("check with import path %s", i.GoImportPath)
+		if i.GoImportPath == path {
+			return i.GoPackageName
+		}
+	}
+	return "__invalid__import__"
+}

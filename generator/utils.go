@@ -27,61 +27,67 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package pkgimport
+package generator
 
-import "text/template"
-import "github.com/Sirupsen/logrus"
+import (
+	"regexp"
+	"strings"
 
-var importTemplate *template.Template
+	"github.com/Sirupsen/logrus"
 
-const importTemplateString = `
-// import template
-import(
-	{{range $import := .}}
-	{{$import.GoPackageName}} "{{$import.GoImportPath}}"
-	{{end}}
-)`
+	"golang.org/x/tools/imports"
+)
 
-func init() {
-	logrus.Debug("Import init()")
-	var err error
-	importTemplate, err = template.New("import_template").Parse(importTemplateString)
+var reduceEmptyLines = regexp.MustCompile("(\n)+")
+
+// GetGoPath get a go import url under the following formats
+// github.com/path/project/dir;package
+// github.com/path/project/dir
+// project/dir;package
+// project/dir
+// and will return the path portion from url:
+// github.com/path/project/dir
+// project/dir
+func GetGoPath(url string) string {
+	idx := strings.LastIndex(url, ";")
+	switch {
+	case idx >= 0:
+		return url[0:idx]
+	default:
+		return url
+	}
+}
+
+// GetGoPackage get a go import url under the following formats
+// github.com/path/project/dir;package
+// github.com/path/project/dir
+// project/dir;package
+// project/dir
+// and will return the package name from url
+// package
+// dir
+// package
+// dir
+func GetGoPackage(url string) string {
+	switch {
+	case strings.Contains(url, ";"):
+		idx := strings.LastIndex(url, ";")
+		return url[idx+1:]
+	case strings.Contains(url, "/"):
+		idx := strings.LastIndex(url, "/")
+		return url[idx+1:]
+	default:
+		return url
+	}
+}
+
+func FormatCode(filename string, buffer []byte) []byte {
+	// reduce the empty lines
+	tmp := reduceEmptyLines.ReplaceAll(buffer, []byte{'\n'})
+	buf, err := imports.Process(filename, tmp, nil)
 	if err != nil {
-		logrus.WithError(err).Fatal("Fail to parse import template")
+		logrus.WithError(err).Errorf("Error processing file %s", filename)
+		return tmp
 	}
-}
-
-type Import struct {
-	GoPackageName string
-	GoImportPath  string
-}
-
-type Imports []*Import
-
-func Empty() *Imports {
-	return &Imports{
-		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
-		&Import{GoImportPath: "database/sql", GoPackageName: "sql"},
-	}
-}
-func (il *Imports) Exist(pkg string) bool {
-	for _, i := range *il {
-		if i.GoPackageName == pkg {
-			return true
-		}
-	}
-	return false
-}
-
-func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
-	for _, i := range *il {
-		if i.GoImportPath == goPath {
-			return i.GoPackageName
-		}
-	}
-	for il.Exist(goPkg) {
-		goPkg = "_" + goPkg
-	}
-	*il = append(*il, &Import{GoPackageName: goPkg, GoImportPath: goPath})
-	return goPkg
+	return buf
 }

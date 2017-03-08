@@ -27,34 +27,32 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package files
+package generator
 
 import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	"github.com/tcncloud/protoc-gen-persist/generator/pkgimport"
-	"github.com/tcncloud/protoc-gen-persist/generator/service"
-	"github.com/tcncloud/protoc-gen-persist/generator/structures"
 )
 
 type FileStruct struct {
 	Desc          *descriptor.FileDescriptorProto
-	ImportList    *pkgimport.Imports
-	Dependency    bool                   // if is dependency
-	Structures    *structures.StructList // all structures in the file
-	AllStructures *structures.StructList // all structures in all the files
-	ServiceList   *service.Services
+	ImportList    *Imports
+	Dependency    bool        // if is dependency
+	Structures    *StructList // all structures in the file
+	AllStructures *StructList // all structures in all the files
+	ServiceList   *Services
 }
 
-func NewFileStruct(desc *descriptor.FileDescriptorProto, allStructs *structures.StructList) *FileStruct {
+func NewFileStruct(desc *descriptor.FileDescriptorProto, allStructs *StructList, dependency bool) *FileStruct {
 	ret := &FileStruct{
 		Desc:          desc,
-		ImportList:    pkgimport.Empty(),
-		Structures:    &structures.StructList{},
-		ServiceList:   &service.Services{},
+		ImportList:    EmptyImportList(),
+		Structures:    &StructList{},
+		ServiceList:   &Services{},
 		AllStructures: allStructs,
+		Dependency:    dependency,
 	}
 	return ret
 }
@@ -71,7 +69,7 @@ func (f *FileStruct) GetFileName() string {
 	return strings.Replace(f.Desc.GetName(), ".proto", ".persist.go", -1)
 }
 
-func (f *FileStruct) GetServices() *service.Services {
+func (f *FileStruct) GetServices() *Services {
 	return f.ServiceList
 }
 
@@ -93,34 +91,69 @@ func (f *FileStruct) GetGoPackage() string {
 	}
 }
 
-func (f *FileStruct) ProcessImports() {
-	for _, srv := range *f.ServiceList {
-		for _, m := range *srv.Methods {
-			if s := f.AllStructures.GetStructByProtoName(m.Desc.GetInputType()); s != nil {
-				if s.Package == f.Desc.GetPackage() {
-					// same file
-				} else {
-					// s.GoPackage = f.ImportList.GetOrAddImport()
-				}
-
-			} else {
-				logrus.Fatalf("Can't find structure %s", m.Desc.GetInputType())
-			}
+func (f *FileStruct) GetGoPath() string {
+	if f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
+		switch {
+		case strings.Contains(f.Desc.GetOptions().GetGoPackage(), ";"):
+			idx := strings.LastIndex(f.Desc.GetOptions().GetGoPackage(), ";")
+			return f.Desc.GetOptions().GetGoPackage()[0:idx]
+		case strings.Contains(f.Desc.GetOptions().GetGoPackage(), "/"):
+			return f.Desc.GetOptions().GetGoPackage()
+		default:
+			return f.Desc.GetOptions().GetGoPackage()
 		}
-	}
 
-	for _, m := range f.Desc.GetMessageType() {
-		logrus.WithField("message", m).Debug("message")
-		f.Structures.AddMessage(m, nil, f.Desc.GetPackage(), f.Desc.GetOptions())
-	}
-	for _, e := range f.Desc.GetEnumType() {
-		logrus.WithField("enum", e).Debug("enum")
-		f.Structures.AddEnum(e, nil, f.Desc.GetPackage(), f.Desc.GetOptions())
+	} else {
+		return strings.Replace(f.Desc.GetPackage(), ".", "_", -1)
 	}
 }
 
-func (f *FileStruct) Generate() string {
+func (f *FileStruct) ProcessImportsForType(name string) {
+	typ := f.AllStructures.GetStructByProtoName(name)
+	if typ != nil {
+		for _, file := range *typ.GetImportedFiles() {
+			if file.GetOrigName() != f.GetOrigName() {
+				f.ImportList.GetOrAddImport(file.GetGoPackage(), file.GetGoPath())
+			}
+		}
+	} else {
+		logrus.Fatalf("Can't find structure %s!", name)
+	}
+}
+
+func (f *FileStruct) ProcessImports() {
+	for _, srv := range *f.ServiceList {
+		if srv.IsServiceEnabled() {
+			srv.ProcessImports()
+			for _, m := range *srv.Methods {
+				f.ProcessImportsForType(m.Desc.GetInputType())
+				f.ProcessImportsForType(m.Desc.GetOutputType())
+			}
+		}
+	}
+}
+
+func (f *FileStruct) Process() {
+	// collect file defined messages
+	for _, m := range f.Desc.GetMessageType() {
+		s := f.AllStructures.AddMessage(m, nil, f.GetPackageName(), f)
+		f.Structures.Append(s)
+	}
+	// collect file defined enums
+	for _, e := range f.Desc.GetEnumType() {
+		s := f.AllStructures.AddEnum(e, nil, f.GetPackageName(), f)
+		f.Structures.Append(s)
+	}
+
+	for _, s := range f.Desc.GetService() {
+		f.ServiceList.AddService(f.GetPackageName(), s, f.AllStructures, f)
+	}
+
+}
+
+func (f *FileStruct) Generate() []byte {
 	// f.Process()
+	logrus.WithField("imports", f.ImportList).Debug("import list")
 	return ExecuteFileTemplate(f)
 }
 
@@ -141,11 +174,21 @@ func (fl *FileList) FindFile(desc *descriptor.FileDescriptorProto) *FileStruct {
 	return nil
 }
 
-func (fl *FileList) GetOrCreateFile(desc *descriptor.FileDescriptorProto, allStructs *structures.StructList) *FileStruct {
+func (fl *FileList) GetOrCreateFile(desc *descriptor.FileDescriptorProto, allStructs *StructList, dependency bool) *FileStruct {
 	if f := fl.FindFile(desc); f != nil {
 		return f
 	}
-	f := NewFileStruct(desc, allStructs)
+	f := NewFileStruct(desc, allStructs, dependency)
 	*fl = append(*fl, f)
 	return f
+}
+
+func (fl *FileList) Process() {
+	for _, file := range *fl {
+		file.Process()
+	}
+}
+
+func (fl *FileList) Append(file *FileStruct) {
+	*fl = append(*fl, file)
 }

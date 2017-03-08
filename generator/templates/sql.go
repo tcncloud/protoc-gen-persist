@@ -31,24 +31,27 @@ package templates
 
 const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}} unimplemented
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
-{{/*	var (
-		{{range $field := .GetSafeResponseFields}}
-		{{$field.K}} {{$field.V}} {{end}}
+	var (
+{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+{{$field}} {{$type}}
+{{end}}
 	)
-	err := s.DB.QueryRow(
-		"{{.GetQuery}}",{{range $qParam := .GetQueryParams}}
-		_utils.ToSafeType(req.{{$qParam}}),
-		{{end}}).
-		Scan({{range $field := .GetSafeResponseFields}} &{{$field.K}},
-		{{end}})
+	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString}}).
+		Scan(&id, &start_time, &name)
 	if err != nil {
-		return nil, ConvertError(err, req)
+		if err == sql.ErrNoRows {
+			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+		} else if strings.Contains(err.Error(), "duplicate key") {
+			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+		}
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	result := &{{.GetOutputType}}{}
-	{{range $local, $go := .GetResponseFieldsMap}}
-	_utils.AssignTo(&result.{{$go}}, {{$local}}) {{end}}
-	return result, nil
-*/}}
+	res := &pb.Table2{
+		Id: id,
+		StartTime: start_time.UnpackSql(),
+		Name: name,
+	}
+	return res, nil
 }
 
 {{end}}`

@@ -27,7 +27,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package files
+package generator
 
 import (
 	"bytes"
@@ -78,11 +78,11 @@ func init() {
 	}
 }
 
-func ExecuteFileTemplate(fileStruct *FileStruct) string {
+func ExecuteFileTemplate(fileStruct *FileStruct) []byte {
 	var buffer bytes.Buffer
 	err := fileTemplate.Execute(&buffer, fileStruct)
 	if err != nil {
 		logrus.WithError(err).Fatal("Fatal error executing file template")
 	}
-	return buffer.String()
+	return buffer.Bytes()
 }

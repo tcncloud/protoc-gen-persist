@@ -30,9 +30,7 @@
 package templates
 
 const ImportTemplate = `{{define "import_template"}}
-import(
-	{{range $import := .}}
-	{{$import.GoPackageName}} "{{$import.GoImportPath}}"
-	{{end}}
+import({{range $import := .}}
+{{$import.GoPackageName}} "{{$import.GoImportPath}}"{{end}}
 )
 {{end}}`
