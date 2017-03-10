@@ -29,14 +29,14 @@
 
 package templates
 
-const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}} 
+const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
 {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-{{$field}} {{$type}}
+{{$field}} {{$type.GoName}}
 {{end}}
 	)
-	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString}}).
+	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
 		Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -48,12 +48,132 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 	}
 	res := &{{.GetOutputType}}{
 	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-	{{$field}}: {{$field}},{{end}}
+	{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
 	}
 	return res, nil
 }
 
 {{end}}`
-const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}} unimplemented{{end}}`
-const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"}}// sql server streaming {{.GetName}} unimplemented{{end}}`
-const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}} unimplemented{{end}}`
+const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"}}// sql server streaming {{.GetName}}
+ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetOutputType}}_ServerStreamServer) error {
+	var (
+ {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+ {{$field}} {{$type.GoName}} {{end}}
+ 	)
+	rows, err := s.SqlDB.Query({{.GetQuery}} {{.GetQueryParamString true}})
+
+	if err != nil {
+		return grpc.Errorf(codes.Unknown, err.Error())
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err = rows.Err()
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+			} else if strings.Contains(err.Error(), "duplicate key") {
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+			}
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+
+		err := rows.Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		res := &{{.GetOutputType}}{
+		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+		}
+		stream.Send(res)
+	}
+	return nil
+}{{end}}`
+const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}}
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientStreamServer) error {
+	stmt, err:= s.SqlDB.Prepare({{.GetQuery}})
+	if err != nil {
+		return err
+	}
+	tx, err := s.SqlDB.Begin()
+	if err != nil {
+		return err
+	}
+	totalAffected := int64(0)
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			tx.Rollback()
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+
+		affected, err := tx.Stmt(stmt).Exec( {{.GetQueryParamString false}})
+		if err != nil {
+			tx.Rollback()
+			if err == sql.ErrNoRows {
+				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+			} else if strings.Contains(err.Error(), "duplicate key") {
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+			}
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+
+		num, err := affected.RowsAffected()
+		if err != nil {
+			tx.Rollback()
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		totalAffected += num
+	}
+	err = tx.Commit()
+	if err != nil {
+		fmt.Errorf("Commiting transaction failed, rolling back...")
+		return grpc.Errorf(codes.Unknown, err.Error())
+	}
+	stream.SendAndClose(&pb.NumRows{ Count: totalAffected })
+	return nil
+}{{end}}`
+const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}}
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_BidirectionalServer) error {
+	stmt, err := s.SqlDB.Prepare({{.GetQuery}})
+	defer stmt.Close()
+	if err != nil {
+		return err
+	}
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		var id int64
+		var start_time utils.MyTime
+		var name string
+
+		err = stmt.QueryRow({{.GetQueryParamString false}}).
+			Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+			} else if strings.Contains(err.Error(), "duplicate key") {
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+			}
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		res := &{{.GetOutputType}}{
+		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+		}
+		if err := stream.Send(res); err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+	}
+	return nil
+}
+
+{{end}}`

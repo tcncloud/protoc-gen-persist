@@ -56,11 +56,15 @@ func (m *Method) GetMethodOption() *persist.QLImpl {
 	return nil
 }
 
-func (m *Method) GetQueryParamString() string {
+func (m *Method) GetQueryParamString(comma bool) string {
+	c := ""
+	if comma {
+		c = ","
+	}
 	if inputTypeStruct := m.GetInputTypeStruct(); inputTypeStruct != nil {
 		if opt := m.GetMethodOption(); opt != nil {
 			if opt.GetArguments() != nil {
-				return "," + strings.Join(fauxgaux.Chain(opt.GetArguments()).Map(func(arg string) string {
+				return c + strings.Join(fauxgaux.Chain(opt.GetArguments()).Map(func(arg string) string {
 					// TODO check if the type is a mapped type
 					if fld := inputTypeStruct.GetFieldType(arg); fld != nil {
 						if m.IsTypeMapped(fld) {
@@ -280,21 +284,36 @@ func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 	//default mapping
 }
 
-func (m *Method) GetFieldsWithLocalTypesFor(str *Struct) map[string]string {
+type TypeDesc struct {
+	Name      string
+	ProtoName string
+	GoName    string
+	IsMapped  bool
+}
+
+func (m *Method) GetFieldsWithLocalTypesFor(str *Struct) map[string]TypeDesc {
+	ret := map[string]TypeDesc{}
 	if str.IsMessage {
-		ret := map[string]string{}
 		// NOTE we don't process oneof fields
 		// for _, mapping := range str.MsgDesc.GetOneofDecl() {}
 		for _, mp := range str.MsgDesc.GetField() {
 			// skip oneof fields
 			if mp.OneofIndex == nil {
-				ret[_gen.CamelCase(mp.GetName())] = m.GetMappedType(mp)
+				var mapped bool = false
+				if m.GetMappedObject(mp) != "" {
+					mapped = true
+				}
+				ret[_gen.CamelCase(mp.GetName())] = TypeDesc{
+					Name:      _gen.CamelCase(mp.GetName()),
+					ProtoName: mp.GetName(),
+					GoName:    m.GetMappedType(mp),
+					IsMapped:  mapped,
+				}
+
 			}
 		}
-		return ret
-	} else {
-		return map[string]string{}
 	}
+	return ret
 }
 
 func (m *Method) GetServiceName() string {

@@ -107,6 +107,8 @@ func (s *Service) IsServiceEnabled() bool {
 }
 
 func (s *Service) ProcessImports() {
+	s.File.ImportList.GetOrAddImport("io", "io")
+	s.File.ImportList.GetOrAddImport("strings", "strings")
 	s.File.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
 	s.File.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
 	s.File.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
