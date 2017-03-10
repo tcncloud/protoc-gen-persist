@@ -63,7 +63,9 @@ func (m *Method) GetQueryParamString() string {
 				return "," + strings.Join(fauxgaux.Chain(opt.GetArguments()).Map(func(arg string) string {
 					// TODO check if the type is a mapped type
 					if fld := inputTypeStruct.GetFieldType(arg); fld != nil {
-
+						if m.IsTypeMapped(fld) {
+							return m.GetMappedObject(fld) + ".ToSql(" + "req." + _gen.CamelCase(arg) + ")"
+						}
 					}
 
 					return "req." + _gen.CamelCase(arg)
@@ -140,6 +142,21 @@ func (m *Method) IsTypeMapped(typ *descriptor.FieldDescriptorProto) bool {
 		}
 	}
 	return false
+}
+
+func (m *Method) GetMappedObject(typ *descriptor.FieldDescriptorProto) string {
+	if mapping := m.GetTypeMapping(); mapping != nil {
+		// if we have a mapping we are going to process it first
+		for _, mapp := range mapping.Types {
+			logrus.WithField("mapping", mapp).WithField("type", typ).Debug("checking mapping")
+			if mapp.GetProtoType() == typ.GetType() &&
+				mapp.GetProtoLabel() == typ.GetLabel() &&
+				mapp.GetProtoTypeName() == typ.GetTypeName() {
+				return m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
+			}
+		}
+	}
+	return ""
 }
 
 // GetMappedType return mapped type for a proto name
@@ -306,19 +323,19 @@ func (m *Method) IsSQL() bool {
 	return false
 }
 
-func (m *Method) IsMongo() bool {
-	if opt := m.GetMethodOption(); opt != nil {
-		return opt.GetPersist() == persist.PersistenceOptions_MONGO
-	}
-	return false
-}
-
-func (m *Method) IsSpanner() bool {
-	if opt := m.GetMethodOption(); opt != nil {
-		return opt.GetPersist() == persist.PersistenceOptions_SPANNER
-	}
-	return false
-}
+// func (m *Method) IsMongo() bool {
+// 	if opt := m.GetMethodOption(); opt != nil {
+// 		return opt.GetPersist() == persist.PersistenceOptions_MONGO
+// 	}
+// 	return false
+// }
+//
+// func (m *Method) IsSpanner() bool {
+// 	if opt := m.GetMethodOption(); opt != nil {
+// 		return opt.GetPersist() == persist.PersistenceOptions_SPANNER
+// 	}
+// 	return false
+// }
 
 func (m *Method) IsUnary() bool {
 	return !m.Desc.GetClientStreaming() && !m.Desc.GetServerStreaming()

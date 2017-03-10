@@ -76,30 +76,30 @@ func (s *Service) IsSQL() bool {
 	return false
 }
 
-func (s *Service) IsMongo() bool {
-	for _, m := range *s.Methods {
-		if m.IsMongo() {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *Service) IsSpanner() bool {
-	for _, m := range *s.Methods {
-		if m.IsSpanner() {
-			return true
-		}
-	}
-	return false
-}
+// func (s *Service) IsMongo() bool {
+// 	for _, m := range *s.Methods {
+// 		if m.IsMongo() {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+//
+// func (s *Service) IsSpanner() bool {
+// 	for _, m := range *s.Methods {
+// 		if m.IsSpanner() {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func (s *Service) IsServiceEnabled() bool {
 	if s.GetServiceOption() != nil {
 		return true
 	}
 	for _, m := range *s.Methods {
-		if m.IsSQL() || m.IsSpanner() || m.IsMongo() {
+		if m.IsSQL() {
 			return true
 		}
 	}
@@ -108,6 +108,8 @@ func (s *Service) IsServiceEnabled() bool {
 
 func (s *Service) ProcessImports() {
 	s.File.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
+	s.File.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
+	s.File.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
 	if opt := s.GetServiceOption(); opt != nil {
 		for _, m := range opt.GetTypes() {
 			s.File.ImportList.GetOrAddImport(GetGoPackage(m.GetGoPackage()), GetGoPath(m.GetGoPackage()))

@@ -34,7 +34,6 @@ const ServicesTemplate = `{{define "implement_services"}}
 {{if $srv.IsServiceEnabled}}
 type {{$srv.GetName}}Impl struct {
 	{{if $srv.IsSQL}}SqlDB *sql.DB{{end}}
-	{{if $srv.IsMongo}}MongoDB *mgo.DB{{end}}
 }
 {{range $method := $srv.Methods}}
 {{template "implement_method" $method}}

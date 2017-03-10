@@ -29,7 +29,7 @@
 
 package templates
 
-const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}} unimplemented
+const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}} 
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
 {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
@@ -37,7 +37,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 {{end}}
 	)
 	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString}}).
-		Scan(&id, &start_time, &name)
+		Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
@@ -46,10 +46,9 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := &pb.Table2{
-		Id: id,
-		StartTime: start_time.UnpackSql(),
-		Name: name,
+	res := &{{.GetOutputType}}{
+	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+	{{$field}}: {{$field}},{{end}}
 	}
 	return res, nil
 }
