@@ -34,8 +34,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/tcncloud/protoc-gen-persist/generator/files"
-	"github.com/tcncloud/protoc-gen-persist/generator/structures"
 )
 
 type GeneratorStruct interface {
@@ -44,8 +42,8 @@ type GeneratorStruct interface {
 
 type Generator struct {
 	OriginalRequest *plugin_go.CodeGeneratorRequest
-	AllStructures   *structures.StructList // all structures present in the files
-	Files           *files.FileList
+	AllStructures   *StructList // all structures present in the files
+	Files           *FileList
 
 	crtFile *descriptor.FileDescriptorProto
 }
@@ -53,80 +51,44 @@ type Generator struct {
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret := new(Generator)
 	ret.OriginalRequest = request
-	ret.AllStructures = structures.NewStructList()
-	ret.Files = files.NewFileList()
+	ret.AllStructures = NewStructList()
+	ret.Files = NewFileList()
 	return ret
 }
 
 func (g *Generator) GetResponse() *plugin_go.CodeGeneratorResponse {
+	logrus.WithField("structs", g.AllStructures).Debug("collected structures")
 	ret := new(plugin_go.CodeGeneratorResponse)
 	for _, fileStruct := range *g.Files {
 		// format file Content
 
-		ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
-			Content: proto.String(fileStruct.Generate()),
-			Name:    proto.String(fileStruct.GetFileName()),
-		})
-		// ret.Error = proto.String(func() string {
-		// 	if ret.Error == nil {
-		// 		return fileStruct.ErrorList
-		// 	} else {
-		// 		return *ret.Error + "\n" + fileStruct.ErrorList
-		// 	}
-		// }())
+		if !fileStruct.Dependency {
+			ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
+				Content: proto.String(string(FormatCode(fileStruct.GetFileName(), fileStruct.Generate()))),
+				Name:    proto.String(fileStruct.GetFileName()),
+			})
+		}
 	}
 	logrus.WithField("response", ret).Debug("result")
 	return ret
 }
 
-// Process the request
-func (g *Generator) ProcessRequest() {
-	// create a list of structures
-	// g.ProcessStructs()
-	// g.ProcessServices()
-	// create structures
-	for _, f := range g.OriginalRequest.ProtoFile {
-		logrus.WithField("f", f.GetName()).Debug("Processing file")
-		g.crtFile = f
-		// determine if this file is just imported
-		dependency := func() bool {
+func (g *Generator) Process() {
+	for _, file := range g.OriginalRequest.ProtoFile {
+		dep := func() bool {
 			for _, fileName := range g.OriginalRequest.FileToGenerate {
-				if fileName == f.GetName() {
-					return true
+				if fileName == file.GetName() {
+					return false
 				}
 			}
-			return false
+			return true
 		}()
 
-		if dependency {
-			file := g.Files.GetOrCreateFile(f)
-			logrus.WithField("new file name", file.GetFileName()).Debug("new file name")
-			file.Process()
-		}
-		for _, m := range f.GetMessageType() {
-			g.ProcessMessage(m, nil, f.GetOptions())
-		}
-		for _, e := range f.GetEnumType() {
-			g.ProcessEnum(e, nil, f.GetOptions())
-		}
+		f := g.Files.GetOrCreateFile(file, g.AllStructures, dep)
+		f.Process()
 	}
-	for _, x := range *g.AllStructures {
-		x.ProcessFieldUsage(g.AllStructures)
-		logrus.Debugf("%s inner %b", x.GetProtoName(), x.IsInnerType)
-	}
-}
 
-func (g *Generator) ProcessMessage(msg *descriptor.DescriptorProto, parent *structures.Struct, opts *descriptor.FileOptions) {
-	// add the current message to the list
-	m := g.AllStructures.AddMessage(msg, parent, g.crtFile.GetPackage(), opts)
-	for _, message := range msg.GetNestedType() {
-		g.ProcessMessage(message, m, opts)
+	for _, f := range *g.Files {
+		f.ProcessImports()
 	}
-	for _, enum := range msg.GetEnumType() {
-		g.ProcessEnum(enum, m, opts)
-	}
-}
-func (g *Generator) ProcessEnum(enum *descriptor.EnumDescriptorProto, parent *structures.Struct, opts *descriptor.FileOptions) {
-	// add the current message to the list
-	g.AllStructures.AddEnum(enum, parent, g.crtFile.GetPackage(), opts)
 }

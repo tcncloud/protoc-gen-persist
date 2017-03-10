@@ -27,55 +27,67 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package generator
 
 import (
-	"io/ioutil"
-	"os"
-
-	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/tcncloud/protoc-gen-persist/generator"
+
+	"golang.org/x/tools/imports"
 )
 
-func init() {
-	if os.Getenv("DEBUG") != "" {
-		logrus.SetLevel(logrus.DebugLevel)
+var reduceEmptyLines = regexp.MustCompile("(\n)+")
+
+// GetGoPath get a go import url under the following formats
+// github.com/path/project/dir;package
+// github.com/path/project/dir
+// project/dir;package
+// project/dir
+// and will return the path portion from url:
+// github.com/path/project/dir
+// project/dir
+func GetGoPath(url string) string {
+	idx := strings.LastIndex(url, ";")
+	switch {
+	case idx >= 0:
+		return url[0:idx]
+	default:
+		return url
 	}
-	logrus.Debug("main init()")
 }
 
-func main() {
-	if len(os.Args) > 1 {
-		fmt.Println("This executable is ment to be used by protoc!\nGo to http://github.com/tcncloud/protoc-gen-persist for more info")
-		os.Exit(-1)
+// GetGoPackage get a go import url under the following formats
+// github.com/path/project/dir;package
+// github.com/path/project/dir
+// project/dir;package
+// project/dir
+// and will return the package name from url
+// package
+// dir
+// package
+// dir
+func GetGoPackage(url string) string {
+	switch {
+	case strings.Contains(url, ";"):
+		idx := strings.LastIndex(url, ";")
+		return url[idx+1:]
+	case strings.Contains(url, "/"):
+		idx := strings.LastIndex(url, "/")
+		return url[idx+1:]
+	default:
+		return url
 	}
-	
-	var req plugin_go.CodeGeneratorRequest
+}
 
-	data, err := ioutil.ReadAll(os.Stdin)
+func FormatCode(filename string, buffer []byte) []byte {
+	// reduce the empty lines
+	tmp := reduceEmptyLines.ReplaceAll(buffer, []byte{'\n'})
+	buf, err := imports.Process(filename, tmp, nil)
 	if err != nil {
-		logrus.Fatal("Can't read the stdin!")
+		logrus.WithError(err).Errorf("Error processing file %s", filename)
+		return tmp
 	}
-
-	if err := proto.Unmarshal(data, &req); err != nil {
-		logrus.Fatal("Error parsing data!")
-	}
-	// DO processing
-	g := generator.NewGenerator(&req)
-	g.Process()
-
-	// Send back the results.
-	data, err = proto.Marshal(g.GetResponse())
-	if err != nil {
-		logrus.Fatal("I can't serialize response")
-	}
-	_, err = os.Stdout.Write(data)
-	if err != nil {
-		logrus.Fatal("Can't send data to stdout!")
-	}
-
+	return buf
 }

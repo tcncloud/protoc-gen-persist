@@ -27,55 +27,17 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package templates
 
-import (
-	"io/ioutil"
-	"os"
-
-	"fmt"
-
-	"github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/tcncloud/protoc-gen-persist/generator"
-)
-
-func init() {
-	if os.Getenv("DEBUG") != "" {
-		logrus.SetLevel(logrus.DebugLevel)
-	}
-	logrus.Debug("main init()")
+const ServicesTemplate = `{{define "implement_services"}}
+{{range $srv := .}}
+{{if $srv.IsServiceEnabled}}
+type {{$srv.GetName}}Impl struct {
+	{{if $srv.IsSQL}}SqlDB *sql.DB{{end}}
 }
-
-func main() {
-	if len(os.Args) > 1 {
-		fmt.Println("This executable is ment to be used by protoc!\nGo to http://github.com/tcncloud/protoc-gen-persist for more info")
-		os.Exit(-1)
-	}
-	
-	var req plugin_go.CodeGeneratorRequest
-
-	data, err := ioutil.ReadAll(os.Stdin)
-	if err != nil {
-		logrus.Fatal("Can't read the stdin!")
-	}
-
-	if err := proto.Unmarshal(data, &req); err != nil {
-		logrus.Fatal("Error parsing data!")
-	}
-	// DO processing
-	g := generator.NewGenerator(&req)
-	g.Process()
-
-	// Send back the results.
-	data, err = proto.Marshal(g.GetResponse())
-	if err != nil {
-		logrus.Fatal("I can't serialize response")
-	}
-	_, err = os.Stdout.Write(data)
-	if err != nil {
-		logrus.Fatal("Can't send data to stdout!")
-	}
-
-}
+{{range $method := $srv.Methods}}
+{{template "implement_method" $method}}
+{{end}}
+{{end}}
+{{end}}
+{{end}}`
