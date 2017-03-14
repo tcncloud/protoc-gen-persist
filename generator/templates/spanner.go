@@ -27,40 +27,9 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package pkgimport
+package templates
 
-import "text/template"
-import "github.com/Sirupsen/logrus"
-
-var importTemplate *template.Template
-
-const importTemplateString = `
-// import template
-import(
-	{{range $import := .}}
-	{{$import.GoPackageName}} "{{$import.GoImportPath}}"
-	{{end}}
-)`
-
-func init() {
-	logrus.Debug("Import init()")
-	var err error
-	importTemplate, err = template.New("import_template").Parse(importTemplateString)
-	if err != nil {
-		logrus.WithError(err).Fatal("Fail to parse import template")
-	}
-}
-
-type Import struct {
-	GoPackageName string
-	GoImportPath  string
-}
-
-type Imports []*Import
-
-func Empty() *Imports {
-	return &Imports{
-		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
-		&Import{GoImportPath: "database/sql", GoPackageName: "sql"},
-	}
-}
+const SpannerUnaryMethodTemplate = `{{define "spanner_unary_method"}}// spanner unary {{.GetName}} unimplemented{{end}}`
+const SpannerClientStreamingMethodTemplate = `{{define "spanner_client_streaming_method"}}// spanner client streaming {{.GetName}} unimplemented{{end}}`
+const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming_method"}}// spanner server streaming {{.GetName}} unimplemented{{end}}`
+const SpannerBidiStreamingMethodTemplate = `{{define "spanner_bidi_streaming_method"}}// spanner bidi streaming {{.GetName}} unimplemented{{end}}`

@@ -61,6 +61,12 @@ message ExampleTable1 {
     repeated string string_array = 6;
     bytes bytes_field = 7;
     google.protobuf.Timestamp start_time = 10;
+    examples.test.Test test_field = 100;
+    oneof skip_one_of {
+      int32 test_id = 1001;
+      string test_value = 1002;
+      examples.test.Test test_out_message = 1003;
+    }
 }
 
 message ExternalTypeTestMessage {
@@ -79,10 +85,10 @@ service ExampleService1 {
             }
         ]
     };
-    rpc UnaryExample1(ExampleTable1.InnerMessage) returns (ExampleTable1) {
+    rpc UnaryExample1(ExampleTable1) returns (ExampleTable1) {
         option (persist.ql) = {
             query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
-            arguments: ["id"]
+            arguments: ["table_id","start_time"]
         };
     }
 
@@ -92,17 +98,22 @@ service ExampleService1 {
             arguments: ["id"]
         };
     }
-
-    rpc UnaryMongoExample1(examples.test.Test) returns (ExampleTable1) {
+    rpc ServerStreamSelect(ExampleTable1) returns (stream ExampleTable1) {
         option (persist.ql) = {
-            query: "Find(bson.M{\"id\": req.Id}"
-        }
+            query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
+            arguments: ["id"]
+        };
     }
 
-    rpc RandomMethod(ExampleTable1) returns (ExampleTable1);
+    rpc ClientStreamingExample(stream ExampleTable1) returns (ExampleTable1) {
+        option (persist.ql) = {
+            query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
+            arguments: ["id"]
+        };
+    }
 
 }
 
 service NotEnabledService{
-    
+
 }
