@@ -175,3 +175,12 @@ func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, p
 func (s *StructList) Append(struc *Struct) {
 	*s = append(*s, struc)
 }
+
+func (s *StructList) GetStructByFieldDesc(fld *desc.FieldDescriptorProto) *Struct {
+	for _, str := range *s {
+		if str.GetProtoName() == fld.GetName() {
+			return str
+		}
+	}
+	return nil
+}

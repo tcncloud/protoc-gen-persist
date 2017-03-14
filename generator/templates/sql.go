@@ -52,8 +52,8 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 	}
 	return res, nil
 }
-
 {{end}}`
+
 const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"}}// sql server streaming {{.GetName}}
  func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetOutputType}}_ServerStreamServer) error {
 	var (
@@ -89,6 +89,7 @@ const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"
 	}
 	return nil
 }{{end}}`
+
 const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientStreamServer) error {
 	stmt, err:= s.SqlDB.Prepare({{.GetQuery}})
@@ -136,8 +137,13 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientSt
 	stream.SendAndClose(&pb.NumRows{ Count: totalAffected })
 	return nil
 }{{end}}`
+
 const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_BidirectionalServer) error {
+	var (
+ {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+ {{$field}} {{$type.GoName}} {{end}}
+ 	)
 	stmt, err := s.SqlDB.Prepare({{.GetQuery}})
 	defer stmt.Close()
 	if err != nil {
@@ -151,9 +157,6 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_Bidirect
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		var id int64
-		var start_time utils.MyTime
-		var name string
 
 		err = stmt.QueryRow({{.GetQueryParamString false}}).
 			Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})

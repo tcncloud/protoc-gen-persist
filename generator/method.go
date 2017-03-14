@@ -163,19 +163,7 @@ func (m *Method) GetMappedObject(typ *descriptor.FieldDescriptorProto) string {
 	return ""
 }
 
-// GetMappedType return mapped type for a proto name
-func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
-	if mapping := m.GetTypeMapping(); mapping != nil {
-		// if we have a mapping we are going to process it first
-		for _, mapp := range mapping.Types {
-			logrus.WithField("mapping", mapp).WithField("type", typ).Debug("checking mapping")
-			if mapp.GetProtoType() == typ.GetType() &&
-				mapp.GetProtoLabel() == typ.GetLabel() &&
-				mapp.GetProtoTypeName() == typ.GetTypeName() {
-				return "*" + m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
-			}
-		}
-	}
+func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	switch typ.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
 		return "int32"
@@ -284,14 +272,50 @@ func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 	//default mapping
 }
 
-type TypeDesc struct {
-	Name      string
-	ProtoName string
-	GoName    string
-	IsMapped  bool
+// GetMappedType return mapped type for a proto name
+func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
+	if mapping := m.GetTypeMapping(); mapping != nil {
+		// if we have a mapping we are going to process it first
+		for _, mapp := range mapping.Types {
+			logrus.WithField("mapping", mapp).WithField("type", typ).Debug("checking mapping")
+			if mapp.GetProtoType() == typ.GetType() &&
+				mapp.GetProtoLabel() == typ.GetLabel() &&
+				mapp.GetProtoTypeName() == typ.GetTypeName() {
+				return "*" + m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
+			}
+		}
+	}
+	return m.DefaultMapping(typ)
 }
 
-func (m *Method) GetFieldsWithLocalTypesFor(str *Struct) map[string]TypeDesc {
+func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeMapping_TypeDescriptor {
+	if mapping := m.GetTypeMapping(); mapping != nil {
+		// if we have a mapping we are going to process it first
+		for _, mapp := range mapping.Types {
+			if mapp.GetProtoType() == typ.GetType() &&
+				mapp.GetProtoLabel() == typ.GetLabel() &&
+				mapp.GetProtoTypeName() == typ.GetTypeName() {
+				return mapp
+			}
+		}
+	}
+	return nil
+}
+
+type TypeDesc struct {
+	Name       string
+	ProtoName  string
+	GoName     string
+	OrigGoName string
+	Struct     *Struct
+	Mapping    *persist.TypeMapping_TypeDescriptor
+}
+
+func (t *TypeDesc) IsMapped() bool {
+	return t.Mapping == nil
+}
+
+func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
 	ret := map[string]TypeDesc{}
 	if str.IsMessage {
 		// NOTE we don't process oneof fields
@@ -299,17 +323,14 @@ func (m *Method) GetFieldsWithLocalTypesFor(str *Struct) map[string]TypeDesc {
 		for _, mp := range str.MsgDesc.GetField() {
 			// skip oneof fields
 			if mp.OneofIndex == nil {
-				var mapped bool = false
-				if m.GetMappedObject(mp) != "" {
-					mapped = true
-				}
 				ret[_gen.CamelCase(mp.GetName())] = TypeDesc{
-					Name:      _gen.CamelCase(mp.GetName()),
-					ProtoName: mp.GetName(),
-					GoName:    m.GetMappedType(mp),
-					IsMapped:  mapped,
+					Name:       _gen.CamelCase(mp.GetName()),
+					Struct:     m.Service.AllStructs.GetStructByFieldDesc(mp),
+					ProtoName:  mp.GetName(),
+					GoName:     m.GetMappedType(mp),
+					OrigGoName: m.DefaultMapping(mp),
+					Mapping:    m.GetMapping(mp),
 				}
-
 			}
 		}
 	}
