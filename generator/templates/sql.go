@@ -33,11 +33,11 @@ const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.Get
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
 {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-{{$field}} {{$type.GoName}}
+{{$field}} {{$type}}
 {{end}}
 	)
 	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
-		Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+		Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} &{{$fld}},{{end}})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
@@ -47,11 +47,44 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
 	res := &{{.GetOutputType}}{
-	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+	{{range $field, $type := .GetTypeDescsForFieldsInStructSnakeCase .GetOutputTypeStruct}}
 	{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
 	}
 	return res, nil
 }
+{{end}}`
+
+const SqlUnaryMethodTemplateOld = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
+///TEST UNARY////
+GetQueryParamString
+{{.GetQueryParamString true}}
+
+GetQuery
+{{.GetQuery}}
+
+GetInputType
+{{.GetInputType}}
+
+GetOutputType
+{{.GetOutputType}}
+
+GetFieldsWithLocalTypesFor
+{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+{{$field}} {{$type}}
+{{end}}
+
+
+GetTYpeDescsFor
+{{range $field, $type := .GetTypeDescsForFieldsInStructSnakeCase .GetOutputTypeStruct}}
+{{$field}}
+TypeDesc.Name = {{$type.Name}}
+TypeDesc.ProtoName = {{$type.ProtoName}}
+TypeDesc.GoName = {{$type.GoName}}
+TypeDesc.OrigGoName = {{$type.OrigGoName}}
+TypeDesc.Struct = {{$type.Struct}}
+TypeDesc.Mapping = {{$type.Mapping}}
+
+{{end}}
 {{end}}`
 
 const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"}}// sql server streaming {{.GetName}}
