@@ -68,7 +68,7 @@ func (m *Method) GetQueryParamString(comma bool) string {
 					// TODO check if the type is a mapped type
 					if fld := inputTypeStruct.GetFieldType(arg); fld != nil {
 						if m.IsTypeMapped(fld) {
-							return m.GetMappedObject(fld) + ".ToSql(" + "req." + _gen.CamelCase(arg) + ")"
+							return m.GetMappedObject(fld) + "{}.ToSql(" + "req." + _gen.CamelCase(arg) + ")"
 						}
 					}
 
@@ -191,9 +191,9 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
 		if structure := m.Service.AllStructs.GetStructByProtoName(typ.GetTypeName()); structure != nil {
 			if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil {
-				return "*" + imp.GoPackageName + "." + structure.GetGoName()
+				return imp.GoPackageName + "." + structure.GetGoName()
 			} else {
-				return "*" + structure.GetGoName()
+				return structure.GetGoName()
 			}
 		}
 	case descriptor.FieldDescriptorProto_TYPE_BOOL:
@@ -300,7 +300,7 @@ func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 			if mapp.GetProtoType() == typ.GetType() &&
 				mapp.GetProtoLabel() == typ.GetLabel() &&
 				mapp.GetProtoTypeName() == typ.GetTypeName() {
-				return "*" + m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
+				return m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
 			}
 		}
 	}
@@ -346,7 +346,7 @@ func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
 					GoName:     m.GetMappedType(mp),
 					OrigGoName: m.DefaultMapping(mp),
 					Mapping:    m.GetMapping(mp),
-					IsMapped:   (m.GetMapping != nil),
+					IsMapped:   (m.GetMapping(mp) != nil),
 				}
 			}
 		}
