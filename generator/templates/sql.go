@@ -55,7 +55,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 {{end}}`
 
 const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"}}// sql server streaming {{.GetName}}
-func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetOutputType}}_ServerStreamServer) error {
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	var (
  {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
  {{$field}} {{$type}}{{end}}
@@ -91,7 +91,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 }{{end}}`
 
 const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}}
-func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientStreamServer) error {
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	stmt, err:= s.SqlDB.Prepare({{.GetQuery}})
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientSt
 }{{end}}`
 
 const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}}
-func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_BidirectionalServer) error {
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	var (
  {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
  {{$field}} {{$type}}{{end}}
