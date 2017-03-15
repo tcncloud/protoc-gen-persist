@@ -354,7 +354,7 @@ func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
 	return ret
 }
 
-func (m *Method) GetTypeDescsForFieldsInStructSnakeCase(st *Struct) map[string]TypeDesc {
+func (m *Method) GetTypeDescForFieldsInStructSnakeCase(st *Struct) map[string]TypeDesc {
 	if st == nil {
 		return nil
 	}
