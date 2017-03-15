@@ -142,7 +142,7 @@ const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}//
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_BidirectionalServer) error {
 	var (
  {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
- {{$field}} {{$type.GoName}} {{end}}
+ {{$field}} {{$type}}{{end}}
  	)
 	stmt, err := s.SqlDB.Prepare({{.GetQuery}})
 	defer stmt.Close()
@@ -169,8 +169,8 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_Bidirect
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		res := &{{.GetOutputType}}{
-		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-		{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
+		{{$field}}: {{$type.ProtoName}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
 		}
 		if err := stream.Send(res); err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
