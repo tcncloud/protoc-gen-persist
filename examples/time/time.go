@@ -14,7 +14,7 @@ type Time struct {
 func (s Time) ToSql(src *timestamp.Timestamp) time.Time {
 	return time.Unix(src.Seconds, int64(src.Nanos))
 }
-func (s Time) FromSql() *timestamp.Timestamp {
+func (s Time) ToProto() *timestamp.Timestamp {
 	return &timestamp.Timestamp{
 		Nanos:   s.Nanos,
 		Seconds: s.Seconds,
