@@ -48,7 +48,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 	}
 	res := &{{.GetOutputType}}{
 	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
-	{{$field}}: {{$type.ProtoName}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+	{{$field}}: {{if $type.IsMessage}} &{{end}}{{if $type.IsEnum}} {{$type.EnumName}}({{$type.ProtoName}}) {{else}}{{$type.ProtoName}}{{if $type.IsMapped}}.ToProto(){{end}}{{end}},{{end}}
 	}
 	return res, nil
 }

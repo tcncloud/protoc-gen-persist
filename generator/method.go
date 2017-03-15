@@ -328,7 +328,10 @@ type TypeDesc struct {
 	OrigGoName string
 	Struct     *Struct
 	Mapping    *persist.TypeMapping_TypeDescriptor
+	EnumName   string
 	IsMapped   bool
+	IsEnum     bool
+	IsMessage  bool
 }
 
 func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
@@ -343,7 +346,10 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 					GoName:     m.GetMappedType(mp),
 					OrigGoName: m.DefaultMapping(mp),
 					Mapping:    m.GetMapping(mp),
+					EnumName:   mp.GetTypeName(),
 					IsMapped:   (m.GetMapping(mp) != nil),
+					IsEnum:     (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
+					IsMessage:  (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE),
 				})
 			}
 		}
