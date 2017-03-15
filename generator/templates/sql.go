@@ -47,51 +47,18 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
 	res := &{{.GetOutputType}}{
-	{{range $field, $type := .GetTypeDescsForFieldsInStructSnakeCase .GetOutputTypeStruct}}
-	{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
+	{{$field}}: {{$type.ProtoName}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
 	}
 	return res, nil
 }
 {{end}}`
 
-const SqlUnaryMethodTemplateOld = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
-///TEST UNARY////
-GetQueryParamString
-{{.GetQueryParamString true}}
-
-GetQuery
-{{.GetQuery}}
-
-GetInputType
-{{.GetInputType}}
-
-GetOutputType
-{{.GetOutputType}}
-
-GetFieldsWithLocalTypesFor
-{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-{{$field}} {{$type}}
-{{end}}
-
-
-GetTYpeDescsFor
-{{range $field, $type := .GetTypeDescsForFieldsInStructSnakeCase .GetOutputTypeStruct}}
-{{$field}}
-TypeDesc.Name = {{$type.Name}}
-TypeDesc.ProtoName = {{$type.ProtoName}}
-TypeDesc.GoName = {{$type.GoName}}
-TypeDesc.OrigGoName = {{$type.OrigGoName}}
-TypeDesc.Struct = {{$type.Struct}}
-TypeDesc.Mapping = {{$type.Mapping}}
-
-{{end}}
-{{end}}`
-
 const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"}}// sql server streaming {{.GetName}}
- func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetOutputType}}_ServerStreamServer) error {
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetOutputType}}_ServerStreamServer) error {
 	var (
  {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
- {{$field}} {{$type.GoName}} {{end}}
+ {{$field}} {{$type}}{{end}}
  	)
 	rows, err := s.SqlDB.Query({{.GetQuery}} {{.GetQueryParamString true}})
 
@@ -110,12 +77,12 @@ const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		err := rows.Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+		err := rows.Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} &{{$fld}},{{end}})
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		res := &{{.GetOutputType}}{
-		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		{{range $field, $type := .GetTypeDescForFieldsInStruct  .GetOutputTypeStruct}}
 		{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
 		}
 		stream.Send(res)
@@ -167,7 +134,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientSt
 		fmt.Errorf("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
-	stream.SendAndClose(&pb.NumRows{ Count: totalAffected })
+	stream.SendAndClose(&{{.GetOutputType}}{ Count: totalAffected })
 	return nil
 }{{end}}`
 
@@ -213,3 +180,4 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_Bidirect
 }
 
 {{end}}`
+
