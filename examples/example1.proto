@@ -101,7 +101,7 @@ service ExampleService1 {
     rpc ServerStreamSelect(ExampleTable1) returns (stream ExampleTable1) {
         option (persist.ql) = {
             query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
-            arguments: ["id"]
+            arguments: ["test_id"]
         };
     }
 
