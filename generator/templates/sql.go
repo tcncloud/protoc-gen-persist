@@ -32,9 +32,8 @@ package templates
 const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
-{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-{{$field}} {{$type}}
-{{end}}
+		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		{{$field}} {{$type}}{{end}}
 	)
 	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
 		Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.ProtoName}},{{end}})
