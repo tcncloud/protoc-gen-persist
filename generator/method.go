@@ -331,15 +331,12 @@ type TypeDesc struct {
 	IsMapped   bool
 }
 
-func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
-	ret := map[string]TypeDesc{}
-	if str.IsMessage {
-		// NOTE we don't process oneof fields
-		// for _, mapping := range str.MsgDesc.GetOneofDecl() {}
+func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
+	ret := make([]TypeDesc, 0)
+	if str != nil && str.IsMessage {
 		for _, mp := range str.MsgDesc.GetField() {
-			// skip oneof fields
 			if mp.OneofIndex == nil {
-				ret[_gen.CamelCase(mp.GetName())] = TypeDesc{
+				ret = append(ret, TypeDesc{
 					Name:       _gen.CamelCase(mp.GetName()),
 					Struct:     m.Service.AllStructs.GetStructByFieldDesc(mp),
 					ProtoName:  mp.GetName(),
@@ -347,29 +344,27 @@ func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
 					OrigGoName: m.DefaultMapping(mp),
 					Mapping:    m.GetMapping(mp),
 					IsMapped:   (m.GetMapping(mp) != nil),
-				}
+				})
 			}
 		}
 	}
 	return ret
 }
 
-func (m *Method) GetTypeDescForFieldsInStructSnakeCase(st *Struct) map[string]TypeDesc {
-	if st == nil {
-		return nil
+func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
+	ret := map[string]TypeDesc{}
+	for _, typeDesc := range m.GetTypeDescArrayForStruct(str) {
+		ret[typeDesc.Name] = typeDesc
 	}
-	otherMap := m.GetTypeDescForFieldsInStruct(st)
-	if otherMap == nil {
-		return nil
-	}
-	mapping := make(map[string]TypeDesc)
+	return ret
+}
 
-	for _, field := range st.MsgDesc.GetField() {
-		if field.Name != nil && field.OneofIndex == nil {
-			mapping[*field.Name] = otherMap[_gen.CamelCase(*field.Name)]
-		}
+func (m *Method) GetTypeDescForFieldsInStructSnakeCase(str *Struct) map[string]TypeDesc {
+	ret := map[string]TypeDesc{}
+	for _, typeDesc := range m.GetTypeDescArrayForStruct(str) {
+		ret[typeDesc.ProtoName] = typeDesc
 	}
-	return mapping
+	return ret
 }
 
 func (m *Method) GetServiceName() string {
