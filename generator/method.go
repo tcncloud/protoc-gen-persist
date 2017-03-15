@@ -80,6 +80,25 @@ func (m *Method) GetQueryParamString(comma bool) string {
 	return ""
 }
 
+func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string{
+	if st == nil {
+		return nil
+	}
+	// The Fields on the struct
+	mapping := make(map[string]string)
+	//ranges over the proto fields
+	for _, field := range st.MsgDesc.GetField(){
+		if field.Name != nil {
+			if m.IsTypeMapped(field) {
+				mapping[*field.Name] = m.GetMappedType(field)
+			} else {
+				mapping[*field.Name] = m.DefaultMapping(field)
+			}
+		}
+	}
+	return mapping
+}
+
 func (m *Method) GetTypeStructByProtoName(proto string) *Struct {
 	return m.Service.AllStructs.GetStructByProtoName(proto)
 }
@@ -309,10 +328,7 @@ type TypeDesc struct {
 	OrigGoName string
 	Struct     *Struct
 	Mapping    *persist.TypeMapping_TypeDescriptor
-}
-
-func (t *TypeDesc) IsMapped() bool {
-	return t.Mapping == nil
+	IsMapped   bool
 }
 
 func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
@@ -330,11 +346,30 @@ func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
 					GoName:     m.GetMappedType(mp),
 					OrigGoName: m.DefaultMapping(mp),
 					Mapping:    m.GetMapping(mp),
+					IsMapped:   (m.GetMapping != nil),
 				}
 			}
 		}
 	}
 	return ret
+}
+
+func (m *Method) GetTypeDescsForFieldsInStructSnakeCase(st *Struct) map[string]TypeDesc {
+	if st == nil {
+		return nil
+	}
+	otherMap := m.GetTypeDescForFieldsInStruct(st)
+	if otherMap == nil {
+		return nil
+	}
+	mapping := make(map[string]TypeDesc)
+
+	for _, field := range st.MsgDesc.GetField() {
+		if field.Name != nil && field.OneofIndex == nil {
+			mapping[*field.Name] = otherMap[_gen.CamelCase(*field.Name)]
+		}
+	}
+	return mapping
 }
 
 func (m *Method) GetServiceName() string {
