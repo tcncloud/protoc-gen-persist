@@ -349,7 +349,7 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 					EnumName:   mp.GetTypeName(),
 					IsMapped:   (m.GetMapping(mp) != nil),
 					IsEnum:     (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
-					IsMessage:  (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE),
+					IsMessage:  (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
 				})
 			}
 		}
