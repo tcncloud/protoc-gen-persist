@@ -81,7 +81,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		err := rows.Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} &{{$fld}},{{end}})
+		err := rows.Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.ProtoName}},{{end}})
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -163,7 +163,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		}
 
 		err = stmt.QueryRow({{.GetQueryParamString false}}).
-			Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+			Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} {{$t.ProtoName}},{{end}})
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
