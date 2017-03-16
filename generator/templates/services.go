@@ -32,9 +32,19 @@ package templates
 const ServicesTemplate = `{{define "implement_services"}}
 {{range $srv := .}}
 {{if $srv.IsServiceEnabled}}
+{{if $srv.IsSQL}}
 type {{$srv.GetName}}Impl struct {
-	{{if $srv.IsSQL}}SqlDB *sql.DB{{end}}
+	SqlDB *sql.DB
 }
+
+func New{{$srv.GetName}}Impl(driver, connString string) (*{{$srv.GetName}}Impl, error) {
+	db, err := sql.Open(driver, connString)
+	if err != nil {
+		return nil, err
+	}
+	return &{{$srv.GetName}}Impl{ SqlDB: db }, nil
+}
+{{end}}
 {{range $method := $srv.Methods}}
 {{template "implement_method" $method}}
 {{end}}
