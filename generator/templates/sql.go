@@ -144,15 +144,11 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 
 const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
-	var (
- {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
- {{$field}} {{$type}}{{end}}
- 	)
 	stmt, err := s.SqlDB.Prepare({{.GetQuery}})
-	defer stmt.Close()
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -161,9 +157,12 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-
+		var (
+		 {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		 {{$field}} {{$type}}{{end}}
+		)
 		err = stmt.QueryRow({{.GetQueryParamString false}}).
-			Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} {{$t.ProtoName}},{{end}})
+			Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.ProtoName}},{{end}})
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
