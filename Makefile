@@ -64,8 +64,8 @@ test-compile: build
 		examples/*.proto
 
 test-impl: build
-	go build -o ./test-impl/server.main ./test-impl/server/sql
-	go build -o ./test-impl/client.main ./test-impl/client/sql
+	env GOOS=linux go build -o ./test-impl/server.main ./test-impl/server/sql
+	env GOOS=linux go build -o ./test-impl/client.main ./test-impl/client/sql
 
 deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/glide
 
