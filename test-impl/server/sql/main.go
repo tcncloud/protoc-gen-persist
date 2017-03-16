@@ -20,6 +20,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	_, err = s.SqlDB.Exec(`CREATE TABLE example_table(
+		id          bigserial,
+		start_time  timestamp with time zone NOT NULL,
+		name        varchar(255)             NOT NULL,
+		primary key(id)
+	)`)
+	if err != nil {
+		fmt.Printf("Server err:  %+v", err)
+	}
 	pb.RegisterAmazingServer(grpcServer, s)
 	fmt.Printf("server listening on 50051\n")
 	grpcServer.Serve(lis)
