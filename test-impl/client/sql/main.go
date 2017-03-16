@@ -8,6 +8,7 @@ import(
 	"google.golang.org/grpc"
 	pb "github.com/tcncloud/protoc-gen-persist/examples"
 	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
+	ptypes "github.com/golang/protobuf/ptypes"
 )
 func setupClient() pb.AmazingClient {
 	conn, err := grpc.Dial("s:50051",  grpc.WithInsecure())
@@ -91,7 +92,7 @@ func bidirectionalStream(client pb.AmazingClient, recs []*pb.Table2) error {
 		if rec != nil {
 			fmt.Printf("Before Bidirectional Update: %+v\n", rec)
 			rec.Name = "jenkins"
-			rec.StartTime = utils.ToProtobufTime(&tomorrow)
+			rec.StartTime = ToProtobufTime(&tomorrow)
 			err := stream.Send(rec)
 
 			if err != nil {
@@ -115,13 +116,8 @@ func bidirectionalStream(client pb.AmazingClient, recs []*pb.Table2) error {
 
 func main() {
 	client := setupClient()
-	_, err := client.CreateTable2(context.Background(), &pb.Empty{})
 
-	if err != nil {
-		panic(err)
-	}
-
-	err = clientStreamInsert(client, "bill")
+	err := clientStreamInsert(client, "bill")
 	if err != nil {
 		panic(err)
 	}
