@@ -147,6 +147,7 @@ func ToProtobufTime(lTime *time.Time) *google_protobuf.Timestamp {
 	}
 	res, err := ptypes.TimestampProto(*lTime)
 	if err != nil {
+		fmt.Printf("something wrong %+v", err)
 		return nil
 	}
 	return res

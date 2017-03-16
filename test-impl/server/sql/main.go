@@ -22,8 +22,8 @@ func main() {
 	}
 	_, err = s.SqlDB.Exec(`CREATE TABLE example_table(
 		id          bigserial,
-		start_time  timestamp with time zone NOT NULL,
-		name        varchar(255)             NOT NULL,
+		start_time  varchar(255) NOT NULL,
+		name        varchar(255) NOT NULL,
 		primary key(id)
 	)`)
 	if err != nil {
