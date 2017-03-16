@@ -182,6 +182,17 @@ func (m *Method) GetMappedObject(typ *descriptor.FieldDescriptorProto) string {
 	return ""
 }
 
+func (m *Method) GetTypeNameMinusPackage(ty *descriptor.FieldDescriptorProto) string {
+	if structure := m.Service.AllStructs.GetStructByProtoName(ty.GetTypeName()); structure != nil {
+		if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil {
+			return imp.GoPackageName + "." + structure.GetGoName()
+		} else {
+			return structure.GetGoName()
+		}
+	}
+	return ""
+}
+
 func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	switch typ.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
@@ -189,12 +200,8 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	case descriptor.FieldDescriptorProto_TYPE_GROUP:
 		logrus.Fatalf("we currently don't support groups/oneof structures %s", typ.GetName())
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
-		if structure := m.Service.AllStructs.GetStructByProtoName(typ.GetTypeName()); structure != nil {
-			if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil {
-				return imp.GoPackageName + "." + structure.GetGoName()
-			} else {
-				return structure.GetGoName()
-			}
+		if ret := m.GetTypeNameMinusPackage(typ); ret != "" {
+			return ret
 		}
 	case descriptor.FieldDescriptorProto_TYPE_BOOL:
 		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
@@ -346,7 +353,7 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 					GoName:     m.GetMappedType(mp),
 					OrigGoName: m.DefaultMapping(mp),
 					Mapping:    m.GetMapping(mp),
-					EnumName:   mp.GetTypeName(),
+					EnumName:   m.GetTypeNameMinusPackage(mp),
 					IsMapped:   (m.GetMapping(mp) != nil),
 					IsEnum:     (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
 					IsMessage:  (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
