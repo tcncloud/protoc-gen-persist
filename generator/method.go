@@ -88,7 +88,8 @@ func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string{
 	mapping := make(map[string]string)
 	//ranges over the proto fields
 	for _, field := range st.MsgDesc.GetField(){
-		if field.Name != nil {
+		// dont support oneof fields yet
+		if field.Name != nil && field.OneofIndex == nil{
 			if m.IsTypeMapped(field) {
 				mapping[*field.Name] = m.GetMappedType(field)
 			} else {
