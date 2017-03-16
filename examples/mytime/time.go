@@ -1,7 +1,8 @@
 package mytime
 
 import (
-	"time"
+	"strings"
+	"strconv"
 	"database/sql/driver"
 	"github.com/golang/protobuf/ptypes/timestamp"
 )
@@ -24,18 +25,27 @@ func (s MyTime) ToProto() *timestamp.Timestamp {
 
 }
 func (t *MyTime) Scan(src interface{}) error {
-	ti, ok := src.(time.Time)
+	ti, ok := src.(string)
 	if !ok {
 		t.Seconds = int64(0)
 		t.Nanos = 0
-	} else {
-		t.Seconds = ti.Unix()
-		t.Nanos = int32(ti.UnixNano())
 	}
+	tis := strings.Split(ti, ",")
+	secs, err := strconv.ParseInt(tis[0], 10, 64)
+	if err != nil {
+		return err
+	}
+	nans, err := strconv.ParseInt(tis[1], 10, 32)
+	if err != nil {
+		return err
+	}
+	t.Seconds = secs
+	t.Nanos = int32(nans)
+
 	return nil
 }
 
 func (t *MyTime) Value() (driver.Value, error) {
-	ti := time.Unix(t.Seconds, int64(t.Nanos))
+	ti := strconv.FormatInt(t.Seconds, 10) + "," + strconv.FormatInt(int64(t.Nanos), 10)
 	return ti, nil
 }
