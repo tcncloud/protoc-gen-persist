@@ -59,7 +59,7 @@ message NumRows {
   int64 count = 1;
 }
 
-service AmazingSql {
+service Amazing {
   option (persist.mapping) = {
     types: [
       {
