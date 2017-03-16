@@ -44,6 +44,7 @@ var (
 		"implement_structs":               templates.StructsTemplate,
 		"implement_services":              templates.ServicesTemplate,
 		"implement_method":                templates.MethodTemplate,
+		"return_convert_helpers":          templates.ReturnConvertHelpers,
 		"unary_method":                    templates.UnaryMethodTemplate,
 		"client_streaming_method":         templates.ClientStreamingMethodTemplate,
 		"server_streaming_method":         templates.ServerStreamingMethodTemplate,

@@ -29,6 +29,11 @@
 
 package templates
 
+const ReturnConvertHelpers= `
+	{{define "addr"}}{{if .IsMessage}}&{{end}}{{end}}
+	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.ProtoName}}){{else}}{{.ProtoName}}{{end}}{{end}}
+	{{define "mapping"}}{{if .IsMapped}}.ToProto(){{end}}{{end}}
+`
 const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
@@ -47,7 +52,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 	}
 	res := &{{.GetOutputType}}{
 	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
-	{{$field}}: {{if $type.IsMessage}} &{{end}}{{if $type.IsEnum}} {{$type.EnumName}}({{$type.ProtoName}}) {{else}}{{$type.ProtoName}}{{if $type.IsMapped}}.ToProto(){{end}}{{end}},{{end}}
+	{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 	}
 	return res, nil
 }
@@ -82,7 +87,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 		}
 		res := &{{.GetOutputType}}{
 		{{range $field, $type := .GetTypeDescForFieldsInStruct  .GetOutputTypeStruct}}
-		{{$field}}: {{$type.ProtoName}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
 		stream.Send(res)
 	}
@@ -169,7 +174,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		}
 		res := &{{.GetOutputType}}{
 		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
-		{{$field}}: {{$type.ProtoName}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
 		if err := stream.Send(res); err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
