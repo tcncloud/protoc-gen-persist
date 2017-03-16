@@ -73,6 +73,10 @@ message ExternalTypeTestMessage {
     google.protobuf.Timestamp time = 1;
 }
 
+message CountRows {
+  int64 count = 1;
+}
+
 
 service ExampleService1 {
     option (persist.mapping) = {
@@ -80,8 +84,8 @@ service ExampleService1 {
             {
                     proto_type_name: ".google.protobuf.Timestamp"
                     proto_type:  TYPE_MESSAGE
-                    go_type: "Time"
-                    go_package: "github.com/tcncloud/protoc-gen-persist/examples/time"
+                    go_type: "MyTime"
+                    go_package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
             }
         ]
     };
@@ -101,17 +105,16 @@ service ExampleService1 {
     rpc ServerStreamSelect(ExampleTable1) returns (stream ExampleTable1) {
         option (persist.ql) = {
             query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
-            arguments: ["id"]
+            arguments: ["table_id"]
         };
     }
 
-    rpc ClientStreamingExample(stream ExampleTable1) returns (ExampleTable1) {
+    rpc ClientStreamingExample(stream ExampleTable1) returns (CountRows) {
         option (persist.ql) = {
             query: "SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1"
-            arguments: ["id"]
+            arguments: ["table_id"]
         };
     }
-
 
 }
 

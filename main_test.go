@@ -27,27 +27,21 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package templates
+package main_test
 
-const ServicesTemplate = `{{define "implement_services"}}
-{{range $srv := .}}
-{{if $srv.IsServiceEnabled}}
-{{if $srv.IsSQL}}
-type {{$srv.GetName}}Impl struct {
-	SqlDB *sql.DB
+import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"testing"
+)
+
+func TestMain(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Main Suite")
 }
 
-func New{{$srv.GetName}}Impl(driver, connString string) (*{{$srv.GetName}}Impl, error) {
-	db, err := sql.Open(driver, connString)
-	if err != nil {
-		return nil, err
-	}
-	return &{{$srv.GetName}}Impl{ SqlDB: db }, nil
-}
-{{end}}
-{{range $method := $srv.Methods}}
-{{template "implement_method" $method}}
-{{end}}
-{{end}}
-{{end}}
-{{end}}`
+var _ = Describe("main", func() {
+	It("exists", func() {})
+})
+

@@ -47,15 +47,15 @@ proto-examples:
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 		examples/test/*.proto
 
-build: generate 
+build: generate
 	glide install
-	go build 
+	go build
 
 install: build
 	go install
 
 test: deps build
-	ginkgo -r 
+	ginkgo -r
 
 test-compile: build
 	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
@@ -63,15 +63,19 @@ test-compile: build
 		--persist_out=. \
 		examples/*.proto
 
+test-impl: build
+	env GOOS=linux go build -o ./test-impl/server.main ./test-impl/server/sql
+	env GOOS=linux go build -o ./test-impl/client.main ./test-impl/client/sql
+
 deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/glide
 
 
 $(GOPATH)/bin/protoc-gen-go:
 	go get -u github.com/golang/protobuf/protoc-gen-go
 
-$(GOPATH)/bin/ginkgo:	
+$(GOPATH)/bin/ginkgo:
 	go get -u github.com/onsi/ginkgo/ginkgo
-	go get -u github.com/onsi/gomega  
+	go get -u github.com/onsi/gomega
 
 $(GOPATH)/bin/glide:
 	go get -u github.com/Masterminds/glide

@@ -1,0 +1,20 @@
+version: '3'
+services:
+  postgres:
+    image: postgres
+  s:
+    image: golang:1.7.5
+    volumes:
+      - .:/app
+    links:
+      - postgres
+    command: /app/server.main
+  c:
+    image: golang:1.7.5
+    volumes:
+      - .:/app
+    links:
+      - postgres
+      - s
+    command:
+      /app/client.main

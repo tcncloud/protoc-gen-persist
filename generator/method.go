@@ -68,7 +68,7 @@ func (m *Method) GetQueryParamString(comma bool) string {
 					// TODO check if the type is a mapped type
 					if fld := inputTypeStruct.GetFieldType(arg); fld != nil {
 						if m.IsTypeMapped(fld) {
-							return m.GetMappedObject(fld) + ".ToSql(" + "req." + _gen.CamelCase(arg) + ")"
+							return m.GetMappedObject(fld) + "{}.ToSql(" + "req." + _gen.CamelCase(arg) + ")"
 						}
 					}
 
@@ -78,6 +78,26 @@ func (m *Method) GetQueryParamString(comma bool) string {
 		}
 	}
 	return ""
+}
+
+func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string{
+	if st == nil {
+		return nil
+	}
+	// The Fields on the struct
+	mapping := make(map[string]string)
+	//ranges over the proto fields
+	for _, field := range st.MsgDesc.GetField(){
+		// dont support oneof fields yet
+		if field.Name != nil && field.OneofIndex == nil{
+			if m.IsTypeMapped(field) {
+				mapping[*field.Name] = m.GetMappedType(field)
+			} else {
+				mapping[*field.Name] = m.DefaultMapping(field)
+			}
+		}
+	}
+	return mapping
 }
 
 func (m *Method) GetTypeStructByProtoName(proto string) *Struct {
@@ -163,6 +183,17 @@ func (m *Method) GetMappedObject(typ *descriptor.FieldDescriptorProto) string {
 	return ""
 }
 
+func (m *Method) GetTypeNameMinusPackage(ty *descriptor.FieldDescriptorProto) string {
+	if structure := m.Service.AllStructs.GetStructByProtoName(ty.GetTypeName()); structure != nil {
+		if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil {
+			return imp.GoPackageName + "." + structure.GetGoName()
+		} else {
+			return structure.GetGoName()
+		}
+	}
+	return ""
+}
+
 func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	switch typ.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
@@ -170,12 +201,8 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	case descriptor.FieldDescriptorProto_TYPE_GROUP:
 		logrus.Fatalf("we currently don't support groups/oneof structures %s", typ.GetName())
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
-		if structure := m.Service.AllStructs.GetStructByProtoName(typ.GetTypeName()); structure != nil {
-			if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil {
-				return "*" + imp.GoPackageName + "." + structure.GetGoName()
-			} else {
-				return "*" + structure.GetGoName()
-			}
+		if ret := m.GetTypeNameMinusPackage(typ); ret != "" {
+			return ret
 		}
 	case descriptor.FieldDescriptorProto_TYPE_BOOL:
 		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
@@ -281,7 +308,7 @@ func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 			if mapp.GetProtoType() == typ.GetType() &&
 				mapp.GetProtoLabel() == typ.GetLabel() &&
 				mapp.GetProtoTypeName() == typ.GetTypeName() {
-				return "*" + m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
+				return m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
 			}
 		}
 	}
@@ -309,30 +336,47 @@ type TypeDesc struct {
 	OrigGoName string
 	Struct     *Struct
 	Mapping    *persist.TypeMapping_TypeDescriptor
+	EnumName   string
+	IsMapped   bool
+	IsEnum     bool
+	IsMessage  bool
 }
 
-func (t *TypeDesc) IsMapped() bool {
-	return t.Mapping == nil
-}
-
-func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
-	ret := map[string]TypeDesc{}
-	if str.IsMessage {
-		// NOTE we don't process oneof fields
-		// for _, mapping := range str.MsgDesc.GetOneofDecl() {}
+func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
+	ret := make([]TypeDesc, 0)
+	if str != nil && str.IsMessage {
 		for _, mp := range str.MsgDesc.GetField() {
-			// skip oneof fields
 			if mp.OneofIndex == nil {
-				ret[_gen.CamelCase(mp.GetName())] = TypeDesc{
+				ret = append(ret, TypeDesc{
 					Name:       _gen.CamelCase(mp.GetName()),
 					Struct:     m.Service.AllStructs.GetStructByFieldDesc(mp),
 					ProtoName:  mp.GetName(),
 					GoName:     m.GetMappedType(mp),
 					OrigGoName: m.DefaultMapping(mp),
 					Mapping:    m.GetMapping(mp),
-				}
+					EnumName:   m.GetTypeNameMinusPackage(mp),
+					IsMapped:   (m.GetMapping(mp) != nil),
+					IsEnum:     (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
+					IsMessage:  (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
+				})
 			}
 		}
+	}
+	return ret
+}
+
+func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
+	ret := map[string]TypeDesc{}
+	for _, typeDesc := range m.GetTypeDescArrayForStruct(str) {
+		ret[typeDesc.Name] = typeDesc
+	}
+	return ret
+}
+
+func (m *Method) GetTypeDescForFieldsInStructSnakeCase(str *Struct) map[string]TypeDesc {
+	ret := map[string]TypeDesc{}
+	for _, typeDesc := range m.GetTypeDescArrayForStruct(str) {
+		ret[typeDesc.ProtoName] = typeDesc
 	}
 	return ret
 }

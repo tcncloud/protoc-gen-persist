@@ -30,3 +30,7 @@ src
 examples/*.go
 examples/test/*.go
 *.cover*
+
+# test client, and test server binaries
+test-impl/client.main
+test-impl/server.main

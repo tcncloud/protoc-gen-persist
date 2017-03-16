@@ -29,15 +29,19 @@
 
 package templates
 
+const ReturnConvertHelpers= `
+	{{define "addr"}}{{if .IsMessage}}&{{end}}{{end}}
+	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.ProtoName}}){{else}}{{.ProtoName}}{{end}}{{end}}
+	{{define "mapping"}}{{if .IsMapped}}.ToProto(){{end}}{{end}}
+`
 const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
-{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-{{$field}} {{$type.GoName}}
-{{end}}
+		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		{{$field}} {{$type}}{{end}}
 	)
 	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
-		Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+		Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.ProtoName}},{{end}})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
@@ -47,18 +51,18 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
 	res := &{{.GetOutputType}}{
-	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-	{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
+	{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 	}
 	return res, nil
 }
 {{end}}`
 
 const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"}}// sql server streaming {{.GetName}}
- func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetOutputType}}_ServerStreamServer) error {
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	var (
  {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
- {{$field}} {{$type.GoName}} {{end}}
+ {{$field}} {{$type}}{{end}}
  	)
 	rows, err := s.SqlDB.Query({{.GetQuery}} {{.GetQueryParamString true}})
 
@@ -77,13 +81,13 @@ const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		err := rows.Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+		err := rows.Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.ProtoName}},{{end}})
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		res := &{{.GetOutputType}}{
-		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-		{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+		{{range $field, $type := .GetTypeDescForFieldsInStruct  .GetOutputTypeStruct}}
+		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
 		stream.Send(res)
 	}
@@ -91,7 +95,7 @@ const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"
 }{{end}}`
 
 const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}}
-func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientStreamServer) error {
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	stmt, err:= s.SqlDB.Prepare({{.GetQuery}})
 	if err != nil {
 		return err
@@ -134,21 +138,17 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientSt
 		fmt.Errorf("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
-	stream.SendAndClose(&pb.NumRows{ Count: totalAffected })
+	stream.SendAndClose(&{{.GetOutputType}}{ Count: totalAffected })
 	return nil
 }{{end}}`
 
 const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}}
-func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_BidirectionalServer) error {
-	var (
- {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
- {{$field}} {{$type.GoName}} {{end}}
- 	)
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	stmt, err := s.SqlDB.Prepare({{.GetQuery}})
-	defer stmt.Close()
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -157,9 +157,12 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_Bidirect
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-
+		var (
+		 {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		 {{$field}} {{$type}}{{end}}
+		)
 		err = stmt.QueryRow({{.GetQueryParamString false}}).
-			Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+			Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.ProtoName}},{{end}})
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
@@ -169,8 +172,8 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_Bidirect
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		res := &{{.GetOutputType}}{
-		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-		{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
+		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
 		if err := stream.Send(res); err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
@@ -180,3 +183,4 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_Bidirect
 }
 
 {{end}}`
+
