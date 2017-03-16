@@ -9,15 +9,15 @@ import(
 	pb "github.com/tcncloud/protoc-gen-persist/examples"
 	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
 )
-func setupClient() pb.AmazingSqlClient {
+func setupClient() pb.AmazingClient {
 	conn, err := grpc.Dial("s:50051",  grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
-	return pb.NewAmazingSqlClient(conn)
+	return pb.NewAmazingClient(conn)
 }
 
-func clientStreamInsert(client pb.AmazingSqlClient, name string) error {
+func clientStreamInsert(client pb.AmazingClient, name string) error {
 	now := time.Now().Truncate(time.Millisecond)
 	docs := []*pb.Table2{
 		&pb.Table2{
@@ -57,7 +57,7 @@ func clientStreamInsert(client pb.AmazingSqlClient, name string) error {
 	return nil
 }
 
-func serverStreamFromName(client pb.AmazingSqlClient, name string) (*[]*pb.Table2, error) {
+func serverStreamFromName(client pb.AmazingClient, name string) (*[]*pb.Table2, error) {
 	res := make([]*pb.Table2, 0)
 	fmt.Printf("Getting all docs that match name %s with server stream\n", name)
 	stream, err := client.ServerStream(context.Background(), &pb.Name{ Name: name })
@@ -79,7 +79,7 @@ func serverStreamFromName(client pb.AmazingSqlClient, name string) (*[]*pb.Table
 	return &res, nil
 }
 
-func bidirectionalStream(client pb.AmazingSqlClient, recs []*pb.Table2) error {
+func bidirectionalStream(client pb.AmazingClient, recs []*pb.Table2) error {
 	stream, err := client.Bidirectional(context.Background())
 	if err != nil {
 		return err

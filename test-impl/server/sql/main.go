@@ -16,11 +16,11 @@ func main() {
 	}
 	grpcServer := grpc.NewServer()
 	connString := "dbname=postgres user=postgres host=postgres port=5432 sslmode=disable"
-	s, err := pb.NewAmazingSqlImpl("postgres",connString)
+	s, err := pb.NewAmazingImpl("postgres",connString)
 	if err != nil {
 		panic(err)
 	}
-	pb.RegisterAmazingSqlServer(grpcServer, s)
+	pb.RegisterAmazingServer(grpcServer, s)
 	fmt.Printf("server listening on 50051\n")
 	grpcServer.Serve(lis)
 }
