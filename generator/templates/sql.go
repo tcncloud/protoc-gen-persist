@@ -31,7 +31,7 @@ package templates
 
 const ReturnConvertHelpers= `
 	{{define "addr"}}{{if .IsMessage}}&{{end}}{{end}}
-	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.ProtoName}}){{else}}{{.ProtoName}}{{end}}{{end}}
+	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.Name}}){{else}}{{.Name}}{{end}}{{end}}
 	{{define "mapping"}}{{if .IsMapped}}.ToProto(){{end}}{{end}}
 `
 const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
@@ -41,7 +41,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		{{$field}} {{$type}}{{end}}
 	)
 	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
-		Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.ProtoName}},{{end}})
+		Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
@@ -81,7 +81,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		err := rows.Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.ProtoName}},{{end}})
+		err := rows.Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -162,7 +162,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		 {{$field}} {{$type}}{{end}}
 		)
 		err = stmt.QueryRow({{.GetQueryParamString false}}).
-			Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.ProtoName}},{{end}})
+			Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)

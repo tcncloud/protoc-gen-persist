@@ -90,10 +90,11 @@ func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string {
 	for _, field := range st.MsgDesc.GetField() {
 		// dont support oneof fields yet
 		if field.Name != nil && field.OneofIndex == nil {
+			name := _gen.CamelCase(*field.Name)
 			if m.IsTypeMapped(field) {
-				mapping[*field.Name] = m.GetMappedType(field)
+				mapping[name] = m.GetMappedType(field)
 			} else {
-				mapping[*field.Name] = m.DefaultMapping(field)
+				mapping[name] = m.DefaultMapping(field)
 			}
 		}
 	}
