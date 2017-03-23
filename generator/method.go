@@ -80,16 +80,16 @@ func (m *Method) GetQueryParamString(comma bool) string {
 	return ""
 }
 
-func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string{
+func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string {
 	if st == nil {
 		return nil
 	}
 	// The Fields on the struct
 	mapping := make(map[string]string)
 	//ranges over the proto fields
-	for _, field := range st.MsgDesc.GetField(){
+	for _, field := range st.MsgDesc.GetField() {
 		// dont support oneof fields yet
-		if field.Name != nil && field.OneofIndex == nil{
+		if field.Name != nil && field.OneofIndex == nil {
 			if m.IsTypeMapped(field) {
 				mapping[*field.Name] = m.GetMappedType(field)
 			} else {
