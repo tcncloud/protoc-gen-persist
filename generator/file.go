@@ -112,7 +112,7 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 	typ := f.AllStructures.GetStructByProtoName(name)
 	if typ != nil {
 		for _, file := range *typ.GetImportedFiles() {
-			if file.GetOrigName() != f.GetOrigName() {
+			if f.GetPackageName() != file.GetPackageName() {
 				f.ImportList.GetOrAddImport(file.GetGoPackage(), file.GetGoPath())
 			}
 		}

@@ -80,16 +80,16 @@ func (m *Method) GetQueryParamString(comma bool) string {
 	return ""
 }
 
-func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string{
+func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string {
 	if st == nil {
 		return nil
 	}
 	// The Fields on the struct
 	mapping := make(map[string]string)
 	//ranges over the proto fields
-	for _, field := range st.MsgDesc.GetField(){
+	for _, field := range st.MsgDesc.GetField() {
 		// dont support oneof fields yet
-		if field.Name != nil && field.OneofIndex == nil{
+		if field.Name != nil && field.OneofIndex == nil {
 			if m.IsTypeMapped(field) {
 				mapping[*field.Name] = m.GetMappedType(field)
 			} else {
@@ -120,7 +120,7 @@ func (m *Method) GetQuery() string {
 
 func (m *Method) GetGoTypeName(typ string) string {
 	str := m.GetAllStructs().GetStructByProtoName(typ)
-	if str.File.GetOrigName() != m.Service.File.GetOrigName() {
+	if m.Service.File.GetPackageName() != str.File.GetPackageName() {
 		if imp := m.Service.File.ImportList.GetGoNameByStruct(str); imp != nil {
 			return imp.GoPackageName + "." + str.GetGoName()
 		} else {
@@ -340,6 +340,11 @@ type TypeDesc struct {
 	IsMapped   bool
 	IsEnum     bool
 	IsMessage  bool
+	ResultHook bool
+}
+
+type ResultHook interface {
+	AddResult(req, row interface{}) error
 }
 
 func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
@@ -347,7 +352,7 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 	if str != nil && str.IsMessage {
 		for _, mp := range str.MsgDesc.GetField() {
 			if mp.OneofIndex == nil {
-				ret = append(ret, TypeDesc{
+				typeDesc := TypeDesc{
 					Name:       _gen.CamelCase(mp.GetName()),
 					Struct:     m.Service.AllStructs.GetStructByFieldDesc(mp),
 					ProtoName:  mp.GetName(),
@@ -358,7 +363,8 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 					IsMapped:   (m.GetMapping(mp) != nil),
 					IsEnum:     (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
 					IsMessage:  (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
-				})
+				}
+				ret = append(ret, typeDesc)
 			}
 		}
 	}
