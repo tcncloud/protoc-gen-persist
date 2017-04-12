@@ -108,13 +108,13 @@ const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
 		{{$val}},{{end}}
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertCols}}, params)
+	muts[0] = spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params)
 	_, err := s.SpannerDB.Apply(muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			return grpc.Errorf(codes.AlreadyExists, err.Error())
 		} else {
-			returnn nil, grpc.Errorf(codes.Unknown, err.Error())
+			return nil, grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
 	res := &{{.GetOutputType}}{}
