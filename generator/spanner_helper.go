@@ -155,4 +155,8 @@ func (sh *SpannerHelper) Parse() error {
 	return nil
 }
 
+func (sh *SpannerHelper) InsertColsAsString() string {
+	return fmt.Sprintf("%#v", sh.InsertCols)
+}
+
 

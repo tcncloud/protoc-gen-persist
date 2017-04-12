@@ -108,7 +108,7 @@ const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
 		{{$val}},{{end}}
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.Insert({{.Spanner.TableName}}, {{.Spanner.InsertCols}}, params)
+	muts[0] = spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertCols}}, params)
 	_, err := s.SpannerDB.Apply(muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
@@ -129,7 +129,7 @@ const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
 		{{$key}}: {{$val}},\n{{end}}
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.UpdateMap({{.Spanner.TableName}}, params)
+	muts[0] = spanner.UpdateMap("{{.Spanner.TableName}}", params)
 	_, err := s.SpannerDB.Apply(muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
@@ -147,7 +147,7 @@ const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
 const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
 	key := {{.GetDeleteKeyRange}}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange({{.Spanner.TableName}}, key)
+	muts[0] = spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
 	_, err := s.SpannerDB.Apply(muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
@@ -192,7 +192,7 @@ params := map[string]interface{}{
 {{range $key, $val := .GetSpannerUpdateArgs}}
 	{{$key}}: {{$val}},\n{{end}}
 }
-muts = append(muts, spanner.UpdateMap({{.Spanner.TableName}}, params))
+muts = append(muts, spanner.UpdateMap("{{.Spanner.TableName}}", params))
 {{end}}`
 
 const SpannerClientStreamingInsertTemplate = `{{define "spanner_client_streaming_insert"}}//spanner client streaming update
@@ -200,12 +200,12 @@ params := []interface{}{
 {{range $index, $val := .GetSpannerInsertArgs}}
 	{{$val}},\n{{end}}
 }
-muts = append(muts, spanner.Insert({{.Spanner.TableName}}, {{.Spanner.InsertCols}}, params))
+muts = append(muts, spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params))
 {{end}}`
 
 const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming_delete"}}//spanner client streaming update
 key := {{.GetDeleteKeyRange "req"}}
-muts = append(muts, spanner.DeleteKeyRange({{.Spanner.TableName}}, key)
+muts = append(muts, spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
 {{end}}`
 
 const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming_method"}}// spanner server streaming {{.GetName}}
