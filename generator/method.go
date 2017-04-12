@@ -32,7 +32,7 @@ package generator
 import (
 	"strconv"
 	"strings"
-
+	"fmt"
 	"github.com/Shrugs/fauxgaux"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
@@ -44,6 +44,25 @@ import (
 type Method struct {
 	Desc    *descriptor.MethodDescriptorProto
 	Service *Service
+	Spanner *SpannerHelper
+}
+
+func NewMethod(desc *descriptor.MethodDescriptorProto, srv *Service) (*Method, error) {
+	meth := &Method{Desc: desc, Service: srv}
+	return meth, nil
+}
+
+func (m *Method) String() string {
+	if m == nil {
+		return "METHOD: <nil>"
+	}
+	isSql := fmt.Sprintf("%t", m.IsSQL())
+	isSpanner := fmt.Sprintf("%t", m.IsSpanner())
+	name := m.Desc.GetName()
+	input := m.Desc.GetInputType()
+	output := m.Desc.GetOutputType()
+	return fmt.Sprintf("Method:\n\tName: %s\n\tisSql: %s\n\tisSpanner: %s\n\tinput: %s\n\toutput: %s\n\tSpanner: %s\n\n",
+			name, isSql, isSpanner, input, output, m.Spanner)
 }
 
 func (m *Method) GetMethodOption() *persist.QLImpl {
@@ -300,6 +319,31 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	//default mapping
 }
 
+//////////SPANNER////////////
+
+// gets the arguments given to the query, and returns their name in the map,  their value, and whether
+// it is mapped or not.  If it is a mapped type we need to check for err before we use the arg
+// value will either be "name.Field",  or "mappedPackage.MappedType{}.ToSpanner(name.Field).Value()"
+// with name being the name of the variable that is our request proto
+func (m *Method) GetSpannerSelectArgs() []QueryArg {
+	return m.Spanner.QueryArgs
+}
+
+func (m *Method) GetSpannerInsertArgs() []QueryArg {
+	return nil
+}
+
+func (m *Method) GetSpannerUpdateArgs() []QueryArg {
+	return nil
+}
+
+func (m *Method) GetDeleteKeyRange() string {
+	return ""
+}
+
+
+
+///////END SPANNER///////////
 // GetMappedType return mapped type for a proto name
 func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 	if mapping := m.GetTypeMapping(); mapping != nil {
@@ -313,6 +357,7 @@ func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 			}
 		}
 	}
+	logrus.Debug("returning default mapping")
 	return m.DefaultMapping(typ)
 }
 
@@ -331,13 +376,13 @@ func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeM
 }
 
 type TypeDesc struct {
-	Name       string
-	ProtoName  string
-	GoName     string
-	OrigGoName string
+	Name       string // ex. StartTime
+	ProtoName  string // start_time
+	GoName     string // mytime.MyTime (if it is mapped)
+	OrigGoName string // Timestamp
 	Struct     *Struct
 	Mapping    *persist.TypeMapping_TypeDescriptor
-	EnumName   string
+	EnumName   string // Timestamp
 	IsMapped   bool
 	IsEnum     bool
 	IsMessage  bool
@@ -352,6 +397,7 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 	ret := make([]TypeDesc, 0)
 	if str != nil && str.IsMessage {
 		for _, mp := range str.MsgDesc.GetField() {
+			logrus.Debugf("mp name: %s\n", mp.GetName())
 			if mp.OneofIndex == nil {
 				typeDesc := TypeDesc{
 					Name:       _gen.CamelCase(mp.GetName()),
@@ -408,10 +454,7 @@ func (m *Method) IsEnabled() bool {
 }
 
 func (m *Method) IsSQL() bool {
-	if opt := m.GetMethodOption(); opt != nil {
-		return opt.GetPersist() == persist.PersistenceOptions_SQL
-	}
-	return false
+	return m.Service.IsSQL()
 }
 
 // func (m *Method) IsMongo() bool {
@@ -420,13 +463,10 @@ func (m *Method) IsSQL() bool {
 // 	}
 // 	return false
 // }
-//
-// func (m *Method) IsSpanner() bool {
-// 	if opt := m.GetMethodOption(); opt != nil {
-// 		return opt.GetPersist() == persist.PersistenceOptions_SPANNER
-// 	}
-// 	return false
-// }
+
+func (m *Method) IsSpanner() bool {
+	return m.Service.IsSpanner()
+}
 
 func (m *Method) IsUnary() bool {
 	return !m.Desc.GetClientStreaming() && !m.Desc.GetServerStreaming()
@@ -444,8 +484,21 @@ func (m *Method) IsBidiStreaming() bool {
 	return m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming()
 }
 
-func (m *Method) Process() {
+func (m *Method) Process() error {
 	logrus.Debugf("Process method %s", m.GetName())
+	if m.IsSpanner() {
+		logrus.Debug("We are a spanner method")
+		s, err := NewSpannerHelper(m)
+		if err != nil {
+			return err
+		}
+		m.Spanner = s
+	} else if m.IsSQL() {
+		logrus.Debug("we are a sql method")
+	} else {
+		logrus.Debug("we are neither?")
+	}
+	return nil
 }
 
 func (m *Method) ProcessImports() {
@@ -462,12 +515,30 @@ func (m *Method) ProcessImports() {
 
 type Methods []*Method
 
-func (m *Methods) AddMethod(desc *descriptor.MethodDescriptorProto, service *Service) {
-	*m = append(*m, &Method{Desc: desc, Service: service})
+func (m *Methods) AddMethod(desc *descriptor.MethodDescriptorProto, service *Service) error {
+	meth, err := NewMethod(desc, service)
+	if err != nil {
+		return err
+	}
+	*m = append(*m, meth)
+	return nil
 }
 
-func (m *Methods) Process() {
-	for _, meth := range *m {
-		meth.Process()
+func (m *Methods) String() string {
+	ret := "Methods:\n"
+	for i, met := range *m {
+		ret += fmt.Sprintf("\ti:%d val: %v", i, met)
 	}
+	return ret
+}
+
+
+func (m *Methods) PreGenerate() error {
+	for _, meth := range *m {
+		err := meth.Process()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
