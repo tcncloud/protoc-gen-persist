@@ -46,7 +46,7 @@ const SpannerHelperTemplates = `
 	if err != nil {
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	{{else}}
+{{else}}
 	// is not mapped
 	conv = req.{{.Name}}
 {{end}}{{end}}
@@ -65,13 +65,13 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 {{if $val.IsFieldValue}}
 	//if is.IsFieldValue
 	{{template "type_desc_to_def" $val.Field}}
-	params[{{$key}}] = conv
+	params["{{$val.Name}}"] = conv
 {{else}}
 	//else
 	//conv = { {$val.Value} }
 	conv = {{$val.Value}}
-	//params[{ {$key} }] = conv
-	params[{{$key}}] = conv
+	//params[{ {$val.Name} }] = conv
+	params["{{$val.Name}}"] = conv
 	{{end}}{{end}}
 
 	//stmt := spanner.Statement{SQL: "{ {.Spanner.Query} }", Params: params}
@@ -214,6 +214,22 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		{{$field}} {{$type}}{{end}}
 	)
+	var conv string
+	var err error
+	//.GetSpannerSelectArgs
+{{range $key, $val := .GetSpannerSelectArgs}}
+{{if $val.IsFieldValue}}
+	//if is.IsFieldValue
+	{{template "type_desc_to_def" $val.Field}}
+	params["{{$val.Name}}"] = conv
+{{else}}
+	//else
+	//conv = { {$val.Value} }
+	conv = {{$val.Value}}
+	//params["{ {$val.Name} }"] = conv
+	params["{{$val.Name}}"] = conv
+{{end}}{{end}}
+
 	stmt := spanner.Statement{SQL: "{{.Spanner.Query}}", Params: params}
 	tx := s.Client.Single()
 	defer tx.Close()
