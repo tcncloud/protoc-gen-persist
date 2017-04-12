@@ -74,8 +74,8 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	params[{{$key}}] = conv
 	{{end}}{{end}}
 
-	//stmt := spanner.Statement{SQL: '{ {.Spanner.Query} }', Params: params}
-	stmt := spanner.Statement{SQL: '{{.Spanner.Query}}', Params: params}
+	//stmt := spanner.Statement{SQL: "{ {.Spanner.Query} }", Params: params}
+	stmt := spanner.Statement{SQL: "{{.Spanner.Query}}", Params: params}
 	tx := s.Client.Single()
 	defer tx.Close()
 	iter := tx.Query(ctx, stmt)
@@ -212,9 +212,9 @@ const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	var (
 	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-		{{$field}} {{$type}},\n{{end}}
+		{{$field}} {{$type}}{{end}}
 	)
-	stmt := spanner.Statement{SQL: {{.GetQuery}}, Params: params}
+	stmt := spanner.Statement{SQL: "{{.Spanner.Query}}", Params: params}
 	tx := s.Client.Single()
 	defer tx.Close()
 	iter := tx.Query(ctx, stmt)
