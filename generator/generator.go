@@ -57,8 +57,9 @@ func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 }
 
 func (g *Generator) GetResponse() *plugin_go.CodeGeneratorResponse {
-	logrus.WithField("structs", g.AllStructures).Debug("collected structures")
+	//logrus.WithField("structs", g.AllStructures).Debug("collected structures")
 	ret := new(plugin_go.CodeGeneratorResponse)
+	logrus.Debugf("going over %d files\n", len(*g.Files))
 	for _, fileStruct := range *g.Files {
 		// format file Content
 
@@ -69,11 +70,12 @@ func (g *Generator) GetResponse() *plugin_go.CodeGeneratorResponse {
 			})
 		}
 	}
-	logrus.WithField("response", ret).Debug("result")
+	//logrus.WithField("response", ret).Debug("result")
 	return ret
 }
 
-func (g *Generator) Process() {
+func (g *Generator) Process() error {
+	logrus.Debug("processing the generator")
 	for _, file := range g.OriginalRequest.ProtoFile {
 		dep := func() bool {
 			for _, fileName := range g.OriginalRequest.FileToGenerate {
@@ -83,12 +85,19 @@ func (g *Generator) Process() {
 			}
 			return true
 		}()
-
+		logrus.WithFields(logrus.Fields{
+			"fileName": file.GetName(),
+			"dependency?": dep,
+		}).Debug("about to get or create this file")
 		f := g.Files.GetOrCreateFile(file, g.AllStructures, dep)
-		f.Process()
+		err := f.Process()
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, f := range *g.Files {
 		f.ProcessImports()
 	}
+	return nil
 }
