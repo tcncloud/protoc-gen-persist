@@ -79,6 +79,7 @@ message CountRows {
 
 
 service ExampleService1 {
+    option (persist.service_type) = SQL;
     option (persist.mapping) = {
         types: [
             {
