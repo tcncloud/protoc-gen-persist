@@ -38,14 +38,17 @@ const MethodTemplate = `{{define "implement_method"}}
 
 const UnaryMethodTemplate = `{{define "unary_method"}}
 {{if .IsSQL}}{{template "sql_unary_method" .}}{{end}}
+{{if .IsSpanner}}{{template "spanner_unary_method" .}}{{end}}
 {{end}}`
 
 const ClientStreamingMethodTemplate = `{{define "client_streaming_method"}}
 {{if .IsSQL}}{{template "sql_client_streaming_method" .}}{{end}}
+{{if .IsSpanner}}{{template "spanner_client_streaming_method" .}}{{end}}
 {{end}}`
 
 const ServerStreamingMethodTemplate = `{{define "server_streaming_method"}}
 {{if .IsSQL}}{{template "sql_server_streaming_method" .}}{{end}}
+{{if .IsSpanner}}{{template "spanner_server_streaming_method" .}}{{end}}
 {{end}}`
 
 const BidiStreamingMethodTemplate = `{{define "bidi_method"}}
