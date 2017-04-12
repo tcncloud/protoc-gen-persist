@@ -54,6 +54,12 @@ service MySpanner {
     ]
   };
 
+  rpc UniaryInsert(Table2) returns (Table2) {
+    option (persist.ql) = {
+      query: "Insert into example_table (id, start_time, name)  Values (?, ?, banannas)"
+      arguments: ["id", "start_time"]
+    };
+  };
   rpc UniarySelect(Filed) returns (Table2) {
     option (persist.ql) = {
       query: "SELECT * from example_table Where id=? AND start_time=?"
