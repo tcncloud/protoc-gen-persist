@@ -104,7 +104,7 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 
 const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
 	params := []interface{}{
-		{{range $index, $val := .GetSpannerInsertArgs "req"}}
+		{{range $index, $val := .GetSpannerInsertArgs}}
 		{{$val}},{{end}}
 	}
 	muts := make([]*spanner.Mutation, 1)
