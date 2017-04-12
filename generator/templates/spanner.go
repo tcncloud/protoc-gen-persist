@@ -184,7 +184,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		}
 	}
 	stream.SendAndClose(&{{.GetOutputType}}{Count: totalAffeted})
-
+}
 {{end}}`
 
 const SpannerClientStreamingUpdateTemplate = `{{define "spanner_client_streaming_update"}}//spanner client streaming update
