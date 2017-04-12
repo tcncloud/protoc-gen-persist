@@ -101,7 +101,7 @@ func NewSpannerHelper(p *Method) (*SpannerHelper, error) {
 
 func (sh *SpannerHelper) Parse() error {
 	// parse our query
-	switch sh.ParsedQuery.(type) {
+	switch pq := sh.ParsedQuery.(type) {
 	case *sqlparser.Select:
 		sh.IsSelect = true
 		spl := strings.Split(sh.RawQuery, "?")
@@ -127,16 +127,30 @@ func (sh *SpannerHelper) Parse() error {
 		sh.Query = updatedQuery
 	case *sqlparser.Insert:
 		sh.IsInsert = true
-		cols := []string{"test_column"}
-		//cols, err := extractInsertColumns(sh.ParsedQuery)
-		//if err != nil {
-		//	return err
-		//}
+		cols, err := extractInsertColumns(pq)
+		if err != nil {
+			return err
+		}
+		table, err := extractIUDTableName(pq)
+		if err != nil {
+			return err
+		}
 		sh.InsertCols = cols
+		sh.TableName = table
 	case *sqlparser.Delete:
 		sh.IsUpdate = true
+		table, err := extractIUDTableName(pq)
+		if err != nil {
+			return err
+		}
+		sh.TableName = table
 	case *sqlparser.Update:
 		sh.IsDelete = true
+		table, err := extractIUDTableName(pq)
+		if err != nil {
+			return err
+		}
+		sh.TableName = table
 	}
 	return nil
 }
