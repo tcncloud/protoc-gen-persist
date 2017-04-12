@@ -214,6 +214,8 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		{{$field}} {{$type}}{{end}}
 	)
+	params := make(map[string]interface{})
+
 	var conv string
 	var err error
 	//.GetSpannerSelectArgs
