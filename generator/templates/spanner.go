@@ -58,7 +58,7 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	)
 	params := make(map[string]interface{})
 
-	var conv string
+	var conv interface{}
 	var err error
 	//.GetSpannerSelectArgs
 {{range $key, $val := .GetSpannerSelectArgs}}
@@ -184,6 +184,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		}
 	}
 	stream.SendAndClose(&{{.GetOutputType}}{Count: totalAffeted})
+	return nil
 }
 {{end}}`
 
@@ -216,7 +217,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	)
 	params := make(map[string]interface{})
 
-	var conv string
+	var conv interface{}
 	var err error
 	//.GetSpannerSelectArgs
 {{range $key, $val := .GetSpannerSelectArgs}}
