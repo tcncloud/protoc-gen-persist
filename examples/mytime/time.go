@@ -17,6 +17,13 @@ func (s MyTime) ToSql(src *timestamp.Timestamp) *MyTime {
 	s.Nanos = src.Nanos
 	return &s
 }
+
+func (s MyTime) ToSpanner(src *timestamp.Timestamp) *MyTime {
+	s.Seconds = src.Seconds
+	s.Nanos = src.Nanos
+	return &s
+}
+
 func (s MyTime) ToProto() *timestamp.Timestamp {
 	return &timestamp.Timestamp{
 		Nanos:   s.Nanos,
