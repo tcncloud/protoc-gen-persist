@@ -53,15 +53,15 @@ type {{$srv.GetName}}Impl struct {
 func New{{$srv.GetName}}Impl(d string, conf *spanner.ClientConfig, opts ...option.ClientOption) (*{{$srv.GetName}}Impl, error) {
 	var client *spanner.Client
 	var err error
-	if config != nil {
-		client, err = spanner.NewClientWithConfig(context.Background(), database, *config, options...)
+	if conf != nil {
+		client, err = spanner.NewClientWithConfig(context.Background(), d, *conf, opts...)
 	} else {
-		client, err = spanner.NewClient(context.Background(), database, options...)
+		client, err = spanner.NewClient(context.Background(), d, opts...)
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &{{$srv.GetName}}Impl{SpannerDB: d}, nil
+	return &{{$srv.GetName}}Impl{SpannerDB: client}, nil
 }
 // need to implement rows
 //{ {template "spanner_row_handler" .} }
