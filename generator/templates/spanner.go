@@ -108,11 +108,11 @@ const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
 		{{$val}},{{end}}
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params)
+	muts[0] = spanner.Insert(ctx, "{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params)
 	_, err := s.SpannerDB.Apply(muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			return grpc.Errorf(codes.AlreadyExists, err.Error())
+			return nil, grpc.Errorf(codes.AlreadyExists, err.Error())
 		} else {
 			return nil, grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -242,7 +242,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 			if err == sql.ErrNowRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			}
-			return grpc.Errorf(codes.nknown, err.Error())
+			return grpc.Errorf(codes.unknown, err.Error())
 		}
 		err := rows.Scan({{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 		if err != nil {
