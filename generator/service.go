@@ -31,6 +31,8 @@ package generator
 
 import (
 	"github.com/golang/protobuf/proto"
+	"fmt"
+	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
@@ -43,14 +45,31 @@ type Service struct {
 	AllStructs *StructList
 }
 
-func (s *Service) ProcessMethods() {
-	for _, m := range s.Desc.GetMethod() {
-		s.Methods.AddMethod(m, s)
+func (s *Service) String() string {
+	var ms string
+	if s.Methods != nil {
+		ms = fmt.Sprintf("%s", s.Methods)
+	} else {
+		ms = "<nil>"
 	}
+	sname := s.Desc.GetName()
+	fname := s.File.Desc.GetName()
+	return fmt.Sprintf("\nSERVICE:\n\tPackage: %s\n\tServiceName: %s\n\tFileName: %s\n\tService Methods: %+v\n\n",
+			s.Package, sname, fname, ms)
 }
 
-func (s *Service) Process() {
-	s.ProcessMethods()
+func (s *Service) ProcessMethods() error {
+	for _, m := range s.Desc.GetMethod() {
+		err := s.Methods.AddMethod(m, s)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Service) Process() error {
+	return s.ProcessMethods()
 }
 
 func (s *Service) GetName() string {
@@ -67,9 +86,19 @@ func (s *Service) GetServiceOption() *persist.TypeMapping {
 	return nil
 }
 
+func (s *Service) GetServiceType() *persist.PersistenceOptions {
+	if s.Desc.Options != nil && proto.HasExtension(s.Desc.Options, persist.E_ServiceType) {
+		ext, err := proto.GetExtension(s.Desc.Options, persist.E_ServiceType)
+		if err == nil {
+			return ext.(*persist.PersistenceOptions)
+		}
+	}
+	return nil
+}
+
 func (s *Service) IsSQL() bool {
-	for _, m := range *s.Methods {
-		if m.IsSQL() {
+	if p := s.GetServiceType(); p != nil {
+		if *p == persist.PersistenceOptions_SQL {
 			return true
 		}
 	}
@@ -85,28 +114,27 @@ func (s *Service) IsSQL() bool {
 // 	return false
 // }
 //
-// func (s *Service) IsSpanner() bool {
-// 	for _, m := range *s.Methods {
-// 		if m.IsSpanner() {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-func (s *Service) IsServiceEnabled() bool {
-	if s.GetServiceOption() != nil {
-		return true
-	}
-	for _, m := range *s.Methods {
-		if m.IsSQL() {
+func (s *Service) IsSpanner() bool {
+	if p := s.GetServiceType(); p != nil {
+		if *p == persist.PersistenceOptions_SPANNER {
 			return true
 		}
 	}
 	return false
 }
 
+func (s *Service) IsServiceEnabled() bool {
+	if s.GetServiceOption() != nil {
+		return true
+	}
+	if s.IsSQL() || s.IsSpanner() {
+		return true
+	}
+	return false
+}
+
 func (s *Service) ProcessImports() {
+	logrus.Warn("PROCESS IMPORTS FOR SERVICE CALLED")
 	s.File.ImportList.GetOrAddImport("io", "io")
 	s.File.ImportList.GetOrAddImport("strings", "strings")
 	s.File.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
@@ -114,6 +142,7 @@ func (s *Service) ProcessImports() {
 	s.File.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
 	if opt := s.GetServiceOption(); opt != nil {
 		for _, m := range opt.GetTypes() {
+			logrus.Warnf("adding import: %+v  for type: %s",GetGoPackage(m.GetGoPackage()), m)
 			s.File.ImportList.GetOrAddImport(GetGoPackage(m.GetGoPackage()), GetGoPath(m.GetGoPackage()))
 		}
 	}
@@ -133,12 +162,27 @@ func (s *Services) AddService(pkg string, desc *descriptor.ServiceDescriptorProt
 		File:       file,
 	}
 	ret.ProcessMethods()
+	logrus.Debugf("created a service: %s", ret)
 	*s = append(*s, ret)
 	return ret
 }
 
-func (s *Services) Process() {
+func (s *Services) Process() error {
 	for _, srv := range *s {
-		srv.Process()
+		err := srv.Process()
+		if err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+func (s *Services) PreGenerate() error {
+	for _, srv := range *s {
+		err := srv.Methods.PreGenerate()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
