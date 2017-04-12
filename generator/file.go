@@ -122,7 +122,9 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 }
 
 func (f *FileStruct) ProcessImports() {
+	logrus.Info("processing imports for file")
 	for _, srv := range *f.ServiceList {
+		logrus.Infof("is service enabled? %t", srv.IsServiceEnabled())
 		if srv.IsServiceEnabled() {
 			srv.ProcessImports()
 			for _, m := range *srv.Methods {
@@ -133,7 +135,10 @@ func (f *FileStruct) ProcessImports() {
 	}
 }
 
-func (f *FileStruct) Process() {
+func (f *FileStruct) Process() error {
+	logrus.WithFields(logrus.Fields{
+		"GetFileName()": f.GetFileName(),
+	}).Debug("processing file")
 	// collect file defined messages
 	for _, m := range f.Desc.GetMessageType() {
 		s := f.AllStructures.AddMessage(m, nil, f.GetPackageName(), f)
@@ -148,11 +153,13 @@ func (f *FileStruct) Process() {
 	for _, s := range f.Desc.GetService() {
 		f.ServiceList.AddService(f.GetPackageName(), s, f.AllStructures, f)
 	}
+	//return f.ServiceList.Process()
+	return nil
 
 }
 
 func (f *FileStruct) Generate() []byte {
-	// f.Process()
+	f.ServiceList.PreGenerate()
 	logrus.WithField("imports", f.ImportList).Debug("import list")
 	return ExecuteFileTemplate(f)
 }
@@ -183,10 +190,14 @@ func (fl *FileList) GetOrCreateFile(desc *descriptor.FileDescriptorProto, allStr
 	return f
 }
 
-func (fl *FileList) Process() {
+func (fl *FileList) Process() error {
 	for _, file := range *fl {
-		file.Process()
+		err := file.Process()
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (fl *FileList) Append(file *FileStruct) {
