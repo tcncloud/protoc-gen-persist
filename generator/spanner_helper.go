@@ -135,6 +135,27 @@ func (sh *SpannerHelper) Parse() error {
 		if err != nil {
 			return err
 		}
+		pas, err := prepareInsertValues(pq)
+		if err != nil {
+			return err
+		}
+		for _, arg := range pas.args {
+			var qa QueryArg
+			if ap, ok := arg.(PassedInArgPos); ok {
+				index := int(ap)
+				argName := sh.OptionArguments[index]
+				qa = QueryArg{
+					IsFieldValue: true,
+					Field: sh.ProtoFieldDescs[argName],
+				}
+			} else {
+				qa = QueryArg{
+					Value: arg,
+					IsFieldValue: false,
+				}
+			}
+			sh.QueryArgs = append(sh.QueryArgs, qa)
+		}
 		sh.InsertCols = cols
 		sh.TableName = table
 	case *sqlparser.Delete:
