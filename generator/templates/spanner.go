@@ -105,6 +105,7 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	tx := s.Client.Single()
 	defer tx.Close()
 	iter := tx.Query(ctx, stmt)
+	defer iter.Stop()
 	row, err := iter.Next()
 	if err == iterator.Done {
 		return grpc.Errorf(codes.NotFound, "no rows found")
@@ -183,7 +184,7 @@ const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
 {{end}}`
 
 const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
-	key := {{.Spanner.GetDeleteKeyRange}}
+	key := {{.Spanner.KeyRangeDesc}}
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
 	_, err := s.SpannerDB.Apply(muts)
@@ -239,7 +240,7 @@ const SpannerClientStreamingInsertTemplate = `{{define "spanner_client_streaming
 {{end}}`
 
 const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming_delete"}}//spanner client streaming delete
-key := {{.Spanner.GetDeleteKeyRange}}
+key := {{.Spanner.KeyRangeDesc}}
 muts = append(muts, spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
 {{end}}`
 
@@ -271,18 +272,33 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	tx := s.Client.Single()
 	defer tx.Close()
 	iter := tx.Query(context.Background(), stmt)
-	rows := s.SRH.NewRowsFromIter(iter)
-	for rows.Next() {
-		if err := rows.Err(); err != nil {
-			if err == sql.ErrNowRows {
-				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-			}
+	defer iter.Stop()
+	for {
+		row, err := iter.Next()
+		if err == iter.Done {
+			break
+		} else if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		err := rows.Scan({{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
+
+		// scan our values out of the row
+		{{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}}
+		{{if $t.IsMapped}}
+		gcv := new(spanner.GenericColumnValue)
+		err = row.ColumnByName({{$t.ProtoName}}, gcv)
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
+		err = {{$t.Name}}.SpannerScan(gcv)
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		{{else}}
+		err = row.ColumnByName({{$t.ProtoName}}, &{{$t.Name}})
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		{{end}}{{end}}
 		res := &{{.GetOutputType}}{
 		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
 		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
