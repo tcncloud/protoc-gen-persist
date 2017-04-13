@@ -158,10 +158,13 @@ func (f *FileStruct) Process() error {
 
 }
 
-func (f *FileStruct) Generate() []byte {
-	f.ServiceList.PreGenerate()
+func (f *FileStruct) Generate() ([]byte, error) {
+	err := f.ServiceList.PreGenerate()
+	if err != nil {
+		return nil, err
+	}
 	logrus.WithField("imports", f.ImportList).Debug("import list")
-	return ExecuteFileTemplate(f)
+	return ExecuteFileTemplate(f), nil
 }
 
 // FileList ----------------

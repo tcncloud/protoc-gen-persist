@@ -73,7 +73,11 @@ func main() {
 	}
 
 	// Send back the results.
-	data, err = proto.Marshal(g.GetResponse())
+	resp, err := g.GetResponse()
+	if err != nil {
+		logrus.Fatalf("recieved err getting the file response: %s", err)
+	}
+	data, err = proto.Marshal(resp)
 	if err != nil {
 		logrus.Fatal("I can't serialize response")
 	}
