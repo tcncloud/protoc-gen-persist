@@ -39,15 +39,23 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 
 
 const SpannerHelperTemplates = `
-{{define "type_desc_to_def"}}
+{{define "type_desc_to_def_map"}}
 {{if .IsMapped}}
-	//is mapped
 	conv, err = {{.GoName}}{}.ToSpanner(req.{{.Name}}).Value()
 	if err != nil {
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
 {{else}}
-	// is not mapped
+	conv = req.{{.Name}}
+{{end}}{{end}}
+
+{{define "type_desc_to_def_slice"}}
+{{if .IsMapped}}
+	conv, err = {{.GoName}}{}.ToSpanner(req.{{.Name}}).Value()
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+{{else}}
 	conv = req.{{.Name}}
 {{end}}{{end}}
 `
@@ -60,19 +68,15 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 
 	var conv interface{}
 	var err error
-	//.GetSpannerSelectArgs
-{{range $key, $val := .GetSpannerSelectArgs}}
+{{range $key, $val := .Spanner.QueryArgs}}
 {{if $val.IsFieldValue}}
-	//if is.IsFieldValue
-	{{template "type_desc_to_def" $val.Field}}
+	{{template "type_desc_to_def_map" $val.Field}}
 	params["{{$val.Name}}"] = conv
 {{else}}
 	//else
-	//conv = { {$val.Value} }
 	conv = {{$val.Value}}
-	//params[{ {$val.Name} }] = conv
 	params["{{$val.Name}}"] = conv
-	{{end}}{{end}}
+{{end}}{{end}}
 
 	//stmt := spanner.Statement{SQL: "{ {.Spanner.Query} }", Params: params}
 	stmt := spanner.Statement{SQL: "{{.Spanner.Query}}", Params: params}
@@ -103,10 +107,17 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 {{end}}`
 
 const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
-	params := []interface{}{
-		{{range $index, $val := .GetSpannerInsertArgs}}
-		{{$val}},{{end}}
-	}
+	params := make([]interface{}, 0)
+	var conv interface{}
+	var err error
+{{range $index, $val := .Spanner.QueryArgs}}
+{{if $val.IsFieldValue}}
+	{{ template "type_desc_to_def_slice" $val.Field}}
+	params = append(params, conv)
+{{else}}
+	params = append(params, {{$val.Value}})
+{{end}}{{end}}
+
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params)
 	_, err := s.SpannerDB.Apply(ctx, muts)
@@ -124,10 +135,20 @@ const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
 {{end}}`
 
 const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
-	params := map[string]interface{}{
-		{{range $key, $val := .GetSpannerUpdateArgs "req"}}
-		{{$key}}: {{$val}},\n{{end}}
-	}
+	params := make(map[string]interface{})
+	var conv string
+	var err string
+
+{{range $key, $val := .Spanner.QueryArgs}}
+{{if $val.IsFieldValue}}
+	{{template "type_desc_to_def_map" $val.Field}}
+	params["{{$val.Name}}"] = conv
+{{else}}
+	//else
+	conv = {{$val.Value}}
+	params["{{$val.Name}}"] = conv
+{{end}}{{end}}
+
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.UpdateMap("{{.Spanner.TableName}}", params)
 	_, err := s.SpannerDB.Apply(muts)
@@ -145,7 +166,7 @@ const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
 {{end}}`
 
 const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
-	key := {{.GetDeleteKeyRange}}
+	key := {{.Spanner.GetDeleteKeyRange}}
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
 	_, err := s.SpannerDB.Apply(muts)
@@ -183,29 +204,35 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			return nil, grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
-	stream.SendAndClose(&{{.GetOutputType}}{Count: totalAffeted})
+	stream.SendAndClose(&{{.GetOutputType}}{Count: totalAffected})
 	return nil
 }
 {{end}}`
 
 const SpannerClientStreamingUpdateTemplate = `{{define "spanner_client_streaming_update"}}//spanner client streaming update
 params := map[string]interface{}{
-{{range $key, $val := .GetSpannerUpdateArgs}}
+{{range $key, $val := .Spanner.QueryArgs}}
 	{{$key}}: {{$val}},\n{{end}}
 }
 muts = append(muts, spanner.UpdateMap("{{.Spanner.TableName}}", params))
 {{end}}`
 
-const SpannerClientStreamingInsertTemplate = `{{define "spanner_client_streaming_insert"}}//spanner client streaming update
-params := []interface{}{
-{{range $index, $val := .GetSpannerInsertArgs}}
-	{{$val}},\n{{end}}
-}
-muts = append(muts, spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params))
+const SpannerClientStreamingInsertTemplate = `{{define "spanner_client_streaming_insert"}}//spanner client streaming insert
+	params := make([]interface{}, 0)
+	var conv interface{}
+	var err error
+{{range $index, $val := .Spanner.QueryArgs}}
+{{if $val.IsFieldValue}}
+	{{ template "type_desc_to_def_slice" $val.Field}}
+	params = append(params, conv)
+{{else}}
+	params = append(params, {{$val.Value}})
+{{end}}{{end}}
+	muts = append(muts, spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params))
 {{end}}`
 
-const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming_delete"}}//spanner client streaming update
-key := {{.GetDeleteKeyRange "req"}}
+const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming_delete"}}//spanner client streaming delete
+key := {{.Spanner.GetDeleteKeyRange}}
 muts = append(muts, spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
 {{end}}`
 
@@ -220,10 +247,10 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	var conv interface{}
 	var err error
 	//.GetSpannerSelectArgs
-{{range $key, $val := .GetSpannerSelectArgs}}
+{{range $key, $val := .Spanner.QueryArgs}}
 {{if $val.IsFieldValue}}
 	//if is.IsFieldValue
-	{{template "type_desc_to_def" $val.Field}}
+	{{template "type_desc_to_def_map" $val.Field}}
 	params["{{$val.Name}}"] = conv
 {{else}}
 	//else
