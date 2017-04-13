@@ -56,3 +56,11 @@ func (t *MyTime) Value() (driver.Value, error) {
 	ti := strconv.FormatInt(t.Seconds, 10) + "," + strconv.FormatInt(int64(t.Nanos), 10)
 	return ti, nil
 }
+
+func (t *MyTime) SpannerScan(src *spanner.GenericColumnValue) error {
+	return nil
+}
+
+func (t *MyTime) SpannerValue() (interface{}, error) {
+	return nil, nil
+}
