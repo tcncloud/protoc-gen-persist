@@ -56,7 +56,7 @@ func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	return ret
 }
 
-func (g *Generator) GetResponse() *plugin_go.CodeGeneratorResponse {
+func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 	//logrus.WithField("structs", g.AllStructures).Debug("collected structures")
 	ret := new(plugin_go.CodeGeneratorResponse)
 	logrus.Debugf("going over %d files\n", len(*g.Files))
@@ -64,14 +64,18 @@ func (g *Generator) GetResponse() *plugin_go.CodeGeneratorResponse {
 		// format file Content
 
 		if !fileStruct.Dependency {
+			fileContents, err := fileStruct.Generate()
+			if err != nil {
+				return nil, err
+			}
 			ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
-				Content: proto.String(string(FormatCode(fileStruct.GetFileName(), fileStruct.Generate()))),
+				Content: proto.String(string(FormatCode(fileStruct.GetFileName(), fileContents))),
 				Name:    proto.String(fileStruct.GetFileName()),
 			})
 		}
 	}
 	//logrus.WithField("response", ret).Debug("result")
-	return ret
+	return ret, nil
 }
 
 func (g *Generator) Process() error {
