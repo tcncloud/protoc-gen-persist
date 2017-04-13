@@ -41,7 +41,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 const SpannerHelperTemplates = `
 {{define "type_desc_to_def_map"}}
 {{if .IsMapped}}
-	conv, err = {{.GoName}}{}.ToSpanner(req.{{.Name}}).Value()
+	conv, err = {{.GoName}}{}.ToSpanner(req.{{.Name}}).SpannerValue()
 	if err != nil {
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
@@ -52,7 +52,7 @@ const SpannerHelperTemplates = `
 
 {{define "type_desc_to_def_slice"}}
 {{if .IsMapped}}
-	conv, err = {{.GoName}}{}.ToSpanner(req.{{.Name}}).Value()
+	conv, err = {{.GoName}}{}.ToSpanner(req.{{.Name}}).SpannerValue()
 	if err != nil {
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
@@ -105,20 +105,36 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	tx := s.Client.Single()
 	defer tx.Close()
 	iter := tx.Query(ctx, stmt)
-	rows := s.SRH.NewRowsFromIter(iter)
-	rows.Next()
-	if err = rows.Err(); err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-
-	//err = rows.Scan({ {range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct} } &{ {$t.Name} },{ {end} })
-	err = rows.Scan({{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
-	if err == sql.ErrNoRows {
-		return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+	row, err := iter.Next()
+	if err == iterator.Done {
+		return grpc.Errorf(codes.NotFound, "no rows found")
 	} else if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
+		return grpc.Errorf(codes.Unknown, err.Error())
 	}
 
+	// scan our values out of the row
+	{{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}}
+	{{if $t.IsMapped}}
+	gcv := new(spanner.GenericColumnValue)
+	err = row.ColumnByName({{$t.ProtoName}}, gcv)
+	if err != nil {
+		return grpc.Errorf(codes.Unknown, err.Error())
+	}
+	err = {{$t.Name}}.SpannerScan(gcv)
+	if err != nil {
+		return grpc.Errorf(codes.Unknown, err.Error())
+	}
+	{{else}}
+	err = row.ColumnByName({{$t.ProtoName}}, &{{$t.Name}})
+	if err != nil {
+		return grpc.Errorf(codes.Unknown, err.Error())
+	}
+	{{end}}{{end}}
+
+	_, err := iter.Next()
+	if err != iter.Done {
+		fmt.Warn("Unary select that returns more than one row..")
+	}
 	//res := &{ {.GetOutputType} }{
 	res := &{{.GetOutputType}}{
 	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
