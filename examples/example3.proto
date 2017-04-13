@@ -66,6 +66,12 @@ service MySpanner {
       arguments: ["id", "start_time"]
     };
   };
+  rpc UniaryUpdate(Table2) returns (Filed) {
+    option (persist.ql) = {
+      query: "Update example_table set start_time=?, name=\"oranges\" where id=?",
+      arguments: ["start_time", "id"],
+    };
+  };
   rpc ServerStream(Name) returns (stream Table2) {
     option (persist.ql) = {
       query: "SELECT * FROM example_table WHERE name=?"
