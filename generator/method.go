@@ -319,31 +319,6 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	//default mapping
 }
 
-//////////SPANNER////////////
-
-// gets the arguments given to the query, and returns their name in the map,  their value, and whether
-// it is mapped or not.  If it is a mapped type we need to check for err before we use the arg
-// value will either be "name.Field",  or "mappedPackage.MappedType{}.ToSpanner(name.Field).Value()"
-// with name being the name of the variable that is our request proto
-func (m *Method) GetSpannerSelectArgs() []QueryArg {
-	return m.Spanner.QueryArgs
-}
-
-func (m *Method) GetSpannerInsertArgs() []QueryArg {
-	return nil
-}
-
-func (m *Method) GetSpannerUpdateArgs() []QueryArg {
-	return nil
-}
-
-func (m *Method) GetDeleteKeyRange() string {
-	return ""
-}
-
-
-
-///////END SPANNER///////////
 // GetMappedType return mapped type for a proto name
 func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 	if mapping := m.GetTypeMapping(); mapping != nil {
