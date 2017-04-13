@@ -103,18 +103,18 @@ const SpannerHelperTemplates = `
 {{template "type_desc_to_def_slice" $arg.Field}}
 	start = append(start, conv)
 {{else}}
-	start = append(start, $arg.Value)
+	start = append(start, {{$arg.Value}})
 {{end}}{{end}}
 {{range $index, $arg := .Spanner.KeyRangeDesc.End}}
 {{if $arg.IsFieldValue}}
-{{template "type_def_desc_slice" $arg.Field}}
+{{template "type_desc_to_def_slice" $arg.Field}}
 	end = append(end, conv)
 {{else}}
-	start = append(end, $arg.Value)
+	start = append(end, {{$arg.Value}})
 {{end}}{{end}}
 	key := &spanner.KeyRange{
-		Start: spanner.Key{start...},
-		End: spanner.Key{end...},
+		Start: start,
+		End: end,
 		Kind: {{.Spanner.KeyRangeDesc.Kind}},
 	}
 {{end}}
@@ -222,6 +222,10 @@ const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
 			return grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
+	res := &{{.GetOutputType}}{}
+
+	return res, nil
+}
 {{end}}`
 
 const SpannerClientStreamingMethodTemplate = `{{define "spanner_client_streaming_method"}}// spanner client streaming {{.GetName}}
