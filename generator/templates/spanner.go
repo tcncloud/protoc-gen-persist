@@ -91,6 +91,34 @@ const SpannerHelperTemplates = `
 	params = append(params, {{$val.Value}})
 {{end}}{{end}}
 {{end}}
+
+
+{{define "declare_spanner_delete_key"}}
+	start := make([]interface{}, 0)
+	end := make([]interface{}, 0)
+	var conv string
+	var err error
+{{range $index, $arg := .Spanner.KeyRangeDesc.Start}}
+{{if $arg.IsFieldValue}}
+{{template "type_desc_to_def_slice" $arg.Field}}
+	start = append(start, conv)
+{{else}}
+	start = append(start, $arg.Value)
+{{end}}{{end}}
+{{range $index, $arg := .Spanner.KeyRangeDesc.End}}
+{{if $arg.IsFieldValue}}
+{{template "type_def_desc_slice" $arg.Field}}
+	end = append(end, conv)
+{{else}}
+	start = append(end, $arg.Value)
+{{end}}{{end}}
+	key := &spanner.KeyRange{
+		Start: spanner.Key{start...},
+		End: spanner.Key{end...},
+		Kind: {{.Spanner.KeyRangeDesc.Kind}},
+	}
+{{end}}
+
 `
 const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	var (
@@ -184,7 +212,8 @@ const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
 {{end}}`
 
 const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
-	key := {{.Spanner.KeyRangeDesc}}
+{{template "declare_spanner_delete_key" .}}
+
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
 	_, err := s.SpannerDB.Apply(muts)
@@ -240,8 +269,9 @@ const SpannerClientStreamingInsertTemplate = `{{define "spanner_client_streaming
 {{end}}`
 
 const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming_delete"}}//spanner client streaming delete
-key := {{.Spanner.KeyRangeDesc}}
-muts = append(muts, spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
+{{template "declare_spanner_delete_key" .}}
+
+	muts = append(muts, spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
 {{end}}`
 
 const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming_method"}}// spanner server streaming {{.GetName}}
