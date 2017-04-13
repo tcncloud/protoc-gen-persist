@@ -56,7 +56,7 @@ service MySpanner {
 
   rpc UniaryInsert(Table2) returns (Table2) {
     option (persist.ql) = {
-      query: "Insert into example_table (id, start_time, name)  Values (?, ?, banannas)"
+      query: "Insert into example_table (id, start_time, name)  Values (?, ?, \"banannas\")"
       arguments: ["id", "start_time"]
     };
   };
