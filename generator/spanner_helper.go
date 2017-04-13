@@ -150,7 +150,7 @@ func (sh *SpannerHelper) Parse() error {
 				}
 			} else {
 				qa = QueryArg{
-					Value: arg,
+					Value: fmt.Sprintf("%#v", arg),
 					IsFieldValue: false,
 				}
 			}
@@ -181,3 +181,6 @@ func (sh *SpannerHelper) InsertColsAsString() string {
 }
 
 
+func (sh *SpannerHelper) GetDeleteKeyRange() string {
+	return ""
+}
