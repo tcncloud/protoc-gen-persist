@@ -72,6 +72,12 @@ service MySpanner {
       arguments: ["start_time", "id"],
     };
   };
+  rpc UniaryDelete(Table2) returns (Table2) {
+    option (persist.ql) = {
+      query: "Delete from example_table where start_time = ? and name >= \"george\" and name <=? and id = ?",
+      arguments: ["start_time", "name", "id"]
+    };
+  };
   rpc ServerStream(Name) returns (stream Table2) {
     option (persist.ql) = {
       query: "SELECT * FROM example_table WHERE name=?"
