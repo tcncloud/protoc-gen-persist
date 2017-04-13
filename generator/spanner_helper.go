@@ -159,17 +159,40 @@ func (sh *SpannerHelper) Parse() error {
 		sh.InsertCols = cols
 		sh.TableName = table
 	case *sqlparser.Delete:
-		sh.IsUpdate = true
+		sh.IsDelete = true
 		table, err := extractIUDTableName(pq)
 		if err != nil {
 			return err
 		}
 		sh.TableName = table
 	case *sqlparser.Update:
-		sh.IsDelete = true
+		sh.IsUpdate = true
 		table, err := extractIUDTableName(pq)
 		if err != nil {
 			return err
+		}
+		pam, err := extractUpdateClause(pq)
+		if err != nil {
+			return err
+		}
+		for key, arg := range pam.args {
+			var qa QueryArg
+			if ap, ok := arg.(PassedInArgPos); ok {
+				index := int(ap)
+				argName := sh.OptionArguments[index]
+				qa = QueryArg{
+					Name: key,
+					IsFieldValue: true,
+					Field: sh.ProtoFieldDescs[argName],
+				}
+			} else {
+				qa = QueryArg{
+					Name: key,
+					Value: fmt.Sprintf("%#v", arg),
+					IsFieldValue: false,
+				}
+			}
+			sh.QueryArgs = append(sh.QueryArgs, qa)
 		}
 		sh.TableName = table
 	}
