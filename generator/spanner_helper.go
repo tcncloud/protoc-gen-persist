@@ -43,6 +43,12 @@ type QueryArg struct {
 	Field        TypeDesc    // if IsFieldValue is true, this will describe the Field
 }
 
+type KeyRangeDesc struct {
+	Start []QueryArg
+	End []QueryArg
+	Kind string // a string of of a spanner.KeyRangeKind (ClosedOpen, ClosedClosed ex.)
+}
+
 type SpannerHelper struct {
 	RawQuery string
 	Query string
@@ -54,6 +60,7 @@ type SpannerHelper struct {
 	IsInsert bool
 	IsDelete bool
 	QueryArgs []QueryArg
+	KeyRangeDesc *KeyRangeDesc // used for delete queries, will be set if IsDelete is true
 	InsertCols []string // the column names for insert queries
 	Parent *Method
 	ProtoFieldDescs map[string]TypeDesc
@@ -103,107 +110,166 @@ func (sh *SpannerHelper) Parse() error {
 	// parse our query
 	switch pq := sh.ParsedQuery.(type) {
 	case *sqlparser.Select:
-		sh.IsSelect = true
-		spl := strings.Split(sh.RawQuery, "?")
-		var updatedQuery string
-
-		if len(sh.OptionArguments) != len(spl) - 1 {
-			errStr := "err parsing spanner query: not correct number of option arguments"
-			errStr += " for method: %s of service: %s  want: %d have: %d"
-			return fmt.Errorf(errStr, sh.Parent.GetName(), sh.Parent.Service.GetName(), len(spl) - 1, len(sh.OptionArguments))
-		}
-		for i := 0; i < len(spl)-1; i++ {
-			name := fmt.Sprintf("@%d", i)
-			field := sh.ProtoFieldDescs[sh.OptionArguments[i]]
-			qa := QueryArg{
-				Name: name,
-				IsFieldValue: true,
-				Field: field,
-			}
-			sh.QueryArgs = append(sh.QueryArgs, qa)
-			updatedQuery += (spl[i] + name)
-		}
-		updatedQuery += spl[len(spl)-1]
-		sh.Query = updatedQuery
+		return sh.ParseSelect(pq)
 	case *sqlparser.Insert:
-		sh.IsInsert = true
-		cols, err := extractInsertColumns(pq)
-		if err != nil {
-			return err
-		}
-		table, err := extractIUDTableName(pq)
-		if err != nil {
-			return err
-		}
-		pas, err := prepareInsertValues(pq)
-		if err != nil {
-			return err
-		}
-		for _, arg := range pas.args {
-			var qa QueryArg
-			if ap, ok := arg.(PassedInArgPos); ok {
-				index := int(ap)
-				argName := sh.OptionArguments[index]
-				qa = QueryArg{
-					IsFieldValue: true,
-					Field: sh.ProtoFieldDescs[argName],
-				}
-			} else {
-				qa = QueryArg{
-					Value: fmt.Sprintf("%#v", arg),
-					IsFieldValue: false,
-				}
-			}
-			sh.QueryArgs = append(sh.QueryArgs, qa)
-		}
-		sh.InsertCols = cols
-		sh.TableName = table
+		return sh.ParseInsert(pq)
 	case *sqlparser.Delete:
-		sh.IsDelete = true
-		table, err := extractIUDTableName(pq)
-		if err != nil {
-			return err
-		}
-		sh.TableName = table
+		return sh.ParseDelete(pq)
 	case *sqlparser.Update:
-		sh.IsUpdate = true
-		table, err := extractIUDTableName(pq)
-		if err != nil {
-			return err
-		}
-		pam, err := extractUpdateClause(pq)
-		if err != nil {
-			return err
-		}
-		for key, arg := range pam.args {
-			var qa QueryArg
-			if ap, ok := arg.(PassedInArgPos); ok {
-				index := int(ap)
-				argName := sh.OptionArguments[index]
-				qa = QueryArg{
-					Name: key,
-					IsFieldValue: true,
-					Field: sh.ProtoFieldDescs[argName],
-				}
-			} else {
-				qa = QueryArg{
-					Name: key,
-					Value: fmt.Sprintf("%#v", arg),
-					IsFieldValue: false,
-				}
-			}
-			sh.QueryArgs = append(sh.QueryArgs, qa)
-		}
-		sh.TableName = table
+		return sh.ParseUpdate(pq)
+	default:
+		return fmt.Errorf("not a query we can parse")
 	}
-	return nil
 }
 
 func (sh *SpannerHelper) InsertColsAsString() string {
 	return fmt.Sprintf("%#v", sh.InsertCols)
 }
 
-
-func (sh *SpannerHelper) GetDeleteKeyRange() string {
-	return ""
+func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) ([]QueryArg, error) {
+	if len(slice) < len(sh.OptionArguments) {
+		return nil, fmt.Errorf("cannot have less ? than arguments in query: %s", sh.Query)
+	}
+	qas := make([]QueryArg, len(slice))
+	for i, arg := range slice {
+		var qa QueryArg
+		if ap, ok := arg.(PassedInArgPos); ok {
+			index := int(ap)
+			argName := sh.OptionArguments[index]
+			qa = QueryArg{
+				IsFieldValue: true,
+				Field: sh.ProtoFieldDescs[argName],
+			}
+		} else {
+			qa = QueryArg{
+				Value: fmt.Sprintf("%#v", arg),
+				IsFieldValue: false,
+			}
+		}
+		qas[i] = qa
+	}
+	return qas, nil
 }
+
+func (sh *SpannerHelper) ParseInsert(pq *sqlparser.Insert) error {
+	sh.IsInsert = true
+	cols, err := extractInsertColumns(pq)
+	if err != nil {
+		return err
+	}
+	table, err := extractIUDTableName(pq)
+	if err != nil {
+		return err
+	}
+	pas, err := prepareInsertValues(pq)
+	if err != nil {
+		return err
+	}
+	qas, err := sh.PopulateArgSlice(pas.args)
+	if err != nil {
+		return err
+	}
+	sh.QueryArgs = qas
+	sh.InsertCols = cols
+	sh.TableName = table
+	return nil
+}
+func (sh *SpannerHelper) ParseSelect(pq *sqlparser.Select) error {
+	sh.IsSelect = true
+	spl := strings.Split(sh.RawQuery, "?")
+	var updatedQuery string
+
+	if len(sh.OptionArguments) != len(spl) - 1 {
+		errStr := "err parsing spanner query: not correct number of option arguments"
+		errStr += " for method: %s of service: %s  want: %d have: %d"
+		return fmt.Errorf(errStr, sh.Parent.GetName(), sh.Parent.Service.GetName(), len(spl) - 1, len(sh.OptionArguments))
+	}
+	for i := 0; i < len(spl)-1; i++ {
+		name := fmt.Sprintf("@%d", i)
+		field := sh.ProtoFieldDescs[sh.OptionArguments[i]]
+		qa := QueryArg{
+			Name: name,
+			IsFieldValue: true,
+			Field: field,
+		}
+		sh.QueryArgs = append(sh.QueryArgs, qa)
+		updatedQuery += (spl[i] + name)
+	}
+	updatedQuery += spl[len(spl)-1]
+	sh.Query = updatedQuery
+	return nil
+}
+func (sh *SpannerHelper) ParseDelete(pq *sqlparser.Delete) error {
+	sh.IsDelete = true
+	table, err := extractIUDTableName(pq)
+	if err != nil {
+		return err
+	}
+	mkr, err := extractSpannerKeyFromDelete(pq)
+	if err != nil {
+		return err
+	}
+	start, err := sh.PopulateArgSlice(mkr.Start.args)
+	if err != nil {
+		return err
+	}
+	end, err := sh.PopulateArgSlice(mkr.End.args)
+	if err != nil {
+		return err
+	}
+	low := mkr.LowerOpen
+	up := mkr.UpperOpen
+
+	var kind string
+
+	if low && up {
+		kind = "spanner.OpenOpen"
+	} else if low && !up {
+		kind = "spanner.OpenClosed"
+	} else if !low && up {
+		kind = "spanner.ClosedOpen"
+	} else {
+		kind = "spanner.ClosedClosed"
+	}
+	sh.KeyRangeDesc = &KeyRangeDesc{
+		Start: start,
+		End: end,
+		Kind: kind,
+	}
+	sh.TableName = table
+	return nil
+}
+
+func (sh *SpannerHelper) ParseUpdate(pq *sqlparser.Update) error {
+	sh.IsUpdate = true
+	table, err := extractIUDTableName(pq)
+	if err != nil {
+		return err
+	}
+	pam, err := extractUpdateClause(pq)
+	if err != nil {
+		return err
+	}
+	for key, arg := range pam.args {
+		var qa QueryArg
+		if ap, ok := arg.(PassedInArgPos); ok {
+			index := int(ap)
+			argName := sh.OptionArguments[index]
+			qa = QueryArg{
+				Name: key,
+				IsFieldValue: true,
+				Field: sh.ProtoFieldDescs[argName],
+			}
+		} else {
+			qa = QueryArg{
+				Name: key,
+				Value: fmt.Sprintf("%#v", arg),
+				IsFieldValue: false,
+			}
+		}
+		sh.QueryArgs = append(sh.QueryArgs, qa)
+	}
+	sh.TableName = table
+	return nil
+}
+
