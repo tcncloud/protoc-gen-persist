@@ -31,10 +31,8 @@
 package generator
 
 import (
-	"database/sql/driver"
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"cloud.google.com/go/spanner"
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -71,7 +69,7 @@ func extractSpannerKeyFromDelete(del *sqlparser.Delete) (*MergableKeyRange, erro
 	if err != nil {
 		return nil, err
 	}
-	return aKeySet.packKeySet()
+	return aKeySet.packKeyRange()
 }
 
 type Key struct {
@@ -102,7 +100,7 @@ type MergableKeyRange struct {
 // all lower bounds are turned into a key together.
 // all upper bounds are turned into a key together.
 // it is expected that all fields in a query belong together
-func (a *AwareKeySet) packKeySet() (*MergableKeyRange, error) {
+func (a *AwareKeySet) packKeyRange() (*MergableKeyRange, error) {
 	var prev *MergableKeyRange
 	//makes sure all we dont have holes in our key ranges,  that is undefined behaviour
 	for i := len(a.KeyOrder) - 1; i > 0; i-- { // dont check before the first elem
@@ -148,35 +146,6 @@ func (k1 *MergableKeyRange) fromKey(key *Key) {
 	k1.End.AddArgs(key.UpperValue)
 }
 
-func (k *MergableKeyRange) ToKeyRange(args []driver.Value) (*spanner.KeyRange, error) {
-	low := k.LowerOpen
-	up := k.UpperOpen
-
-	var kind spanner.KeyRangeKind
-
-	if low && up {
-		kind = spanner.OpenOpen
-	} else if low && !up {
-		kind = spanner.OpenClosed
-	} else if !low && up {
-		kind = spanner.ClosedOpen
-	} else {
-		kind = spanner.ClosedClosed
-	}
-	start, err := k.Start.GetFilledArgs(args)
-	if err != nil {
-		return nil, err
-	}
-	end, err := k.End.GetFilledArgs(args)
-	if err != nil {
-		return nil, err
-	}
-	return &spanner.KeyRange{
-		Start: start,
-		End:   end,
-		Kind:  kind,
-	}, nil
-}
 
 func (k1 *MergableKeyRange) mergeKey(k2 *Key) error {
 	logrus.Debug("\nmerging into k1: %#v\n  k2: %#v\n\n", k1, k2)
