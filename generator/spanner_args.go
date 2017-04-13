@@ -34,7 +34,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"strconv"
-
+	"github.com/Sirupsen/logrus"
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -47,10 +47,10 @@ type Args struct {
 func (a *Args) ParseValExpr(expr sqlparser.ValExpr) (interface{}, error) {
 	switch value := expr.(type) {
 	case sqlparser.StrVal: // a quoted string
-		fmt.Printf("StrVal %+v\n", value)
+		logrus.Debugf("StrVal %+v\n", value)
 		return string(value[:]), nil
 	case sqlparser.NumVal:
-		fmt.Printf("NumVal %+v\n", value)
+		logrus.Debugf("NumVal %+v\n", value)
 		rv, err := strconv.ParseInt(string(value[:]), 10, 64)
 		if err != nil {
 			rv, err := strconv.ParseFloat(string(value[:]), 64)
@@ -68,21 +68,21 @@ func (a *Args) ParseValExpr(expr sqlparser.ValExpr) (interface{}, error) {
 	case *sqlparser.NullVal:
 		return nil, nil
 	case *sqlparser.ColName:
-		fmt.Printf("ColName %+v\n", value)
+		logrus.Debugf("ColName %+v\n", value)
 	case sqlparser.ValTuple:
-		fmt.Printf("ValTuple %+v\n", value)
+		logrus.Debugf("ValTuple %+v\n", value)
 	case *sqlparser.Subquery:
-		fmt.Printf("Subquery %+v\n", value)
+		logrus.Debugf("Subquery %+v\n", value)
 	case sqlparser.ListArg:
-		fmt.Printf("ListArg %+v\n", value)
+		logrus.Debugf("ListArg %+v\n", value)
 	case *sqlparser.BinaryExpr:
-		fmt.Printf("BinaryExpr %+v\n", value)
+		logrus.Debugf("BinaryExpr %+v\n", value)
 	case *sqlparser.UnaryExpr:
-		fmt.Printf("UnaryExpr %+v\n", value)
+		logrus.Debugf("UnaryExpr %+v\n", value)
 	case *sqlparser.FuncExpr:
-		fmt.Printf("FuncExpr %+v\n", value)
+		logrus.Debugf("FuncExpr %+v\n", value)
 	case *sqlparser.CaseExpr:
-		fmt.Printf("CaseExpr %+v\n", value)
+		logrus.Debugf("CaseExpr %+v\n", value)
 	}
 	return nil, fmt.Errorf("unsupported value expression")
 }
@@ -129,7 +129,8 @@ func (p *partialArgSlice) GetFilledArgs(a []driver.Value) ([]interface{}, error)
 	}
 	argsCopy := p.args[:]
 	for index, ap := range p.unfilled {
-		argsCopy[index] = int(ap)
+		aIndex := int(ap)
+		argsCopy[index] = a[aIndex]
 	}
 	return argsCopy, nil
 }
@@ -148,7 +149,8 @@ func (p *partialArgMap) GetFilledArgs(a []driver.Value) (map[string]interface{},
 	}
 	// this is modifiying the map directly, but should be okay because of the error above
 	for key, ap := range p.unfilled {
-		p.args[key] = int(ap)
+		aIndex := int(ap)
+		p.args[key] = a[aIndex]
 	}
 	return p.args, nil
 }

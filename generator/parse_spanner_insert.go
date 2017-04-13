@@ -93,7 +93,7 @@ func extractIUDTableName(st sqlparser.Statement) (string, error) {
 		return "", fmt.Errorf("TableName node cannot be nil")
 	}
 	if len(table.Qualifier) != 0 {
-		fmt.Printf("table qualifier: %s", string(table.Qualifier[:]))
+		logrus.Debugf("table qualifier: %s", string(table.Qualifier[:]))
 		return "", fmt.Errorf("Table Name Qualifiers are not supported for insert/update queries")
 	}
 	if len(table.Name) == 0 {
@@ -127,7 +127,7 @@ func prepareInsertValues(insert *sqlparser.Insert) (*partialArgSlice, error) {
 		case *sqlparser.Subquery:
 			return nil, fmt.Errorf("insert queries cannot have subqueries")
 		case sqlparser.ValTuple: // a number
-			fmt.Printf("is ValTuple %+v\n", valType)
+			logrus.Debugf("is ValTuple %+v\n", valType)
 
 			valExp := sqlparser.ValExprs(valType)
 			valExps := ([]sqlparser.ValExpr)(valExp)

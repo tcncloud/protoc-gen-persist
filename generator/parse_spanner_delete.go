@@ -33,7 +33,7 @@ package generator
 import (
 	"database/sql/driver"
 	"fmt"
-
+	"github.com/Sirupsen/logrus"
 	"cloud.google.com/go/spanner"
 	"github.com/xwb1989/sqlparser"
 )
@@ -61,7 +61,7 @@ func extractSpannerKeyFromDelete(del *sqlparser.Delete) (*MergableKeyRange, erro
 		return nil, fmt.Errorf("Must include a where clause that contain primary keys in delete statement")
 	}
 	myArgs := &Args{}
-	fmt.Printf("where type: %+v\n", where.Type)
+	logrus.Debugf("where type: %+v\n", where.Type)
 	aKeySet := &AwareKeySet{
 		Args:     myArgs,
 		Keys:     make(map[string]*Key),
@@ -125,15 +125,14 @@ func (a *AwareKeySet) packKeySet() (*MergableKeyRange, error) {
 			prev = &MergableKeyRange{Start: newPartialArgSlice(), End: newPartialArgSlice()}
 			prev.fromKey(key)
 		} else {
-			fmt.Printf("key that will populate prev: %#v\n\n", key)
+			logrus.Debugf("key that will populate prev: %#v\n\n", key)
 			err := prev.mergeKey(key)
-			fmt.Printf("merged prev with m %#v\n\n", prev)
+			logrus.Debugf("merged prev with m %#v\n\n", prev)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
-	fmt.Printf("prev: %#v\n\n", prev)
 	return prev, nil
 }
 
@@ -180,7 +179,7 @@ func (k *MergableKeyRange) ToKeyRange(args []driver.Value) (*spanner.KeyRange, e
 }
 
 func (k1 *MergableKeyRange) mergeKey(k2 *Key) error {
-	fmt.Printf("\nmerging into k1: %#v\n  k2: %#v\n\n", k1, k2)
+	logrus.Debug("\nmerging into k1: %#v\n  k2: %#v\n\n", k1, k2)
 	if k2.HaveLower {
 		if k1.LowerOpen != k2.LowerOpen {
 			return fmt.Errorf("Kinds in ranges must all match")
@@ -215,7 +214,7 @@ func (a *AwareKeySet) addKeyFromValExpr(valExpr sqlparser.ValExpr) (*Key, error)
 func (a *AwareKeySet) walkBoolExpr(boolExpr sqlparser.BoolExpr) error {
 	switch expr := boolExpr.(type) {
 	case *sqlparser.AndExpr:
-		fmt.Printf("AndExpr %#v\n", expr)
+		logrus.Debugf("AndExpr %#v\n", expr)
 		err := a.walkBoolExpr(expr.Left)
 		if err != nil {
 			return err
@@ -226,12 +225,12 @@ func (a *AwareKeySet) walkBoolExpr(boolExpr sqlparser.BoolExpr) error {
 		}
 		return nil
 	case *sqlparser.OrExpr:
-		fmt.Printf("OrExpr %#v\n", expr)
+		logrus.Debugf("OrExpr %#v\n", expr)
 		return fmt.Errorf("Or Expressions are not currently supported")
 	case *sqlparser.ParenBoolExpr:
-		fmt.Printf("ParenBoolExpr %#v\n", expr)
+		logrus.Debugf("ParenBoolExpr %#v\n", expr)
 	case *sqlparser.ComparisonExpr:
-		fmt.Printf("ComparisonExpr %#v\n", expr)
+		logrus.Debugf("ComparisonExpr %#v\n", expr)
 		myKey, err := a.addKeyFromValExpr(expr.Left)
 		if err != nil {
 			return err
@@ -240,7 +239,7 @@ func (a *AwareKeySet) walkBoolExpr(boolExpr sqlparser.BoolExpr) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("OPERTATOR %#v\n", expr.Operator)
+		logrus.Debugf("OPERTATOR %#v\n", expr.Operator)
 		switch expr.Operator {
 		case "=":
 			myKey.LowerValue = val
@@ -278,7 +277,7 @@ func (a *AwareKeySet) walkBoolExpr(boolExpr sqlparser.BoolExpr) error {
 			return fmt.Errorf("%#v  is not a supported operator", expr.Operator)
 		}
 	case *sqlparser.RangeCond:
-		fmt.Printf("RangeCond %#v\n", expr)
+		logrus.Debugf("RangeCond %#v\n", expr)
 		myKey, err := a.addKeyFromValExpr(expr.Left)
 		if err != nil {
 			return err
@@ -301,10 +300,8 @@ func (a *AwareKeySet) walkBoolExpr(boolExpr sqlparser.BoolExpr) error {
 			return fmt.Errorf("not between operator is not supported")
 		}
 	case *sqlparser.ExistsExpr:
-		fmt.Printf("ExistsExpr %#v\n", expr)
+		logrus.Debugf("ExistsExpr %#v\n", expr)
 		return fmt.Errorf("Exists Expressions are not supported")
-	default:
-		fmt.Printf("HITTING DEFAULT %#v\n", boolExpr)
 	}
 
 	return fmt.Errorf("not a boolexpr %#v\n", boolExpr)
