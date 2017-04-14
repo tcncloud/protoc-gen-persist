@@ -140,6 +140,9 @@ func (s *Service) ProcessImports() {
 	s.File.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
 	s.File.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
 	s.File.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
+	if s.IsSpanner() {
+		s.File.ImportList.GetOrAddImport("iterator", "google.golang.org/api/iterator")
+	}
 	if opt := s.GetServiceOption(); opt != nil {
 		for _, m := range opt.GetTypes() {
 			logrus.Warnf("adding import: %+v  for type: %s",GetGoPackage(m.GetGoPackage()), m)
