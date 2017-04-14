@@ -125,10 +125,7 @@ func (sh *SpannerHelper) InsertColsAsString() string {
 	return fmt.Sprintf("%#v", sh.InsertCols)
 }
 
-func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) ([]QueryArg, error) {
-	if len(slice) < len(sh.OptionArguments) {
-		return nil, fmt.Errorf("cannot have less ? than arguments in query: %s", sh.Query)
-	}
+func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) ([]QueryArg) {
 	qas := make([]QueryArg, len(slice))
 	for i, arg := range slice {
 		var qa QueryArg
@@ -147,7 +144,7 @@ func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) ([]QueryArg, erro
 		}
 		qas[i] = qa
 	}
-	return qas, nil
+	return qas
 }
 
 func (sh *SpannerHelper) ParseInsert(pq *sqlparser.Insert) error {
@@ -164,7 +161,7 @@ func (sh *SpannerHelper) ParseInsert(pq *sqlparser.Insert) error {
 	if err != nil {
 		return err
 	}
-	qas, err := sh.PopulateArgSlice(pas.args)
+	qas := sh.PopulateArgSlice(pas.args)
 	if err != nil {
 		return err
 	}
@@ -208,14 +205,8 @@ func (sh *SpannerHelper) ParseDelete(pq *sqlparser.Delete) error {
 	if err != nil {
 		return err
 	}
-	start, err := sh.PopulateArgSlice(mkr.Start.args)
-	if err != nil {
-		return err
-	}
-	end, err := sh.PopulateArgSlice(mkr.End.args)
-	if err != nil {
-		return err
-	}
+	start := sh.PopulateArgSlice(mkr.Start.args)
+	end := sh.PopulateArgSlice(mkr.End.args)
 	low := mkr.LowerOpen
 	up := mkr.UpperOpen
 
