@@ -57,11 +57,15 @@ install: build
 test: deps build
 	ginkgo -r
 
-test-compile: build
+test-compile:
+	go build
 	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
 		--persist_out=. \
 		examples/*.proto
+
+test-build: test-compile
+	cd examples && go build
 
 test-impl: build
 	env GOOS=linux go build -o ./test-impl/server.main ./test-impl/server/sql
