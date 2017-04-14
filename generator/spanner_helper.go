@@ -181,10 +181,11 @@ func (sh *SpannerHelper) ParseSelect(pq *sqlparser.Select) error {
 		return fmt.Errorf(errStr, sh.Parent.GetName(), sh.Parent.Service.GetName(), len(spl)-1, len(sh.OptionArguments))
 	}
 	for i := 0; i < len(spl)-1; i++ {
-		name := fmt.Sprintf("@%d", i)
+		name := fmt.Sprintf(` @string%d`, i)
+		index := fmt.Sprintf("string%d", i)
 		field := sh.ProtoFieldDescs[sh.OptionArguments[i]]
 		qa := QueryArg{
-			Name:         name,
+			Name:         index,
 			IsFieldValue: true,
 			Field:        field,
 		}
