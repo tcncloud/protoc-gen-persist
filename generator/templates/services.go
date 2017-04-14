@@ -63,8 +63,6 @@ func New{{$srv.GetName}}Impl(d string, conf *spanner.ClientConfig, opts ...optio
 	}
 	return &{{$srv.GetName}}Impl{SpannerDB: client}, nil
 }
-// need to implement rows
-//{ {template "spanner_row_handler" .} }
 
 {{end}}
 {{range $method := $srv.Methods}}
