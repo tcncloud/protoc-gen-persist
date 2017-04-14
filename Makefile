@@ -67,9 +67,13 @@ test-compile:
 test-build: test-compile
 	cd examples && go build
 
-test-impl: build
+test-sql-impl: build
 	env GOOS=linux go build -o ./test-impl/server.main ./test-impl/server/sql
 	env GOOS=linux go build -o ./test-impl/client.main ./test-impl/client/sql
+
+test-spanner-impl: build
+	go build -o ./test-impl/server.main ./test-impl/server/spanner
+	go build -o ./test-impl/client.main ./test-impl/client/spanner
 
 deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/glide
 
