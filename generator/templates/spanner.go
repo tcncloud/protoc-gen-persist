@@ -63,9 +63,10 @@ const SpannerHelperTemplates = `
 
 {{define "declare_spanner_arg_map"}}
 	params := make(map[string]interface{})
-	var conv interface{}
 	var err error
-
+{{if gt (len .Spanner.OptionArguments) 0}}
+	var conv interface{}
+{{end}}
 {{range $key, $val := .Spanner.QueryArgs}}
 {{if $val.IsFieldValue}}
 	{{template "type_desc_to_def_map" $val.Field}}
@@ -80,8 +81,10 @@ const SpannerHelperTemplates = `
 
 {{define "declare_spanner_arg_slice"}}
 	params := make([]interface{}, 0)
-	var conv interface{}
 	var err error
+{{if gt (len .Spanner.OptionArguments) 0}}
+	var conv interface{}
+{{end}}
 
 {{range $index, $val := .Spanner.QueryArgs}}
 {{if $val.IsFieldValue}}
@@ -96,8 +99,10 @@ const SpannerHelperTemplates = `
 {{define "declare_spanner_delete_key"}}
 	start := make([]interface{}, 0)
 	end := make([]interface{}, 0)
-	var conv string
 	var err error
+{{if gt (len .Spanner.OptionArguments) 0}}
+	var conv string
+{{end}}
 {{range $index, $arg := .Spanner.KeyRangeDesc.Start}}
 {{if $arg.IsFieldValue}}
 {{template "type_desc_to_def_slice" $arg.Field}}
@@ -145,7 +150,7 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	{{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}}
 	{{if $t.IsMapped}}
 	gcv := new(spanner.GenericColumnValue)
-	err = row.ColumnByName({{$t.ProtoName}}, gcv)
+	err = row.ColumnByName("{{$t.ProtoName}}", gcv)
 	if err != nil {
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
@@ -178,7 +183,7 @@ const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
 
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params)
-	_, err := s.SpannerDB.Apply(ctx, muts)
+	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			return nil, grpc.Errorf(codes.AlreadyExists, err.Error())
@@ -197,7 +202,7 @@ const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
 
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.UpdateMap("{{.Spanner.TableName}}", params)
-	_, err := s.SpannerDB.Apply(muts)
+	_, err = s.SpannerDB.Apply(muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			return grpc.Errorf(codes.AlreadyExists, err.Error())
@@ -319,7 +324,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 		{{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}}
 		{{if $t.IsMapped}}
 		gcv := new(spanner.GenericColumnValue)
-		err = row.ColumnByName({{$t.ProtoName}}, gcv)
+		err = row.ColumnByName("{{$t.ProtoName}}", gcv)
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}

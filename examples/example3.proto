@@ -78,6 +78,12 @@ service MySpanner {
       arguments: ["start_time", "name", "id"]
     };
   };
+  rpc NoArgs(Table2) returns (Table2) {
+    option (persist.ql) = {
+      query: "select * from example_table limit 10",
+      arguments: []
+    };
+  };
   rpc ServerStream(Name) returns (stream Table2) {
     option (persist.ql) = {
       query: "SELECT * FROM example_table WHERE name=?"
