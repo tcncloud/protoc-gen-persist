@@ -24,8 +24,8 @@ var ctx = context.Background()
 
 func main() {
 	client := setupClient()
-
-	err := uniaryInsert(client)
+	var err error
+	err = uniaryInsert(client)
 	if err != nil { panic(err) }
 	err = clientStreamInsert(client)
 	if err != nil { panic(err) }
@@ -46,7 +46,6 @@ func main() {
 	err = clientStreamDelete(client)
 	if err != nil { panic(err) }
 	err = serverStream(client)
-	if err != nil { panic(err) }
 }
 // query: "Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"
 func uniaryInsert(client pb.MySpannerClient) error {
@@ -67,7 +66,7 @@ func uniarySelect(client pb.MySpannerClient) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("recieved res: %+v\n\n", res)
+	fmt.Printf("recieved res: %+v\n\n", res)
 	return nil
 }
 // query: "Update example_table set start_time=?, name=\"oranges\" where id=?",
@@ -88,7 +87,7 @@ func uniaryUpdate(client pb.MySpannerClient) error {
 // query: "DELETE FROM example_table WHERE id>? AND id<?",
 func uniaryDelete(client pb.MySpannerClient) error {
 	fmt.Println("performing uniaryDelete")
-	_, err := client.UniaryDelete(ctx, &pb.Table2Range{StartId: int64(1), EndId: int64(4)})
+	_, err := client.UniaryDelete(ctx, &pb.Table2Range{StartId: int64(0), EndId: int64(5)})
 	if err != nil {
 		return err
 	}
@@ -98,7 +97,7 @@ func uniaryDelete(client pb.MySpannerClient) error {
 
 // query: "select * from example_table limit 1",
 func noArgs(client pb.MySpannerClient) error {
-	fmt.Printf("performing NoArgs query")
+	fmt.Println("performing NoArgs query")
 	res, err := client.NoArgs(ctx, &pb.Table2{})
 	if err != nil {
 		return err

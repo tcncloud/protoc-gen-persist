@@ -15,7 +15,7 @@ func main() {
 		panic(err)
 	}
 	grpcServer := grpc.NewServer()
-	connString := "projects/algebraic-ratio-149721/instances/test-instance/database/test-project"
+	connString := "projects/algebraic-ratio-149721/instances/test-instance/databases/test-project"
 	s, err := pb.NewMySpannerImpl(connString, nil)
 	if err != nil {
 		panic(err)
