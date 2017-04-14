@@ -197,7 +197,7 @@ const SpannerClientStreamingInsertTemplate = `{{define "spanner_client_streaming
 const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming_delete"}}//spanner client streaming delete
 {{template "declare_spanner_delete_key" .}}
 
-	muts = append(muts, spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
+	muts = append(muts, spanner.DeleteKeyRange("{{.Spanner.TableName}}", key))
 {{end}}`
 
 const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming_method"}}// spanner server streaming {{.GetName}}
@@ -206,7 +206,9 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		{{$field}} {{$type}}{{end}}
 	)
+	{{if ne (len .Spanner.QueryArgs) 0}}
 	var err error
+	{{end}}
 
 	{{template "declare_spanner_arg_map" .}}
 
@@ -259,9 +261,6 @@ const SpannerHelperTemplates = `
 {{define "type_desc_to_def_map"}}
 {{if .IsMapped}}
 	conv, err = {{.GoName}}{}.ToSpanner(req.{{.Name}}).SpannerValue()
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
 {{else}}
 	conv = req.{{.Name}}
 {{end}}{{end}}
