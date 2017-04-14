@@ -208,23 +208,9 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		{{$field}} {{$type}}{{end}}
 	)
-	params := make(map[string]interface{})
-
-	var conv interface{}
 	var err error
-	//.GetSpannerSelectArgs
-{{range $key, $val := .Spanner.QueryArgs}}
-{{if $val.IsFieldValue}}
-	//if is.IsFieldValue
-	{{template "type_desc_to_def_map" $val.Field}}
-	params["{{$val.Name}}"] = conv
-{{else}}
-	//else
-	//conv = { {$val.Value} }
-	conv = {{$val.Value}}
-	//params["{ {$val.Name} }"] = conv
-	params["{{$val.Name}}"] = conv
-{{end}}{{end}}
+
+	{{template "declare_spanner_arg_map" .}}
 
 	stmt := spanner.Statement{SQL: "{{.Spanner.Query}}", Params: params}
 	tx := s.SpannerDB.Single()
