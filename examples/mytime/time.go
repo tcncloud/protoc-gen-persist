@@ -32,6 +32,7 @@ func (s MyTime) ToProto() *timestamp.Timestamp {
 	}
 
 }
+
 func (t *MyTime) Scan(src interface{}) error {
 	ti, ok := src.(string)
 	if !ok {
@@ -59,9 +60,14 @@ func (t *MyTime) Value() (driver.Value, error) {
 }
 
 func (t *MyTime) SpannerScan(src *spanner.GenericColumnValue) error {
-	return nil
+	var strTime string
+	err := src.Decode(&strTime)
+	if err != nil {
+		return err
+	}
+	return t.Scan(strTime)
 }
 
 func (t *MyTime) SpannerValue() (interface{}, error) {
-	return nil, nil
+	return t.Value()
 }
