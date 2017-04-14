@@ -90,7 +90,7 @@ func (g *Generator) Process() error {
 			return true
 		}()
 		logrus.WithFields(logrus.Fields{
-			"fileName": file.GetName(),
+			"fileName":    file.GetName(),
 			"dependency?": dep,
 		}).Debug("about to get or create this file")
 		f := g.Files.GetOrCreateFile(file, g.AllStructures, dep)

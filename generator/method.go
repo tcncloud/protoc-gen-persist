@@ -30,8 +30,6 @@
 package generator
 
 import (
-	"strconv"
-	"strings"
 	"fmt"
 	"github.com/Shrugs/fauxgaux"
 	"github.com/Sirupsen/logrus"
@@ -39,6 +37,8 @@ import (
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/tcncloud/protoc-gen-persist/persist"
+	"strconv"
+	"strings"
 )
 
 type Method struct {
@@ -62,7 +62,7 @@ func (m *Method) String() string {
 	input := m.Desc.GetInputType()
 	output := m.Desc.GetOutputType()
 	return fmt.Sprintf("Method:\n\tName: %s\n\tisSql: %s\n\tisSpanner: %s\n\tinput: %s\n\toutput: %s\n\tSpanner: %s\n\n",
-			name, isSql, isSpanner, input, output, m.Spanner)
+		name, isSql, isSpanner, input, output, m.Spanner)
 }
 
 func (m *Method) GetMethodOption() *persist.QLImpl {
@@ -506,7 +506,6 @@ func (m *Methods) String() string {
 	}
 	return ret
 }
-
 
 func (m *Methods) PreGenerate() error {
 	for _, meth := range *m {

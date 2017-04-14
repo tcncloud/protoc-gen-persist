@@ -30,9 +30,9 @@
 package generator
 
 import (
-	"github.com/golang/protobuf/proto"
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
@@ -55,7 +55,7 @@ func (s *Service) String() string {
 	sname := s.Desc.GetName()
 	fname := s.File.Desc.GetName()
 	return fmt.Sprintf("\nSERVICE:\n\tPackage: %s\n\tServiceName: %s\n\tFileName: %s\n\tService Methods: %+v\n\n",
-			s.Package, sname, fname, ms)
+		s.Package, sname, fname, ms)
 }
 
 func (s *Service) ProcessMethods() error {
@@ -145,7 +145,7 @@ func (s *Service) ProcessImports() {
 	}
 	if opt := s.GetServiceOption(); opt != nil {
 		for _, m := range opt.GetTypes() {
-			logrus.Warnf("adding import: %+v  for type: %s",GetGoPackage(m.GetGoPackage()), m)
+			logrus.Warnf("adding import: %+v  for type: %s", GetGoPackage(m.GetGoPackage()), m)
 			s.File.ImportList.GetOrAddImport(GetGoPackage(m.GetGoPackage()), GetGoPath(m.GetGoPackage()))
 		}
 	}

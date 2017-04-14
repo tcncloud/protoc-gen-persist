@@ -146,7 +146,6 @@ func (k1 *MergableKeyRange) fromKey(key *Key) {
 	k1.End.AddArgs(key.UpperValue)
 }
 
-
 func (k1 *MergableKeyRange) mergeKey(k2 *Key) error {
 	logrus.Debug("\nmerging into k1: %#v\n  k2: %#v\n\n", k1, k2)
 	if k2.HaveLower {

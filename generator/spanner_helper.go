@@ -31,9 +31,9 @@ package generator
 
 import (
 	"fmt"
-	"strings"
-	"github.com/xwb1989/sqlparser"
 	"github.com/Sirupsen/logrus"
+	"github.com/xwb1989/sqlparser"
+	"strings"
 )
 
 type QueryArg struct {
@@ -45,31 +45,31 @@ type QueryArg struct {
 
 type KeyRangeDesc struct {
 	Start []QueryArg
-	End []QueryArg
-	Kind string // a string of of a spanner.KeyRangeKind (ClosedOpen, ClosedClosed ex.)
+	End   []QueryArg
+	Kind  string // a string of of a spanner.KeyRangeKind (ClosedOpen, ClosedClosed ex.)
 }
 
 type SpannerHelper struct {
-	RawQuery string
-	Query string
-	ParsedQuery sqlparser.Statement
-	TableName string
+	RawQuery        string
+	Query           string
+	ParsedQuery     sqlparser.Statement
+	TableName       string
 	OptionArguments []string
-	IsSelect bool
-	IsUpdate bool
-	IsInsert bool
-	IsDelete bool
-	QueryArgs []QueryArg
-	KeyRangeDesc *KeyRangeDesc // used for delete queries, will be set if IsDelete is true
-	InsertCols []string // the column names for insert queries
-	Parent *Method
+	IsSelect        bool
+	IsUpdate        bool
+	IsInsert        bool
+	IsDelete        bool
+	QueryArgs       []QueryArg
+	KeyRangeDesc    *KeyRangeDesc // used for delete queries, will be set if IsDelete is true
+	InsertCols      []string      // the column names for insert queries
+	Parent          *Method
 	ProtoFieldDescs map[string]TypeDesc
 }
 
 func (sh *SpannerHelper) String() string {
 	if sh != nil {
 		return fmt.Sprintf("SpannerHelper\n\tQuery: %s\n\tIsSelect: %t\n\tIsUpdate: %t\n\tIsInsert: %t\n\tIsDelete: %t\n\n",
-				sh.Query, sh.IsSelect, sh.IsUpdate, sh.IsInsert, sh.IsDelete)
+			sh.Query, sh.IsSelect, sh.IsUpdate, sh.IsInsert, sh.IsDelete)
 	}
 	return "<nil>"
 }
@@ -91,12 +91,11 @@ func NewSpannerHelper(p *Method) (*SpannerHelper, error) {
 	input := p.GetInputTypeStruct()
 	fieldsMap := p.GetTypeDescForFieldsInStructSnakeCase(input)
 
-
 	sh := &SpannerHelper{
-		RawQuery: query,
-		ParsedQuery: pquery,
+		RawQuery:        query,
+		ParsedQuery:     pquery,
 		OptionArguments: args,
-		Parent: p,
+		Parent:          p,
 		ProtoFieldDescs: fieldsMap,
 	}
 	err = sh.Parse()
@@ -138,11 +137,11 @@ func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) ([]QueryArg, erro
 			argName := sh.OptionArguments[index]
 			qa = QueryArg{
 				IsFieldValue: true,
-				Field: sh.ProtoFieldDescs[argName],
+				Field:        sh.ProtoFieldDescs[argName],
 			}
 		} else {
 			qa = QueryArg{
-				Value: fmt.Sprintf("%#v", arg),
+				Value:        fmt.Sprintf("%#v", arg),
 				IsFieldValue: false,
 			}
 		}
@@ -179,18 +178,18 @@ func (sh *SpannerHelper) ParseSelect(pq *sqlparser.Select) error {
 	spl := strings.Split(sh.RawQuery, "?")
 	var updatedQuery string
 
-	if len(sh.OptionArguments) != len(spl) - 1 {
+	if len(sh.OptionArguments) != len(spl)-1 {
 		errStr := "err parsing spanner query: not correct number of option arguments"
 		errStr += " for method: %s of service: %s  want: %d have: %d"
-		return fmt.Errorf(errStr, sh.Parent.GetName(), sh.Parent.Service.GetName(), len(spl) - 1, len(sh.OptionArguments))
+		return fmt.Errorf(errStr, sh.Parent.GetName(), sh.Parent.Service.GetName(), len(spl)-1, len(sh.OptionArguments))
 	}
 	for i := 0; i < len(spl)-1; i++ {
 		name := fmt.Sprintf("@%d", i)
 		field := sh.ProtoFieldDescs[sh.OptionArguments[i]]
 		qa := QueryArg{
-			Name: name,
+			Name:         name,
 			IsFieldValue: true,
-			Field: field,
+			Field:        field,
 		}
 		sh.QueryArgs = append(sh.QueryArgs, qa)
 		updatedQuery += (spl[i] + name)
@@ -233,8 +232,8 @@ func (sh *SpannerHelper) ParseDelete(pq *sqlparser.Delete) error {
 	}
 	sh.KeyRangeDesc = &KeyRangeDesc{
 		Start: start,
-		End: end,
-		Kind: kind,
+		End:   end,
+		Kind:  kind,
 	}
 	sh.TableName = table
 	return nil
@@ -256,14 +255,14 @@ func (sh *SpannerHelper) ParseUpdate(pq *sqlparser.Update) error {
 			index := int(ap)
 			argName := sh.OptionArguments[index]
 			qa = QueryArg{
-				Name: key,
+				Name:         key,
 				IsFieldValue: true,
-				Field: sh.ProtoFieldDescs[argName],
+				Field:        sh.ProtoFieldDescs[argName],
 			}
 		} else {
 			qa = QueryArg{
-				Name: key,
-				Value: fmt.Sprintf("%#v", arg),
+				Name:         key,
+				Value:        fmt.Sprintf("%#v", arg),
 				IsFieldValue: false,
 			}
 		}
@@ -272,4 +271,3 @@ func (sh *SpannerHelper) ParseUpdate(pq *sqlparser.Update) error {
 	sh.TableName = table
 	return nil
 }
-

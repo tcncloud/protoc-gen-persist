@@ -37,8 +37,6 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 {{if .Spanner.IsDelete}}{{template "spanner_unary_delete" .}}{{end}}
 {{end}}`
 
-
-
 const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	var err error
 	var (

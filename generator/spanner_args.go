@@ -31,17 +31,16 @@
 package generator
 
 import (
-	"database/sql/driver"
 	"fmt"
-	"strconv"
 	"github.com/Sirupsen/logrus"
 	"github.com/xwb1989/sqlparser"
+	"strconv"
 )
 
 type PassedInArgPos int
 
 type Args struct {
-	Cur  PassedInArgPos
+	Cur PassedInArgPos
 }
 
 func (a *Args) ParseValExpr(expr sqlparser.ValExpr) (interface{}, error) {
@@ -123,34 +122,10 @@ func (p *partialArgSlice) AddArgs(args ...interface{}) {
 	}
 }
 
-func (p *partialArgSlice) GetFilledArgs(a []driver.Value) ([]interface{}, error) {
-	if len(a) < p.expectedArgs {
-		return nil, fmt.Errorf("expected at least %i args", p.expectedArgs)
-	}
-	argsCopy := p.args[:]
-	for index, ap := range p.unfilled {
-		aIndex := int(ap)
-		argsCopy[index] = a[aIndex]
-	}
-	return argsCopy, nil
-}
-
 func (p *partialArgMap) AddArg(key string, val interface{}) {
 	p.args[key] = val
 	if ap, ok := val.(PassedInArgPos); ok {
 		p.expectedArgs += 1
 		p.unfilled[key] = ap
 	}
-}
-
-func (p *partialArgMap) GetFilledArgs(a []driver.Value) (map[string]interface{}, error) {
-	if len(a) < p.expectedArgs {
-		return nil, fmt.Errorf("expected at least %i args", p.expectedArgs)
-	}
-	// this is modifiying the map directly, but should be okay because of the error above
-	for key, ap := range p.unfilled {
-		aIndex := int(ap)
-		p.args[key] = a[aIndex]
-	}
-	return p.args, nil
 }
