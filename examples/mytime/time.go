@@ -4,6 +4,7 @@ import (
 	"strings"
 	"strconv"
 	"database/sql/driver"
+	"cloud.google.com/go/spanner"
 	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
