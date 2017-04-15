@@ -32,6 +32,7 @@ package generator
 import (
 	"strings"
 
+	"github.com/Sirupsen/logrus"
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	gen "github.com/golang/protobuf/protoc-gen-go/generator"
 )
@@ -176,9 +177,13 @@ func (s *StructList) Append(struc *Struct) {
 	*s = append(*s, struc)
 }
 
+//TODO  str.GetProtoName  will never  be equal to fld.GetName
 func (s *StructList) GetStructByFieldDesc(fld *desc.FieldDescriptorProto) *Struct {
+	//logrus.Debugf("finding struct: %s", fld.GetName())
 	for _, str := range *s {
+		//logrus.Debugf("checking str:  %s", str.GetProtoName())
 		if str.GetProtoName() == fld.GetName() {
+			logrus.Warnf("the struct name matches. Struct: %s  fld: %s", str.GetProtoName, fld.GetName())
 			return str
 		}
 	}

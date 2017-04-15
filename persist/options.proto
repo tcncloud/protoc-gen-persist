@@ -42,11 +42,16 @@ extend google.protobuf.MethodOptions {
 
 extend google.protobuf.ServiceOptions {
     optional TypeMapping mapping = 560001;
+
+    // persistence option, right now it has only one option, SQL
+    // more options will be added when new query languages will be supported
+    optional PersistenceOptions service_type = 560002;
 }
 
 enum PersistenceOptions {
     // SQL Query
     SQL = 0;
+    SPANNER = 1;
 }
 
 
@@ -57,10 +62,6 @@ message QLImpl {
     // in order list of argument names that will be used as parameters for the query
     // the list of arguments represents the field names of the input type message
     repeated string arguments = 2;
-
-    // persistence option, right now it has only one option, SQL
-    // more options will be added when new query languages will be supported
-    optional PersistenceOptions persist = 3;
 
     // method level type mapping, if this does not exist it will be
     // used the type mapping at the service level, if that one will not exist

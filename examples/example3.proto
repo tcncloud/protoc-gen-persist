@@ -38,29 +38,16 @@ import "google/protobuf/descriptor.proto";
 
 
 import "examples/test/test.proto";
+import "examples/example2.proto";
 
-message Table2 {
-  int64 id = 1;
-  google.protobuf.Timestamp start_time = 2;
-  string name = 3;
+message Table2Range {
+  int64 start_id = 1;
+  int64 end_id = 2;
 }
 
-message Filed {
-  int64 id = 1;
-  google.protobuf.Timestamp start_time = 2;
-}
+service MySpanner {
+  option (persist.service_type) = SPANNER;
 
-message Name {
-  string name = 1;
-}
-
-message NumRows {
-  int64 count = 1;
-}
-
-
-service Amazing {
-  option (persist.service_type) = SQL;
   option (persist.mapping) = {
     types: [
       {
@@ -72,28 +59,59 @@ service Amazing {
     ]
   };
 
-  rpc UniarySelect(Filed) returns (Table2) {
+  rpc UniaryInsert(Table2) returns (Table2) {
     option (persist.ql) = {
-      query: "SELECT * from example_table Where id=$1 AND start_time=$2"
+      query: "Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"
       arguments: ["id", "start_time"]
+    };
+  };
+  rpc UniarySelect(Table2) returns (Table2) {
+    option (persist.ql) = {
+      query: "SELECT * from example_table Where id=? AND name=?"
+      arguments: ["id", "name"]
+    };
+  };
+  rpc UniaryUpdate(Table2) returns (Filed) {
+    option (persist.ql) = {
+      query: "Update example_table set start_time=?, name=\"oranges\" where id=?",
+      arguments: ["start_time", "id"],
+    };
+  };
+  rpc UniaryDelete(Table2Range) returns (Table2) {
+    option (persist.ql) = {
+      query: "DELETE FROM example_table WHERE id>? AND id<?",
+      arguments: ["start_id", "end_id"]
+    };
+  };
+  rpc NoArgs(Table2) returns (Table2) {
+    option (persist.ql) = {
+      query: "select * from example_table limit 1",
+      arguments: []
     };
   };
   rpc ServerStream(Name) returns (stream Table2) {
     option (persist.ql) = {
-      query: "SELECT * FROM example_table WHERE name=$1"
-      arguments: ["name"]
+      query: "SELECT * FROM example_table"
+      arguments: []
     };
   };
-  rpc Bidirectional(stream Table2) returns (stream Table2) {
+  rpc ClientStreamInsert(stream Table2) returns (NumRows) {
     option (persist.ql) = {
-      query: "UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *"
+      query: "INSERT INTO example_table (id, start_time, name) VALUES (?, ?, ?)"
       arguments: ["id", "start_time", "name"]
     };
   };
-  rpc ClientStream(stream Table2) returns (NumRows) {
+  rpc ClientStreamDelete(stream Table2) returns (NumRows) {
     option (persist.ql) = {
-      query: "INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)"
-      arguments: ["id", "start_time", "name"]
+      query: "delete from example_table where id=?",
+      arguments: ["id"],
     };
   };
+  rpc ClientStreamUpdate(stream Table2) returns (NumRows) {
+    option (persist.ql) = {
+      query: "update example_table set start_time=?, name=? where id=?",
+      arguments: ["start_time", "name", "id"]
+    };
+  };
+
 }

@@ -45,6 +45,26 @@ func New{{$srv.GetName}}Impl(driver, connString string) (*{{$srv.GetName}}Impl, 
 	return &{{$srv.GetName}}Impl{ SqlDB: db }, nil
 }
 {{end}}
+{{if $srv.IsSpanner}}
+type {{$srv.GetName}}Impl struct {
+	SpannerDB *spanner.Client
+}
+
+func New{{$srv.GetName}}Impl(d string, conf *spanner.ClientConfig, opts ...option.ClientOption) (*{{$srv.GetName}}Impl, error) {
+	var client *spanner.Client
+	var err error
+	if conf != nil {
+		client, err = spanner.NewClientWithConfig(context.Background(), d, *conf, opts...)
+	} else {
+		client, err = spanner.NewClient(context.Background(), d, opts...)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &{{$srv.GetName}}Impl{SpannerDB: client}, nil
+}
+
+{{end}}
 {{range $method := $srv.Methods}}
 {{template "implement_method" $method}}
 {{end}}

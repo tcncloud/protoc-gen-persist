@@ -29,7 +29,327 @@
 
 package templates
 
-const SpannerUnaryMethodTemplate = `{{define "spanner_unary_method"}}// spanner unary {{.GetName}} unimplemented{{end}}`
-const SpannerClientStreamingMethodTemplate = `{{define "spanner_client_streaming_method"}}// spanner client streaming {{.GetName}} unimplemented{{end}}`
-const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming_method"}}// spanner server streaming {{.GetName}} unimplemented{{end}}`
-const SpannerBidiStreamingMethodTemplate = `{{define "spanner_bidi_streaming_method"}}// spanner bidi streaming {{.GetName}} unimplemented{{end}}`
+const SpannerUnaryMethodTemplate = `{{define "spanner_unary_method"}}// spanner unary select {{.GetName}}
+func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
+{{if .Spanner.IsSelect}}{{template "spanner_unary_select" .}}{{end}}
+{{if .Spanner.IsUpdate}}{{template "spanner_unary_update" .}}{{end}}
+{{if .Spanner.IsInsert}}{{template "spanner_unary_insert" .}}{{end}}
+{{if .Spanner.IsDelete}}{{template "spanner_unary_delete" .}}{{end}}
+{{end}}`
+
+const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
+	var err error
+	var (
+{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		{{$field}} {{$type}}{{end}}
+	)
+
+	{{template "declare_spanner_arg_map" .}}
+
+	//stmt := spanner.Statement{SQL: "{ {.Spanner.Query} }", Params: params}
+	stmt := spanner.Statement{SQL: "{{.Spanner.Query}}", Params: params}
+	tx := s.SpannerDB.Single()
+	defer tx.Close()
+	iter := tx.Query(ctx, stmt)
+	defer iter.Stop()
+	row, err := iter.Next()
+	if err == iterator.Done {
+		return nil, grpc.Errorf(codes.NotFound, "no rows found")
+	} else if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+
+	// scan our values out of the row
+	{{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}}
+	{{if $t.IsMapped}}
+	gcv := new(spanner.GenericColumnValue)
+	err = row.ColumnByName("{{$t.ProtoName}}", gcv)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	err = {{$t.Name}}.SpannerScan(gcv)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	{{else}}
+	err = row.ColumnByName("{{$t.ProtoName}}", &{{$t.Name}})
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	{{end}}{{end}}
+
+	_, err = iter.Next()
+	if err != iterator.Done {
+		fmt.Println("Unary select that returns more than one row..")
+	}
+	//res := &{ {.GetOutputType} }{
+	res := &{{.GetOutputType}}{
+	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
+	{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
+	}
+	return res, nil
+}
+{{end}}`
+
+const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
+	var err error
+	{{template "declare_spanner_arg_slice" .}}
+
+	muts := make([]*spanner.Mutation, 1)
+	muts[0] = spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params)
+	_, err = s.SpannerDB.Apply(ctx, muts)
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			return nil, grpc.Errorf(codes.AlreadyExists, err.Error())
+		} else {
+			return nil, grpc.Errorf(codes.Unknown, err.Error())
+		}
+	}
+	res := &{{.GetOutputType}}{}
+
+	return res, nil
+}
+{{end}}`
+
+const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
+	var err error
+	{{template "declare_spanner_arg_map" .}}
+
+	muts := make([]*spanner.Mutation, 1)
+	muts[0] = spanner.UpdateMap("{{.Spanner.TableName}}", params)
+	_, err = s.SpannerDB.Apply(ctx, muts)
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			return nil, grpc.Errorf(codes.AlreadyExists, err.Error())
+		} else {
+			return nil, grpc.Errorf(codes.Unknown, err.Error())
+		}
+	}
+	res := &{{.GetOutputType}}{}
+
+	return res, nil
+}
+{{end}}`
+
+const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
+	var err error
+{{template "declare_spanner_delete_key" .}}
+
+	muts := make([]*spanner.Mutation, 1)
+	muts[0] = spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
+	_, err = s.SpannerDB.Apply(ctx, muts)
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, grpc.Errorf(codes.NotFound, err.Error())
+		}
+	}
+	res := &{{.GetOutputType}}{}
+
+	return res, nil
+}
+{{end}}`
+
+const SpannerClientStreamingMethodTemplate = `{{define "spanner_client_streaming_method"}}// spanner client streaming {{.GetName}}
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
+	var totalAffected int64
+	var err error
+	muts := make([]*spanner.Mutation, 0)
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		} else if err  != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		totalAffected += 1
+
+		{{if .Spanner.IsInsert}}{{template "spanner_client_streaming_insert" .}}{{end}}
+		{{if .Spanner.IsUpdate}}{{template "spanner_client_streaming_update" .}}{{end}}
+		{{if .Spanner.IsDelete}}{{template "spanner_client_streaming_delete" .}}{{end}}
+		//In the future, we might do apply if muts gets really big,  but for now,
+		// we only do one apply on the database with all the records stored in muts
+	}
+	_, err = s.SpannerDB.Apply(context.Background(), muts)
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			return grpc.Errorf(codes.AlreadyExists, err.Error())
+		} else {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+	}
+	stream.SendAndClose(&{{.GetOutputType}}{Count: totalAffected})
+	return nil
+}
+{{end}}`
+
+const SpannerClientStreamingUpdateTemplate = `{{define "spanner_client_streaming_update"}}//spanner client streaming update
+{{template "declare_spanner_arg_map" .}}
+
+muts = append(muts, spanner.UpdateMap("{{.Spanner.TableName}}", params))
+{{end}}`
+
+const SpannerClientStreamingInsertTemplate = `{{define "spanner_client_streaming_insert"}}//spanner client streaming insert
+{{template "declare_spanner_arg_slice" .}}
+
+	muts = append(muts, spanner.Insert("{{.Spanner.TableName}}", {{.Spanner.InsertColsAsString}}, params))
+{{end}}`
+
+const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming_delete"}}//spanner client streaming delete
+{{template "declare_spanner_delete_key" .}}
+
+	muts = append(muts, spanner.DeleteKeyRange("{{.Spanner.TableName}}", key))
+{{end}}`
+
+const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming_method"}}// spanner server streaming {{.GetName}}
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetServiceName}}_{{.GetName}}Server) error {
+	var (
+	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		{{$field}} {{$type}}{{end}}
+	)
+	{{if ne (len .Spanner.QueryArgs) 0}}
+	var err error
+	{{end}}
+
+	{{template "declare_spanner_arg_map" .}}
+
+	stmt := spanner.Statement{SQL: "{{.Spanner.Query}}", Params: params}
+	tx := s.SpannerDB.Single()
+	defer tx.Close()
+	iter := tx.Query(context.Background(), stmt)
+	defer iter.Stop()
+	for {
+		row, err := iter.Next()
+		if err == iterator.Done {
+			break
+		} else if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+
+		// scan our values out of the row
+		{{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}}
+		{{if $t.IsMapped}}
+		gcv := new(spanner.GenericColumnValue)
+		err = row.ColumnByName("{{$t.ProtoName}}", gcv)
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		err = {{$t.Name}}.SpannerScan(gcv)
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		{{else}}
+		err = row.ColumnByName("{{$t.ProtoName}}", &{{$t.Name}})
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		{{end}}{{end}}
+		res := &{{.GetOutputType}}{
+		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
+		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
+		}
+		stream.Send(res)
+	}
+	return  nil
+}
+{{end}}`
+
+const SpannerBidiStreamingMethodTemplate = `{{define "spanner_bidi_streaming_method"}}// spanner bidi streaming {{.GetName}}
+unimplemented
+{{end}}`
+
+const SpannerHelperTemplates = `
+{{define "type_desc_to_def_map"}}
+{{if .IsMapped}}
+	conv, err = {{.GoName}}{}.ToSpanner(req.{{.Name}}).SpannerValue()
+{{else}}
+	conv = req.{{.Name}}
+{{end}}{{end}}
+
+
+{{define "type_desc_to_def_slice"}}
+{{if .IsMapped}}
+	conv, err = {{.GoName}}{}.ToSpanner(req.{{.Name}}).SpannerValue()
+{{else}}
+	conv = req.{{.Name}}
+{{end}}{{end}}
+
+
+{{define "return_err_on_method"}}
+	if err != nil {
+{{if .IsUnary}}
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+{{else}}
+		return grpc.Errorf(codes.Unknown, err.Error())
+{{end}}
+	}
+{{end}}
+
+
+{{define "declare_spanner_arg_map"}}
+{{$method := .}}
+	params := make(map[string]interface{})
+{{if gt (len .Spanner.OptionArguments) 0}}
+	var conv interface{}
+{{end}}
+{{range $key, $val := .Spanner.QueryArgs}}
+{{if $val.IsFieldValue}}
+	{{template "type_desc_to_def_map" $val.Field}}
+	{{template "return_err_on_method" $method}}
+	params["{{$val.Name}}"] = conv
+{{else}}
+	//else
+	conv = {{$val.Value}}
+	params["{{$val.Name}}"] = conv
+{{end}}{{end}}
+{{end}}
+
+
+{{define "declare_spanner_arg_slice"}}
+{{$method := .}}
+	params := make([]interface{}, 0)
+{{if gt (len .Spanner.OptionArguments) 0}}
+	var conv interface{}
+{{end}}
+
+{{range $index, $val := .Spanner.QueryArgs}}
+{{if $val.IsFieldValue}}
+	{{template "type_desc_to_def_slice" $val.Field}}
+	{{template "return_err_on_method" $method}}
+	params = append(params, conv)
+{{else}}
+	params = append(params, {{$val.Value}})
+{{end}}{{end}}
+{{end}}
+
+
+{{define "declare_spanner_delete_key"}}
+{{$method := .}}
+	start := make([]interface{}, 0)
+	end := make([]interface{}, 0)
+{{if gt (len .Spanner.OptionArguments) 0}}
+	var conv interface{}
+{{end}}
+{{range $index, $arg := .Spanner.KeyRangeDesc.Start}}
+{{if $arg.IsFieldValue}}
+{{template "type_desc_to_def_slice" $arg.Field}}
+{{template "return_err_on_method" $method}}
+	start = append(start, conv)
+{{else}}
+	start = append(start, {{$arg.Value}})
+{{end}}{{end}}
+{{range $index, $arg := .Spanner.KeyRangeDesc.End}}
+{{if $arg.IsFieldValue}}
+{{template "type_desc_to_def_slice" $arg.Field}}
+{{template "return_err_on_method" $method}}
+	end = append(end, conv)
+{{else}}
+	start = append(end, {{$arg.Value}})
+{{end}}{{end}}
+	key := spanner.KeyRange{
+		Start: start,
+		End: end,
+		Kind: {{.Spanner.KeyRangeDesc.Kind}},
+	}
+{{end}}
+
+`

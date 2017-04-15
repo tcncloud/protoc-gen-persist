@@ -4,6 +4,7 @@ import (
 	"strings"
 	"strconv"
 	"database/sql/driver"
+	"cloud.google.com/go/spanner"
 	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
@@ -17,6 +18,13 @@ func (s MyTime) ToSql(src *timestamp.Timestamp) *MyTime {
 	s.Nanos = src.Nanos
 	return &s
 }
+
+func (s MyTime) ToSpanner(src *timestamp.Timestamp) *MyTime {
+	s.Seconds = src.Seconds
+	s.Nanos = src.Nanos
+	return &s
+}
+
 func (s MyTime) ToProto() *timestamp.Timestamp {
 	return &timestamp.Timestamp{
 		Nanos:   s.Nanos,
@@ -24,6 +32,7 @@ func (s MyTime) ToProto() *timestamp.Timestamp {
 	}
 
 }
+
 func (t *MyTime) Scan(src interface{}) error {
 	ti, ok := src.(string)
 	if !ok {
@@ -48,4 +57,17 @@ func (t *MyTime) Scan(src interface{}) error {
 func (t *MyTime) Value() (driver.Value, error) {
 	ti := strconv.FormatInt(t.Seconds, 10) + "," + strconv.FormatInt(int64(t.Nanos), 10)
 	return ti, nil
+}
+
+func (t *MyTime) SpannerScan(src *spanner.GenericColumnValue) error {
+	var strTime string
+	err := src.Decode(&strTime)
+	if err != nil {
+		return err
+	}
+	return t.Scan(strTime)
+}
+
+func (t *MyTime) SpannerValue() (interface{}, error) {
+	return t.Value()
 }
