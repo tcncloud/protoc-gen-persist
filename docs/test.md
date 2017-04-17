@@ -1,1 +1,4 @@
+---
+title: awsome title
+---
 # test
