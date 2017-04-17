@@ -1,9 +1,23 @@
 # protoc-gen-persist
-[![wercker status](https://app.wercker.com/status/17256e7e44980466f184c85f4bf14166/m/ "wercker status")](https://app.wercker.com/project/byKey/17256e7e44980466f184c85f4bf14166)
 
 Protobuf plugin that generate a persistence layer backed by SQL database
 
-## NOTE: This project is under development and is not usable yet!
+## NOTE: This project is under development everything could be changed !
+
+## Rationale
+Opinionated protoc plugin that will help generate builerplate go code for grpc microservices that need to interact 
+with a SQL or Spanner database.
+
+
+protoc-gen-persist is a protoc plugin used to generate golang CRUD services that communicate through GRPC,                     and talk to a persistence layer back end.  This is accomplished by providing a protobuf file with proper                       
+annotations, and then running the protoc cli tool with the ```--go_out``` option, and the ```--persist_out```                 
+options set to the same directory.
+
+## Installation
+
+## Documentation
+
+## Versions
 
 ## Roadmap
  1. ~~type mapping~~
