@@ -1,0 +1,26 @@
+  {% include global_head %}
+
+    {% include navigation %}
+    <div class="{{ page.layout }}-page">
+      <div class="blog-page-header bg-grad-tcnpri2">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-12">
+              <h2 class="animated fadeIn">{{ page.title }}</h2>
+              <h5 class="animated fadeIn">{{ page.date | date: "%B %e, %Y" }}</h5>
+              </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="container main-content">
+        <div class="row">
+          <section class="col-md-12">
+                {{ content }}
+          </section>
+        </div>
+      </div>
+    </div>
+
+    {% include footer %}
+  {% include global_foot %}
