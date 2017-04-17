@@ -1,0 +1,27 @@
+  {% include global_head %}
+
+    {% include navigation %}
+
+      <div class="primary-page-header bg-grad-tcnpri2">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-12">
+              <h1 class="project-tagline animated fadeIn">{{ site.description | default: site.github.project_tagline }}</h1>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="container main-content">
+
+        <div class="row markdown-content">
+          <div class="col-md-12">
+            {{content}}
+          </div>
+        </div>
+
+      </div>
+
+
+    {% include footer %}
+  {% include global_foot %}

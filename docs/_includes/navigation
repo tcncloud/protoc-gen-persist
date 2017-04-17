@@ -1,0 +1,19 @@
+<nav class="navbar navbar-default navbar-static-top">
+  <div class="container">
+    <div class="navbar-header">
+      <button class="navbar-toggle" data-toggle="collapse" data-target="#navbar-default-1" type="button">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand brand-svg" href="/">
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0" y="0" viewBox="0 0 360 360" xml:space="preserve"><path d="M45.8 215.5V165H33.1v-25.9h12.7v-27.3H76v27.3h25.1V165H76v45.6c0 7 3 10.3 9.7 10.3 5.6 0 10.5-1.4 14.9-3.8v24.3c-6.4 3.8-13.7 6.2-23.9 6.2C58.3 247.5 45.8 240.2 45.8 215.5zM114.2 193v-0.4c0-30.4 23.3-55.5 55.9-55.5 20.1 0 32.6 6.8 42.6 17.9l-18.5 19.9c-6.8-7.2-13.5-11.7-24.3-11.7 -15.1 0-25.9 13.3-25.9 29v0.4c0 16.3 10.5 29.4 27.1 29.4 10.1 0 17.1-4.4 24.5-11.3l17.7 17.9c-10.3 11.3-22.3 19.5-43.6 19.5C137.7 248.1 114.2 223.5 114.2 193zM229.3 139.1h30.2v15.1c7-9 15.9-17.1 31.2-17.1 22.9 0 36.2 15.1 36.2 39.6v69h-30.2v-59.5c0-14.3-6.8-21.7-18.3-21.7s-18.9 7.4-18.9 21.7v59.5h-30.2V139.1z"/></svg>
+      </a>
+    </div>
+    <div class="collapse navbar-collapse" id="navbar-default-1">
+      <ul class="nav navbar-nav navbar-right">
+        <li><button class="btn navbar-btn btn-sm btn-tcnpri1"><a href="{{ site.github.owner_url }}" class="text-light"><i class="fa fa-github" aria-hidden="true"></i> Follow TCN on Github</a></button></li>
+      </ul>
+    </div>
+  </div>
+</nav>
