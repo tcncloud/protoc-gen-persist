@@ -192,7 +192,7 @@ protoc-gen-persist generates a handler begins a transaction,  makes a prepared s
 and executes that statement for every received request over the stream. If an error is encountered,
 the transaction is rolled back.  After all requests have been executed on the statment successfully
 the transaction is committed, and the number of times the query exectued will be returned. Client streaming
-queries assume your message response type  has a count field.  As stated before, your response message can
+queries assume your message response type  has a count field that is of type int64.  As stated before, your response message can
 have additional fields, but the field that is required to be on the response for a client streaming call
 is a count field that looks like this:
 ```proto
@@ -235,30 +235,84 @@ service UserTalker {
 ```
 This will let you stream users over to be updated, and get the updated user back
 
+bidirectional streams will get heavier work done in future releases,  for now it would be best to use server, client, and
+non stream calls.
 
-
-lets take some proto messages as examples:
+## Persistance Options
+### Method options
+the options you can put on a method are currently the query,  and the arguments.  In the future method type mapping
+and before and after hooks will put here as well.  rpc methods that do not have a persist.ql options object will not
+have a server handler generated.
 ```proto
-// a User is row our database's user table
 message User {
   int64 id = 1;
   string first_name = 2;
   string last_name = 3;
+  float64 money = 4;
 }
+service UserTalker {
+  rpc GetRichPeople(User) returns (stream User) {
+    option (persist.ql) = {
+      query: "SELECT last_name from users WHERE firstName=? AND money=?
+      arguments: ["first_name", "money"]
+    };
+  };
+}
+```
+The ```query``` option is the query that will be executed on the database.  parameter placeholders ex.(?, $1, :col)
+are replaced in order  with with the the field on the request that matches the argument in the arguments array. So using
+the above example,  sent a request to the server with a user that looked like this (go syntax):
+```go
+import (
+  pb "usertalker" // wherever the generated code is for the User talker service
+  fmt
+	"context"
+	"google.golang.org/grpc"
+  "google.golang.org/grpc/codes"
+)
 
-message Id {
-  int64 id = 1;
+// purposely ignoring errors here, but you shouldn't
+func main() {
+  // setup a client and connection to the server as normal
+  // for this example we assume there is a UserTalker server on
+  // localhost:50051
+  con, _ := grpc.Dial("localhost:50051", grpc.WithInsecure())
+  client = pb.NewUserTalkerClient(con)
 
-
-message NumRows {
-  int64 count = 1;
+  // we dont need the Id, or the LastName to be filled out on the user
+  // because our query does not have those used in the arguments.
+  stream, _ := client.GetRichPeople(context.Background(), &pb.User{
+    FirstName: "billy",
+    Money: float64(9000.01),
+  })
+  for {
+    // if stream does not return an error, each resp will be a User object
+    // with only the LastName filled out.  This is becuase we specifically
+    // returned the last name,  and not *
+    resp, err := stream.Recv()
+    // io.EOF will be returned when there is no more rows found in the database
+    if err == io.EOF {
+      break
+    }
+    // if we get no rows from the query we will get a grpc error code of NotFound.
+    if err != nil && c := grpc.Code(err); c == codes.NotFound {
+      fmt.Println("no users with this last name and money")
+      break
+    }
+    if err != nil {
+      fmt.Printf("problem with the rpc call: %s\n", err)
+      break
+    }
+    fmt.Printf("a last name of a user with money: %s", resp.LastName)
+  }
 }
 ```
 
 
 
 
-## Persistance Options
+
+
 
 ## Spanner Queries
 
