@@ -259,7 +259,7 @@ service UserTalker {
   };
 }
 ```
-The ```query``` option is the query that will be executed on the database.  parameter placeholders ex.(?, $1, :col)
+The ```query``` option is the query that will be executed on the database.  parameter placeholders ex: (?, $1, :col)
 are replaced in order  with with the the field on the request that matches the argument in the arguments array. So using
 the above example,  sent a request to the server with a user that looked like this (go syntax):
 ```go
@@ -307,10 +307,93 @@ func main() {
   }
 }
 ```
+### * queries
+if you have a query that uses the * in any way, it is important to make sure your response message
+has the exact rows, in the exact order that the database recieves the rows. fields are scanned out of the
+row in the database in the order that they are read. If your proto message definition  does not have rows that match
+the table in the exact order, you can get an error at runtime.  Here is an example:
 
+Lets say I had a table that had this definition:
+```sql
+`CREATE TABLE example_table(
+  id          bigserial,
+  phone       integer      NOT NULL,
+  name        varchar(255) NOT NULL,
+  primary key(id)
+)`
+```
+and I wanted to perform a simple query that looks like this: (this is the failing example)
+```proto
+message Empty{}
+message Person {
+  int64 id = 1;
+  string name = 2;
+  int32 phone = 3;
+}
 
+service Person {
+  rpc FindOnePerson(Empty) returns (Person) {
+    option (persist.ql) = {
+      query: "SELECT * from example_table Limit 1"
+      arguments: []
+    };
+  };
+}
+```
+** This above example will fail at runtime **
 
+The reason this does not work is because we defined the example_table's phone field before the name field,
+but on the Person message in the proto, we defined the name field before the phone field.  This will generate
+code that scans name out of the database before phone,  and we will get a mismatched type.
 
+To Fix the above example  simply swap the phone field to be above the name field on the Person
+message definition in the proto like this: (this is the working example)
+```proto
+message Empty{}
+// notice the name field is above the phone field now
+message Person {
+  int64 id = 1;
+  int32 phone = 3;
+  string name = 2;
+}
+
+service Person {
+  rpc FindOnePerson(Empty) returns (Person) {
+    option (persist.ql) = {
+      query: "SELECT * from example_table Limit 1"
+      arguments: []
+    };
+  };
+}
+```
+This code above would work correctly.  The plugin would read the phone field before the name field,
+and this will scan the phone field out of the received row first.  Notice how on the Person message,
+the field numbers go in order of 1, 3, 2  now instead of 1, 2, 3  as in the failing example?  This is
+not a typo,  all protoc-gen-persist cares about is the ORDER it reads the fields in,  it does not care
+about the field's number.  Your protobuf messages do not have to update their numbers,  just their position
+in the message definition.
+
+If You really do not want to switch your Message definition field positions, you can still use select
+statements,  but select the exact field order that matches your response messages field order.
+So if you changed the query in the failing example to this,  it would work
+```proto
+message Empty{}
+message Person {
+  int64 id = 1;
+  string name = 2;
+  int32 phone = 3;
+}
+
+service Person {
+  rpc FindOnePerson(Empty) returns (Person) {
+    option (persist.ql) = {
+      query: "SELECT id, name, phone from example_table Limit 1"
+      arguments: []
+    };
+  };
+}
+```
+this works without having to change the field order in the Person message definition
 
 
 
