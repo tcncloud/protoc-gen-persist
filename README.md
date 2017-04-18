@@ -2,8 +2,7 @@
 
 Protobuf plugin that generate a persistence layer backed by SQL or Spanner database
 
-## NOTE: This project is under development, everything could be changed, and there will be bugs!
-## (especially with spanner)
+## NOTE: This project is under development, everything could be changed, and there will be bugs!  (especially with spanner)
 
 ## Rationale
 Opinionated protoc plugin that will help generate boiler plate go code for GRPC microservices that need to interact
@@ -16,7 +15,7 @@ options set to the same directory.
 ## Documentation
 documentation for the project can be found [Here](docs/index.md)
 The documentation goes over the persist options, how to structure your proto file,
-and spanner query parsing
+custom type mapping to/from the database, and spanner query parsing
 
 ## Version 0.1.0
 

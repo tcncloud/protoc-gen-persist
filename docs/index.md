@@ -119,7 +119,7 @@ func (s *UsersTalkerImpl) SelectById(ctx context.Context, req *Id) (*User, error
 ```
 
 All that is left to do is to attach a "UsersTalkerImpl" to a grpc service and run it.
-Here is a simple example of one way you could do that assuming you are using a vendor directory:
+Here is a simple example of one way you could do that:
 ``` go
 package main
 
@@ -127,7 +127,7 @@ import (
 	"fmt"
 	"net"
 	_"github.com/go-sql-driver/mysql"
-	pb "simple_service"
+	pb "simple_service" // wherever we put the proto generated code
 	"google.golang.org/grpc"
 )
 
@@ -148,13 +148,92 @@ func main() {
 }
 ```
 
-That is it.  you simply build, and run your server, and you will be able to make a grpc client
-that can talk to your grpc server, and get users when given ids.
+All that is left to do is build, and run your server. Then you will be able to make a grpc client
+that can talk to your grpc server, and get users from the database when sent their id as a grpc call.
 
 Full code examples can be found in the [examples directory](../examples/README.md)
 
+### Constructing Your Proto File
+protoc-gen-persist generates code based on how you construct your .proto file.  It generates code
+by looking at 4 things on your grpc service:
+- request/response message types of the rpc call
+- the streaming catagory of the rpc call (none, client streaming, server streaming, bidirectional)
+- service level options (type mapping definitions, and sevice type)
+- method level options (the query string, and arguments array)
 
+The options will be gone over in more detail in the next section. This section will cover what gets generated
+based on the streaming type of your rpc call, and the request/response message types of the rpc call
+
+#### non streaming calls
+for non streaming calls ```rpc SelectById(Id) returns (User)```
+protoc-gen-persist generates code that assumes the query returns at most one row.
+- For sql backends the handler uses database/sql QueryRow method.
+- For spanner additional rows are ignored.
+
+#### server streaming call
+for server streaming calls: ```rpc SelectByName(Name) returns (stream User)```
+protoc gen-persist generates a handler that runs the provided query, and streams
+back each result one by one.
+- For sql backends  the handler uses database/sql's Query method
+- Spanner does a single() read transaction.
+
+
+Do not use non streaming, or server streaming calls if your query does not return rows.  In the future,
+We might try to identify if the query returns rows or not,  and generate code based on that,  but this
+is not yet supported.
+
+#### client streaming calls
+for client streaming calls: ```rpc InsertUsers(stream User) returns (NumRowsInserted)```
+protoc-gen-persist generates a handler begins a transaction,  makes a prepared statement
+and executes that statement for every received request over the stream. If an error is encountered,
+the transaction is rolled back.  After all requests have been executed on the statment successfully
+the transaction is committed, and the number of times the query exectued will be returned. Client streaming
+queries assume your message response type  has a count field.  As stated before, your response message can
+have additional fields, but the field that is required to be on the response for a client streaming call
+is a count field that looks like this ex.
+```proto
+message NumRows {
+  int64 count = 1;
+}
+```
+- For sql service types the streamed reqeusts are executed on the transaction right away, and the error is
+checked right away.  It is safe to stream any number of requests over before closing the stream.
+- For spanner service types the streamed requests are stored in a slice of mutations.  The mutations are
+not applied to the database till the stream is closed by the client.  This is done because there is no rollback
+feature for spanner. All mutations given to an apply method are done only if they all succeed. Till there is a
+way to have a transaction that can be rolled back in spanner,  be aware that each request is stored as a mutation in
+memory on the server.
+
+
+
+lets take some proto messages as examples:
+```proto
+// a User is row our database's user table
+message User {
+  int64 id = 1;
+  string first_name = 2;
+  string last_name = 3;
+}
+
+message Id {
+  int64 id = 1;
+}
+
+message NumRows {
+  int64 count = 1;
+}
+```
+
+
+
+
+### Persistance Options
+
+### Spanner Queries
+
+### More Help
 This will walk you through step by step creating a project that talks to a users table stored in postgres.
+
 [Tutorial](tutorial.md)
 
 
