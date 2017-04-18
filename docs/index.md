@@ -395,7 +395,177 @@ service Person {
 ```
 this works without having to change the field order in the Person message definition
 
+### Custom Types
+Protobuf message types, and database types do not line up one to one unfortunately.
+However protoc-gen-persist supports mapping your custom proto types to types that will
+fit into the database you are using. Here is how to do it:
 
+First we have our proto file.  For this simple example, we have 3 fields on an Appointment message.
+An id, a  name field, both of which are not mapped. We want to store a time.  We want to pass our
+time around as a google protobuf timestamp struct.
+```proto
+syntax = "proto3";
+
+// import google's timestamp proto
+import "google/protobuf/timestamp.proto";
+
+// our message we want to store into the database.
+// the timestamp we are referencing is found here: https://github.com/google/protobuf/blob/master/src/google/protobuf/timestamp.proto
+// and it looks like this:
+//message Timestamp {
+//  int64 seconds = 1;
+//  int32 nanos = 2;
+//}
+message Appointment {
+  int64 id = 1;
+  string name = 2;
+  google.protobuf.Timestamp time = 3;
+}
+```
+If our postgres table looked like this:
+```sql
+CREATE TABLE appointments(
+  id     bigserial,
+  name   varchar(255)  NOT NULL,
+  time   varchar(255)  NOT NULL,
+  primary key(id)
+);
+```
+A google protobuf timestamp struct will not fit into our Postgres database, because we have
+defined our table to store a time as a string. We can however create a type that can convert
+to/from a string from the database, to a Timestamp proto type.  Here is the code that does that:
+```go
+// this MUST not be in the same package in order to ensure no cyclical dependencies
+package mytime
+
+import (
+	"strings"
+	"strconv"
+	"database/sql/driver"// if you have a SQL service type, you will need to return a driver.Value
+	"cloud.google.com/go/spanner"// if you have a Spanner sql type, you will need to accept a GenericColumnValue
+	"github.com/golang/protobuf/ptypes/timestamp" // our protobuf's timestamp
+)
+
+// create a type that can handle conversion between
+// a google protobuf time stamp.  This is the struct
+// that will be created and used in the generated code
+type MyTime struct {
+	Seconds int64
+	Nanos   int32
+}
+
+// to use our type with sql code, we need to suport this ToSql method
+// it needs to take the source type we will use in the proto file (the *timestamp.Timestamp)
+// and it needs to return a pointer to our type.  We initialize our type with
+// the data that will be required to put our type into the database
+func (s MyTime) ToSql(src *timestamp.Timestamp) *MyTime {
+	s.Seconds = src.Seconds
+	s.Nanos = src.Nanos
+	return &s
+}
+
+// This is jsut like the ToSql method,  except it is called if your service_type
+// option is SPANNER.  It is okay to use the same type for both sql and spanner services
+func (s MyTime) ToSpanner(src *timestamp.Timestamp) *MyTime {
+	s.Seconds = src.Seconds
+	s.Nanos = src.Nanos
+	return &s
+}
+
+// This is called on a populated instance of our type, setup by the generated code in the handler
+// The code will be populated with Scan, or SpannerScan, and it needs to return us a pointer
+// to the proto type to be returned.  Since our proto for this example uses googles Timestamp,
+// we return construct a new google timestamp and return its address
+func (s MyTime) ToProto() *timestamp.Timestamp {
+	return &timestamp.Timestamp{
+		Nanos:   s.Nanos,
+		Seconds: s.Seconds,
+	}
+
+}
+
+// protoc-gen-persist uses the go database/sql package. We get types out of the database
+// by having your custom type implement the database/sql Scanner interface. We pass an
+// instance of MyTime to row.Scan(),  this will populate the MyTime instance for the response
+func (t *MyTime) Scan(src interface{}) error {
+	ti, ok := src.(string)
+	if !ok {
+		t.Seconds = int64(0)
+		t.Nanos = 0
+	}
+	tis := strings.Split(ti, ",")
+	secs, err := strconv.ParseInt(tis[0], 10, 64)
+	if err != nil {
+		return err
+	}
+	nans, err := strconv.ParseInt(tis[1], 10, 32)
+	if err != nil {
+		return err
+	}
+	t.Seconds = secs
+	t.Nanos = int32(nans)
+
+	return nil
+}
+
+// we get your custom type into a database by having it implement go's database/sql
+// Valuer interface.  We pass MyTime instance to your query, that has been populated with
+// By calling the ToSql()  method on a MyTime instance.
+func (t *MyTime) Value() (driver.Value, error) {
+	ti := strconv.FormatInt(t.Seconds, 10) + "," + strconv.FormatInt(int64(t.Nanos), 10)
+	return ti, nil
+}
+
+// Similar to Scan, This is how we get the database stored type, into your custom type
+// You are expected to implement SpannerScan, and take a spanner GenericColumnValue, and
+// decode it to an instance of your type.  In this example we just decode src that will be a
+// string of the time,  and call can on it, but you do not have to do it this way. You just
+// need to populate the MyTime t
+func (t *MyTime) SpannerScan(src *spanner.GenericColumnValue) error {
+	var strTime string
+	err := src.Decode(&strTime)
+	if err != nil {
+		return err
+	}
+	return t.Scan(strTime)
+}
+
+// Similar to Value(),  we expect you to return an interface that will fit into spanner.
+// It does not have to be a driver.Value as it is in this example,  but it needs to be a type
+// that matches the column type in spanner.
+func (t *MyTime) SpannerValue() (interface{}, error) {
+	return t.Value()
+}
+```
+As noted before, this type must be put in a different package than both the service, and the
+package that contains the generated code. If you put this type in the same package,  you could
+introduce a dependency cycle
+
+
+Now that we have a type that implements the required functions we need to create a service, and tell
+it to map google protobuf Timestamp message type to our new MyTime type.  The MyTime package needs
+to be somewhere in your gopath (or in your vendor directory of the project)
+We define an appointment service,  that will be talking to a SQL database (for this example).
+```proto
+service Appointments {
+  option (persist.service_type) = SQL;
+  option (persist.mapping) = {
+    types: [
+      {
+        proto_type_name: ".google.protobuf.Timestamp"
+        proto_type:  TYPE_MESSAGE
+        go_type: "MyTime"
+        go_package: "git.tcncloud.net/bb-persist/protobuf/bb/utils"
+      }
+    ]
+  rpc GetAppointmentsAfterTime(Appointment) returns(stream Appointment){
+    option (persist.ql) = {
+      query: "SELECT * FROM appointments WHERE time > ?"
+      arguments["time"]
+    };
+  }
+}
+```
 
 ## Spanner Queries
 
