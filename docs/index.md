@@ -1,6 +1,7 @@
 ---
 layout: home
 ---
+# Documentation
 
 ## About protoc-gen-persist
 protoc-gen-persist was created to allow services to abstract away their persistence layer.
@@ -153,7 +154,7 @@ that can talk to your grpc server, and get users from the database when sent the
 
 Full code examples can be found in the [examples directory](../examples/README.md)
 
-### Constructing Your Proto File
+## Constructing Your Proto File
 protoc-gen-persist generates code based on how you construct your .proto file.  It generates code
 by looking at 4 things on your grpc service:
 - request/response message types of the rpc call
@@ -161,17 +162,19 @@ by looking at 4 things on your grpc service:
 - service level options (type mapping definitions, and sevice type)
 - method level options (the query string, and arguments array)
 
-The options will be gone over in more detail in the next section. This section will cover what gets generated
+The service/method options will be gone over in more detail in the next section. This section will cover what gets generated
 based on the streaming type of your rpc call, and the request/response message types of the rpc call
 
-#### non streaming calls
-for non streaming calls ```rpc SelectById(Id) returns (User)```
+### non streaming calls
+non streaming calls ```rpc SelectById(Id) returns (User)```
+
 protoc-gen-persist generates code that assumes the query returns at most one row.
 - For sql backends the handler uses database/sql QueryRow method.
 - For spanner additional rows are ignored.
 
-#### server streaming call
-for server streaming calls: ```rpc SelectByName(Name) returns (stream User)```
+### server streaming call
+server streaming calls: ```rpc SelectByName(Name) returns (stream User)```
+
 protoc gen-persist generates a handler that runs the provided query, and streams
 back each result one by one.
 - For sql backends  the handler uses database/sql's Query method
@@ -182,15 +185,16 @@ Do not use non streaming, or server streaming calls if your query does not retur
 We might try to identify if the query returns rows or not,  and generate code based on that,  but this
 is not yet supported.
 
-#### client streaming calls
-for client streaming calls: ```rpc InsertUsers(stream User) returns (NumRowsInserted)```
+### client streaming calls
+client streaming calls: ```rpc InsertUsers(stream User) returns (NumRowsInserted)```
+
 protoc-gen-persist generates a handler begins a transaction,  makes a prepared statement
 and executes that statement for every received request over the stream. If an error is encountered,
 the transaction is rolled back.  After all requests have been executed on the statment successfully
 the transaction is committed, and the number of times the query exectued will be returned. Client streaming
 queries assume your message response type  has a count field.  As stated before, your response message can
 have additional fields, but the field that is required to be on the response for a client streaming call
-is a count field that looks like this ex.
+is a count field that looks like this:
 ```proto
 message NumRows {
   int64 count = 1;
@@ -206,6 +210,7 @@ memory on the server.
 
 
 
+
 lets take some proto messages as examples:
 ```proto
 // a User is row our database's user table
@@ -217,7 +222,7 @@ message User {
 
 message Id {
   int64 id = 1;
-}
+
 
 message NumRows {
   int64 count = 1;
@@ -227,11 +232,11 @@ message NumRows {
 
 
 
-### Persistance Options
+## Persistance Options
 
-### Spanner Queries
+## Spanner Queries
 
-### More Help
+## More Help
 This will walk you through step by step creating a project that talks to a users table stored in postgres.
 
 [Tutorial](tutorial.md)
