@@ -266,8 +266,8 @@ the above example,  sent a request to the server with a user that looked like th
 import (
   pb "usertalker" // wherever the generated code is for the User talker service
   fmt
-	"context"
-	"google.golang.org/grpc"
+  "context"
+  "google.golang.org/grpc"
   "google.golang.org/grpc/codes"
 )
 
@@ -340,7 +340,7 @@ service Person {
   };
 }
 ```
-** This above example will fail at runtime **
+**This above example will fail at runtime**
 
 The reason this does not work is because we defined the example_table's phone field before the name field,
 but on the Person message in the proto, we defined the name field before the phone field.  This will generate
