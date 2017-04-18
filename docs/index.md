@@ -166,14 +166,14 @@ The service/method options will be gone over in more detail in the next section.
 based on the streaming type of your rpc call, and the request/response message types of the rpc call
 
 ### non streaming calls
-non streaming calls ```rpc SelectById(Id) returns (User)```
+ex: ```rpc SelectById(Id) returns (User)```
 
 protoc-gen-persist generates code that assumes the query returns at most one row.
 - For sql backends the handler uses database/sql QueryRow method.
 - For spanner additional rows are ignored.
 
 ### server streaming call
-server streaming calls: ```rpc SelectByName(Name) returns (stream User)```
+ex: ```rpc SelectByName(Name) returns (stream User)```
 
 protoc gen-persist generates a handler that runs the provided query, and streams
 back each result one by one.
@@ -186,7 +186,7 @@ We might try to identify if the query returns rows or not,  and generate code ba
 is not yet supported.
 
 ### client streaming calls
-client streaming calls: ```rpc InsertUsers(stream User) returns (NumRowsInserted)```
+ex: ```rpc InsertUsers(stream User) returns (NumRowsInserted)```
 
 protoc-gen-persist generates a handler begins a transaction,  makes a prepared statement
 and executes that statement for every received request over the stream. If an error is encountered,
@@ -208,6 +208,32 @@ feature for spanner. All mutations given to an apply method are done only if the
 way to have a transaction that can be rolled back in spanner,  be aware that each request is stored as a mutation in
 memory on the server.
 
+### bidirectional streaming calls
+ex: ```rpc UpdateUser(User) returns (User)```
+
+**bidirectional stream methods are only supported for sql service types**
+
+protoc-gen-persist generates a handler that prepares a statement.  For every  request streamed to the server,
+a QueryRow is performed on that statement, the resulting row is marshelled into the result message type, and streamed back
+Bidirectional stream methods are not really useful for many things yet.  One area they can be used is if you worked with
+a driver that supports returning rows after being updated.  for example:
+```proto
+message User {
+  int64 id = 1;
+  string first_name = 2;
+  string last_name = 3;
+}
+service UserTalker {
+  rpc UpdateUserLastName(stream User) returns (stream User) {
+    option (persist.ql) = {
+      // using the lib/pq driver you could do a query like this
+      query: "UPDATE users SET(last_name) = ($1) Where id=$2 RETURNING *"
+      arguments: ["last_name", "id"]
+    };
+  };
+}
+```
+This will let you stream users over to be updated, and get the updated user back
 
 
 
