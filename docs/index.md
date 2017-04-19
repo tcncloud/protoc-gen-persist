@@ -441,9 +441,12 @@ package mytime
 import (
 	"strings"
 	"strconv"
-	"database/sql/driver"// if you have a SQL service type, you will need to return a driver.Value
-	"cloud.google.com/go/spanner"// if you have a Spanner sql type, you will need to accept a GenericColumnValue
-	"github.com/golang/protobuf/ptypes/timestamp" // our protobuf's timestamp
+  // if you have a SQL service type, you will need to return a driver.Value
+	"database/sql/driver"
+  // if you have a Spanner sql type, you will need to accept a GenericColumnValue
+	"cloud.google.com/go/spanner"
+  // our protobuf's timestamp
+	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
 // create a type that can handle conversion between
@@ -571,7 +574,61 @@ will be converted to a MyTime.  And since Mytime has Scan and Value methods,  My
 in the database. The full options available for converting protobuf types to database types is in the
 [persist proto](../persist/options.proto)
 
-## Spanner Queries
+## Spanner
+Most of this tutorial has given sql examples instead examples using spanner.
+Most of the things you can do with sql, you can also do when using spanner, the things
+that are different will be gone over in more detail here.
+### making a new server implementation
+
+### Query differences
+we use [this package](https://godoc.org/cloud.google.com/go/spanner) in our generated code  to talk to spanner.
+It is possible to perform and sql SELECT query on your spanner database,  but there is no way to perform
+update,  delete, or insert queries  using just this library.  Those queries have to be parsed using a
+sql parser before we can generate the code that uses them. Spanner doesn't allow as expressive queries as
+regular sql would allow for INSERT DELETE and UPDATE, so neither can protoc-gen-persist when talking to a
+spanner database.
+
+Here are the Things to look out for for each query
+
+
+#### UPDATE
+Spanner handles updates to rows by having you create a mutation providing the rows
+primary key(s)  it will find that particular row, and update that row only. Because of this,
+it is not possible to update the primary key in spanner with an update query. Nor is it possible
+to update more than one row at a time, and you must have the primary key(s)  of the row you
+are trying to update. Lets break down an example query that will work in spanner:
+
+```proto
+message Empty {}
+message Person {
+  int64 id = 1;
+  string ssn = 2;
+  string name = 3;
+  string favorite_fruit = 4;
+  string favorite_veggie = 5;
+}
+service Test {
+  rpc UpdateMyFood(Person) returns (Empty) {
+    option(persist.ql) {
+      query: "UPDATE example_table SET favorite_fruit=?, favorite_veggie=\"peas\" WHERE id = ? AND ssn = ?"
+      arguments: ["favorite_fruite" "id", "ssn"]
+    };
+  };
+}
+```
+This query would break down into an update mutation, where **Both** id, and ssn were primary keys
+Put the row values you want to change in the SET list,  and in the WHERE clause,  lists the primary keys,
+and what they are equal to. The only operator is '=' in a WHERE clause for updates.
+
+#### INSERT
+spanner insert queries allow basic inserts into the table only.  for example:
+```INSERT INTO example_table (col1, col2)  VALUES (?, 2)```
+You cannot create any cross table references, or use AS  in your queries.
+Spanner insert queries do not support INSERT INTO SELECT ... style queries.
+
+#### DELETE
+Delete sql queries are the most complicated to transform into spanner delete mutations.
+
 
 ## More Help
 This will walk you through step by step creating a project that talks to a users table stored in postgres.
