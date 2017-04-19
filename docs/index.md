@@ -588,6 +588,11 @@ sql parser before we can generate the code that uses them. Spanner doesn't allow
 regular sql would allow for INSERT DELETE and UPDATE, so neither can protoc-gen-persist when talking to a
 spanner database.
 
+
+You will notice that most examples return an Empty message,  You do not have to, but
+spanner does not return anything from a write request, so the responses will always be empty, except for
+client streaming rpc calls,  which will expect a response with a 'count' field.
+
 Here are the Things to look out for for each query
 
 
@@ -604,14 +609,14 @@ message Person {
   int64 id = 1;
   string ssn = 2;
   string name = 3;
-  string favorite_fruit = 4;
-  string favorite_veggie = 5;
+  string fav_fruit = 4;
+  string fav_veggie = 5;
 }
 service Test {
   rpc UpdateMyFood(Person) returns (Empty) {
     option(persist.ql) {
-      query: "UPDATE example_table SET favorite_fruit=?, favorite_veggie=\"peas\" WHERE id = ? AND ssn = ?"
-      arguments: ["favorite_fruite" "id", "ssn"]
+      query: "UPDATE example_table SET fav_fruit=?, fav_veggie=\"peas\" WHERE id=? AND ssn=?"
+      arguments: ["fav_fruit" "id", "ssn"]
     };
   };
 }
@@ -628,6 +633,7 @@ Spanner insert queries do not support INSERT INTO SELECT ... style queries.
 
 #### DELETE
 Delete sql queries are the most complicated to transform into spanner delete mutations.
+
 
 
 ## More Help
