@@ -651,8 +651,8 @@ Query: ```DELETE FROM mytable WHERE id=1 AND id2=1```
 This would delete one row in our table. it would create a key range that looked like:
 ```go
 spanner.KeyRange{
-  Start: spanner.Key{1, "1"},
-  End: spanner.Key{1, "1"},
+  Start: spanner.Key{1, 1},
+  End: spanner.Key{1, 1},
   Kind: spanner.ClosedClosed
 }
 ```
