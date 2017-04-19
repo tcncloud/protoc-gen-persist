@@ -544,7 +544,7 @@ introduce a dependency cycle
 
 Now that we have a type that implements the required functions we need to create a service, and tell
 it to map google protobuf Timestamp message type to our new MyTime type.  The MyTime package needs
-to be somewhere in your gopath (or in your vendor directory of the project)
+to be somewhere in your go path (or in your vendor directory of the project)
 We define an appointment service,  that will be talking to a SQL database (for this example).
 ```proto
 service Appointments {
@@ -555,7 +555,7 @@ service Appointments {
         proto_type_name: ".google.protobuf.Timestamp"
         proto_type:  TYPE_MESSAGE
         go_type: "MyTime"
-        go_package: "git.tcncloud.net/bb-persist/protobuf/bb/utils"
+        go_package: "path/to/your/package/mytime"
       }
     ]
   rpc GetAppointmentsAfterTime(Appointment) returns(stream Appointment){
@@ -566,6 +566,10 @@ service Appointments {
   }
 }
 ```
+The persist mapping object above will make it so any type that is encountered that is a Timestamp,
+will be converted to a MyTime.  And since Mytime has Scan and Value methods,  MyTime types can fit
+in the database. The full options available for converting protobuf types to database types is in the
+[persist proto](../persist/options.proto)
 
 ## Spanner Queries
 
