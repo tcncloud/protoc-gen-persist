@@ -42,7 +42,16 @@ proto-persist:
 proto-examples:
 	protoc -I/usr/local/include -I. -I$$GOPATH/src \
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-		examples/*.proto
+		examples/sql/basic/*.proto
+	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/sql/little_of_everything/*.proto
+	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/spanner/basic/*.proto
+	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/spanner/delete/*.proto
 	protoc -I/usr/local/include -I. -I$$GOPATH/src \
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 		examples/test/*.proto
@@ -61,8 +70,16 @@ test-compile:
 	go build
 	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
-		--persist_out=. \
-		examples/*.proto
+		--persist_out=.  examples/sql/little_of_everything/*.proto
+	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/sql/basic/*.proto
+	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/spanner/basic/*.proto
+	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/spanner/delete/*.proto
 
 test-build: test-compile
 	cd examples && go build
