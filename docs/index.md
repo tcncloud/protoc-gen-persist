@@ -690,12 +690,12 @@ The four spanner kinds are:
 
 the first "Closed" or "Open"  refers to the start,  while the second "Closed" or "Open"  part of the kind affects the
 end.  Here are their translations for each operator
-- ```BETWEEN```:  start: "Open",  end: "Open"
-- ```=```: start: "Closed", end: "Closed"
-- ```>```: start: "Open", end: ""
-- ```<```: start: "", end: "Open"
-- ```>=```: start: "Closed", end: ""
-- ```<=```: start: "", end: "Closed"
+- ```BETWEEN```:  start: "Open",   end: "Open"
+- ```=```:        start: "Closed", end: "Closed"
+- ```>```:        start: "Open",   end: ""
+- ```<```:        start: "",       end: "Open"
+- ```>=```:       start: "Closed", end: ""
+- ```<=```:       start: "",       end: "Closed"
 
 If there is a blank,  that means the operator does not affect that part of the kind.
 It is not okay to mix Kinds on the same position. Only use operators in your delete queries
