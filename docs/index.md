@@ -621,7 +621,7 @@ service Test {
   };
 }
 ```
-This query would break down into an update mutation, where **Both** id, and ssn were primary keys
+This query would break down into an update mutation, where **Both** id, and ssn were primary keys.
 Put the row values you want to change in the SET list,  and in the WHERE clause,  lists the primary keys,
 and what they are equal to. The only operator is '=' in a WHERE clause for updates.
 
@@ -633,7 +633,48 @@ Spanner insert queries do not support INSERT INTO SELECT ... style queries.
 
 #### DELETE
 Delete sql queries are the most complicated to transform into spanner delete mutations.
+Spanner only allows you to delete by a key in the table, or a range of keys in the table.
+A "key"  in spanner is the primary key of the table, or if your spanner table has mutliple
+primary keys,  a key can be a subset of the primary keys. Here is an example Table we can work
+with that has multiple primary keys:
 
+```sql
+`CREATE TABLE mytable(
+  id          int64,
+  id2         int64 NOT NULL,
+  name        string NOT NULL,
+  primary key(id, id2)
+)`
+```
+Query: ```DELETE FROM mytable WHERE id=1 AND id2=1```
+
+This would delete one row in our table. it would create a key range that looked like:
+```go
+spanner.KeyRange{
+  Start: spanner.Key{1, "1"},
+  End: spanner.Key{1, "1"},
+  Kind: spanner.ClosedClosed
+}
+```
+another example:
+
+Query: ```DELETE FROM mytable WHERE id=1```
+
+This deletes all of the rows in the database that have an id of 1. This can be multiple,
+because only the combination of id, and id2 have to be unique
+
+Query: ```DELETE FROM mytable WHERE id=1 AND id2 > 7```
+
+
+this query would actually fail.  protoc-gen-persist compresses the delete queries where clause into
+one spanner key range.  This key range must have a kind.  id=?  translates to the kind ClosedClosed,
+where id2 > ?  translates to either OpenOpen, or OpenClosed.  Since the lower bound is already closed,
+you would need to change this query. to either
+- ```DELETE FROM mytable WHERE id > 0 AND id < 2 AND id2 > 7```
+- ```DELETE FROM mytable WHERE id BETWEEN 0 AND 2 AND id2 > 7```
+- ```DELETE FROM mytable WHERE id = 1 AND id2 >= 6```
+
+any of these queries above would work, and delete the the same range
 
 
 ## More Help
