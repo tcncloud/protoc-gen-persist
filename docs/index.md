@@ -677,6 +677,31 @@ you would need to change this query. to either
 any of these queries above would work, and delete the the same range
 
 
+There is no way to delete a set of keys without creating multiple mutations.  If you would like to
+delete a set of keys, just use a client streaming rpc call
+
+using the operators ```>, <, >=, <=, BETWEEN, =``` will translate into different spanner Kind
+Some operators affect both the start and end Kind,  while others only affect just the start, or just the end kind
+The four spanner kinds are:
+- OpenOpen
+- OpenClosed
+- ClosedOpen
+- ClosedClosed
+
+the first "Closed" or "Open"  refers to the start,  while the second "Closed" or "Open"  part of the kind affects the
+end.  Here are their translations for each operator
+- ```BETWEEN```:  start: "Open",  end: "Open"
+- ```=```: start: "Closed", end: "Closed"
+- ```>```: start: "Open", end: ""
+- ```<```: start: "", end: "Open"
+- ```>=```: start: "Closed", end: ""
+- ```<=```: start: "", end: "Closed"
+If there is a blank,  that means the operator does not affect that part of the kind.
+It is not okay to mix Kinds on the same position. Only use operators in your delete queries
+that will generate one of the four spanner kinds.  More examples of delete queries for spanner
+are located in the spanner examples.
+
+
 ## More Help
 This will walk you through step by step creating a project that talks to a users table stored in postgres.
 
