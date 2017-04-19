@@ -30,7 +30,7 @@ syntax = "proto3";
 
 package examples;
 
-option go_package="github.com/tcncloud/protoc-gen-persist/examples;examples";
+option go_package="github.com/tcncloud/protoc-gen-persist/examples/spanner/basic;basic";
 
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
