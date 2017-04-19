@@ -696,6 +696,7 @@ end.  Here are their translations for each operator
 - ```<```: start: "", end: "Open"
 - ```>=```: start: "Closed", end: ""
 - ```<=```: start: "", end: "Closed"
+
 If there is a blank,  that means the operator does not affect that part of the kind.
 It is not okay to mix Kinds on the same position. Only use operators in your delete queries
 that will generate one of the four spanner kinds.  More examples of delete queries for spanner
