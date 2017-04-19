@@ -693,12 +693,12 @@ end.  Here are their translations for each operator
 
 |   Operator    |    Start  |    End       |
 |---------------|-----------|--------------|
-| ```BETWEEN``` |   "Open", | "Open"       |
+| ```BETWEEN``` |   "Open"  | "Open"       |
 | ```=```       |   "Closed"| "Closed"     |
-| ```>```       |   "Open", | ""           |
-| ```<```       |   "",     | "Open"       |
+| ```>```       |   "Open"  | ""           |
+| ```<```       |   ""      | "Open"       |
 | ```>=```      |   "Closed"| ""           |
-| ```<=```      |   "",     | "Closed"     |
+| ```<=```      |   ""      | "Closed"     |
 
 If there is a blank,  that means the operator does not affect that part of the kind.
 It is not okay to mix Kinds on the same position. Only use operators in your delete queries
