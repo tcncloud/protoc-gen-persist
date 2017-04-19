@@ -582,7 +582,7 @@ that are different will be gone over in more detail here.
 
 ### Query differences
 we use [this package](https://godoc.org/cloud.google.com/go/spanner) in our generated code  to talk to spanner.
-It is possible to perform and sql SELECT query on your spanner database,  but there is no way to perform
+It is possible to perform any sql SELECT query on your spanner database,  but there is no way to perform
 update,  delete, or insert queries  using just this library.  Those queries have to be parsed using a
 sql parser before we can generate the code that uses them. Spanner doesn't allow as expressive queries as
 regular sql would allow for INSERT DELETE and UPDATE, so neither can protoc-gen-persist when talking to a
