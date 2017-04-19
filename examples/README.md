@@ -8,8 +8,8 @@ the protobuf definitions.  There are 4 sub-directories in this directory.  3 of 
 different than sql queries and have several limitations compared to normal sql queries.  This differences are explained in the examples
 
 Each of the sub-directories in the sql, and spanner assume you ran the protoc commands:
-- ``` protoc -I/usr/local/include -I. -I$GOPATH/src --go_out=plugins=grpc:. ./simple_service.proto ```
-- ``` protoc -I/usr/local/include -I. -I$GOPATH/src --persist_out=plugins=protoc-gen-persist:. ./simple_service.proto ```
+- ``` protoc -I/usr/local/include -I. -I$GOPATH/src --go_out=plugins=grpc:. ./name_of_proto.proto ```
+- ``` protoc -I/usr/local/include -I. -I$GOPATH/src --persist_out=plugins=protoc-gen-persist:. ./name_of_proto.proto ```
 
 in each of the directories to generate the code from the proto files. The files are commented explaining what will
 be generated from the proto files, but you should read the [documentation](../docs/index.md) for a more detailed walkthrough
