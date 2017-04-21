@@ -634,77 +634,28 @@ Spanner insert queries do not support INSERT INTO SELECT ... style queries.
 #### DELETE
 Delete sql queries are the most complicated to transform into spanner delete mutations.
 Spanner only allows you to delete by a key in the table, or a range of keys in the table.
-A "key"  in spanner is the primary key of the table, or if your spanner table has mutliple
-primary keys,  a key can be a subset of the primary keys. Here is an example Table we can work
-with that has multiple primary keys:
 
-```sql
-`CREATE TABLE mytable(
-  id          int64,
-  id2         int64 NOT NULL,
-  name        string NOT NULL,
-  primary key(id, id2)
-)`
-```
-Query: ```DELETE FROM mytable WHERE id=1 AND id2=1```
+Because of this, We do not allow sql queries for Delete calls.  Instead we support a simple
+KeyRange syntax for deleteion. Example:
 
-This would delete one row in our table. it would create a key range that looked like:
-```go
-spanner.KeyRange{
-  Start: spanner.Key{1, 1},
-  End: spanner.Key{1, 1},
-  Kind: spanner.ClosedClosed
-}
-```
-another example:
+```"DELETE TABLE('my_table') START('Bob') END('Bob', '01/01/2001') KIND(CO)"```
 
-Query: ```DELETE FROM mytable WHERE id=1```
+Rules:
+- Start the definition with the keyword  DELETE (in all caps), all other definitions can come in any order.
+- START() and END() are comma seperated lists that translate to the start and end keyranges.  You can put in
+floats, ints strings, or ?  like sql.
+- KIND()  refers to the spanner.Kind definition. Its options are:
+  - CC  ClosedClosed
+  - CO  ClosedOpen
+  - OC  OpenClosed
+  - OO  OpenOpen
+-  TABLE()  takes a string argument refering to the table in spanner that the deletion will take place
+-  Strings are represented with single quotes: 'example_string'
+-  ? in a START() or END()  definition will put your arguments at that position, just
+like the other query examples
 
-This deletes all of the rows in the database that have an id of 1. This can be multiple,
-because only the combination of id, and id2 have to be unique
-
-Query: ```DELETE FROM mytable WHERE id=1 AND id2 > 7```
-
-
-this query would actually fail.  protoc-gen-persist compresses the delete queries where clause into
-one spanner key range.  This key range must have a kind.  id=?  translates to the kind ClosedClosed,
-where id2 > ?  translates to either OpenOpen, or OpenClosed.  Since the lower bound is already closed,
-you would need to change this query. to either
-- ```DELETE FROM mytable WHERE id > 0 AND id < 2 AND id2 > 7```
-- ```DELETE FROM mytable WHERE id BETWEEN 0 AND 2 AND id2 > 7```
-- ```DELETE FROM mytable WHERE id = 1 AND id2 >= 6```
-
-any of these queries above would work, and delete the the same range
-
-
-There is no way to delete a set of keys without creating multiple mutations.  If you would like to
-delete a set of keys, just use a client streaming rpc call
-
-using the operators ```>, <, >=, <=, BETWEEN, =``` will translate into different spanner Kind
-Some operators affect both the start and end Kind,  while others only affect just the start, or just the end kind
-The four spanner kinds are:
-- OpenOpen
-- OpenClosed
-- ClosedOpen
-- ClosedClosed
-
-the first "Closed" or "Open"  refers to the start,  while the second "Closed" or "Open"  part of the kind affects the
-end.  Here are their translations for each operator
-
-|   Operator    |    Start  |    End       |
-|---------------|-----------|--------------|
-| ```BETWEEN``` |   "Open"  | "Open"       |
-| ```=```       |   "Closed"| "Closed"     |
-| ```>```       |   "Open"  | ""           |
-| ```<```       |   ""      | "Open"       |
-| ```>=```      |   "Closed"| ""           |
-| ```<=```      |   ""      | "Closed"     |
-
-If there is a blank,  that means the operator does not affect that part of the kind.
-It is not okay to mix Kinds on the same position. Only use operators in your delete queries
-that will generate one of the four spanner kinds.  More examples of delete queries for spanner
-are located in the spanner examples.
-
+Examples of spanner delete queries are in the exapmles folder,  for more help with knowing what a
+spanner KeyRange is,  [Look Here](https://godoc.org/cloud.google.com/go/spanner#KeyRange)
 
 ## More Help
 This will walk you through step by step creating a project that talks to a users table stored in postgres.
