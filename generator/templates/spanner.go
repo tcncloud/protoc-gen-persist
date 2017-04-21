@@ -136,7 +136,7 @@ const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
 {{template "declare_spanner_delete_key" .}}
 
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange("{{.Spanner.TableName}}", key)
+	muts[0] = spanner.DeleteKeyRange({{.Spanner.TableName}}, key)
 	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
@@ -197,7 +197,7 @@ const SpannerClientStreamingInsertTemplate = `{{define "spanner_client_streaming
 const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming_delete"}}//spanner client streaming delete
 {{template "declare_spanner_delete_key" .}}
 
-	muts = append(muts, spanner.DeleteKeyRange("{{.Spanner.TableName}}", key))
+	muts = append(muts, spanner.DeleteKeyRange({{.Spanner.TableName}}, key))
 {{end}}`
 
 const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming_method"}}// spanner server streaming {{.GetName}}
@@ -297,9 +297,10 @@ const SpannerHelperTemplates = `
 	{{template "return_err_on_method" $method}}
 	params["{{$val.Name}}"] = conv
 {{else}}
-	//else
+{{if $val.IsValue}}
 	conv = {{$val.Value}}
 	params["{{$val.Name}}"] = conv
+{{end}}
 {{end}}{{end}}
 {{end}}
 
@@ -317,7 +318,9 @@ const SpannerHelperTemplates = `
 	{{template "return_err_on_method" $method}}
 	params = append(params, conv)
 {{else}}
+{{if $val.IsValue}}
 	params = append(params, {{$val.Value}})
+{{end}}
 {{end}}{{end}}
 {{end}}
 
@@ -343,12 +346,14 @@ const SpannerHelperTemplates = `
 {{template "return_err_on_method" $method}}
 	end = append(end, conv)
 {{else}}
-	start = append(end, {{$arg.Value}})
+{{if $arg.IsValue}}
+	end = append(end, {{$arg.Value}})
+{{end}}
 {{end}}{{end}}
 	key := spanner.KeyRange{
 		Start: start,
 		End: end,
-		Kind: {{.Spanner.KeyRangeDesc.Kind}},
+		Kind: spanner.{{.Spanner.KeyRangeDesc.Kind}},
 	}
 {{end}}
 

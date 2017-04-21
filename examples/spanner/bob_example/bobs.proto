@@ -28,24 +28,28 @@
 
 syntax = "proto3";
 
-package examples;
+package bob;
 
-option go_package="github.com/tcncloud/protoc-gen-persist/examples;examples";
+option go_package="github.com/tcncloud/protoc-gen-persist/examples/spanner/bob_example;bob_example";
 
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
-import "google/protobuf/descriptor.proto";
 
 
-import "examples/test/test.proto";
-import "examples/example2.proto";
-
-message Table2Range {
-  int64 start_id = 1;
-  int64 end_id = 2;
+message Bob {
+  int64 id = 1;
+  google.protobuf.Timestamp start_time = 2;
+  string name = 3;
 }
+message NumRows {
+  int64 count = 1;
+}
+message Empty { }
 
-service MySpanner {
+// table: bob_table
+// pk: id, start_time
+// this service is just to test the multiple primary key deletion
+service Bobs {
   option (persist.service_type) = SPANNER;
 
   option (persist.mapping) = {
@@ -58,60 +62,23 @@ service MySpanner {
       }
     ]
   };
-
-  rpc UniaryInsert(Table2) returns (Table2) {
+  // Delete all bob events before the time in the end key
+  rpc DeleteBobs(Bob) returns (Empty) {
     option (persist.ql) = {
-      query: "Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"
-      arguments: ["id", "start_time"]
+      query: "DELETE TABLE('bob_table') START('Bob') END('Bob', ?) KIND(CO)"
+      arguments: ["start_time"]
     };
   };
-  rpc UniarySelect(Table2) returns (Table2) {
+  rpc PutBobs(stream Bob) returns (NumRows) {
     option (persist.ql) = {
-      query: "SELECT * from example_table Where id=? AND name=?"
-      arguments: ["id", "name"]
+      query: "INSERT INTO bob_table (id, name, start_time) VALUES (?, ?, ?)"
+      arguments: ["id", "name", "start_time"]
     };
   };
-  rpc UniaryUpdate(Table2) returns (Filed) {
+  rpc GetBobs(Empty) returns (stream Bob) {
     option (persist.ql) = {
-      query: "Update example_table set start_time=?, name=\"oranges\" where id=?",
-      arguments: ["start_time", "id"],
+      query: "SELECT * from bob_table"
     };
   };
-  rpc UniaryDelete(Table2Range) returns (Table2) {
-    option (persist.ql) = {
-      query: "DELETE FROM example_table WHERE id>? AND id<?",
-      arguments: ["start_id", "end_id"]
-    };
-  };
-  rpc NoArgs(Table2) returns (Table2) {
-    option (persist.ql) = {
-      query: "select * from example_table limit 1",
-      arguments: []
-    };
-  };
-  rpc ServerStream(Name) returns (stream Table2) {
-    option (persist.ql) = {
-      query: "SELECT * FROM example_table"
-      arguments: []
-    };
-  };
-  rpc ClientStreamInsert(stream Table2) returns (NumRows) {
-    option (persist.ql) = {
-      query: "INSERT INTO example_table (id, start_time, name) VALUES (?, ?, ?)"
-      arguments: ["id", "start_time", "name"]
-    };
-  };
-  rpc ClientStreamDelete(stream Table2) returns (NumRows) {
-    option (persist.ql) = {
-      query: "delete from example_table where id=?",
-      arguments: ["id"],
-    };
-  };
-  rpc ClientStreamUpdate(stream Table2) returns (NumRows) {
-    option (persist.ql) = {
-      query: "update example_table set start_time=?, name=? where id=?",
-      arguments: ["start_time", "name", "id"]
-    };
-  };
-
 }
+

@@ -1,29 +1,32 @@
 # protoc-gen-persist
 
-Protobuf plugin that generate a persistence layer backed by SQL database
+Protobuf plugin that generate a persistence layer backed by SQL or Spanner database
 
-## NOTE: This project is under development everything could be changed !
+## NOTE: This project is under development, everything could be changed, and there will be bugs!  (especially with spanner)
 
 ## Rationale
-Opinionated protoc plugin that will help generate builerplate go code for grpc microservices that need to interact 
-with a SQL or Spanner database.
-
-
-protoc-gen-persist is a protoc plugin used to generate golang CRUD services that communicate through GRPC,                     and talk to a persistence layer back end.  This is accomplished by providing a protobuf file with proper                       
-annotations, and then running the protoc cli tool with the ```--go_out``` option, and the ```--persist_out```                 
+Opinionated protoc plugin that will help generate boiler plate go code for GRPC microservices that need to interact
+with a SQL or Spanner database. The code generation is accomplishe by providing a protobuf file with proper
+annotations, and then running the protoc cli tool with the ```--go_out``` option, and the ```--persist_out```
 options set to the same directory.
 
 ## Installation
+This project requires [protoc]() and [protoc-gen-go]() be installed
 
+Then install with ```go get github.com/tcncloud/protoc-gen-persist```
 ## Documentation
+documentation for the project can be found [Here](docs/index.md)
+The documentation goes over the persist options, how to structure your proto file,
+custom type mapping to/from the database, and spanner query parsing
 
-## Versions
+## Version 0.1.0
+
 
 ## Roadmap
  1. ~~type mapping~~
  1. before & after callback function
  1. add tests, lots of tests
- 1. mongo 
+ 1. mongo
 
 
 ## Authors

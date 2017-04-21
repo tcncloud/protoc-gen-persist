@@ -7,7 +7,7 @@ import(
 	"time"
 	"context"
 	"google.golang.org/grpc"
-	pb "github.com/tcncloud/protoc-gen-persist/examples"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic"
 	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
 	ptypes "github.com/golang/protobuf/ptypes"
 )
@@ -51,7 +51,7 @@ func main() {
 func uniaryInsert(client pb.MySpannerClient) error {
 	now := time.Now().Truncate(time.Millisecond)
 	fmt.Println("performing uniary insert")
-	_, err := client.UniaryInsert(ctx, &pb.Table2{Id: int64(5), StartTime: ToProtobufTime(&now)})
+	_, err := client.UniaryInsert(ctx, &pb.ExampleTable{Id: int64(5), StartTime: ToProtobufTime(&now)})
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func uniaryInsert(client pb.MySpannerClient) error {
 // query: "SELECT * from example_table Where id=? AND name=?"
 func uniarySelect(client pb.MySpannerClient) error {
 	fmt.Println("performing uniary select")
-	res, err := client.UniarySelect(ctx, &pb.Table2{Id: int64(5), Name: "bananas"})
+	res, err := client.UniarySelect(ctx, &pb.ExampleTable{Id: int64(5), Name: "bananas"})
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func uniarySelect(client pb.MySpannerClient) error {
 func uniaryUpdate(client pb.MySpannerClient) error {
 	fmt.Println("performing uniaryUpdate")
 	now := time.Now().Truncate(time.Millisecond)
-	_, err := client.UniaryUpdate(ctx, &pb.Table2{
+	_, err := client.UniaryUpdate(ctx, &pb.ExampleTable{
 		StartTime: ToProtobufTime(&now),
 		Id: int64(1),
 	})
@@ -87,7 +87,7 @@ func uniaryUpdate(client pb.MySpannerClient) error {
 // query: "DELETE FROM example_table WHERE id>? AND id<?",
 func uniaryDelete(client pb.MySpannerClient) error {
 	fmt.Println("performing uniaryDelete")
-	_, err := client.UniaryDelete(ctx, &pb.Table2Range{StartId: int64(0), EndId: int64(5)})
+	_, err := client.UniaryDelete(ctx, &pb.ExampleTableRange{StartId: int64(0), EndId: int64(5)})
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func uniaryDelete(client pb.MySpannerClient) error {
 // query: "select * from example_table limit 1",
 func noArgs(client pb.MySpannerClient) error {
 	fmt.Println("performing NoArgs query")
-	res, err := client.NoArgs(ctx, &pb.Table2{})
+	res, err := client.NoArgs(ctx, &pb.ExampleTable{})
 	if err != nil {
 		return err
 	}
@@ -131,23 +131,23 @@ func serverStream(client pb.MySpannerClient) error {
 func clientStreamInsert(client pb.MySpannerClient) error {
 	fmt.Println("inserting docs with client stream")
 	now := time.Now().Truncate(time.Millisecond)
-	docs := []*pb.Table2{
-		&pb.Table2{
+	docs := []*pb.ExampleTable{
+		&pb.ExampleTable{
 			Id: int64(1),
 			StartTime: ToProtobufTime(&now),
 			Name: "george",
 		},
-		&pb.Table2{
+		&pb.ExampleTable{
 			Id: int64(2),
 			StartTime: ToProtobufTime(&now),
 			Name: "michelle",
 		},
-		&pb.Table2{
+		&pb.ExampleTable{
 			Id: int64(3),
 			StartTime: ToProtobufTime(&now),
 			Name: "frank",
 		},
-		&pb.Table2{
+		&pb.ExampleTable{
 			Id: int64(4),
 			StartTime: ToProtobufTime(&now),
 			Name: "amy",
@@ -172,8 +172,8 @@ func clientStreamInsert(client pb.MySpannerClient) error {
 // query: "delete from example_table where id=?",
 func clientStreamDelete(client pb.MySpannerClient) error {
 	fmt.Println("deleting docs with client stream")
-	docs := []*pb.Table2{
-		&pb.Table2{
+	docs := []*pb.ExampleTable{
+		&pb.ExampleTable{
 			Id: int64(5),
 		},
 	}
@@ -197,23 +197,23 @@ func clientStreamDelete(client pb.MySpannerClient) error {
 func clientStreamUpdate(client pb.MySpannerClient) error {
 	fmt.Println("updating docs with client stream")
 	now := time.Now().Truncate(time.Millisecond)
-	docs := []*pb.Table2{
-		&pb.Table2{
+	docs := []*pb.ExampleTable{
+		&pb.ExampleTable{
 			Id: int64(1),
 			StartTime: ToProtobufTime(&now),
 			Name: "notgeorge",
 		},
-		&pb.Table2{
+		&pb.ExampleTable{
 			Id: int64(2),
 			StartTime: ToProtobufTime(&now),
 			Name: "notmichelle",
 		},
-		&pb.Table2{
+		&pb.ExampleTable{
 			Id: int64(3),
 			StartTime: ToProtobufTime(&now),
 			Name: "notfrank",
 		},
-		&pb.Table2{
+		&pb.ExampleTable{
 			Id: int64(4),
 			StartTime: ToProtobufTime(&now),
 			Name: "notamy",
