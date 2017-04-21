@@ -658,7 +658,7 @@ Examples of spanner delete queries are in the exapmles folder,  for more help wi
 spanner KeyRange is,  [Look Here](https://godoc.org/cloud.google.com/go/spanner#KeyRange)
 
 ## More Help
-This will walk you through step by step creating a project that talks to a users table stored in postgres.
+This will walk you through step by step creating a project that talks to a users table stored in postgres. (Not finished yet)
 
 [Tutorial](tutorial.md)
 
