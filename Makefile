@@ -54,6 +54,9 @@ proto-examples:
 		examples/spanner/delete/*.proto
 	protoc -I/usr/local/include -I. -I$$GOPATH/src \
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/spanner/bob_example/*.proto
+	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 		examples/test/*.proto
 
 build: generate
@@ -80,17 +83,22 @@ test-compile:
 	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
 		--persist_out=.  examples/spanner/delete/*.proto
+	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/spanner/bob_example/*.proto
 
-test-build: test-compile
-	cd examples && go build
 
 test-sql-impl: build
 	env GOOS=linux go build -o ./test-impl/server.main ./test-impl/server/sql
 	env GOOS=linux go build -o ./test-impl/client.main ./test-impl/client/sql
 
 test-spanner-impl: build
-	go build -o ./test-impl/server.main ./test-impl/server/spanner
-	go build -o ./test-impl/client.main ./test-impl/client/spanner
+	go build -o ./test-impl/server.main ./test-impl/server/spanner/basic
+	go build -o ./test-impl/client.main ./test-impl/client/spanner/basic
+
+test-bobs: build
+	go build -o ./test-impl/server.main ./test-impl/server/spanner/bobs
+	go build -o ./test-impl/client.main ./test-impl/client/spanner/bobs
 
 deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/glide
 
