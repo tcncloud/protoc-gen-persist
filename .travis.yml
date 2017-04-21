@@ -8,3 +8,4 @@ before_script:
   - wget https://github.com/google/protobuf/releases/download/v3.2.0/protoc-3.2.0-linux-x86_64.zip
   - sudo unzip protoc-3.2.0-linux-x86_64.zip -d /usr/local
   - sudo chmod +x /usr/local/bin/protoc
+  - sudo chmod -R +r /usr/local/include/google
