@@ -11,7 +11,9 @@ annotations, and then running the protoc cli tool with the ```--go_out``` option
 options set to the same directory.
 
 ## Installation
+This project requires [protoc]() and [protoc-gen-go]() be installed
 
+Then install with ```go get github.com/tcncloud/protoc-gen-persist```
 ## Documentation
 documentation for the project can be found [Here](docs/index.md)
 The documentation goes over the persist options, how to structure your proto file,
