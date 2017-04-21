@@ -1,5 +1,7 @@
 # protoc-gen-persist
 
+[![Build Status](https://www.travis-ci.org/tcncloud/protoc-gen-persist.svg?branch=master)](https://www.travis-ci.org/tcncloud/protoc-gen-persist)
+
 Protobuf plugin that generate a persistence layer backed by SQL or Spanner database
 
 ## NOTE: This project is under development, everything could be changed, and there will be bugs!  (especially with spanner)
