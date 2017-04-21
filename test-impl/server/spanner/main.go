@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 	_"github.com/lib/pq"
-	pb "github.com/tcncloud/protoc-gen-persist/examples"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic"
 	"google.golang.org/grpc"
 )
 
