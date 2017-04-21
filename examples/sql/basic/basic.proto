@@ -39,13 +39,13 @@ import "google/protobuf/descriptor.proto";
 
 import "examples/test/test.proto";
 
-message Table2 {
+message ExampleTable {
   int64 id = 1;
   google.protobuf.Timestamp start_time = 2;
   string name = 3;
 }
 
-message Filed {
+message PartialTable {
   int64 id = 1;
   google.protobuf.Timestamp start_time = 2;
 }
@@ -72,25 +72,25 @@ service Amazing {
     ]
   };
 
-  rpc UniarySelect(Filed) returns (Table2) {
+  rpc UniarySelect(PartialTable) returns (ExampleTable) {
     option (persist.ql) = {
       query: "SELECT * from example_table Where id=$1 AND start_time=$2"
       arguments: ["id", "start_time"]
     };
   };
-  rpc ServerStream(Name) returns (stream Table2) {
+  rpc ServerStream(Name) returns (stream ExampleTable) {
     option (persist.ql) = {
       query: "SELECT * FROM example_table WHERE name=$1"
       arguments: ["name"]
     };
   };
-  rpc Bidirectional(stream Table2) returns (stream Table2) {
+  rpc Bidirectional(stream ExampleTable) returns (stream ExampleTable) {
     option (persist.ql) = {
       query: "UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *"
       arguments: ["id", "start_time", "name"]
     };
   };
-  rpc ClientStream(stream Table2) returns (NumRows) {
+  rpc ClientStream(stream ExampleTable) returns (NumRows) {
     option (persist.ql) = {
       query: "INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)"
       arguments: ["id", "start_time", "name"]
