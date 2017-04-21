@@ -198,7 +198,7 @@ func (s *MySpannerImpl) UniaryDelete(ctx context.Context, req *ExampleTableRange
 	key := spanner.KeyRange{
 		Start: start,
 		End:   end,
-		Kind:  OpenOpen,
+		Kind:  spanner.ClosedOpen,
 	}
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.DeleteKeyRange("example_table", key)
@@ -409,7 +409,7 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 		key := spanner.KeyRange{
 			Start: start,
 			End:   end,
-			Kind:  ClosedClosed,
+			Kind:  spanner.ClosedClosed,
 		}
 		muts = append(muts, spanner.DeleteKeyRange("example_table", key))
 		//In the future, we might do apply if muts gets really big,  but for now,

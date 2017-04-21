@@ -41,7 +41,7 @@ func (s *DeleteImpl) DeleteEquals(ctx context.Context, req *Empty) (*Empty, erro
 	key := spanner.KeyRange{
 		Start: start,
 		End:   end,
-		Kind:  ClosedClosed,
+		Kind:  spanner.ClosedClosed,
 	}
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.DeleteKeyRange("mytable", key)
@@ -64,7 +64,7 @@ func (s *DeleteImpl) DeleteGreater(ctx context.Context, req *Empty) (*Empty, err
 	key := spanner.KeyRange{
 		Start: start,
 		End:   end,
-		Kind:  ClosedOpen,
+		Kind:  spanner.ClosedOpen,
 	}
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.DeleteKeyRange("mytable", key)
@@ -83,11 +83,13 @@ func (s *DeleteImpl) DeleteLess(ctx context.Context, req *Empty) (*Empty, error)
 	var err error
 	start := make([]interface{}, 0)
 	end := make([]interface{}, 0)
+	start = append(start, "b123b_asdf")
+	start = append(start, 1.1)
 	end = append(end, 10)
 	key := spanner.KeyRange{
 		Start: start,
 		End:   end,
-		Kind:  OpenClosed,
+		Kind:  spanner.OpenClosed,
 	}
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.DeleteKeyRange("mytable", key)
@@ -113,7 +115,7 @@ func (s *DeleteImpl) DeleteMultiEquals(ctx context.Context, req *Empty) (*Empty,
 	key := spanner.KeyRange{
 		Start: start,
 		End:   end,
-		Kind:  ClosedClosed,
+		Kind:  spanner.ClosedClosed,
 	}
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.DeleteKeyRange("mytable", key)

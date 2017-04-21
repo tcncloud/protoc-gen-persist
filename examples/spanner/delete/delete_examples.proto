@@ -55,7 +55,7 @@ service Delete {
   };
   rpc DeleteLess(Empty) returns (Empty) {
     option (persist.ql) = {
-      query:"DELETE TABLE('mytable') START() END(10) KIND(OC)"
+      query:"DELETE TABLE('mytable') START('b123b_asdf', 1.1) END(10) KIND(OC)"
       arguments:[]
     };
   };
