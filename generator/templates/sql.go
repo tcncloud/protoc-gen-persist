@@ -46,7 +46,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		if err == sql.ErrNoRows {
 			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 		} else if strings.Contains(err.Error(), "duplicate key") {
-			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
@@ -135,7 +135,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 	}
 	err = tx.Commit()
 	if err != nil {
-		fmt.Errorf("Commiting transaction failed, rolling back...")
+		fmt.Println("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
 	stream.SendAndClose(&{{.GetOutputType}}{ Count: totalAffected })
