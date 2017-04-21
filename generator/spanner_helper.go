@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/xwb1989/sqlparser"
+	"github.com/tcncloud/protoc-gen-persist/generator/delete_parser"
 	"strings"
 )
 
@@ -40,6 +41,7 @@ type QueryArg struct {
 	Name         string      // name in the map,
 	Value        interface{} // generic value of the argument. If is a field, this will be empty
 	IsFieldValue bool        // Whether this refers to a field passed in
+	IsValue      bool        // If the Value field is set, this will be true
 	Field        TypeDesc    // if IsFieldValue is true, this will describe the Field
 }
 
@@ -47,12 +49,14 @@ type KeyRangeDesc struct {
 	Start []QueryArg
 	End   []QueryArg
 	Kind  string // a string of of a spanner.KeyRangeKind (ClosedOpen, ClosedClosed ex.)
+	Table string
 }
 
 type SpannerHelper struct {
 	RawQuery        string
 	Query           string
 	ParsedQuery     sqlparser.Statement
+	DeleteParser    *delete_parser.Parser
 	TableName       string
 	OptionArguments []string
 	IsSelect        bool
@@ -83,22 +87,17 @@ func NewSpannerHelper(p *Method) (*SpannerHelper, error) {
 	args := opts.GetArguments()
 	query := opts.GetQuery()
 	logrus.Debugf("query: %#v", query)
-	pquery, err := sqlparser.Parse(query)
-	if err != nil {
-		return nil, fmt.Errorf("parsing error in spanner_helper: %s", err)
-	}
 	// get the fields descriptions to construct query args
 	input := p.GetInputTypeStruct()
 	fieldsMap := p.GetTypeDescForFieldsInStructSnakeCase(input)
 
 	sh := &SpannerHelper{
 		RawQuery:        query,
-		ParsedQuery:     pquery,
 		OptionArguments: args,
 		Parent:          p,
 		ProtoFieldDescs: fieldsMap,
 	}
-	err = sh.Parse()
+	err := sh.Parse()
 	if err != nil {
 		return nil, err
 	}
@@ -106,18 +105,35 @@ func NewSpannerHelper(p *Method) (*SpannerHelper, error) {
 }
 
 func (sh *SpannerHelper) Parse() error {
-	// parse our query
-	switch pq := sh.ParsedQuery.(type) {
-	case *sqlparser.Select:
-		return sh.ParseSelect(pq)
-	case *sqlparser.Insert:
-		return sh.ParseInsert(pq)
-	case *sqlparser.Delete:
-		return sh.ParseDelete(pq)
-	case *sqlparser.Update:
-		return sh.ParseUpdate(pq)
-	default:
-		return fmt.Errorf("not a query we can parse")
+	// parse our RAW query
+	// if this is a delete query, (starts with DELETE)  then create a delete parser"
+	// otherwise use the sqlparser
+	if strings.HasPrefix(sh.RawQuery, "DELETE") {
+		sh.DeleteParser = delete_parser.NewParser(sh.RawQuery)
+		pdq, err :=  sh.DeleteParser.Expr()
+		if err != nil {
+			return err
+		}
+		return sh.HandleDelete(pdq)
+	} else {
+		parsed, err := sqlparser.Parse(sh.RawQuery)
+		if err != nil {
+			logrus.Debugf("got error trying to parse spanner query: %s, err: %s\n", sh.RawQuery, err)
+			return err
+		}
+		sh.ParsedQuery = parsed
+		switch pq := sh.ParsedQuery.(type) {
+		case *sqlparser.Select:
+			return sh.ParseSelect(pq)
+		case *sqlparser.Insert:
+			return sh.ParseInsert(pq)
+		case *sqlparser.Delete:
+			return fmt.Errorf("delete querys must start with DELETE, instead saw: %s", sh.RawQuery)
+		case *sqlparser.Update:
+			return sh.ParseUpdate(pq)
+		default:
+			return fmt.Errorf("not a query we can parse")
+		}
 	}
 }
 
@@ -134,12 +150,19 @@ func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) ([]QueryArg) {
 			argName := sh.OptionArguments[index]
 			qa = QueryArg{
 				IsFieldValue: true,
+				IsValue: false,
 				Field:        sh.ProtoFieldDescs[argName],
 			}
 		} else {
 			qa = QueryArg{
 				Value:        fmt.Sprintf("%#v", arg),
 				IsFieldValue: false,
+				IsValue: true,
+			}
+			if arg != nil {
+				qa.Value = fmt.Sprintf("%#v", arg)
+			} else {
+				qa.Value = "nil"
 			}
 		}
 		qas[i] = qa
@@ -187,6 +210,7 @@ func (sh *SpannerHelper) ParseSelect(pq *sqlparser.Select) error {
 		qa := QueryArg{
 			Name:         index,
 			IsFieldValue: true,
+			IsValue: false,
 			Field:        field,
 		}
 		sh.QueryArgs = append(sh.QueryArgs, qa)
@@ -196,38 +220,51 @@ func (sh *SpannerHelper) ParseSelect(pq *sqlparser.Select) error {
 	sh.Query = updatedQuery
 	return nil
 }
-func (sh *SpannerHelper) ParseDelete(pq *sqlparser.Delete) error {
+
+func (sh *SpannerHelper) HandleDelete(pdq *delete_parser.ParsedKeyRange) error {
 	sh.IsDelete = true
-	table, err := extractIUDTableName(pq)
-	if err != nil {
+	sh.TableName = pdq.Table
+
+	start := make([]QueryArg, len(pdq.Start))
+	end := make([]QueryArg, len(pdq.End))
+	index := 0
+	if err := sh.PopulateDeleteSlice(pdq.Start, start, &index); err != nil {
 		return err
 	}
-	mkr, err := extractSpannerKeyFromDelete(pq)
-	if err != nil {
+	if err := sh.PopulateDeleteSlice(pdq.End, end, &index); err != nil {
 		return err
-	}
-	start := sh.PopulateArgSlice(mkr.Start.args)
-	end := sh.PopulateArgSlice(mkr.End.args)
-	low := mkr.LowerOpen
-	up := mkr.UpperOpen
-
-	var kind string
-
-	if low && up {
-		kind = "spanner.OpenOpen"
-	} else if low && !up {
-		kind = "spanner.OpenClosed"
-	} else if !low && up {
-		kind = "spanner.ClosedOpen"
-	} else {
-		kind = "spanner.ClosedClosed"
 	}
 	sh.KeyRangeDesc = &KeyRangeDesc{
 		Start: start,
-		End:   end,
-		Kind:  kind,
+		End: end,
+		Kind: pdq.Kind,
 	}
-	sh.TableName = table
+	return nil
+}
+
+func  (sh *SpannerHelper) PopulateDeleteSlice(source []*delete_parser.Token, dest []QueryArg, index *int) error {
+	for i, tok := range source {
+		var qa QueryArg
+		if tok.Type == "?" {
+			if *index >= len(sh.OptionArguments) {
+				return fmt.Errorf("too many ? for arguments")
+			}
+			argName := sh.OptionArguments[*index]
+			*index += 1
+			qa = QueryArg{
+				IsValue: false,
+				IsFieldValue: true,
+				Field: sh.ProtoFieldDescs[argName],
+			}
+		} else {
+			qa = QueryArg{
+				IsValue: true,
+				IsFieldValue: false,
+				Value: tok.Value,
+			}
+		}
+		dest[i] = qa
+	}
 	return nil
 }
 
@@ -249,6 +286,7 @@ func (sh *SpannerHelper) ParseUpdate(pq *sqlparser.Update) error {
 			qa = QueryArg{
 				Name:         key,
 				IsFieldValue: true,
+				IsValue: false,
 				Field:        sh.ProtoFieldDescs[argName],
 			}
 		} else {
@@ -256,6 +294,7 @@ func (sh *SpannerHelper) ParseUpdate(pq *sqlparser.Update) error {
 				Name:         key,
 				Value:        fmt.Sprintf("%#v", arg),
 				IsFieldValue: false,
+				IsValue: true,
 			}
 		}
 		sh.QueryArgs = append(sh.QueryArgs, qa)
