@@ -11,7 +11,10 @@ before_script:
 - chmod +x $PROTOC_DIR/bin/protoc
 
 before_deploy:
-  - 
+  - go get github.com/mitchellh/gox
+  - gox
+  - rm protoc-gen-persist
+  - for i in protoc-gen-persist; do zip $i-$TRAVIS_TAG.zip $i; done
 deploy:
   provider: releases
   api_key:
