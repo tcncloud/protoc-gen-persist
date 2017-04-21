@@ -1,7 +1,9 @@
+dist: trusty
+sudo: false
 language: go
 go:
 - '1.8'
 
 before_script:
   - wget https://github.com/google/protobuf/releases/download/v3.2.0/protoc-3.2.0-linux-x86_64.zip
-  - sudo unzip protoc-3.2.0-linux-x86_64.zip -d /usr/local
+  - unzip protoc-3.2.0-linux-x86_64.zip -d /usr/local
