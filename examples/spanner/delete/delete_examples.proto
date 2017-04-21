@@ -30,7 +30,7 @@ syntax = "proto3";
 
 package examples;
 
-option go_package="github.com/tcncloud/protoc-gen-persist/examples/spanner;examples"
+option go_package="github.com/tcncloud/protoc-gen-persist/examples/spanner/delete;delete";
 
 import "persist/options.proto";
 
@@ -43,58 +43,26 @@ service Delete {
   // single primary key deletes (easy)
   rpc DeleteEquals(Empty) returns (Empty){
     option (persist.ql) = {
-      query: "DELETE FROM mytable WHERE pkey=1",
+      query: "DELETE TABLE('mytable') START(1) END(1) KIND(CC)",
       arguments: []
     };
   };
   rpc DeleteGreater(Empty) returns (Empty) {
     option (persist.ql) = {
-      query:"DELETE FROM mytable WHERE pkey > 1"
+      query:"DELETE TABLE('mytable') START(1) END() KIND(CO)"
       arguments:[]
     };
   };
   rpc DeleteLess(Empty) returns (Empty) {
     option (persist.ql) = {
-      query:"Delete From mytable WHERE pkey < 10"
-      arguments:[]
-    };
-  };
-  rpc DeleteLessAndGreater(Empty) returns (Empty) {
-    option (persist.ql) = {
-      query:"DELETE FROM mytable WHERE pkey > 5 AND pkey < 12"
-      arguments:[]
-    };
-  };
-  rpc DeleteBetween(Empty) returns (Empty) {
-    option (persist.ql) = {
-      query:"DELETE FROM mytable WHERE pkey BETWEEN 5 AND 7"
-      arguments:[]
-    };
-  };
-  rpc DeleteLessEqual(Empty) returns (Empty) {
-    option (persist.ql) = {
-      query:"DELETE FROM mytable WHERE pkey <= 10"
+      query:"DELETE TABLE('mytable') START() END(10) KIND(OC)"
       arguments:[]
     };
   };
   // multi primary key deletes (hard)
   rpc DeleteMultiEquals(Empty) returns (Empty) {
     option (persist.ql) = {
-      query:"DELETE FROM mytable WHERE pkey1 = 1 AND pkey2 = 50"
-      arguments:[]
-    };
-  };
-
-  rpc DeleteMultiBetween(Empty) returns (Empty) {
-    option (persist.ql) = {
-      query:"DELETE FROM mytable WHERE pkey1 > 1 AND pkey2 BETWEEN 5 AND 7"
-      arguments:[]
-    };
-  };
-
-  rpc DeleteMultiGreaterEqual(Empty) returns (Empty) {
-    option (persist.ql) = {
-      query:"DELETE FROM mytable WHERE pkey1 = 1 AND pkey2 >= 6"
+      query:"DELETE TABLE('mytable')START(1, 50) END(1, 50) KIND(CC)"
       arguments:[]
     };
   };
