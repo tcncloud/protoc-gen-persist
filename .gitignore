@@ -40,3 +40,6 @@ docs/_site
 docs/Gemfile
 docs/Gemfile.lock
 .DS_Store
+
+protoc-gen-persist*
+*~
