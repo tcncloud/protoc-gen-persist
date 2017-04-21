@@ -14,13 +14,29 @@ before_deploy:
   - go get github.com/mitchellh/gox
   - gox
   - rm protoc-gen-persist
-  - for i in protoc-gen-persist*; do zip $i-$TRAVIS_TAG.zip $i; done
-  - ls -la 
+  - export VER=`echo $TRAVIS_TAG|tr -d v`
+  - for i in protoc-gen-persist*; do zip $i-$VER.zip $i; done
 deploy:
   skip_cleanup: true
   provider: releases
   api_key:
     secure: vVLq6xmDURGKYwH6Wtj+JzVPMt71BppAlurpOfXh49CO/ccL3X3RGy6sDW18ERh+T1+xCsn7wsE7Eko9EoTPell84WNqO2J4sRTIAd9F7nkk2VEB8eMMW0RKfltuFuA0JLFf8OgRVz/qFcIOhcwWpbG4kOROE7IAV/bTzx/qlgSLBhNFrOgNWaveMfuz98xUOZV+vhNf2MH30lMOl6lJjePVgNdlzmTARlb6IYiiIDiQZtcoUr2Gjo74Mjb7+3HL/JyoDw4rUfU1mt8eeBzvoVmZxcHab3xYGof+vCkxYd9yd43MY4F1JwoNHNmXOtSIzDNTJxd6rq3MFaQ5LKv0ojUif5+9UswAx3EQqVwEIreGLctsu+ouf3zkx9PMQ12PZ4lZdxvd+XvYFEkiNrNyQ3JlcOuvdJJ8PqJk9RuN2A44AjXJUSZDAV17kNg2RUnO2AkBxvyTqqiUJFWLwPidifU0ZRaPmmB13UrEXezPNWiHEf8OKYdtEQ/EQY3HoyF6ux4vrqpSkZPeVlCEfmdt/x47o4BoggDp7GykHr0+OJ3tn0gK174nyuk/BeCg6NIC2Y1g+jX1t5CZVfrLJeGOyDq80HXtJCdUjhM8rh2CncCspwcqzU9g94fkd8wq911iyv/518L4sjVTWL1llIU0YWspp0eoSOPYpverVaYcYas=
-  file: protoc-gen-persist*.zip
+  file: 
+    - protoc-gen-persist_darwin_386-$VER.zip
+    - protoc-gen-persist_darwin_amd64-$VER.zip
+    - protoc-gen-persist_freebsd_386-$VER.zip
+    - protoc-gen-persist_freebsd_amd64-$VER.zip
+    - protoc-gen-persist_freebsd_arm-$VER.zip
+    - protoc-gen-persist_linux_386-$VER.zip
+    - protoc-gen-persist_linux_amd64-$VER.zip
+    - protoc-gen-persist_linux_arm-$VER.zip
+    - protoc-gen-persist_netbsd_386-$VER.zip
+    - protoc-gen-persist_netbsd_amd64-$VER.zip
+    - protoc-gen-persist_netbsd_arm-$VER.zip
+    - protoc-gen-persist_openbsd_386-$VER.zip
+    - protoc-gen-persist_openbsd_amd64-$VER.zip
+    - protoc-gen-persist_windows_386.exe-$VER.zip
+    - protoc-gen-persist_windows_amd64.exe-$VER.zip
+
   on:
     tags: true
