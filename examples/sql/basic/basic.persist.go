@@ -40,7 +40,7 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *PartialTable) (*Exa
 		if err == sql.ErrNoRows {
 			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 		} else if strings.Contains(err.Error(), "duplicate key") {
-			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
@@ -172,7 +172,7 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 	}
 	err = tx.Commit()
 	if err != nil {
-		fmt.Errorf("Commiting transaction failed, rolling back...")
+		fmt.Println("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
 	stream.SendAndClose(&NumRows{Count: totalAffected})
