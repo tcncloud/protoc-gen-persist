@@ -10,3 +10,7 @@ before_script:
   - mkdir -p $PROTOC_DIR
   - unzip protoc-3.2.0-linux-x86_64.zip -d $PROTOC_DIR
   - chmod +x $PROTOC_DIR/bin/protoc
+
+before_deploy:
+  - go get github.com/mitchellh/gox
+  - gox
