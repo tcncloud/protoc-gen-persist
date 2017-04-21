@@ -353,7 +353,7 @@ const SpannerHelperTemplates = `
 	key := spanner.KeyRange{
 		Start: start,
 		End: end,
-		Kind: {{.Spanner.KeyRangeDesc.Kind}},
+		Kind: spanner.{{.Spanner.KeyRangeDesc.Kind}},
 	}
 {{end}}
 
