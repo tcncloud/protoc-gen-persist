@@ -4,13 +4,10 @@
 
 Protobuf plugin that generate a persistence layer backed by SQL or Spanner database
 
-## NOTE: This project is under development, everything could be changed, and there will be bugs!  (especially with spanner)
 
 ## Rationale
-Opinionated protoc plugin that will help generate boiler plate go code for GRPC microservices that need to interact
-with a SQL or Spanner database. The code generation is accomplishe by providing a protobuf file with proper
-annotations, and then running the protoc cli tool with the ```--go_out``` option, and the ```--persist_out```
-options set to the same directory.
+An opinionated protoc plugin that will help generate boiler plate go code for GRPC micro services projects that need to interact with a SQL or Spanner database. 
+The code generation is accomplished by providing a protobuf file with proper annotations, and then running the protoc cli tool with the `--go_out` option, and the `--persist_out` options set to the same directory.
 
 ## Installation
 This project requires [protoc](https://github.com/google/protobuf) and [protoc-gen-go](https://developers.google.com/protocol-buffers/docs/gotutorial) be installed
@@ -20,6 +17,9 @@ Then install with ```go get github.com/tcncloud/protoc-gen-persist```
 documentation for the project can be found [Here](docs/index.md)
 The documentation goes over the persist options, how to structure your proto file,
 custom type mapping to/from the database, and spanner query parsing
+
+## NOTE: This project is under development, use it at your own risk!
+
 
 ## Version 0.1.0
 
