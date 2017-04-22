@@ -209,7 +209,7 @@ way to have a transaction that can be rolled back in spanner,  be aware that eac
 memory on the server.
 
 ### bidirectional streaming calls
-ex: ```rpc UpdateUser(User) returns (User)```
+ex: ```rpc UpdateUser(stream User) returns (stream User)```
 
 **bidirectional stream methods are only supported for sql service types**
 
