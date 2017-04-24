@@ -32,8 +32,8 @@ package generator
 import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"github.com/xwb1989/sqlparser"
 	"github.com/tcncloud/protoc-gen-persist/generator/delete_parser"
+	"github.com/xwb1989/sqlparser"
 	"strings"
 )
 
@@ -110,7 +110,7 @@ func (sh *SpannerHelper) Parse() error {
 	// otherwise use the sqlparser
 	if strings.HasPrefix(sh.RawQuery, "DELETE") {
 		sh.DeleteParser = delete_parser.NewParser(sh.RawQuery)
-		pdq, err :=  sh.DeleteParser.Expr()
+		pdq, err := sh.DeleteParser.Expr()
 		if err != nil {
 			return err
 		}
@@ -141,7 +141,7 @@ func (sh *SpannerHelper) InsertColsAsString() string {
 	return fmt.Sprintf("%#v", sh.InsertCols)
 }
 
-func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) ([]QueryArg) {
+func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) []QueryArg {
 	qas := make([]QueryArg, len(slice))
 	for i, arg := range slice {
 		var qa QueryArg
@@ -150,14 +150,14 @@ func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) ([]QueryArg) {
 			argName := sh.OptionArguments[index]
 			qa = QueryArg{
 				IsFieldValue: true,
-				IsValue: false,
+				IsValue:      false,
 				Field:        sh.ProtoFieldDescs[argName],
 			}
 		} else {
 			qa = QueryArg{
 				Value:        fmt.Sprintf("%#v", arg),
 				IsFieldValue: false,
-				IsValue: true,
+				IsValue:      true,
 			}
 			if arg != nil {
 				qa.Value = fmt.Sprintf("%#v", arg)
@@ -210,7 +210,7 @@ func (sh *SpannerHelper) ParseSelect(pq *sqlparser.Select) error {
 		qa := QueryArg{
 			Name:         index,
 			IsFieldValue: true,
-			IsValue: false,
+			IsValue:      false,
 			Field:        field,
 		}
 		sh.QueryArgs = append(sh.QueryArgs, qa)
@@ -236,13 +236,13 @@ func (sh *SpannerHelper) HandleDelete(pdq *delete_parser.ParsedKeyRange) error {
 	}
 	sh.KeyRangeDesc = &KeyRangeDesc{
 		Start: start,
-		End: end,
-		Kind: pdq.Kind,
+		End:   end,
+		Kind:  pdq.Kind,
 	}
 	return nil
 }
 
-func  (sh *SpannerHelper) PopulateDeleteSlice(source []*delete_parser.Token, dest []QueryArg, index *int) error {
+func (sh *SpannerHelper) PopulateDeleteSlice(source []*delete_parser.Token, dest []QueryArg, index *int) error {
 	for i, tok := range source {
 		var qa QueryArg
 		if tok.Type == "?" {
@@ -252,15 +252,15 @@ func  (sh *SpannerHelper) PopulateDeleteSlice(source []*delete_parser.Token, des
 			argName := sh.OptionArguments[*index]
 			*index += 1
 			qa = QueryArg{
-				IsValue: false,
+				IsValue:      false,
 				IsFieldValue: true,
-				Field: sh.ProtoFieldDescs[argName],
+				Field:        sh.ProtoFieldDescs[argName],
 			}
 		} else {
 			qa = QueryArg{
-				IsValue: true,
+				IsValue:      true,
 				IsFieldValue: false,
-				Value: tok.Value,
+				Value:        tok.Value,
 			}
 		}
 		dest[i] = qa
@@ -286,7 +286,7 @@ func (sh *SpannerHelper) ParseUpdate(pq *sqlparser.Update) error {
 			qa = QueryArg{
 				Name:         key,
 				IsFieldValue: true,
-				IsValue: false,
+				IsValue:      false,
 				Field:        sh.ProtoFieldDescs[argName],
 			}
 		} else {
@@ -294,7 +294,7 @@ func (sh *SpannerHelper) ParseUpdate(pq *sqlparser.Update) error {
 				Name:         key,
 				Value:        fmt.Sprintf("%#v", arg),
 				IsFieldValue: false,
-				IsValue: true,
+				IsValue:      true,
 			}
 		}
 		sh.QueryArgs = append(sh.QueryArgs, qa)
