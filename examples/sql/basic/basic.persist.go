@@ -71,7 +71,7 @@ func (s *AmazingImpl) ServerStream(req *Name, stream Amazing_ServerStreamServer)
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -116,7 +116,7 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -135,11 +135,11 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 
 // sql client streaming ClientStream
 func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
-	stmt, err := s.SqlDB.Prepare("INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)")
+	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err
 	}
-	tx, err := s.SqlDB.Begin()
+	stmt, err := tx.Prepare("INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)")
 	if err != nil {
 		return err
 	}
@@ -153,13 +153,13 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 			tx.Rollback()
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		affected, err := tx.Stmt(stmt).Exec(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name)
+		affected, err := stmt.Exec(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name)
 		if err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
