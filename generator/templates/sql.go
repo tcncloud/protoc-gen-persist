@@ -76,7 +76,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -96,11 +96,11 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 
 const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
-	stmt, err:= s.SqlDB.Prepare({{.GetQuery}})
+	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err
 	}
-	tx, err := s.SqlDB.Begin()
+	stmt, err:= tx.Prepare({{.GetQuery}})
 	if err != nil {
 		return err
 	}
@@ -115,13 +115,13 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		affected, err := tx.Stmt(stmt).Exec( {{.GetQueryParamString false}})
+		affected, err := stmt.Exec({{.GetQueryParamString false}})
 		if err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -167,7 +167,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
