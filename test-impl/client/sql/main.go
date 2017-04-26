@@ -6,19 +6,20 @@ import(
 	"time"
 	"context"
 	"google.golang.org/grpc"
-	pb "github.com/tcncloud/protoc-gen-persist/examples/sql/basic"
+	pbclient "github.com/tcncloud/protoc-gen-persist/examples/sql/basic"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/test"
 	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
 	ptypes "github.com/golang/protobuf/ptypes"
 )
-func setupClient() pb.AmazingClient {
+func setupClient() pbclient.AmazingClient {
 	conn, err := grpc.Dial("s:50051",  grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
-	return pb.NewAmazingClient(conn)
+	return pbclient.NewAmazingClient(conn)
 }
 
-func clientStreamInsert(client pb.AmazingClient, name string) error {
+func clientStreamInsert(client pbclient.AmazingClient, name string) error {
 	now := time.Now().Truncate(time.Millisecond)
 	docs := []*pb.ExampleTable{
 		&pb.ExampleTable{
@@ -42,7 +43,7 @@ func clientStreamInsert(client pb.AmazingClient, name string) error {
 			Name: name,
 		},
 	}
-	stream, err := client.ClientStream(context.Background())
+	stream, err := client.ClientStreamWithHook(context.Background())
 	for _, doc := range(docs) {
 		fmt.Printf("clientStreaming doc: %+v\n", doc)
 		err := stream.Send(doc)
@@ -58,10 +59,10 @@ func clientStreamInsert(client pb.AmazingClient, name string) error {
 	return nil
 }
 
-func serverStreamFromName(client pb.AmazingClient, name string) (*[]*pb.ExampleTable, error) {
+func serverStreamFromName(client pbclient.AmazingClient, name string) (*[]*pb.ExampleTable, error) {
 	res := make([]*pb.ExampleTable, 0)
 	fmt.Printf("Getting all docs that match name %s with server stream\n", name)
-	stream, err := client.ServerStream(context.Background(), &pb.Name{ Name: name })
+	stream, err := client.ServerStreamWithHooks(context.Background(), &pb.Name{ Name: name })
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +81,8 @@ func serverStreamFromName(client pb.AmazingClient, name string) (*[]*pb.ExampleT
 	return &res, nil
 }
 
-func bidirectionalStream(client pb.AmazingClient, recs []*pb.ExampleTable) error {
-	stream, err := client.Bidirectional(context.Background())
+func bidirectionalStream(client pbclient.AmazingClient, recs []*pb.ExampleTable) error {
+	stream, err := client.BidirectionalWithHooks(context.Background())
 	if err != nil {
 		return err
 	}
