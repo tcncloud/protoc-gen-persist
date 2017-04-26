@@ -33,8 +33,12 @@ const ReturnConvertHelpers= `
 	{{define "addr"}}{{if .IsMessage}}&{{end}}{{end}}
 	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.Name}}){{else}}{{.Name}}{{end}}{{end}}
 	{{define "mapping"}}{{if .IsMapped}}.ToProto(){{end}}{{end}}
+`
+const BeforeHook = `
 	{{define "before_hook"}}
-	{{/* Our before hook template give it a Method as dot*/}}
+	{{/* give it a Method as dot, assumes a "req" exists to give to the hook as parameter*/}}
+	{{/* works for all method types, but assumes we are in a loop to continue on for */}}
+	{{/* client streaming and bidi streaming methods */}}
 	{{$before := .GetMethodOption.GetBefore}}
 		{{if $before}}
 			beforeRes, err := {{.GetGoPackage $before.GetPackage}}.{{$before.GetName}}(req)
@@ -55,6 +59,19 @@ const ReturnConvertHelpers= `
 				{{if or .IsUnary .IsServerStreaming}}
 					return beforeRes, nil
 				{{end}}
+			}
+		{{end}}
+	{{end}}
+`
+const AfterHook = `
+	{{define "after_hook"}}
+	{{/* give it a Method as dot, assumes a "res" exists to give the hook as parameter */}}
+	{{/* does not do anything for client streaming methods */}}
+	{{$after := .GetMethodOption.GetAfter}}
+		{{if and $after (not .IsClientStreaming)}}
+			err := {{.GetGoPackage $after.GetPackage}}.{{$after.GetName}}(res)
+			if err != nil {
+				return nil, grpc.Errorf(codes.Unknown, err.Error())
 			}
 		{{end}}
 	{{end}}
@@ -82,6 +99,8 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
 	{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 	}
+
+	{{template "after_hook" .}}
 	return res, nil
 }
 {{end}}`
@@ -120,6 +139,9 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 		{{range $field, $type := .GetTypeDescForFieldsInStruct  .GetOutputTypeStruct}}
 		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
+
+		{{template "after_hook" .}}
+
 		stream.Send(res)
 	}
 	return nil
@@ -209,6 +231,9 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
 		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
+
+		{{template "after_hook" .}}
+
 		if err := stream.Send(res); err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
