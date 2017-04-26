@@ -33,6 +33,31 @@ const ReturnConvertHelpers= `
 	{{define "addr"}}{{if .IsMessage}}&{{end}}{{end}}
 	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.Name}}){{else}}{{.Name}}{{end}}{{end}}
 	{{define "mapping"}}{{if .IsMapped}}.ToProto(){{end}}{{end}}
+	{{define "before_hook"}}
+	{{/* Our before hook template give it a Method as dot*/}}
+	{{$before := .GetMethodOption.GetBefore}}
+		{{if $before}}
+			beforeRes, err := {{.GetGoPackage $before.GetPackage}}.{{$before.GetName}}(req)
+			if err != nil {
+				return nil, grpc.Errorf(codes.Unknown, err.Error())
+			}
+			if beforeRes != nil {
+				{{if .IsClientStreaming}}
+					continue
+				{{end}}
+				{{if and .IsBidiStreaming (not .IsSpanner)}}
+					err := stream.Send(beforeRes)
+					if err != nil {
+						return grpc.Errorf(codes.Unknown, err.Error())
+					}
+					continue
+				{{end}}
+				{{if or .IsUnary .IsServerStreaming}}
+					return beforeRes, nil
+				{{end}}
+			}
+		{{end}}
+	{{end}}
 `
 const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
@@ -40,6 +65,9 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		{{$field}} {{$type}}{{end}}
 	)
+
+	{{template "before_hook" .}}
+
 	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
 		Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 	if err != nil {
@@ -64,6 +92,9 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
  {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
  {{$field}} {{$type}}{{end}}
  	)
+
+	{{template "before_hook" .}}
+
 	rows, err := s.SqlDB.Query({{.GetQuery}} {{.GetQueryParamString true}})
 
 	if err != nil {
@@ -115,6 +146,8 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
+		{{template "before_hook" .}}
+
 		affected, err := stmt.Exec({{.GetQueryParamString false}})
 		if err != nil {
 			tx.Rollback()
@@ -157,6 +190,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
+		{{template "before_hook" .}}
 		var (
 		 {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		 {{$field}} {{$type}}{{end}}
