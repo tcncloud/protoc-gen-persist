@@ -86,6 +86,10 @@ service Amazing {
         name: "BeforeHook"
         package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
       }
+      after: {
+        name: "AfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+      }
     };
   };
   rpc ServerStream(Name) returns (stream ExampleTable) {
@@ -100,6 +104,10 @@ service Amazing {
       arguments: ["name"]
       before: {
         name: "BeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+      }
+      after: {
+        name: "AfterHook"
         package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
       }
     };
@@ -118,6 +126,10 @@ service Amazing {
         name: "BeforeHook"
         package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
       }
+      after: {
+        name: "AfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+      }
     };
   };
   rpc ClientStream(stream ExampleTable) returns (NumRows) {
@@ -132,6 +144,10 @@ service Amazing {
       arguments: ["id", "start_time", "name"]
       before: {
         name: "BeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+      }
+      after: {
+        name: "AfterHook"
         package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
       }
     };
