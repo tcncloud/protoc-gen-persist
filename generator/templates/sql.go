@@ -43,21 +43,31 @@ const BeforeHook = `
 		{{if $before}}
 			beforeRes, err := {{.GetGoPackage $before.GetPackage}}.{{$before.GetName}}(req)
 			if err != nil {
-				return nil, grpc.Errorf(codes.Unknown, err.Error())
+				{{if .IsUnary}}
+					return nil, grpc.Errorf(codes.Unknown, err.Error())
+				{{else}}
+					return grpc.Errorf(codes.Unknown, err.Error())
+				{{end}}
 			}
 			if beforeRes != nil {
 				{{if .IsClientStreaming}}
 					continue
 				{{end}}
 				{{if and .IsBidiStreaming (not .IsSpanner)}}
-					err := stream.Send(beforeRes)
+					err = stream.Send(beforeRes)
 					if err != nil {
 						return grpc.Errorf(codes.Unknown, err.Error())
 					}
 					continue
 				{{end}}
-				{{if or .IsUnary .IsServerStreaming}}
+				{{if or .IsUnary}}
 					return beforeRes, nil
+				{{end}}
+				{{if .IsServerStreaming}}
+					err = stream.Send(beforeRes)
+					if err != nil {
+						return err
+					}
 				{{end}}
 			}
 		{{end}}
@@ -69,9 +79,13 @@ const AfterHook = `
 	{{/* does not do anything for client streaming methods */}}
 	{{$after := .GetMethodOption.GetAfter}}
 		{{if and $after (not .IsClientStreaming)}}
-			err := {{.GetGoPackage $after.GetPackage}}.{{$after.GetName}}(res)
+			err = {{.GetGoPackage $after.GetPackage}}.{{$after.GetName}}(res)
 			if err != nil {
-				return nil, grpc.Errorf(codes.Unknown, err.Error())
+				{{if .IsUnary}}
+					return nil, grpc.Errorf(codes.Unknown, err.Error())
+				{{else}}
+					return grpc.Errorf(codes.Unknown, err.Error())
+				{{end}}
 			}
 		{{end}}
 	{{end}}
@@ -81,11 +95,12 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 	var (
 		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		{{$field}} {{$type}}{{end}}
+		err error
 	)
 
 	{{template "before_hook" .}}
 
-	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
+	err = s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
 		Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -110,6 +125,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	var (
  {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
  {{$field}} {{$type}}{{end}}
+ 	err error
  	)
 
 	{{template "before_hook" .}}
@@ -149,6 +165,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 
 const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
+	var err error
 	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err
@@ -199,6 +216,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 
 const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
+	var err error
 	stmt, err := s.SqlDB.Prepare({{.GetQuery}})
 	if err != nil {
 		return err
