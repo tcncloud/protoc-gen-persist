@@ -47,6 +47,7 @@ type Method struct {
 	Spanner *SpannerHelper
 }
 
+
 func NewMethod(desc *descriptor.MethodDescriptorProto, srv *Service) (*Method, error) {
 	meth := &Method{Desc: desc, Service: srv}
 	return meth, nil
@@ -482,8 +483,27 @@ func (m *Method) ProcessImports() {
 			for _, mapping := range m.GetMethodOption().GetMapping().GetTypes() {
 				m.Service.File.ImportList.GetOrAddImport(GetGoPackage(mapping.GetGoPackage()), GetGoPath(mapping.GetGoPackage()))
 			}
+			// if CallbackFunction options exist,  import the packages
+			// name string, package string
+			beforeOpt := m.GetMethodOption().GetBefore()
+			afterOpt := m.GetMethodOption().GetAfter()
+			if beforeOpt != nil {
+				m.Service.File.ImportList.GetOrAddImport(GetGoPackage(beforeOpt.GetPackage()), GetGoPath(beforeOpt.GetPackage()))
+			}
+			if afterOpt != nil {
+				m.Service.File.ImportList.GetOrAddImport(GetGoPackage(afterOpt.GetPackage()), GetGoPath(afterOpt.GetPackage()))
+			}
+
 		}
 	}
+}
+
+func (m *Method) GetGoPackage(path string) string {
+	return GetGoPackage(path)
+}
+
+func (m *Method) GeGoPath(path string) string {
+	return GetGoPath(path)
 }
 
 // -- Methods

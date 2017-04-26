@@ -31,9 +31,30 @@ syntax = "proto3";
 
 package examples.test;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/tcncloud/protoc-gen-persist/examples/test;test";
 
 message Test {
     int32 id = 1;
     string name = 2;
+}
+
+message ExampleTable {
+  int64 id = 1;
+  google.protobuf.Timestamp start_time = 2;
+  string name = 3;
+}
+
+message PartialTable {
+  int64 id = 1;
+  google.protobuf.Timestamp start_time = 2;
+}
+
+message Name {
+  string name = 1;
+}
+
+message NumRows {
+  int64 count = 1;
 }

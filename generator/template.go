@@ -45,6 +45,8 @@ var (
 		"implement_services":              templates.ServicesTemplate,
 		"implement_method":                templates.MethodTemplate,
 		"return_convert_helpers":          templates.ReturnConvertHelpers,
+		"before_hook":                     templates.BeforeHook,
+		"after_hook":                      templates.AfterHook,
 		"type_desc_to_mapped":             templates.SpannerHelperTemplates,
 		"unary_method":                    templates.UnaryMethodTemplate,
 		"client_streaming_method":         templates.ClientStreamingMethodTemplate,

@@ -34,13 +34,73 @@ const ReturnConvertHelpers= `
 	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.Name}}){{else}}{{.Name}}{{end}}{{end}}
 	{{define "mapping"}}{{if .IsMapped}}.ToProto(){{end}}{{end}}
 `
+const BeforeHook = `
+	{{define "before_hook"}}
+	{{/* give it a Method as dot, assumes a "req" exists to give to the hook as parameter*/}}
+	{{/* works for all method types, but assumes we are in a loop to continue on for */}}
+	{{/* client streaming and bidi streaming methods */}}
+	{{$before := .GetMethodOption.GetBefore}}
+		{{if $before}}
+			beforeRes, err := {{.GetGoPackage $before.GetPackage}}.{{$before.GetName}}(req)
+			if err != nil {
+				{{if .IsUnary}}
+					return nil, grpc.Errorf(codes.Unknown, err.Error())
+				{{else}}
+					return grpc.Errorf(codes.Unknown, err.Error())
+				{{end}}
+			}
+			if beforeRes != nil {
+				{{if .IsClientStreaming}}
+					continue
+				{{end}}
+				{{if and .IsBidiStreaming (not .IsSpanner)}}
+					err = stream.Send(beforeRes)
+					if err != nil {
+						return grpc.Errorf(codes.Unknown, err.Error())
+					}
+					continue
+				{{end}}
+				{{if or .IsUnary}}
+					return beforeRes, nil
+				{{end}}
+				{{if .IsServerStreaming}}
+					err = stream.Send(beforeRes)
+					if err != nil {
+						return err
+					}
+				{{end}}
+			}
+		{{end}}
+	{{end}}
+`
+const AfterHook = `
+	{{define "after_hook"}}
+	{{/* give it a Method as dot, assumes a "res" exists to give the hook as parameter */}}
+	{{/* does not do anything for client streaming methods */}}
+	{{$after := .GetMethodOption.GetAfter}}
+		{{if and $after (not .IsClientStreaming)}}
+			err = {{.GetGoPackage $after.GetPackage}}.{{$after.GetName}}(res)
+			if err != nil {
+				{{if .IsUnary}}
+					return nil, grpc.Errorf(codes.Unknown, err.Error())
+				{{else}}
+					return grpc.Errorf(codes.Unknown, err.Error())
+				{{end}}
+			}
+		{{end}}
+	{{end}}
+`
 const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
 		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		{{$field}} {{$type}}{{end}}
+		err error
 	)
-	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
+
+	{{template "before_hook" .}}
+
+	err = s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
 		Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -54,6 +114,8 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
 	{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 	}
+
+	{{template "after_hook" .}}
 	return res, nil
 }
 {{end}}`
@@ -63,7 +125,11 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	var (
  {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
  {{$field}} {{$type}}{{end}}
+ 	err error
  	)
+
+	{{template "before_hook" .}}
+
 	rows, err := s.SqlDB.Query({{.GetQuery}} {{.GetQueryParamString true}})
 
 	if err != nil {
@@ -76,7 +142,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -89,6 +155,9 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 		{{range $field, $type := .GetTypeDescForFieldsInStruct  .GetOutputTypeStruct}}
 		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
+
+		{{template "after_hook" .}}
+
 		stream.Send(res)
 	}
 	return nil
@@ -96,11 +165,12 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 
 const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
-	stmt, err:= s.SqlDB.Prepare({{.GetQuery}})
+	var err error
+	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err
 	}
-	tx, err := s.SqlDB.Begin()
+	stmt, err:= tx.Prepare({{.GetQuery}})
 	if err != nil {
 		return err
 	}
@@ -115,13 +185,15 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		affected, err := tx.Stmt(stmt).Exec( {{.GetQueryParamString false}})
+		{{template "before_hook" .}}
+
+		affected, err := stmt.Exec({{.GetQueryParamString false}})
 		if err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -144,6 +216,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 
 const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
+	var err error
 	stmt, err := s.SqlDB.Prepare({{.GetQuery}})
 	if err != nil {
 		return err
@@ -157,6 +230,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
+		{{template "before_hook" .}}
 		var (
 		 {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		 {{$field}} {{$type}}{{end}}
@@ -167,7 +241,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -175,6 +249,9 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
 		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
+
+		{{template "after_hook" .}}
+
 		if err := stream.Send(res); err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}

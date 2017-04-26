@@ -10,6 +10,7 @@ import (
 	strings "strings"
 
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -28,13 +29,15 @@ func NewAmazingImpl(driver, connString string) (*AmazingImpl, error) {
 }
 
 // sql unary UniarySelect
-func (s *AmazingImpl) UniarySelect(ctx context.Context, req *PartialTable) (*ExampleTable, error) {
+func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	var (
 		Id        int64
 		Name      string
 		StartTime mytime.MyTime
+		err       error
 	)
-	err := s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time=$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
+
+	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time=$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
 		Scan(&Id, &StartTime, &Name)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -44,22 +47,73 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *PartialTable) (*Exa
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := &ExampleTable{
+	res := &test.ExampleTable{
 
 		Id:        Id,
 		Name:      Name,
 		StartTime: StartTime.ToProto(),
 	}
+
 	return res, nil
 }
 
-// sql server streaming ServerStream
-func (s *AmazingImpl) ServerStream(req *Name, stream Amazing_ServerStreamServer) error {
+// sql unary UniarySelectWithHooks
+func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	var (
 		Id        int64
 		Name      string
 		StartTime mytime.MyTime
+		err       error
 	)
+
+	beforeRes, err := mytime.UniarySelectBeforeHook(req)
+	if err != nil {
+
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+
+	}
+	if beforeRes != nil {
+
+		return beforeRes, nil
+
+	}
+
+	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time=$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
+		Scan(&Id, &StartTime, &Name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+		} else if strings.Contains(err.Error(), "duplicate key") {
+			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+		}
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	res := &test.ExampleTable{
+
+		Id:        Id,
+		Name:      Name,
+		StartTime: StartTime.ToProto(),
+	}
+
+	err = mytime.UniarySelectAfterHook(res)
+	if err != nil {
+
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+
+	}
+
+	return res, nil
+}
+
+// sql server streaming ServerStream
+func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
+	var (
+		Id        int64
+		Name      string
+		StartTime mytime.MyTime
+		err       error
+	)
+
 	rows, err := s.SqlDB.Query("SELECT * FROM example_table WHERE name=$1", req.Name)
 	if err != nil {
 		return grpc.Errorf(codes.Unknown, err.Error())
@@ -71,7 +125,7 @@ func (s *AmazingImpl) ServerStream(req *Name, stream Amazing_ServerStreamServer)
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -79,12 +133,75 @@ func (s *AmazingImpl) ServerStream(req *Name, stream Amazing_ServerStreamServer)
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &ExampleTable{
+		res := &test.ExampleTable{
 
 			Id:        Id,
 			Name:      Name,
 			StartTime: StartTime.ToProto(),
 		}
+
+		stream.Send(res)
+	}
+	return nil
+}
+
+// sql server streaming ServerStreamWithHooks
+func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
+	var (
+		Id        int64
+		Name      string
+		StartTime mytime.MyTime
+		err       error
+	)
+
+	beforeRes, err := mytime.ServerStreamBeforeHook(req)
+	if err != nil {
+
+		return grpc.Errorf(codes.Unknown, err.Error())
+
+	}
+	if beforeRes != nil {
+
+		err = stream.Send(beforeRes)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	rows, err := s.SqlDB.Query("SELECT * FROM example_table WHERE name=$1", req.Name)
+	if err != nil {
+		return grpc.Errorf(codes.Unknown, err.Error())
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err = rows.Err()
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+			} else if strings.Contains(err.Error(), "duplicate key") {
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+			}
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		err := rows.Scan(&Id, &StartTime, &Name)
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		res := &test.ExampleTable{
+
+			Id:        Id,
+			Name:      Name,
+			StartTime: StartTime.ToProto(),
+		}
+
+		err = mytime.ServerStreamAfterHook(res)
+		if err != nil {
+
+			return grpc.Errorf(codes.Unknown, err.Error())
+
+		}
+
 		stream.Send(res)
 	}
 	return nil
@@ -92,6 +209,7 @@ func (s *AmazingImpl) ServerStream(req *Name, stream Amazing_ServerStreamServer)
 
 // sql bidi streaming Bidirectional
 func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
+	var err error
 	stmt, err := s.SqlDB.Prepare("UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *")
 	if err != nil {
 		return err
@@ -105,6 +223,7 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
+
 		var (
 			Id        int64
 			Name      string
@@ -116,16 +235,86 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &ExampleTable{
+		res := &test.ExampleTable{
 
 			Id:        Id,
 			Name:      Name,
 			StartTime: StartTime.ToProto(),
 		}
+
+		if err := stream.Send(res); err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+	}
+	return nil
+}
+
+// sql bidi streaming BidirectionalWithHooks
+func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHooksServer) error {
+	var err error
+	stmt, err := s.SqlDB.Prepare("UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+
+		beforeRes, err := mytime.BidirectionalBeforeHook(req)
+		if err != nil {
+
+			return grpc.Errorf(codes.Unknown, err.Error())
+
+		}
+		if beforeRes != nil {
+
+			err = stream.Send(beforeRes)
+			if err != nil {
+				return grpc.Errorf(codes.Unknown, err.Error())
+			}
+			continue
+
+		}
+
+		var (
+			Id        int64
+			Name      string
+			StartTime mytime.MyTime
+		)
+		err = stmt.QueryRow(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name).
+			Scan(&Id, &StartTime, &Name)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+			} else if strings.Contains(err.Error(), "duplicate key") {
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+			}
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		res := &test.ExampleTable{
+
+			Id:        Id,
+			Name:      Name,
+			StartTime: StartTime.ToProto(),
+		}
+
+		err = mytime.BidirectionalAfterHook(res)
+		if err != nil {
+
+			return grpc.Errorf(codes.Unknown, err.Error())
+
+		}
+
 		if err := stream.Send(res); err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -135,11 +324,12 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 
 // sql client streaming ClientStream
 func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
-	stmt, err := s.SqlDB.Prepare("INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)")
+	var err error
+	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err
 	}
-	tx, err := s.SqlDB.Begin()
+	stmt, err := tx.Prepare("INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)")
 	if err != nil {
 		return err
 	}
@@ -153,13 +343,14 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 			tx.Rollback()
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		affected, err := tx.Stmt(stmt).Exec(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name)
+
+		affected, err := stmt.Exec(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name)
 		if err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -175,6 +366,66 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 		fmt.Println("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
-	stream.SendAndClose(&NumRows{Count: totalAffected})
+	stream.SendAndClose(&test.NumRows{Count: totalAffected})
+	return nil
+}
+
+// sql client streaming ClientStreamWithHook
+func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookServer) error {
+	var err error
+	tx, err := s.SqlDB.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err := tx.Prepare("INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)")
+	if err != nil {
+		return err
+	}
+	totalAffected := int64(0)
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			tx.Rollback()
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+
+		beforeRes, err := mytime.ClientStreamBeforeHook(req)
+		if err != nil {
+
+			return grpc.Errorf(codes.Unknown, err.Error())
+
+		}
+		if beforeRes != nil {
+
+			continue
+
+		}
+
+		affected, err := stmt.Exec(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name)
+		if err != nil {
+			tx.Rollback()
+			if err == sql.ErrNoRows {
+				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+			} else if strings.Contains(err.Error(), "duplicate key") {
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+			}
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		num, err := affected.RowsAffected()
+		if err != nil {
+			tx.Rollback()
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		totalAffected += num
+	}
+	err = tx.Commit()
+	if err != nil {
+		fmt.Println("Commiting transaction failed, rolling back...")
+		return grpc.Errorf(codes.Unknown, err.Error())
+	}
+	stream.SendAndClose(&test.NumRows{Count: totalAffected})
 	return nil
 }

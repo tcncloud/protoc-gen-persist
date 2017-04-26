@@ -9,10 +9,6 @@ It is generated from these files:
 	examples/sql/basic/basic.proto
 
 It has these top-level messages:
-	ExampleTable
-	PartialTable
-	Name
-	NumRows
 */
 package basic
 
@@ -20,9 +16,9 @@ import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
 import _ "github.com/tcncloud/protoc-gen-persist/persist"
-import google_protobuf1 "github.com/golang/protobuf/ptypes/timestamp"
+import _ "github.com/golang/protobuf/ptypes/timestamp"
 import _ "github.com/golang/protobuf/protoc-gen-go/descriptor"
-import _ "github.com/tcncloud/protoc-gen-persist/examples/test"
+import examples_test "github.com/tcncloud/protoc-gen-persist/examples/test"
 
 import (
 	context "golang.org/x/net/context"
@@ -40,101 +36,6 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type ExampleTable struct {
-	Id        int64                       `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
-	StartTime *google_protobuf1.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime" json:"start_time,omitempty"`
-	Name      string                      `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
-}
-
-func (m *ExampleTable) Reset()                    { *m = ExampleTable{} }
-func (m *ExampleTable) String() string            { return proto.CompactTextString(m) }
-func (*ExampleTable) ProtoMessage()               {}
-func (*ExampleTable) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
-
-func (m *ExampleTable) GetId() int64 {
-	if m != nil {
-		return m.Id
-	}
-	return 0
-}
-
-func (m *ExampleTable) GetStartTime() *google_protobuf1.Timestamp {
-	if m != nil {
-		return m.StartTime
-	}
-	return nil
-}
-
-func (m *ExampleTable) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-type PartialTable struct {
-	Id        int64                       `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
-	StartTime *google_protobuf1.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime" json:"start_time,omitempty"`
-}
-
-func (m *PartialTable) Reset()                    { *m = PartialTable{} }
-func (m *PartialTable) String() string            { return proto.CompactTextString(m) }
-func (*PartialTable) ProtoMessage()               {}
-func (*PartialTable) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-func (m *PartialTable) GetId() int64 {
-	if m != nil {
-		return m.Id
-	}
-	return 0
-}
-
-func (m *PartialTable) GetStartTime() *google_protobuf1.Timestamp {
-	if m != nil {
-		return m.StartTime
-	}
-	return nil
-}
-
-type Name struct {
-	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-}
-
-func (m *Name) Reset()                    { *m = Name{} }
-func (m *Name) String() string            { return proto.CompactTextString(m) }
-func (*Name) ProtoMessage()               {}
-func (*Name) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
-
-func (m *Name) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-type NumRows struct {
-	Count int64 `protobuf:"varint,1,opt,name=count" json:"count,omitempty"`
-}
-
-func (m *NumRows) Reset()                    { *m = NumRows{} }
-func (m *NumRows) String() string            { return proto.CompactTextString(m) }
-func (*NumRows) ProtoMessage()               {}
-func (*NumRows) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
-
-func (m *NumRows) GetCount() int64 {
-	if m != nil {
-		return m.Count
-	}
-	return 0
-}
-
-func init() {
-	proto.RegisterType((*ExampleTable)(nil), "examples.ExampleTable")
-	proto.RegisterType((*PartialTable)(nil), "examples.PartialTable")
-	proto.RegisterType((*Name)(nil), "examples.Name")
-	proto.RegisterType((*NumRows)(nil), "examples.NumRows")
-}
-
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
 var _ grpc.ClientConn
@@ -146,10 +47,14 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for Amazing service
 
 type AmazingClient interface {
-	UniarySelect(ctx context.Context, in *PartialTable, opts ...grpc.CallOption) (*ExampleTable, error)
-	ServerStream(ctx context.Context, in *Name, opts ...grpc.CallOption) (Amazing_ServerStreamClient, error)
+	UniarySelect(ctx context.Context, in *examples_test.PartialTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error)
+	UniarySelectWithHooks(ctx context.Context, in *examples_test.PartialTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error)
+	ServerStream(ctx context.Context, in *examples_test.Name, opts ...grpc.CallOption) (Amazing_ServerStreamClient, error)
+	ServerStreamWithHooks(ctx context.Context, in *examples_test.Name, opts ...grpc.CallOption) (Amazing_ServerStreamWithHooksClient, error)
 	Bidirectional(ctx context.Context, opts ...grpc.CallOption) (Amazing_BidirectionalClient, error)
+	BidirectionalWithHooks(ctx context.Context, opts ...grpc.CallOption) (Amazing_BidirectionalWithHooksClient, error)
 	ClientStream(ctx context.Context, opts ...grpc.CallOption) (Amazing_ClientStreamClient, error)
+	ClientStreamWithHook(ctx context.Context, opts ...grpc.CallOption) (Amazing_ClientStreamWithHookClient, error)
 }
 
 type amazingClient struct {
@@ -160,8 +65,8 @@ func NewAmazingClient(cc *grpc.ClientConn) AmazingClient {
 	return &amazingClient{cc}
 }
 
-func (c *amazingClient) UniarySelect(ctx context.Context, in *PartialTable, opts ...grpc.CallOption) (*ExampleTable, error) {
-	out := new(ExampleTable)
+func (c *amazingClient) UniarySelect(ctx context.Context, in *examples_test.PartialTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error) {
+	out := new(examples_test.ExampleTable)
 	err := grpc.Invoke(ctx, "/examples.Amazing/UniarySelect", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -169,7 +74,16 @@ func (c *amazingClient) UniarySelect(ctx context.Context, in *PartialTable, opts
 	return out, nil
 }
 
-func (c *amazingClient) ServerStream(ctx context.Context, in *Name, opts ...grpc.CallOption) (Amazing_ServerStreamClient, error) {
+func (c *amazingClient) UniarySelectWithHooks(ctx context.Context, in *examples_test.PartialTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error) {
+	out := new(examples_test.ExampleTable)
+	err := grpc.Invoke(ctx, "/examples.Amazing/UniarySelectWithHooks", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *amazingClient) ServerStream(ctx context.Context, in *examples_test.Name, opts ...grpc.CallOption) (Amazing_ServerStreamClient, error) {
 	stream, err := grpc.NewClientStream(ctx, &_Amazing_serviceDesc.Streams[0], c.cc, "/examples.Amazing/ServerStream", opts...)
 	if err != nil {
 		return nil, err
@@ -185,7 +99,7 @@ func (c *amazingClient) ServerStream(ctx context.Context, in *Name, opts ...grpc
 }
 
 type Amazing_ServerStreamClient interface {
-	Recv() (*ExampleTable, error)
+	Recv() (*examples_test.ExampleTable, error)
 	grpc.ClientStream
 }
 
@@ -193,8 +107,40 @@ type amazingServerStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *amazingServerStreamClient) Recv() (*ExampleTable, error) {
-	m := new(ExampleTable)
+func (x *amazingServerStreamClient) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *amazingClient) ServerStreamWithHooks(ctx context.Context, in *examples_test.Name, opts ...grpc.CallOption) (Amazing_ServerStreamWithHooksClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Amazing_serviceDesc.Streams[1], c.cc, "/examples.Amazing/ServerStreamWithHooks", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &amazingServerStreamWithHooksClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Amazing_ServerStreamWithHooksClient interface {
+	Recv() (*examples_test.ExampleTable, error)
+	grpc.ClientStream
+}
+
+type amazingServerStreamWithHooksClient struct {
+	grpc.ClientStream
+}
+
+func (x *amazingServerStreamWithHooksClient) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -202,7 +148,7 @@ func (x *amazingServerStreamClient) Recv() (*ExampleTable, error) {
 }
 
 func (c *amazingClient) Bidirectional(ctx context.Context, opts ...grpc.CallOption) (Amazing_BidirectionalClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Amazing_serviceDesc.Streams[1], c.cc, "/examples.Amazing/Bidirectional", opts...)
+	stream, err := grpc.NewClientStream(ctx, &_Amazing_serviceDesc.Streams[2], c.cc, "/examples.Amazing/Bidirectional", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -211,8 +157,8 @@ func (c *amazingClient) Bidirectional(ctx context.Context, opts ...grpc.CallOpti
 }
 
 type Amazing_BidirectionalClient interface {
-	Send(*ExampleTable) error
-	Recv() (*ExampleTable, error)
+	Send(*examples_test.ExampleTable) error
+	Recv() (*examples_test.ExampleTable, error)
 	grpc.ClientStream
 }
 
@@ -220,12 +166,43 @@ type amazingBidirectionalClient struct {
 	grpc.ClientStream
 }
 
-func (x *amazingBidirectionalClient) Send(m *ExampleTable) error {
+func (x *amazingBidirectionalClient) Send(m *examples_test.ExampleTable) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *amazingBidirectionalClient) Recv() (*ExampleTable, error) {
-	m := new(ExampleTable)
+func (x *amazingBidirectionalClient) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *amazingClient) BidirectionalWithHooks(ctx context.Context, opts ...grpc.CallOption) (Amazing_BidirectionalWithHooksClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Amazing_serviceDesc.Streams[3], c.cc, "/examples.Amazing/BidirectionalWithHooks", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &amazingBidirectionalWithHooksClient{stream}
+	return x, nil
+}
+
+type Amazing_BidirectionalWithHooksClient interface {
+	Send(*examples_test.ExampleTable) error
+	Recv() (*examples_test.ExampleTable, error)
+	grpc.ClientStream
+}
+
+type amazingBidirectionalWithHooksClient struct {
+	grpc.ClientStream
+}
+
+func (x *amazingBidirectionalWithHooksClient) Send(m *examples_test.ExampleTable) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *amazingBidirectionalWithHooksClient) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -233,7 +210,7 @@ func (x *amazingBidirectionalClient) Recv() (*ExampleTable, error) {
 }
 
 func (c *amazingClient) ClientStream(ctx context.Context, opts ...grpc.CallOption) (Amazing_ClientStreamClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Amazing_serviceDesc.Streams[2], c.cc, "/examples.Amazing/ClientStream", opts...)
+	stream, err := grpc.NewClientStream(ctx, &_Amazing_serviceDesc.Streams[4], c.cc, "/examples.Amazing/ClientStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -242,8 +219,8 @@ func (c *amazingClient) ClientStream(ctx context.Context, opts ...grpc.CallOptio
 }
 
 type Amazing_ClientStreamClient interface {
-	Send(*ExampleTable) error
-	CloseAndRecv() (*NumRows, error)
+	Send(*examples_test.ExampleTable) error
+	CloseAndRecv() (*examples_test.NumRows, error)
 	grpc.ClientStream
 }
 
@@ -251,15 +228,49 @@ type amazingClientStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *amazingClientStreamClient) Send(m *ExampleTable) error {
+func (x *amazingClientStreamClient) Send(m *examples_test.ExampleTable) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *amazingClientStreamClient) CloseAndRecv() (*NumRows, error) {
+func (x *amazingClientStreamClient) CloseAndRecv() (*examples_test.NumRows, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	m := new(NumRows)
+	m := new(examples_test.NumRows)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *amazingClient) ClientStreamWithHook(ctx context.Context, opts ...grpc.CallOption) (Amazing_ClientStreamWithHookClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Amazing_serviceDesc.Streams[5], c.cc, "/examples.Amazing/ClientStreamWithHook", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &amazingClientStreamWithHookClient{stream}
+	return x, nil
+}
+
+type Amazing_ClientStreamWithHookClient interface {
+	Send(*examples_test.ExampleTable) error
+	CloseAndRecv() (*examples_test.NumRows, error)
+	grpc.ClientStream
+}
+
+type amazingClientStreamWithHookClient struct {
+	grpc.ClientStream
+}
+
+func (x *amazingClientStreamWithHookClient) Send(m *examples_test.ExampleTable) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *amazingClientStreamWithHookClient) CloseAndRecv() (*examples_test.NumRows, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(examples_test.NumRows)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -269,10 +280,14 @@ func (x *amazingClientStreamClient) CloseAndRecv() (*NumRows, error) {
 // Server API for Amazing service
 
 type AmazingServer interface {
-	UniarySelect(context.Context, *PartialTable) (*ExampleTable, error)
-	ServerStream(*Name, Amazing_ServerStreamServer) error
+	UniarySelect(context.Context, *examples_test.PartialTable) (*examples_test.ExampleTable, error)
+	UniarySelectWithHooks(context.Context, *examples_test.PartialTable) (*examples_test.ExampleTable, error)
+	ServerStream(*examples_test.Name, Amazing_ServerStreamServer) error
+	ServerStreamWithHooks(*examples_test.Name, Amazing_ServerStreamWithHooksServer) error
 	Bidirectional(Amazing_BidirectionalServer) error
+	BidirectionalWithHooks(Amazing_BidirectionalWithHooksServer) error
 	ClientStream(Amazing_ClientStreamServer) error
+	ClientStreamWithHook(Amazing_ClientStreamWithHookServer) error
 }
 
 func RegisterAmazingServer(s *grpc.Server, srv AmazingServer) {
@@ -280,7 +295,7 @@ func RegisterAmazingServer(s *grpc.Server, srv AmazingServer) {
 }
 
 func _Amazing_UniarySelect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PartialTable)
+	in := new(examples_test.PartialTable)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -292,13 +307,31 @@ func _Amazing_UniarySelect_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: "/examples.Amazing/UniarySelect",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AmazingServer).UniarySelect(ctx, req.(*PartialTable))
+		return srv.(AmazingServer).UniarySelect(ctx, req.(*examples_test.PartialTable))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Amazing_UniarySelectWithHooks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(examples_test.PartialTable)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AmazingServer).UniarySelectWithHooks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/examples.Amazing/UniarySelectWithHooks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AmazingServer).UniarySelectWithHooks(ctx, req.(*examples_test.PartialTable))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Amazing_ServerStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Name)
+	m := new(examples_test.Name)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -306,7 +339,7 @@ func _Amazing_ServerStream_Handler(srv interface{}, stream grpc.ServerStream) er
 }
 
 type Amazing_ServerStreamServer interface {
-	Send(*ExampleTable) error
+	Send(*examples_test.ExampleTable) error
 	grpc.ServerStream
 }
 
@@ -314,7 +347,28 @@ type amazingServerStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *amazingServerStreamServer) Send(m *ExampleTable) error {
+func (x *amazingServerStreamServer) Send(m *examples_test.ExampleTable) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Amazing_ServerStreamWithHooks_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(examples_test.Name)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(AmazingServer).ServerStreamWithHooks(m, &amazingServerStreamWithHooksServer{stream})
+}
+
+type Amazing_ServerStreamWithHooksServer interface {
+	Send(*examples_test.ExampleTable) error
+	grpc.ServerStream
+}
+
+type amazingServerStreamWithHooksServer struct {
+	grpc.ServerStream
+}
+
+func (x *amazingServerStreamWithHooksServer) Send(m *examples_test.ExampleTable) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -323,8 +377,8 @@ func _Amazing_Bidirectional_Handler(srv interface{}, stream grpc.ServerStream) e
 }
 
 type Amazing_BidirectionalServer interface {
-	Send(*ExampleTable) error
-	Recv() (*ExampleTable, error)
+	Send(*examples_test.ExampleTable) error
+	Recv() (*examples_test.ExampleTable, error)
 	grpc.ServerStream
 }
 
@@ -332,12 +386,38 @@ type amazingBidirectionalServer struct {
 	grpc.ServerStream
 }
 
-func (x *amazingBidirectionalServer) Send(m *ExampleTable) error {
+func (x *amazingBidirectionalServer) Send(m *examples_test.ExampleTable) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *amazingBidirectionalServer) Recv() (*ExampleTable, error) {
-	m := new(ExampleTable)
+func (x *amazingBidirectionalServer) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Amazing_BidirectionalWithHooks_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AmazingServer).BidirectionalWithHooks(&amazingBidirectionalWithHooksServer{stream})
+}
+
+type Amazing_BidirectionalWithHooksServer interface {
+	Send(*examples_test.ExampleTable) error
+	Recv() (*examples_test.ExampleTable, error)
+	grpc.ServerStream
+}
+
+type amazingBidirectionalWithHooksServer struct {
+	grpc.ServerStream
+}
+
+func (x *amazingBidirectionalWithHooksServer) Send(m *examples_test.ExampleTable) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *amazingBidirectionalWithHooksServer) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -349,8 +429,8 @@ func _Amazing_ClientStream_Handler(srv interface{}, stream grpc.ServerStream) er
 }
 
 type Amazing_ClientStreamServer interface {
-	SendAndClose(*NumRows) error
-	Recv() (*ExampleTable, error)
+	SendAndClose(*examples_test.NumRows) error
+	Recv() (*examples_test.ExampleTable, error)
 	grpc.ServerStream
 }
 
@@ -358,12 +438,38 @@ type amazingClientStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *amazingClientStreamServer) SendAndClose(m *NumRows) error {
+func (x *amazingClientStreamServer) SendAndClose(m *examples_test.NumRows) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *amazingClientStreamServer) Recv() (*ExampleTable, error) {
-	m := new(ExampleTable)
+func (x *amazingClientStreamServer) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Amazing_ClientStreamWithHook_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AmazingServer).ClientStreamWithHook(&amazingClientStreamWithHookServer{stream})
+}
+
+type Amazing_ClientStreamWithHookServer interface {
+	SendAndClose(*examples_test.NumRows) error
+	Recv() (*examples_test.ExampleTable, error)
+	grpc.ServerStream
+}
+
+type amazingClientStreamWithHookServer struct {
+	grpc.ServerStream
+}
+
+func (x *amazingClientStreamWithHookServer) SendAndClose(m *examples_test.NumRows) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *amazingClientStreamWithHookServer) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -378,11 +484,20 @@ var _Amazing_serviceDesc = grpc.ServiceDesc{
 			MethodName: "UniarySelect",
 			Handler:    _Amazing_UniarySelect_Handler,
 		},
+		{
+			MethodName: "UniarySelectWithHooks",
+			Handler:    _Amazing_UniarySelectWithHooks_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "ServerStream",
 			Handler:       _Amazing_ServerStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ServerStreamWithHooks",
+			Handler:       _Amazing_ServerStreamWithHooks_Handler,
 			ServerStreams: true,
 		},
 		{
@@ -392,8 +507,19 @@ var _Amazing_serviceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 		{
+			StreamName:    "BidirectionalWithHooks",
+			Handler:       _Amazing_BidirectionalWithHooks_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
 			StreamName:    "ClientStream",
 			Handler:       _Amazing_ClientStream_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "ClientStreamWithHook",
+			Handler:       _Amazing_ClientStreamWithHook_Handler,
 			ClientStreams: true,
 		},
 	},
@@ -403,43 +529,49 @@ var _Amazing_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("examples/sql/basic/basic.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 604 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x94, 0xcf, 0x6e, 0xd3, 0x30,
-	0x1c, 0xc7, 0x49, 0xf7, 0x8f, 0x79, 0x65, 0x02, 0x0b, 0x50, 0x95, 0x03, 0xb3, 0xa2, 0x1c, 0xb2,
-	0xa9, 0x4b, 0xd6, 0x4e, 0x9a, 0x34, 0xa1, 0x0a, 0x75, 0x5b, 0x80, 0x89, 0x2d, 0x9b, 0x92, 0x14,
-	0x04, 0x42, 0x0c, 0x37, 0xf1, 0x3a, 0x43, 0x12, 0x07, 0xc7, 0x05, 0xc6, 0x91, 0x23, 0xa7, 0xed,
-	0x05, 0x78, 0x06, 0x8e, 0x7b, 0x0a, 0x9e, 0x09, 0x39, 0x49, 0xbb, 0xa8, 0x53, 0x91, 0x90, 0xb8,
-	0x58, 0xfd, 0xd5, 0xdf, 0xe8, 0xf3, 0xf1, 0x57, 0x4e, 0xc0, 0x23, 0xf2, 0x15, 0xc7, 0x69, 0x44,
-	0x32, 0x2b, 0xfb, 0x14, 0x59, 0x7d, 0x9c, 0xd1, 0xa0, 0x58, 0xcd, 0x94, 0x33, 0xc1, 0xe0, 0xed,
-	0xd1, 0xbe, 0xfa, 0x20, 0x25, 0x3c, 0xa3, 0x99, 0xb0, 0x58, 0x2a, 0x28, 0x4b, 0xb2, 0x22, 0xa0,
-	0xae, 0x0c, 0x18, 0x1b, 0x44, 0xc4, 0xca, 0xa7, 0xfe, 0xf0, 0xd4, 0x12, 0x34, 0x26, 0x99, 0xc0,
-	0x71, 0x5a, 0x06, 0xd0, 0x64, 0x20, 0x24, 0x59, 0xc0, 0x69, 0x2a, 0x18, 0x2f, 0x13, 0x8d, 0xb1,
-	0x83, 0x20, 0x99, 0xc8, 0x97, 0x62, 0x47, 0x8b, 0x41, 0xdd, 0x2e, 0xf6, 0x7c, 0xdc, 0x8f, 0x08,
-	0x5c, 0x06, 0x35, 0x1a, 0x36, 0x14, 0xa4, 0x18, 0x33, 0x6e, 0x8d, 0x86, 0x70, 0x1b, 0x80, 0x4c,
-	0x60, 0x2e, 0x4e, 0x24, 0xb4, 0x51, 0x43, 0x8a, 0xb1, 0xd4, 0x56, 0xcd, 0x02, 0x68, 0x8e, 0x80,
-	0xa6, 0x3f, 0x32, 0x72, 0x17, 0xf3, 0xb4, 0x9c, 0x21, 0x04, 0xb3, 0x09, 0x8e, 0x49, 0x63, 0x06,
-	0x29, 0xc6, 0xa2, 0x9b, 0xff, 0xd6, 0x5e, 0x83, 0xfa, 0x31, 0xe6, 0x82, 0xe2, 0xe8, 0x7f, 0xe3,
-	0x34, 0x15, 0xcc, 0x3a, 0xb8, 0x82, 0x55, 0x2a, 0xd8, 0x15, 0xb0, 0xe0, 0x0c, 0x63, 0x97, 0x7d,
-	0xc9, 0xe0, 0x7d, 0x30, 0x17, 0xb0, 0x61, 0x22, 0x4a, 0x68, 0x31, 0xb4, 0x7f, 0xcf, 0x81, 0x85,
-	0x6e, 0x8c, 0xbf, 0xd1, 0x64, 0x00, 0x2f, 0x14, 0x50, 0xef, 0x25, 0x14, 0xf3, 0x73, 0x8f, 0x44,
-	0x24, 0x10, 0xf0, 0xa1, 0x39, 0xaa, 0xcf, 0xac, 0xca, 0xab, 0x95, 0xff, 0xab, 0x1d, 0x6a, 0xc7,
-	0xdf, 0xaf, 0x2e, 0x6b, 0x2f, 0xc0, 0xb6, 0x67, 0x1f, 0xd8, 0xbb, 0x3e, 0x5a, 0x43, 0xa7, 0x9c,
-	0xc5, 0xa8, 0xcc, 0x9e, 0x08, 0x99, 0x41, 0xaf, 0xce, 0x08, 0x27, 0x88, 0x86, 0x1d, 0xbd, 0x85,
-	0xba, 0xce, 0x1e, 0xba, 0x3e, 0x75, 0x47, 0x6f, 0x43, 0x59, 0x45, 0xa5, 0x08, 0x98, 0x82, 0xba,
-	0x47, 0xf8, 0x67, 0xc2, 0x3d, 0xc1, 0x09, 0x8e, 0xe1, 0xf2, 0x35, 0x59, 0x9e, 0x79, 0xaa, 0xc9,
-	0x96, 0x34, 0x69, 0x81, 0xd5, 0xb1, 0xc9, 0x53, 0xf7, 0xe8, 0x70, 0xd2, 0xe4, 0xb9, 0xed, 0xda,
-	0x48, 0xd6, 0xd4, 0xd1, 0x5b, 0x30, 0xef, 0x6b, 0x43, 0x81, 0xbf, 0x14, 0x70, 0x67, 0x87, 0x86,
-	0x94, 0x93, 0x40, 0xde, 0x45, 0x1c, 0xc1, 0x29, 0x8c, 0xa9, 0xec, 0x8f, 0x92, 0x7d, 0x0a, 0x9c,
-	0xde, 0xf1, 0x5e, 0xd7, 0xb7, 0x27, 0xa0, 0x9e, 0xed, 0x23, 0xe3, 0xfa, 0x80, 0xcd, 0x9c, 0xbf,
-	0x8a, 0x3a, 0xc8, 0xd0, 0xdb, 0x4d, 0xa4, 0x6f, 0xae, 0x96, 0x5a, 0x45, 0x41, 0xae, 0xed, 0xf7,
-	0x5c, 0x67, 0xdf, 0x79, 0x86, 0xd6, 0x6e, 0x54, 0x93, 0x0b, 0x1b, 0xca, 0x86, 0x02, 0x7f, 0x2a,
-	0xa0, 0xbe, 0x1b, 0x51, 0x92, 0x88, 0xb2, 0xa5, 0x69, 0xc6, 0xf7, 0x2a, 0xed, 0x15, 0xb7, 0x42,
-	0xc3, 0x52, 0xf6, 0x2d, 0xd8, 0xdb, 0x77, 0x3c, 0xdb, 0xf5, 0xd1, 0xbe, 0xe3, 0x1f, 0x4d, 0x18,
-	0x1b, 0x34, 0x6c, 0xa2, 0x9b, 0xc6, 0x2f, 0xbb, 0x07, 0x3d, 0xdb, 0x43, 0x86, 0xde, 0x6a, 0xa2,
-	0x52, 0x7d, 0x9a, 0xa2, 0xfa, 0xe1, 0xc7, 0xd5, 0x65, 0xed, 0x3d, 0x78, 0x07, 0xfe, 0x72, 0xa3,
-	0xef, 0x2e, 0x69, 0xf3, 0x87, 0xe7, 0x72, 0x5c, 0xdb, 0x1a, 0x50, 0x71, 0x36, 0xec, 0x9b, 0x01,
-	0x8b, 0x2d, 0x11, 0x24, 0x41, 0xc4, 0x86, 0x61, 0xf1, 0x8e, 0x07, 0xeb, 0x03, 0x92, 0xac, 0x8f,
-	0xbe, 0x16, 0xe3, 0x77, 0x3b, 0x3e, 0x97, 0xb8, 0x8b, 0xab, 0xcb, 0xda, 0xad, 0x9d, 0xee, 0x9b,
-	0x27, 0xff, 0xfa, 0xf8, 0xf8, 0xf3, 0xf4, 0x38, 0x5f, 0xfb, 0xf3, 0x79, 0x78, 0xf3, 0x4f, 0x00,
-	0x00, 0x00, 0xff, 0xff, 0x08, 0xd1, 0x19, 0xca, 0xc1, 0x04, 0x00, 0x00,
+	// 696 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x96, 0x41, 0x4f, 0x13, 0x41,
+	0x14, 0xc7, 0xdd, 0x8d, 0x41, 0x33, 0x62, 0x34, 0xa3, 0xa0, 0xa9, 0x89, 0x4e, 0x48, 0x0f, 0x85,
+	0x94, 0x2d, 0x85, 0x84, 0xc4, 0x18, 0x62, 0x0a, 0xac, 0x42, 0x84, 0xa5, 0xee, 0x6e, 0x25, 0x21,
+	0x46, 0x9c, 0x6e, 0xa7, 0x65, 0x64, 0x77, 0xa7, 0xce, 0x4c, 0x55, 0x38, 0x1a, 0x4f, 0x7a, 0xb1,
+	0x57, 0x3f, 0x01, 0x27, 0x4f, 0x1e, 0x88, 0x9f, 0xc0, 0x0f, 0xe0, 0xc9, 0x93, 0x67, 0x0f, 0x9e,
+	0xfc, 0x00, 0x66, 0x76, 0xdb, 0xb2, 0x2c, 0x01, 0x85, 0xa2, 0x97, 0x49, 0xa7, 0xf3, 0xde, 0xcc,
+	0xff, 0xfd, 0xde, 0x7b, 0x33, 0x0b, 0x6e, 0x92, 0x57, 0x38, 0x68, 0xfa, 0x44, 0x14, 0xc4, 0x73,
+	0xbf, 0x50, 0xc5, 0x82, 0x7a, 0xf1, 0x68, 0x34, 0x39, 0x93, 0x0c, 0x9e, 0xef, 0xae, 0x67, 0x86,
+	0x9a, 0x84, 0x0b, 0x2a, 0x64, 0x81, 0x35, 0x25, 0x65, 0xa1, 0x88, 0x0d, 0x32, 0xb7, 0x1a, 0x8c,
+	0x35, 0x7c, 0x52, 0x88, 0x66, 0xd5, 0x56, 0xbd, 0x20, 0x69, 0x40, 0x84, 0xc4, 0x41, 0xb3, 0x63,
+	0x80, 0xd2, 0x06, 0x35, 0x22, 0x3c, 0x4e, 0x9b, 0x92, 0xf1, 0x8e, 0xc5, 0xf5, 0x9e, 0x06, 0x49,
+	0x84, 0x8c, 0x86, 0x78, 0x65, 0xf2, 0xfb, 0x25, 0x70, 0xae, 0x14, 0xe0, 0x6d, 0x1a, 0x36, 0xe0,
+	0x07, 0x0d, 0x0c, 0x56, 0x42, 0x8a, 0xf9, 0x96, 0x43, 0x7c, 0xe2, 0x49, 0x78, 0xc3, 0xe8, 0xfa,
+	0x19, 0x91, 0x4b, 0x19, 0x73, 0x49, 0xb1, 0xef, 0xe2, 0xaa, 0x4f, 0x32, 0xe9, 0x45, 0x33, 0x9e,
+	0x45, 0x8b, 0x23, 0xe5, 0xd7, 0xbb, 0x6d, 0xfd, 0x01, 0xb8, 0xed, 0x98, 0x4b, 0xe6, 0x9c, 0x8b,
+	0xc6, 0x50, 0x9d, 0xb3, 0x00, 0x75, 0x1c, 0xd6, 0xa5, 0xb2, 0x41, 0xab, 0x1b, 0x84, 0x13, 0x44,
+	0x6b, 0x33, 0xd9, 0x22, 0x2a, 0x59, 0xf3, 0x48, 0x48, 0xcc, 0xe5, 0xba, 0x0a, 0x6e, 0x26, 0x3b,
+	0x09, 0x75, 0x5a, 0x83, 0x60, 0xef, 0x2f, 0xf8, 0x45, 0x07, 0x43, 0x49, 0x71, 0xab, 0x54, 0x6e,
+	0x2c, 0x30, 0xb6, 0x29, 0xfa, 0x50, 0xf9, 0x4b, 0x53, 0x32, 0x7f, 0x6a, 0xa7, 0xa8, 0xd3, 0x2e,
+	0x83, 0xe1, 0xa4, 0xcc, 0x59, 0x52, 0x67, 0x9c, 0x28, 0xa1, 0x70, 0xba, 0x41, 0xe5, 0x46, 0xab,
+	0x6a, 0x78, 0x2c, 0x28, 0x48, 0x2f, 0xf4, 0x7c, 0xd6, 0xaa, 0xc5, 0x39, 0xf3, 0xc6, 0x1b, 0x24,
+	0x1c, 0xef, 0x66, 0xbf, 0x97, 0xab, 0x60, 0x4b, 0xed, 0xb8, 0xb6, 0xb2, 0x3f, 0xf0, 0x52, 0x5d,
+	0x12, 0xde, 0xcf, 0x86, 0x70, 0x1b, 0x0c, 0x3a, 0x84, 0xbf, 0x20, 0xdc, 0x91, 0x9c, 0xe0, 0x00,
+	0x5e, 0x49, 0x31, 0xb2, 0x70, 0xf0, 0x07, 0x70, 0xd3, 0x8a, 0x5b, 0x11, 0x8c, 0xf6, 0xb0, 0xdd,
+	0xb3, 0x57, 0x96, 0xd3, 0xd8, 0x16, 0x4c, 0xdb, 0x44, 0x21, 0x56, 0x98, 0x8a, 0xf0, 0xac, 0xfa,
+	0x31, 0xa1, 0xc1, 0x1d, 0x1d, 0x0c, 0x25, 0x0f, 0xdf, 0x4b, 0xe3, 0xf1, 0x55, 0x7c, 0x8b, 0xd2,
+	0xf7, 0x55, 0x3b, 0xb6, 0x0e, 0x95, 0xa4, 0xa4, 0x88, 0xd3, 0x49, 0x52, 0x72, 0xc7, 0xbe, 0x93,
+	0x34, 0xa1, 0xc1, 0xcf, 0x1a, 0xb8, 0x38, 0x4b, 0x6b, 0x94, 0x13, 0x4f, 0x5d, 0x07, 0xd8, 0x87,
+	0x47, 0xd1, 0x38, 0x1a, 0xd5, 0xa6, 0x22, 0x55, 0x07, 0x56, 0xa5, 0x3c, 0x5f, 0x72, 0xcd, 0x14,
+	0x21, 0xc7, 0x74, 0x51, 0x6e, 0xaf, 0x84, 0xf3, 0x11, 0xac, 0x51, 0x34, 0x83, 0x72, 0xd9, 0xc9,
+	0x3c, 0xca, 0x4e, 0x8d, 0x76, 0x18, 0xc6, 0x2d, 0x60, 0x9b, 0x6e, 0xc5, 0xb6, 0x16, 0xad, 0xfb,
+	0x68, 0xec, 0x40, 0x93, 0x46, 0x74, 0x73, 0xda, 0x84, 0x06, 0x7f, 0xe8, 0x60, 0x78, 0x9f, 0xf8,
+	0xc3, 0xfb, 0xf5, 0xef, 0xa3, 0x68, 0xeb, 0x2a, 0x8c, 0x77, 0xfa, 0xff, 0x89, 0xc3, 0x7e, 0x08,
+	0xae, 0xed, 0x0b, 0xe1, 0x14, 0xca, 0xa4, 0x9c, 0xa2, 0xd2, 0x77, 0x9d, 0x44, 0xb0, 0x77, 0x34,
+	0x30, 0x38, 0xe7, 0x53, 0x12, 0xca, 0x4e, 0x47, 0x1f, 0x89, 0x78, 0x38, 0xdd, 0x68, 0xad, 0xc0,
+	0x66, 0x2f, 0xc5, 0x08, 0x56, 0x70, 0x1f, 0x83, 0xf9, 0x45, 0xcb, 0x31, 0x6d, 0x17, 0x2d, 0x5a,
+	0xee, 0x4a, 0x0a, 0x70, 0x8e, 0xd6, 0xf2, 0xe8, 0x20, 0xe0, 0x47, 0xa5, 0xa5, 0x8a, 0xe9, 0xa0,
+	0x5c, 0xb6, 0x98, 0x47, 0x1d, 0xd2, 0x87, 0x55, 0x06, 0x7c, 0xa3, 0x83, 0xab, 0x49, 0xa9, 0xdd,
+	0xb2, 0x38, 0x99, 0xe4, 0x4f, 0xd1, 0x0d, 0xf0, 0x51, 0xfb, 0x97, 0xa2, 0xd5, 0x65, 0x91, 0x54,
+	0xdc, 0x7f, 0x15, 0xe4, 0xb4, 0xcc, 0xb3, 0xb7, 0xbb, 0x6d, 0xfd, 0x29, 0x78, 0x02, 0x32, 0x46,
+	0xfc, 0x78, 0x1b, 0xdd, 0xc7, 0xdb, 0x70, 0xbb, 0xaf, 0xfb, 0xe5, 0x0b, 0x23, 0x03, 0xcb, 0x5b,
+	0x6a, 0x3a, 0x76, 0xc2, 0x83, 0xde, 0xef, 0xb6, 0xf5, 0x33, 0xb3, 0xa5, 0xb5, 0xbb, 0xc7, 0x75,
+	0xef, 0x7d, 0xa9, 0xdc, 0x89, 0xc6, 0xea, 0x40, 0x64, 0x3c, 0xf5, 0x3b, 0x00, 0x00, 0xff, 0xff,
+	0x10, 0x85, 0x0b, 0xbd, 0xcc, 0x08, 0x00, 0x00,
 }

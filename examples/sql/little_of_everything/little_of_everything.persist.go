@@ -40,8 +40,10 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 		TableId      int32
 		TestField    test.Test
 		Value        string
+		err          error
 	)
-	err := s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.TableId, mytime.MyTime{}.ToSql(req.StartTime)).
+
+	err = s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.TableId, mytime.MyTime{}.ToSql(req.StartTime)).
 		Scan(&TableId, &Key, &Value, &InnerMessage, &InnerEnum, &StringArray, &BytesField, &StartTime, &TestField)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -63,6 +65,7 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 		TestField:    &TestField,
 		Value:        Value,
 	}
+
 	return res, nil
 }
 
@@ -78,8 +81,10 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 		TableId      int32
 		TestField    test.Test
 		Value        string
+		err          error
 	)
-	err := s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.Id).
+
+	err = s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.Id).
 		Scan(&TableId, &Key, &Value, &InnerMessage, &InnerEnum, &StringArray, &BytesField, &StartTime, &TestField)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -101,6 +106,7 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 		TestField:    &TestField,
 		Value:        Value,
 	}
+
 	return res, nil
 }
 
@@ -116,7 +122,9 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 		TableId      int32
 		TestField    test.Test
 		Value        string
+		err          error
 	)
+
 	rows, err := s.SqlDB.Query("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.TableId)
 	if err != nil {
 		return grpc.Errorf(codes.Unknown, err.Error())
@@ -128,7 +136,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -148,6 +156,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 			TestField:    &TestField,
 			Value:        Value,
 		}
+
 		stream.Send(res)
 	}
 	return nil
@@ -155,11 +164,12 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 
 // sql client streaming ClientStreamingExample
 func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_ClientStreamingExampleServer) error {
-	stmt, err := s.SqlDB.Prepare("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1")
+	var err error
+	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err
 	}
-	tx, err := s.SqlDB.Begin()
+	stmt, err := tx.Prepare("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1")
 	if err != nil {
 		return err
 	}
@@ -173,13 +183,14 @@ func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_Clie
 			tx.Rollback()
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		affected, err := tx.Stmt(stmt).Exec(req.TableId)
+
+		affected, err := stmt.Exec(req.TableId)
 		if err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
