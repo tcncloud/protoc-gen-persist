@@ -78,10 +78,30 @@ service Amazing {
       arguments: ["id", "start_time"]
     };
   };
+  rpc UniarySelectWithHooks(PartialTable) returns (ExampleTable) {
+    option (persist.ql) = {
+      query: "SELECT * from example_table Where id=$1 AND start_time=$2"
+      arguments: ["id", "start_time"]
+      before: {
+        name: "BeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+      }
+    };
+  };
   rpc ServerStream(Name) returns (stream ExampleTable) {
     option (persist.ql) = {
       query: "SELECT * FROM example_table WHERE name=$1"
       arguments: ["name"]
+    };
+  };
+  rpc ServerStreamWithHooks(Name) returns (stream ExampleTable) {
+    option (persist.ql) = {
+      query: "SELECT * FROM example_table WHERE name=$1"
+      arguments: ["name"]
+      before: {
+        name: "BeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+      }
     };
   };
   rpc Bidirectional(stream ExampleTable) returns (stream ExampleTable) {
@@ -90,10 +110,30 @@ service Amazing {
       arguments: ["id", "start_time", "name"]
     };
   };
+  rpc BidirectionalWithHooks(stream ExampleTable) returns (stream ExampleTable) {
+    option (persist.ql) = {
+      query: "UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *"
+      arguments: ["id", "start_time", "name"]
+      before: {
+        name: "BeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+      }
+    };
+  };
   rpc ClientStream(stream ExampleTable) returns (NumRows) {
     option (persist.ql) = {
       query: "INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)"
       arguments: ["id", "start_time", "name"]
+    };
+  };
+  rpc ClientStreamWithHook(stream ExampleTable) returns (NumRows) {
+    option (persist.ql) = {
+      query: "INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)"
+      arguments: ["id", "start_time", "name"]
+      before: {
+        name: "BeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+      }
     };
   };
 }
