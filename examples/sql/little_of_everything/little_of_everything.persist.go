@@ -40,9 +40,10 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 		TableId      int32
 		TestField    test.Test
 		Value        string
+		err          error
 	)
 
-	err := s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.TableId, mytime.MyTime{}.ToSql(req.StartTime)).
+	err = s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.TableId, mytime.MyTime{}.ToSql(req.StartTime)).
 		Scan(&TableId, &Key, &Value, &InnerMessage, &InnerEnum, &StringArray, &BytesField, &StartTime, &TestField)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -80,9 +81,10 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 		TableId      int32
 		TestField    test.Test
 		Value        string
+		err          error
 	)
 
-	err := s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.Id).
+	err = s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.Id).
 		Scan(&TableId, &Key, &Value, &InnerMessage, &InnerEnum, &StringArray, &BytesField, &StartTime, &TestField)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -120,6 +122,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 		TableId      int32
 		TestField    test.Test
 		Value        string
+		err          error
 	)
 
 	rows, err := s.SqlDB.Query("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.TableId)
@@ -161,6 +164,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 
 // sql client streaming ClientStreamingExample
 func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_ClientStreamingExampleServer) error {
+	var err error
 	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err

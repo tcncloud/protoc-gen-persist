@@ -10,6 +10,7 @@ import (
 	strings "strings"
 
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -28,14 +29,15 @@ func NewAmazingImpl(driver, connString string) (*AmazingImpl, error) {
 }
 
 // sql unary UniarySelect
-func (s *AmazingImpl) UniarySelect(ctx context.Context, req *PartialTable) (*ExampleTable, error) {
+func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	var (
 		Id        int64
 		Name      string
 		StartTime mytime.MyTime
+		err       error
 	)
 
-	err := s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time=$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
+	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time=$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
 		Scan(&Id, &StartTime, &Name)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -45,7 +47,7 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *PartialTable) (*Exa
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := &ExampleTable{
+	res := &test.ExampleTable{
 
 		Id:        Id,
 		Name:      Name,
@@ -56,16 +58,19 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *PartialTable) (*Exa
 }
 
 // sql unary UniarySelectWithHooks
-func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *PartialTable) (*ExampleTable, error) {
+func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	var (
 		Id        int64
 		Name      string
 		StartTime mytime.MyTime
+		err       error
 	)
 
-	beforeRes, err := mytime.BeforeHook(req)
+	beforeRes, err := mytime.UniarySelectBeforeHook(req)
 	if err != nil {
+
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
+
 	}
 	if beforeRes != nil {
 
@@ -73,7 +78,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *PartialTab
 
 	}
 
-	err := s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time=$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
+	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time=$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
 		Scan(&Id, &StartTime, &Name)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -83,27 +88,30 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *PartialTab
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := &ExampleTable{
+	res := &test.ExampleTable{
 
 		Id:        Id,
 		Name:      Name,
 		StartTime: StartTime.ToProto(),
 	}
 
-	err := mytime.AfterHook(res)
+	err = mytime.UniarySelectAfterHook(res)
 	if err != nil {
+
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
+
 	}
 
 	return res, nil
 }
 
 // sql server streaming ServerStream
-func (s *AmazingImpl) ServerStream(req *Name, stream Amazing_ServerStreamServer) error {
+func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
 	var (
 		Id        int64
 		Name      string
 		StartTime mytime.MyTime
+		err       error
 	)
 
 	rows, err := s.SqlDB.Query("SELECT * FROM example_table WHERE name=$1", req.Name)
@@ -125,7 +133,7 @@ func (s *AmazingImpl) ServerStream(req *Name, stream Amazing_ServerStreamServer)
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &ExampleTable{
+		res := &test.ExampleTable{
 
 			Id:        Id,
 			Name:      Name,
@@ -138,20 +146,26 @@ func (s *AmazingImpl) ServerStream(req *Name, stream Amazing_ServerStreamServer)
 }
 
 // sql server streaming ServerStreamWithHooks
-func (s *AmazingImpl) ServerStreamWithHooks(req *Name, stream Amazing_ServerStreamWithHooksServer) error {
+func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
 	var (
 		Id        int64
 		Name      string
 		StartTime mytime.MyTime
+		err       error
 	)
 
-	beforeRes, err := mytime.BeforeHook(req)
+	beforeRes, err := mytime.ServerStreamBeforeHook(req)
 	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
+
+		return grpc.Errorf(codes.Unknown, err.Error())
+
 	}
 	if beforeRes != nil {
 
-		return beforeRes, nil
+		err = stream.Send(beforeRes)
+		if err != nil {
+			return err
+		}
 
 	}
 
@@ -174,16 +188,18 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *Name, stream Amazing_ServerStre
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &ExampleTable{
+		res := &test.ExampleTable{
 
 			Id:        Id,
 			Name:      Name,
 			StartTime: StartTime.ToProto(),
 		}
 
-		err := mytime.AfterHook(res)
+		err = mytime.ServerStreamAfterHook(res)
 		if err != nil {
-			return nil, grpc.Errorf(codes.Unknown, err.Error())
+
+			return grpc.Errorf(codes.Unknown, err.Error())
+
 		}
 
 		stream.Send(res)
@@ -193,6 +209,7 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *Name, stream Amazing_ServerStre
 
 // sql bidi streaming Bidirectional
 func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
+	var err error
 	stmt, err := s.SqlDB.Prepare("UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *")
 	if err != nil {
 		return err
@@ -222,7 +239,7 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &ExampleTable{
+		res := &test.ExampleTable{
 
 			Id:        Id,
 			Name:      Name,
@@ -238,6 +255,7 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 
 // sql bidi streaming BidirectionalWithHooks
 func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHooksServer) error {
+	var err error
 	stmt, err := s.SqlDB.Prepare("UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *")
 	if err != nil {
 		return err
@@ -252,13 +270,15 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		beforeRes, err := mytime.BeforeHook(req)
+		beforeRes, err := mytime.BidirectionalBeforeHook(req)
 		if err != nil {
-			return nil, grpc.Errorf(codes.Unknown, err.Error())
+
+			return grpc.Errorf(codes.Unknown, err.Error())
+
 		}
 		if beforeRes != nil {
 
-			err := stream.Send(beforeRes)
+			err = stream.Send(beforeRes)
 			if err != nil {
 				return grpc.Errorf(codes.Unknown, err.Error())
 			}
@@ -281,16 +301,18 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &ExampleTable{
+		res := &test.ExampleTable{
 
 			Id:        Id,
 			Name:      Name,
 			StartTime: StartTime.ToProto(),
 		}
 
-		err := mytime.AfterHook(res)
+		err = mytime.BidirectionalAfterHook(res)
 		if err != nil {
-			return nil, grpc.Errorf(codes.Unknown, err.Error())
+
+			return grpc.Errorf(codes.Unknown, err.Error())
+
 		}
 
 		if err := stream.Send(res); err != nil {
@@ -302,6 +324,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 
 // sql client streaming ClientStream
 func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
+	var err error
 	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err
@@ -343,12 +366,13 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 		fmt.Println("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
-	stream.SendAndClose(&NumRows{Count: totalAffected})
+	stream.SendAndClose(&test.NumRows{Count: totalAffected})
 	return nil
 }
 
 // sql client streaming ClientStreamWithHook
 func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookServer) error {
+	var err error
 	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err
@@ -368,9 +392,11 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		beforeRes, err := mytime.BeforeHook(req)
+		beforeRes, err := mytime.ClientStreamBeforeHook(req)
 		if err != nil {
-			return nil, grpc.Errorf(codes.Unknown, err.Error())
+
+			return grpc.Errorf(codes.Unknown, err.Error())
+
 		}
 		if beforeRes != nil {
 
@@ -400,6 +426,6 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 		fmt.Println("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
-	stream.SendAndClose(&NumRows{Count: totalAffected})
+	stream.SendAndClose(&test.NumRows{Count: totalAffected})
 	return nil
 }
