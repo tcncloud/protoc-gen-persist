@@ -55,6 +55,10 @@ message Name {
   string name = 1;
 }
 
+message Ids {
+  repeated int64 ids = 1;
+}
+
 message NumRows {
   int64 count = 1;
 }
