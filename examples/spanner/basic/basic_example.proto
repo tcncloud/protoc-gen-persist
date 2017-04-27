@@ -164,20 +164,6 @@ service MySpanner {
       }
     };
   };
-  rpc NoArgsWithHooks(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: "select * from example_table limit 1",
-      arguments: []
-      before: {
-        name: "NoArgsBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
-      }
-      after: {
-        name: "NoArgsAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
-      }
-    };
-  };
   rpc ServerStreamWithHooks(test.Name) returns (stream test.ExampleTable) {
     option (persist.ql) = {
       query: "SELECT * FROM example_table"
@@ -188,34 +174,6 @@ service MySpanner {
       }
       after: {
         name: "ServerStreamAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
-      }
-    };
-  };
-  rpc ClientStreamInsertWithHooks(stream test.ExampleTable) returns (test.NumRows) {
-    option (persist.ql) = {
-      query: "INSERT INTO example_table (id, start_time, name) VALUES (?, ?, ?)"
-      arguments: ["id", "start_time", "name"]
-      before: {
-        name: "ClientStreamInsertBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
-      }
-      after: {
-        name: "ClientStreamInsertAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
-      }
-    };
-  };
-  rpc ClientStreamDeleteWithHooks(stream test.ExampleTable) returns (test.NumRows) {
-    option (persist.ql) = {
-      query: "DELETE TABLE('example_table') START(?) END(?) KIND(CC)",
-      arguments: ["id", "id"],
-      before: {
-        name: "ClientStreamDeleteAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
-      }
-      after: {
-        name: "ClientStreamDeleteAfterHook"
         package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
       }
     };
