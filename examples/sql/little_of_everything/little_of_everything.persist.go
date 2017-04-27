@@ -53,7 +53,7 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := &ExampleTable1{
+	res := ExampleTable1{
 
 		BytesField:   BytesField,
 		InnerEnum:    ExampleTable1_InnerEnum(InnerEnum),
@@ -66,7 +66,7 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 		Value:        Value,
 	}
 
-	return res, nil
+	return &res, nil
 }
 
 // sql unary UnaryExample2
@@ -94,7 +94,7 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := &ExampleTable1{
+	res := ExampleTable1{
 
 		BytesField:   BytesField,
 		InnerEnum:    ExampleTable1_InnerEnum(InnerEnum),
@@ -107,7 +107,7 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 		Value:        Value,
 	}
 
-	return res, nil
+	return &res, nil
 }
 
 // sql server streaming ServerStreamSelect
@@ -144,7 +144,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &ExampleTable1{
+		res := ExampleTable1{
 
 			BytesField:   BytesField,
 			InnerEnum:    ExampleTable1_InnerEnum(InnerEnum),
@@ -157,7 +157,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 			Value:        Value,
 		}
 
-		stream.Send(res)
+		stream.Send(&res)
 	}
 	return nil
 }
@@ -173,7 +173,8 @@ func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_Clie
 	if err != nil {
 		return err
 	}
-	totalAffected := int64(0)
+
+	res := CountRows{}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -184,7 +185,7 @@ func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_Clie
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		affected, err := stmt.Exec(req.TableId)
+		_, err = stmt.Exec(req.TableId)
 		if err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
@@ -194,18 +195,13 @@ func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_Clie
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		num, err := affected.RowsAffected()
-		if err != nil {
-			tx.Rollback()
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		totalAffected += num
+
 	}
 	err = tx.Commit()
 	if err != nil {
 		fmt.Println("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
-	stream.SendAndClose(&CountRows{Count: totalAffected})
+	stream.SendAndClose(&res)
 	return nil
 }
