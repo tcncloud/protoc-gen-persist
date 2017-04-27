@@ -37,6 +37,7 @@ func NewBobsImpl(d string, conf *spanner.ClientConfig, opts ...option.ClientOpti
 // spanner unary select DeleteBobs
 func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 	var err error
+
 	start := make([]interface{}, 0)
 	end := make([]interface{}, 0)
 	var conv interface{}
@@ -60,14 +61,15 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := &Empty{}
-	return res, nil
+	res := Empty{}
+
+	return &res, nil
 }
 
 // spanner client streaming PutBobs
 func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
-	var totalAffected int64
 	var err error
+	res := NumRows{}
 	muts := make([]*spanner.Mutation, 0)
 	for {
 		req, err := stream.Recv()
@@ -76,7 +78,7 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 		} else if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		totalAffected += 1
+
 		//spanner client streaming insert
 		params := make([]interface{}, 0)
 		var conv interface{}
@@ -103,8 +105,14 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 		params = append(params, conv)
 		muts = append(muts, spanner.Insert("bob_table", []string{"id", "name", "start_time"}, params))
 
-		//In the future, we might do apply if muts gets really big,  but for now,
+		////////////////////////////// NOTE //////////////////////////////////////
+		// In the future, we might do apply if muts gets really big,  but for now,
 		// we only do one apply on the database with all the records stored in muts
+		//////////////////////////////////////////////////////////////////////////
+		// This isn't technically an "after" hook because it happens before the mutations
+		// are applied to the database.  Think of it as more of an aggregation hook for
+		// gathering the proto response
+
 	}
 	_, err = s.SpannerDB.Apply(context.Background(), muts)
 	if err != nil {
@@ -114,7 +122,7 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
-	stream.SendAndClose(&NumRows{Count: totalAffected})
+	stream.SendAndClose(&res)
 	return nil
 }
 
@@ -161,13 +169,14 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		res := &Bob{
+		res := Bob{
 
 			Id:        Id,
 			Name:      Name,
 			StartTime: StartTime.ToProto(),
 		}
-		stream.Send(res)
+
+		stream.Send(&res)
 	}
 	return nil
 }
