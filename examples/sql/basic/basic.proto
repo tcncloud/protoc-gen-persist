@@ -64,11 +64,11 @@ service Amazing {
       arguments: ["id", "start_time"]
       before: {
         name: "UniarySelectBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
       }
       after: {
         name: "UniarySelectAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
       }
     };
   };
@@ -84,11 +84,11 @@ service Amazing {
       arguments: ["name"]
       before: {
         name: "ServerStreamBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
       }
       after: {
         name: "ServerStreamAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
       }
     };
   };
@@ -104,11 +104,11 @@ service Amazing {
       arguments: ["id", "start_time", "name"]
       before: {
         name: "BidirectionalBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
       }
       after: {
         name: "BidirectionalAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
       }
     };
   };
@@ -124,11 +124,11 @@ service Amazing {
       arguments: ["id", "start_time", "name"]
       before: {
         name: "ClientStreamBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
       }
       after: {
         name: "ClientStreamAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
       }
     };
   };

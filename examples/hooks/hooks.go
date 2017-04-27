@@ -1,6 +1,6 @@
 // test before and after hooks
 
-package mytime
+package hooks
 
 import (
 	"fmt"
