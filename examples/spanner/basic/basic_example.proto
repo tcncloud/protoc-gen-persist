@@ -39,29 +39,6 @@ import "google/protobuf/descriptor.proto";
 
 import "examples/test/test.proto";
 
-message ExampleTable {
-  int64 id = 1;
-  google.protobuf.Timestamp start_time = 2;
-  string name = 3;
-}
-
-message PartialTable {
-  int64 id = 1;
-  google.protobuf.Timestamp start_time = 2;
-}
-
-message Name {
-  string name = 1;
-}
-
-message NumRows {
-  int64 count = 1;
-}
-message ExampleTableRange {
-  int64 start_id = 1;
-  int64 end_id = 2;
-}
-
 service MySpanner {
   option (persist.service_type) = SPANNER;
 
@@ -76,58 +53,185 @@ service MySpanner {
     ]
   };
 
-  rpc UniaryInsert(ExampleTable) returns (ExampleTable) {
+  rpc UniaryInsert(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
       query: "Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"
       arguments: ["id", "start_time"]
     };
   };
-  rpc UniarySelect(ExampleTable) returns (ExampleTable) {
+  rpc UniarySelect(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
       query: "SELECT * from example_table Where id=? AND name=?"
       arguments: ["id", "name"]
     };
   };
-  rpc UniaryUpdate(ExampleTable) returns (PartialTable) {
+  rpc UniaryUpdate(test.ExampleTable) returns (test.PartialTable) {
     option (persist.ql) = {
       query: "Update example_table set start_time=?, name=\"oranges\" where id=?",
       arguments: ["start_time", "id"],
     };
   };
-  rpc UniaryDelete(ExampleTableRange) returns (ExampleTable) {
+  rpc UniaryDelete(test.ExampleTableRange) returns (test.ExampleTable) {
     option (persist.ql) = {
       query: "DELETE TABLE('example_table') START(?) END(?) KIND(CO)",
       arguments: ["start_id", "end_id"]
     };
   };
-  rpc NoArgs(ExampleTable) returns (ExampleTable) {
+  rpc NoArgs(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
       query: "select * from example_table limit 1",
       arguments: []
     };
   };
-  rpc ServerStream(Name) returns (stream ExampleTable) {
+  rpc ServerStream(test.Name) returns (stream test.ExampleTable) {
     option (persist.ql) = {
       query: "SELECT * FROM example_table"
       arguments: []
     };
   };
-  rpc ClientStreamInsert(stream ExampleTable) returns (NumRows) {
+  rpc ClientStreamInsert(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
       query: "INSERT INTO example_table (id, start_time, name) VALUES (?, ?, ?)"
       arguments: ["id", "start_time", "name"]
     };
   };
-  rpc ClientStreamDelete(stream ExampleTable) returns (NumRows) {
+  rpc ClientStreamDelete(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
       query: "DELETE TABLE('example_table') START(?) END(?) KIND(CC)",
       arguments: ["id", "id"],
     };
   };
-  rpc ClientStreamUpdate(stream ExampleTable) returns (NumRows) {
+  rpc ClientStreamUpdate(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
       query: "update example_table set start_time=?, name=? where id=?",
       arguments: ["start_time", "name", "id"]
+    };
+  }
+  // hook examples
+  rpc UniaryInsertWithHooks(test.ExampleTable) returns (test.ExampleTable) {
+    option (persist.ql) = {
+      query: "Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"
+      arguments: ["id", "start_time"]
+      before: {
+        name: "UniaryInsertBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+      after: {
+        name: "UniaryInsertAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+    };
+  };
+  rpc UniarySelectWithHook(test.ExampleTable) returns (test.ExampleTable) {
+    option (persist.ql) = {
+      query: "SELECT * from example_table Where id=? AND name=?"
+      arguments: ["id", "name"]
+      before: {
+        name: "UniaryInsertBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+      after: {
+        name: "UniaryInsertAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+    };
+  };
+  rpc UniaryUpdateWithHooks(test.ExampleTable) returns (test.PartialTable) {
+    option (persist.ql) = {
+      query: "Update example_table set start_time=?, name=\"oranges\" where id=?",
+      arguments: ["start_time", "id"],
+      before: {
+        name: "UniaryUpdateBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+      after: {
+        name: "UniaryUpdateAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+    };
+  };
+  rpc UniaryDeleteWithHooks(test.ExampleTableRange) returns (test.ExampleTable) {
+    option (persist.ql) = {
+      query: "DELETE TABLE('example_table') START(?) END(?) KIND(CO)",
+      arguments: ["start_id", "end_id"]
+      before: {
+        name: "UniaryDeleteBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+      after: {
+        name: "UniaryDeleteAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+    };
+  };
+  rpc NoArgsWithHooks(test.ExampleTable) returns (test.ExampleTable) {
+    option (persist.ql) = {
+      query: "select * from example_table limit 1",
+      arguments: []
+      before: {
+        name: "NoArgsBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+      after: {
+        name: "NoArgsAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+    };
+  };
+  rpc ServerStreamWithHooks(test.Name) returns (stream test.ExampleTable) {
+    option (persist.ql) = {
+      query: "SELECT * FROM example_table"
+      arguments: []
+      before: {
+        name: "ServerStreamBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+      after: {
+        name: "ServerStreamAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+    };
+  };
+  rpc ClientStreamInsertWithHooks(stream test.ExampleTable) returns (test.NumRows) {
+    option (persist.ql) = {
+      query: "INSERT INTO example_table (id, start_time, name) VALUES (?, ?, ?)"
+      arguments: ["id", "start_time", "name"]
+      before: {
+        name: "ClientStreamInsertBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+      after: {
+        name: "ClientStreamInsertAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+    };
+  };
+  rpc ClientStreamDeleteWithHooks(stream test.ExampleTable) returns (test.NumRows) {
+    option (persist.ql) = {
+      query: "DELETE TABLE('example_table') START(?) END(?) KIND(CC)",
+      arguments: ["id", "id"],
+      before: {
+        name: "ClientStreamDeleteAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+      after: {
+        name: "ClientStreamDeleteAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+    };
+  };
+  rpc ClientStreamUpdateWithHooks(stream test.ExampleTable) returns (test.NumRows) {
+    option (persist.ql) = {
+      query: "update example_table set start_time=?, name=? where id=?",
+      arguments: ["start_time", "name", "id"]
+      before: {
+        name: "ClientStreamUpdateBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
+      after: {
+        name: "ClientStreamUpdateAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
+      }
     };
   };
 }
