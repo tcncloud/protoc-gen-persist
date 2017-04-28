@@ -668,7 +668,7 @@ __Before Hook Notes__
 
 All before hooks share the same signature: ```func(*protoReq) (*protoRes, error)```
 
-but server streaming responses have the signature of: ```func(*protoRes) ([]*protores, error)```
+but server streaming before hooks have the signature of: ```func(*protoReq) ([]*protoRes, error)```
 
 the responses are looped through and streamed back to the client for server streaming calls if the array is not nil
 or empty, and then the function early returns without querying the database
