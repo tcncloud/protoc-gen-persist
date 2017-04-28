@@ -191,15 +191,12 @@ ex: ```rpc InsertUsers(stream User) returns (NumRowsInserted)```
 protoc-gen-persist generates a handler begins a transaction,  makes a prepared statement
 and executes that statement for every received request over the stream. If an error is encountered,
 the transaction is rolled back.  After all requests have been executed on the statment successfully
-the transaction is committed, and the number of times the query exectued will be returned. Client streaming
-queries assume your message response type  has a count field that is of type int64.  As stated before, your response message can
-have additional fields, but the field that is required to be on the response for a client streaming call
-is a count field that looks like this:
-```proto
-message NumRows {
-  int64 count = 1;
-}
-```
+the transaction is committed, and an empty instance of your proto response type is returned.
+An empty response is returned because protoc-gen-persist does not make assumptions on what the return
+type should be.  You can use an after hook to aggregate the data from the requests, and stream and populate
+the response with whatever you want.  Before and After hooks are explained in a later section.
+
+
 - For sql service types the streamed reqeusts are executed on the transaction right away, and the error is
 checked right away.  It is safe to stream any number of requests over before closing the stream.
 - For spanner service types the streamed requests are stored in a slice of mutations.  The mutations are
