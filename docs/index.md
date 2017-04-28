@@ -665,6 +665,7 @@ After hooks are called after the query is executed, and given the request, and t
 It is safe to dereference the response in your hook, so data aggregation is possible in client stream hooks.
 
 __Before Hook Notes__
+
 All before hooks share the same signature: ```func(*protoReq) (*protoRes, error)```
 
 but server streaming responses have the signature of: ```func(*protoRes) ([]*protores, error)```
