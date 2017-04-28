@@ -6,7 +6,7 @@ Protobuf plugin that generate a persistence layer backed by SQL or Spanner datab
 
 
 ## Rationale
-An opinionated protoc plugin that will help generate boiler plate go code for GRPC micro services projects that need to interact with a SQL or Spanner database. 
+An opinionated protoc plugin that will help generate boiler plate go code for GRPC micro services projects that need to interact with a SQL or Spanner database.
 The code generation is accomplished by providing a protobuf file with proper annotations, and then running the protoc cli tool with the `--go_out` option, and the `--persist_out` options set to the same directory.
 
 ## Installation
@@ -21,12 +21,12 @@ custom type mapping to/from the database, and spanner query parsing
 ## NOTE: This project is under development, use it at your own risk!
 
 
-## Version 0.1.0
+## Version 0.2.0
 
 
 ## Roadmap
  1. ~~type mapping~~
- 1. before & after callback function
+ 1. ~~before & after callback function~~
  1. add tests, lots of tests
  1. mongo
 
