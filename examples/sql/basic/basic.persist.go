@@ -163,10 +163,13 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 	}
 	if beforeRes != nil {
 
-		err = stream.Send(beforeRes)
-		if err != nil {
-			return err
+		for _, res := range beforeRes {
+			err = stream.Send(res)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
 
 	}
 

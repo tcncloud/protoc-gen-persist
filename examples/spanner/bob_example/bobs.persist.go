@@ -70,6 +70,7 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 	var err error
 	res := NumRows{}
+
 	muts := make([]*spanner.Mutation, 0)
 	for {
 		req, err := stream.Recv()
@@ -109,10 +110,6 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 		// In the future, we might do apply if muts gets really big,  but for now,
 		// we only do one apply on the database with all the records stored in muts
 		//////////////////////////////////////////////////////////////////////////
-		// This isn't technically an "after" hook because it happens before the mutations
-		// are applied to the database.  Think of it as more of an aggregation hook for
-		// gathering the proto response
-
 	}
 	_, err = s.SpannerDB.Apply(context.Background(), muts)
 	if err != nil {
@@ -122,6 +119,7 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
+
 	stream.SendAndClose(&res)
 	return nil
 }

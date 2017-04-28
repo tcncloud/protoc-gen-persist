@@ -153,13 +153,6 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 	params := make(map[string]interface{})
 	var conv interface{}
 
-	conv = req.Id
-
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	params["id"] = conv
-
 	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
 
 	if err != nil {
@@ -168,6 +161,13 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 	params["start_time"] = conv
 	conv = "oranges"
 	params["name"] = conv
+
+	conv = req.Id
+
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["id"] = conv
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.UpdateMap("example_table", params)
 	_, err = s.SpannerDB.Apply(ctx, muts)
@@ -335,6 +335,7 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertServer) error {
 	var err error
 	res := test.NumRows{}
+
 	muts := make([]*spanner.Mutation, 0)
 	for {
 		req, err := stream.Recv()
@@ -374,10 +375,6 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 		// In the future, we might do apply if muts gets really big,  but for now,
 		// we only do one apply on the database with all the records stored in muts
 		//////////////////////////////////////////////////////////////////////////
-		// This isn't technically an "after" hook because it happens before the mutations
-		// are applied to the database.  Think of it as more of an aggregation hook for
-		// gathering the proto response
-
 	}
 	_, err = s.SpannerDB.Apply(context.Background(), muts)
 	if err != nil {
@@ -387,6 +384,7 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
+
 	stream.SendAndClose(&res)
 	return nil
 }
@@ -395,6 +393,7 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteServer) error {
 	var err error
 	res := test.NumRows{}
+
 	muts := make([]*spanner.Mutation, 0)
 	for {
 		req, err := stream.Recv()
@@ -428,10 +427,6 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 		// In the future, we might do apply if muts gets really big,  but for now,
 		// we only do one apply on the database with all the records stored in muts
 		//////////////////////////////////////////////////////////////////////////
-		// This isn't technically an "after" hook because it happens before the mutations
-		// are applied to the database.  Think of it as more of an aggregation hook for
-		// gathering the proto response
-
 	}
 	_, err = s.SpannerDB.Apply(context.Background(), muts)
 	if err != nil {
@@ -441,6 +436,7 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
+
 	stream.SendAndClose(&res)
 	return nil
 }
@@ -449,6 +445,7 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateServer) error {
 	var err error
 	res := test.NumRows{}
+
 	muts := make([]*spanner.Mutation, 0)
 	for {
 		req, err := stream.Recv()
@@ -488,10 +485,6 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		// In the future, we might do apply if muts gets really big,  but for now,
 		// we only do one apply on the database with all the records stored in muts
 		//////////////////////////////////////////////////////////////////////////
-		// This isn't technically an "after" hook because it happens before the mutations
-		// are applied to the database.  Think of it as more of an aggregation hook for
-		// gathering the proto response
-
 	}
 	_, err = s.SpannerDB.Apply(context.Background(), muts)
 	if err != nil {
@@ -501,6 +494,7 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
+
 	stream.SendAndClose(&res)
 	return nil
 }
@@ -560,8 +554,8 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 	return &res, nil
 }
 
-// spanner unary select UniarySelectWithHook
-func (s *MySpannerImpl) UniarySelectWithHook(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+// spanner unary select UniarySelectWithHooks
+func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	var (
 		Id        int64
@@ -590,15 +584,8 @@ func (s *MySpannerImpl) UniarySelectWithHook(ctx context.Context, req *test.Exam
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
 	params["string0"] = conv
-
-	conv = req.Name
-
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	params["string1"] = conv
 	//stmt := spanner.Statement{SQL: "{ {.Spanner.Query} }", Params: params}
-	stmt := spanner.Statement{SQL: "SELECT * from example_table Where id= @string0 AND name= @string1", Params: params}
+	stmt := spanner.Statement{SQL: "SELECT * from example_table Where id= @string0", Params: params}
 	tx := s.SpannerDB.Single()
 	defer tx.Close()
 	iter := tx.Query(ctx, stmt)
@@ -670,6 +657,13 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 
 	params := make(map[string]interface{})
 	var conv interface{}
+
+	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
+
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["start_time"] = conv
 	conv = "oranges"
 	params["name"] = conv
 
@@ -679,13 +673,6 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
 	params["id"] = conv
-
-	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
-
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	params["start_time"] = conv
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.UpdateMap("example_table", params)
 	_, err = s.SpannerDB.Apply(ctx, muts)
@@ -778,10 +765,13 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 	}
 	if beforeRes != nil {
 
-		err = stream.Send(beforeRes)
-		if err != nil {
-			return err
+		for _, res := range beforeRes {
+			err = stream.Send(res)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
 
 	}
 
@@ -843,6 +833,9 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
 	var err error
 	res := test.NumRows{}
+
+	reqs := make([]*test.ExampleTable, 0)
+
 	muts := make([]*spanner.Mutation, 0)
 	for {
 		req, err := stream.Recv()
@@ -864,6 +857,8 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 
 		}
 
+		reqs = append(reqs, req)
+
 		//spanner client streaming update
 		params := make(map[string]interface{})
 		var conv interface{}
@@ -873,16 +868,9 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		params["start_time"] = conv
-
-		conv = req.Name
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
 		params["name"] = conv
 
-		conv = req.Id
+		conv = req.Name
 
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
@@ -894,17 +882,6 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 		// In the future, we might do apply if muts gets really big,  but for now,
 		// we only do one apply on the database with all the records stored in muts
 		//////////////////////////////////////////////////////////////////////////
-		// This isn't technically an "after" hook because it happens before the mutations
-		// are applied to the database.  Think of it as more of an aggregation hook for
-		// gathering the proto response
-
-		err = hooks.ClientStreamUpdateAfterHook(req, &res)
-		if err != nil {
-
-			return grpc.Errorf(codes.Unknown, err.Error())
-
-		}
-
 	}
 	_, err = s.SpannerDB.Apply(context.Background(), muts)
 	if err != nil {
@@ -914,6 +891,18 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
+
+	for _, req := range reqs {
+
+		err = hooks.ClientStreamUpdateAfterHook(req, &res)
+		if err != nil {
+
+			return grpc.Errorf(codes.Unknown, err.Error())
+
+		}
+
+	}
+
 	stream.SendAndClose(&res)
 	return nil
 }
