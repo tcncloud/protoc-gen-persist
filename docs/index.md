@@ -657,6 +657,164 @@ like the other query examples
 Examples of spanner delete queries are in the exapmles folder,  for more help with knowing what a
 spanner KeyRange is,  [Look Here](https://godoc.org/cloud.google.com/go/spanner#KeyRange)
 
+
+## Before/After Hooks
+protoc-gen-persist supports before and after hooks on proto method definitions. Before hooks are called before query
+execution, and if a proto response is returned with no error, the method returns early without running the query.
+After hooks are called after the query is executed, and given the request, and the address of the response recieved.
+It is safe to dereference the response in your hook, so data aggregation is possible in client stream hooks.
+
+__Before Hook Notes__
+The only thing that works not quite as expected is that before hooks for server stream methods will only stream
+back one response, and it is not currently possible to stream back more than one response
+
+
+__After Hook Notes__
+- Client streaming calls create an instance of the response message, and pass the same response to the after hook
+for each request in the transaction
+- Server streaming methods call the after hook with one response for each row returned from the database
+- Other grpc method types call the after hook once
+
+### Example
+
+Here is an example of a proto service definition with hooks defined
+```proto
+// "basic" proto package with our service
+option go_package="github.com/tcncloud/protoc-gen-persist/examples/sql/basic;basic";
+
+// our message definitions stored here
+import "examples/test/test.proto";
+
+service Amazing {
+  // (the start_time field is mapped to a custom type for this example, but is not shown)
+
+  rpc UniarySelectWithHooks(test.PartialTable) returns (test.ExampleTable) {
+    option (persist.ql) = {
+      query: "SELECT * from example_table Where id=$1 AND start_time>$2"
+      arguments: ["id", "start_time"]
+      before: {
+        name: "UniarySelectBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
+      }
+      after: {
+        name: "UniarySelectAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
+      }
+    };
+  };
+}
+```
+
+ This is our hooks package (github.com/tcncloud/protoc-gen-persist/examples/hooks)
+ Notice we import the package where our messages are defined, NOT the package that
+ defines our grpc service.
+```go
+// Simple cache example. Database queries are only performed on
+// results that are not in the cache.
+package hooks
+
+import (
+	"fmt"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/test"
+)
+
+var cache map[int64]*pb.ExampleTable
+
+func init() {
+	cache = make(map[int64]*pb.ExampleTable)
+}
+
+
+// our before hook,  takes a our proto request as a parameter and returns
+// the item in the cache.  If the item in the cache is nil, the database
+// is queried, because nil is returned as the proto response, and as the error
+func UniarySelectBeforeHook(req *pb.PartialTable) (*pb.ExampleTable, error) {
+	fmt.Printf("UniarySelectBeforeHook: cache: %#v\n", cache)
+	if req != nil {
+		res := cache[req.Id]
+		fmt.Printf("UniarySelectBeforeHook: req:%+v , cache: %+v\n", *req, res)
+		return res, nil
+	} else {
+		fmt.Println("UniarySelectBeforeHook: req was nil...")
+	}
+	return nil, nil
+}
+
+// our after hook is given our request, and the address to our response
+// This example stores  the address in the cache, but you can manipulate
+// the response, and it will be returned with your changes applied.
+// ClientStreaming after hooks get the same proto response given to the after
+// hook for every request streamed over
+func UniarySelectAfterHook(req *pb.PartialTable, res *pb.ExampleTable) error {
+	if req != nil {
+		fmt.Printf("uniarySelectAfterHook: req:%+v , res:%+v\n", *req, *res)
+		cache[req.Id] = res
+	}
+	fmt.Printf("UniarySelectAfterHook: cache now: %#v\n", cache)
+	return nil
+}
+
+```
+
+This is an example of what is generated when using hooks
+```go
+import (
+  ...
+	"github.com/tcncloud/protoc-gen-persist/examples/hooks"
+	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+	test "github.com/tcncloud/protoc-gen-persist/examples/test"
+)
+
+...
+
+func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
+	var (
+		Id        int64
+		Name      string
+		StartTime mytime.MyTime
+		err       error
+	)
+
+	// our before hook
+	beforeRes, err := hooks.UniarySelectBeforeHook(req)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+
+	}
+	// return early with response
+	if beforeRes != nil {
+		return beforeRes, nil
+	}
+
+	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time>$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
+		Scan(&Id, &StartTime, &Name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
+		} else if strings.Contains(err.Error(), "duplicate key") {
+			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+		}
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	// res is created as an instance of the proto response
+	res := test.ExampleTable{
+		Id:        Id,
+		Name:      Name,
+		StartTime: StartTime.ToProto(),
+	}
+	// our after hook is called with an instance of req, and the address of res
+	err = hooks.UniarySelectAfterHook(req, &res)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+
+	return &res, nil
+}
+```
+
+The examples folder has examples of before hooks and after hooks in use.
+
+
 ## More Help
 This will walk you through step by step creating a project that talks to a users table stored in postgres. (Not finished yet)
 
