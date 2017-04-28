@@ -115,6 +115,24 @@ func bidirectionalStream(client pbclient.AmazingClient, recs []*pb.ExampleTable)
 	return nil
 }
 
+func uniaryCacheTest(client pbclient.AmazingClient) error {
+	yesterday := time.Now().Add(time.Hour * -24).Truncate(time.Millisecond)
+	req := &pb.PartialTable{
+		Id: int64(1),
+		StartTime: ToProtobufTime(&yesterday),
+	}
+	res1, err := client.UniarySelectWithHooks(context.Background(), req)
+	if err != nil {
+		return err
+	}
+	res2, err := client.UniarySelectWithHooks(context.Background(), req)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("UniaryCacheTest: req: %+v\nresp1:%+v\nresp2:%+v\n\n", *req, *res1, *res2)
+	return nil
+}
+
 func main() {
 	client := setupClient()
 
@@ -122,7 +140,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
+	err = uniaryCacheTest(client)
+	if err != nil {
+		panic(err)
+	}
 	docs, err := serverStreamFromName(client, "bill")
 	if err != nil {
 		panic(err)

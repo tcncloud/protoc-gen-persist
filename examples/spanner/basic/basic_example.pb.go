@@ -9,11 +9,6 @@ It is generated from these files:
 	examples/spanner/basic/basic_example.proto
 
 It has these top-level messages:
-	ExampleTable
-	PartialTable
-	Name
-	NumRows
-	ExampleTableRange
 */
 package basic
 
@@ -21,9 +16,9 @@ import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
 import _ "github.com/tcncloud/protoc-gen-persist/persist"
-import google_protobuf1 "github.com/golang/protobuf/ptypes/timestamp"
+import _ "github.com/golang/protobuf/ptypes/timestamp"
 import _ "github.com/golang/protobuf/protoc-gen-go/descriptor"
-import _ "github.com/tcncloud/protoc-gen-persist/examples/test"
+import examples_test "github.com/tcncloud/protoc-gen-persist/examples/test"
 
 import (
 	context "golang.org/x/net/context"
@@ -41,126 +36,6 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type ExampleTable struct {
-	Id        int64                       `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
-	StartTime *google_protobuf1.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime" json:"start_time,omitempty"`
-	Name      string                      `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
-}
-
-func (m *ExampleTable) Reset()                    { *m = ExampleTable{} }
-func (m *ExampleTable) String() string            { return proto.CompactTextString(m) }
-func (*ExampleTable) ProtoMessage()               {}
-func (*ExampleTable) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
-
-func (m *ExampleTable) GetId() int64 {
-	if m != nil {
-		return m.Id
-	}
-	return 0
-}
-
-func (m *ExampleTable) GetStartTime() *google_protobuf1.Timestamp {
-	if m != nil {
-		return m.StartTime
-	}
-	return nil
-}
-
-func (m *ExampleTable) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-type PartialTable struct {
-	Id        int64                       `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
-	StartTime *google_protobuf1.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime" json:"start_time,omitempty"`
-}
-
-func (m *PartialTable) Reset()                    { *m = PartialTable{} }
-func (m *PartialTable) String() string            { return proto.CompactTextString(m) }
-func (*PartialTable) ProtoMessage()               {}
-func (*PartialTable) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-func (m *PartialTable) GetId() int64 {
-	if m != nil {
-		return m.Id
-	}
-	return 0
-}
-
-func (m *PartialTable) GetStartTime() *google_protobuf1.Timestamp {
-	if m != nil {
-		return m.StartTime
-	}
-	return nil
-}
-
-type Name struct {
-	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-}
-
-func (m *Name) Reset()                    { *m = Name{} }
-func (m *Name) String() string            { return proto.CompactTextString(m) }
-func (*Name) ProtoMessage()               {}
-func (*Name) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
-
-func (m *Name) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-type NumRows struct {
-	Count int64 `protobuf:"varint,1,opt,name=count" json:"count,omitempty"`
-}
-
-func (m *NumRows) Reset()                    { *m = NumRows{} }
-func (m *NumRows) String() string            { return proto.CompactTextString(m) }
-func (*NumRows) ProtoMessage()               {}
-func (*NumRows) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
-
-func (m *NumRows) GetCount() int64 {
-	if m != nil {
-		return m.Count
-	}
-	return 0
-}
-
-type ExampleTableRange struct {
-	StartId int64 `protobuf:"varint,1,opt,name=start_id,json=startId" json:"start_id,omitempty"`
-	EndId   int64 `protobuf:"varint,2,opt,name=end_id,json=endId" json:"end_id,omitempty"`
-}
-
-func (m *ExampleTableRange) Reset()                    { *m = ExampleTableRange{} }
-func (m *ExampleTableRange) String() string            { return proto.CompactTextString(m) }
-func (*ExampleTableRange) ProtoMessage()               {}
-func (*ExampleTableRange) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
-
-func (m *ExampleTableRange) GetStartId() int64 {
-	if m != nil {
-		return m.StartId
-	}
-	return 0
-}
-
-func (m *ExampleTableRange) GetEndId() int64 {
-	if m != nil {
-		return m.EndId
-	}
-	return 0
-}
-
-func init() {
-	proto.RegisterType((*ExampleTable)(nil), "examples.ExampleTable")
-	proto.RegisterType((*PartialTable)(nil), "examples.PartialTable")
-	proto.RegisterType((*Name)(nil), "examples.Name")
-	proto.RegisterType((*NumRows)(nil), "examples.NumRows")
-	proto.RegisterType((*ExampleTableRange)(nil), "examples.ExampleTableRange")
-}
-
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
 var _ grpc.ClientConn
@@ -172,15 +47,22 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for MySpanner service
 
 type MySpannerClient interface {
-	UniaryInsert(ctx context.Context, in *ExampleTable, opts ...grpc.CallOption) (*ExampleTable, error)
-	UniarySelect(ctx context.Context, in *ExampleTable, opts ...grpc.CallOption) (*ExampleTable, error)
-	UniaryUpdate(ctx context.Context, in *ExampleTable, opts ...grpc.CallOption) (*PartialTable, error)
-	UniaryDelete(ctx context.Context, in *ExampleTableRange, opts ...grpc.CallOption) (*ExampleTable, error)
-	NoArgs(ctx context.Context, in *ExampleTable, opts ...grpc.CallOption) (*ExampleTable, error)
-	ServerStream(ctx context.Context, in *Name, opts ...grpc.CallOption) (MySpanner_ServerStreamClient, error)
+	UniaryInsert(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error)
+	UniarySelect(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error)
+	UniaryUpdate(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.PartialTable, error)
+	UniaryDelete(ctx context.Context, in *examples_test.ExampleTableRange, opts ...grpc.CallOption) (*examples_test.ExampleTable, error)
+	NoArgs(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error)
+	ServerStream(ctx context.Context, in *examples_test.Name, opts ...grpc.CallOption) (MySpanner_ServerStreamClient, error)
 	ClientStreamInsert(ctx context.Context, opts ...grpc.CallOption) (MySpanner_ClientStreamInsertClient, error)
 	ClientStreamDelete(ctx context.Context, opts ...grpc.CallOption) (MySpanner_ClientStreamDeleteClient, error)
 	ClientStreamUpdate(ctx context.Context, opts ...grpc.CallOption) (MySpanner_ClientStreamUpdateClient, error)
+	// hook examples
+	UniaryInsertWithHooks(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error)
+	UniarySelectWithHooks(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error)
+	UniaryUpdateWithHooks(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.PartialTable, error)
+	UniaryDeleteWithHooks(ctx context.Context, in *examples_test.ExampleTableRange, opts ...grpc.CallOption) (*examples_test.ExampleTable, error)
+	ServerStreamWithHooks(ctx context.Context, in *examples_test.Name, opts ...grpc.CallOption) (MySpanner_ServerStreamWithHooksClient, error)
+	ClientStreamUpdateWithHooks(ctx context.Context, opts ...grpc.CallOption) (MySpanner_ClientStreamUpdateWithHooksClient, error)
 }
 
 type mySpannerClient struct {
@@ -191,8 +73,8 @@ func NewMySpannerClient(cc *grpc.ClientConn) MySpannerClient {
 	return &mySpannerClient{cc}
 }
 
-func (c *mySpannerClient) UniaryInsert(ctx context.Context, in *ExampleTable, opts ...grpc.CallOption) (*ExampleTable, error) {
-	out := new(ExampleTable)
+func (c *mySpannerClient) UniaryInsert(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error) {
+	out := new(examples_test.ExampleTable)
 	err := grpc.Invoke(ctx, "/examples.MySpanner/UniaryInsert", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -200,8 +82,8 @@ func (c *mySpannerClient) UniaryInsert(ctx context.Context, in *ExampleTable, op
 	return out, nil
 }
 
-func (c *mySpannerClient) UniarySelect(ctx context.Context, in *ExampleTable, opts ...grpc.CallOption) (*ExampleTable, error) {
-	out := new(ExampleTable)
+func (c *mySpannerClient) UniarySelect(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error) {
+	out := new(examples_test.ExampleTable)
 	err := grpc.Invoke(ctx, "/examples.MySpanner/UniarySelect", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -209,8 +91,8 @@ func (c *mySpannerClient) UniarySelect(ctx context.Context, in *ExampleTable, op
 	return out, nil
 }
 
-func (c *mySpannerClient) UniaryUpdate(ctx context.Context, in *ExampleTable, opts ...grpc.CallOption) (*PartialTable, error) {
-	out := new(PartialTable)
+func (c *mySpannerClient) UniaryUpdate(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.PartialTable, error) {
+	out := new(examples_test.PartialTable)
 	err := grpc.Invoke(ctx, "/examples.MySpanner/UniaryUpdate", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -218,8 +100,8 @@ func (c *mySpannerClient) UniaryUpdate(ctx context.Context, in *ExampleTable, op
 	return out, nil
 }
 
-func (c *mySpannerClient) UniaryDelete(ctx context.Context, in *ExampleTableRange, opts ...grpc.CallOption) (*ExampleTable, error) {
-	out := new(ExampleTable)
+func (c *mySpannerClient) UniaryDelete(ctx context.Context, in *examples_test.ExampleTableRange, opts ...grpc.CallOption) (*examples_test.ExampleTable, error) {
+	out := new(examples_test.ExampleTable)
 	err := grpc.Invoke(ctx, "/examples.MySpanner/UniaryDelete", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -227,8 +109,8 @@ func (c *mySpannerClient) UniaryDelete(ctx context.Context, in *ExampleTableRang
 	return out, nil
 }
 
-func (c *mySpannerClient) NoArgs(ctx context.Context, in *ExampleTable, opts ...grpc.CallOption) (*ExampleTable, error) {
-	out := new(ExampleTable)
+func (c *mySpannerClient) NoArgs(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error) {
+	out := new(examples_test.ExampleTable)
 	err := grpc.Invoke(ctx, "/examples.MySpanner/NoArgs", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -236,7 +118,7 @@ func (c *mySpannerClient) NoArgs(ctx context.Context, in *ExampleTable, opts ...
 	return out, nil
 }
 
-func (c *mySpannerClient) ServerStream(ctx context.Context, in *Name, opts ...grpc.CallOption) (MySpanner_ServerStreamClient, error) {
+func (c *mySpannerClient) ServerStream(ctx context.Context, in *examples_test.Name, opts ...grpc.CallOption) (MySpanner_ServerStreamClient, error) {
 	stream, err := grpc.NewClientStream(ctx, &_MySpanner_serviceDesc.Streams[0], c.cc, "/examples.MySpanner/ServerStream", opts...)
 	if err != nil {
 		return nil, err
@@ -252,7 +134,7 @@ func (c *mySpannerClient) ServerStream(ctx context.Context, in *Name, opts ...gr
 }
 
 type MySpanner_ServerStreamClient interface {
-	Recv() (*ExampleTable, error)
+	Recv() (*examples_test.ExampleTable, error)
 	grpc.ClientStream
 }
 
@@ -260,8 +142,8 @@ type mySpannerServerStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *mySpannerServerStreamClient) Recv() (*ExampleTable, error) {
-	m := new(ExampleTable)
+func (x *mySpannerServerStreamClient) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -278,8 +160,8 @@ func (c *mySpannerClient) ClientStreamInsert(ctx context.Context, opts ...grpc.C
 }
 
 type MySpanner_ClientStreamInsertClient interface {
-	Send(*ExampleTable) error
-	CloseAndRecv() (*NumRows, error)
+	Send(*examples_test.ExampleTable) error
+	CloseAndRecv() (*examples_test.NumRows, error)
 	grpc.ClientStream
 }
 
@@ -287,15 +169,15 @@ type mySpannerClientStreamInsertClient struct {
 	grpc.ClientStream
 }
 
-func (x *mySpannerClientStreamInsertClient) Send(m *ExampleTable) error {
+func (x *mySpannerClientStreamInsertClient) Send(m *examples_test.ExampleTable) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *mySpannerClientStreamInsertClient) CloseAndRecv() (*NumRows, error) {
+func (x *mySpannerClientStreamInsertClient) CloseAndRecv() (*examples_test.NumRows, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	m := new(NumRows)
+	m := new(examples_test.NumRows)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -312,8 +194,8 @@ func (c *mySpannerClient) ClientStreamDelete(ctx context.Context, opts ...grpc.C
 }
 
 type MySpanner_ClientStreamDeleteClient interface {
-	Send(*ExampleTable) error
-	CloseAndRecv() (*NumRows, error)
+	Send(*examples_test.ExampleTable) error
+	CloseAndRecv() (*examples_test.NumRows, error)
 	grpc.ClientStream
 }
 
@@ -321,15 +203,15 @@ type mySpannerClientStreamDeleteClient struct {
 	grpc.ClientStream
 }
 
-func (x *mySpannerClientStreamDeleteClient) Send(m *ExampleTable) error {
+func (x *mySpannerClientStreamDeleteClient) Send(m *examples_test.ExampleTable) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *mySpannerClientStreamDeleteClient) CloseAndRecv() (*NumRows, error) {
+func (x *mySpannerClientStreamDeleteClient) CloseAndRecv() (*examples_test.NumRows, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	m := new(NumRows)
+	m := new(examples_test.NumRows)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -346,8 +228,8 @@ func (c *mySpannerClient) ClientStreamUpdate(ctx context.Context, opts ...grpc.C
 }
 
 type MySpanner_ClientStreamUpdateClient interface {
-	Send(*ExampleTable) error
-	CloseAndRecv() (*NumRows, error)
+	Send(*examples_test.ExampleTable) error
+	CloseAndRecv() (*examples_test.NumRows, error)
 	grpc.ClientStream
 }
 
@@ -355,15 +237,117 @@ type mySpannerClientStreamUpdateClient struct {
 	grpc.ClientStream
 }
 
-func (x *mySpannerClientStreamUpdateClient) Send(m *ExampleTable) error {
+func (x *mySpannerClientStreamUpdateClient) Send(m *examples_test.ExampleTable) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *mySpannerClientStreamUpdateClient) CloseAndRecv() (*NumRows, error) {
+func (x *mySpannerClientStreamUpdateClient) CloseAndRecv() (*examples_test.NumRows, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	m := new(NumRows)
+	m := new(examples_test.NumRows)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *mySpannerClient) UniaryInsertWithHooks(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error) {
+	out := new(examples_test.ExampleTable)
+	err := grpc.Invoke(ctx, "/examples.MySpanner/UniaryInsertWithHooks", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mySpannerClient) UniarySelectWithHooks(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.ExampleTable, error) {
+	out := new(examples_test.ExampleTable)
+	err := grpc.Invoke(ctx, "/examples.MySpanner/UniarySelectWithHooks", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mySpannerClient) UniaryUpdateWithHooks(ctx context.Context, in *examples_test.ExampleTable, opts ...grpc.CallOption) (*examples_test.PartialTable, error) {
+	out := new(examples_test.PartialTable)
+	err := grpc.Invoke(ctx, "/examples.MySpanner/UniaryUpdateWithHooks", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mySpannerClient) UniaryDeleteWithHooks(ctx context.Context, in *examples_test.ExampleTableRange, opts ...grpc.CallOption) (*examples_test.ExampleTable, error) {
+	out := new(examples_test.ExampleTable)
+	err := grpc.Invoke(ctx, "/examples.MySpanner/UniaryDeleteWithHooks", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mySpannerClient) ServerStreamWithHooks(ctx context.Context, in *examples_test.Name, opts ...grpc.CallOption) (MySpanner_ServerStreamWithHooksClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_MySpanner_serviceDesc.Streams[4], c.cc, "/examples.MySpanner/ServerStreamWithHooks", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &mySpannerServerStreamWithHooksClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type MySpanner_ServerStreamWithHooksClient interface {
+	Recv() (*examples_test.ExampleTable, error)
+	grpc.ClientStream
+}
+
+type mySpannerServerStreamWithHooksClient struct {
+	grpc.ClientStream
+}
+
+func (x *mySpannerServerStreamWithHooksClient) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *mySpannerClient) ClientStreamUpdateWithHooks(ctx context.Context, opts ...grpc.CallOption) (MySpanner_ClientStreamUpdateWithHooksClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_MySpanner_serviceDesc.Streams[5], c.cc, "/examples.MySpanner/ClientStreamUpdateWithHooks", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &mySpannerClientStreamUpdateWithHooksClient{stream}
+	return x, nil
+}
+
+type MySpanner_ClientStreamUpdateWithHooksClient interface {
+	Send(*examples_test.ExampleTable) error
+	CloseAndRecv() (*examples_test.NumRows, error)
+	grpc.ClientStream
+}
+
+type mySpannerClientStreamUpdateWithHooksClient struct {
+	grpc.ClientStream
+}
+
+func (x *mySpannerClientStreamUpdateWithHooksClient) Send(m *examples_test.ExampleTable) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *mySpannerClientStreamUpdateWithHooksClient) CloseAndRecv() (*examples_test.NumRows, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(examples_test.NumRows)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -373,15 +357,22 @@ func (x *mySpannerClientStreamUpdateClient) CloseAndRecv() (*NumRows, error) {
 // Server API for MySpanner service
 
 type MySpannerServer interface {
-	UniaryInsert(context.Context, *ExampleTable) (*ExampleTable, error)
-	UniarySelect(context.Context, *ExampleTable) (*ExampleTable, error)
-	UniaryUpdate(context.Context, *ExampleTable) (*PartialTable, error)
-	UniaryDelete(context.Context, *ExampleTableRange) (*ExampleTable, error)
-	NoArgs(context.Context, *ExampleTable) (*ExampleTable, error)
-	ServerStream(*Name, MySpanner_ServerStreamServer) error
+	UniaryInsert(context.Context, *examples_test.ExampleTable) (*examples_test.ExampleTable, error)
+	UniarySelect(context.Context, *examples_test.ExampleTable) (*examples_test.ExampleTable, error)
+	UniaryUpdate(context.Context, *examples_test.ExampleTable) (*examples_test.PartialTable, error)
+	UniaryDelete(context.Context, *examples_test.ExampleTableRange) (*examples_test.ExampleTable, error)
+	NoArgs(context.Context, *examples_test.ExampleTable) (*examples_test.ExampleTable, error)
+	ServerStream(*examples_test.Name, MySpanner_ServerStreamServer) error
 	ClientStreamInsert(MySpanner_ClientStreamInsertServer) error
 	ClientStreamDelete(MySpanner_ClientStreamDeleteServer) error
 	ClientStreamUpdate(MySpanner_ClientStreamUpdateServer) error
+	// hook examples
+	UniaryInsertWithHooks(context.Context, *examples_test.ExampleTable) (*examples_test.ExampleTable, error)
+	UniarySelectWithHooks(context.Context, *examples_test.ExampleTable) (*examples_test.ExampleTable, error)
+	UniaryUpdateWithHooks(context.Context, *examples_test.ExampleTable) (*examples_test.PartialTable, error)
+	UniaryDeleteWithHooks(context.Context, *examples_test.ExampleTableRange) (*examples_test.ExampleTable, error)
+	ServerStreamWithHooks(*examples_test.Name, MySpanner_ServerStreamWithHooksServer) error
+	ClientStreamUpdateWithHooks(MySpanner_ClientStreamUpdateWithHooksServer) error
 }
 
 func RegisterMySpannerServer(s *grpc.Server, srv MySpannerServer) {
@@ -389,7 +380,7 @@ func RegisterMySpannerServer(s *grpc.Server, srv MySpannerServer) {
 }
 
 func _MySpanner_UniaryInsert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExampleTable)
+	in := new(examples_test.ExampleTable)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -401,13 +392,13 @@ func _MySpanner_UniaryInsert_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/examples.MySpanner/UniaryInsert",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MySpannerServer).UniaryInsert(ctx, req.(*ExampleTable))
+		return srv.(MySpannerServer).UniaryInsert(ctx, req.(*examples_test.ExampleTable))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _MySpanner_UniarySelect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExampleTable)
+	in := new(examples_test.ExampleTable)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -419,13 +410,13 @@ func _MySpanner_UniarySelect_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/examples.MySpanner/UniarySelect",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MySpannerServer).UniarySelect(ctx, req.(*ExampleTable))
+		return srv.(MySpannerServer).UniarySelect(ctx, req.(*examples_test.ExampleTable))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _MySpanner_UniaryUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExampleTable)
+	in := new(examples_test.ExampleTable)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -437,13 +428,13 @@ func _MySpanner_UniaryUpdate_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/examples.MySpanner/UniaryUpdate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MySpannerServer).UniaryUpdate(ctx, req.(*ExampleTable))
+		return srv.(MySpannerServer).UniaryUpdate(ctx, req.(*examples_test.ExampleTable))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _MySpanner_UniaryDelete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExampleTableRange)
+	in := new(examples_test.ExampleTableRange)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -455,13 +446,13 @@ func _MySpanner_UniaryDelete_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/examples.MySpanner/UniaryDelete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MySpannerServer).UniaryDelete(ctx, req.(*ExampleTableRange))
+		return srv.(MySpannerServer).UniaryDelete(ctx, req.(*examples_test.ExampleTableRange))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _MySpanner_NoArgs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExampleTable)
+	in := new(examples_test.ExampleTable)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -473,13 +464,13 @@ func _MySpanner_NoArgs_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: "/examples.MySpanner/NoArgs",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MySpannerServer).NoArgs(ctx, req.(*ExampleTable))
+		return srv.(MySpannerServer).NoArgs(ctx, req.(*examples_test.ExampleTable))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _MySpanner_ServerStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Name)
+	m := new(examples_test.Name)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -487,7 +478,7 @@ func _MySpanner_ServerStream_Handler(srv interface{}, stream grpc.ServerStream) 
 }
 
 type MySpanner_ServerStreamServer interface {
-	Send(*ExampleTable) error
+	Send(*examples_test.ExampleTable) error
 	grpc.ServerStream
 }
 
@@ -495,7 +486,7 @@ type mySpannerServerStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *mySpannerServerStreamServer) Send(m *ExampleTable) error {
+func (x *mySpannerServerStreamServer) Send(m *examples_test.ExampleTable) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -504,8 +495,8 @@ func _MySpanner_ClientStreamInsert_Handler(srv interface{}, stream grpc.ServerSt
 }
 
 type MySpanner_ClientStreamInsertServer interface {
-	SendAndClose(*NumRows) error
-	Recv() (*ExampleTable, error)
+	SendAndClose(*examples_test.NumRows) error
+	Recv() (*examples_test.ExampleTable, error)
 	grpc.ServerStream
 }
 
@@ -513,12 +504,12 @@ type mySpannerClientStreamInsertServer struct {
 	grpc.ServerStream
 }
 
-func (x *mySpannerClientStreamInsertServer) SendAndClose(m *NumRows) error {
+func (x *mySpannerClientStreamInsertServer) SendAndClose(m *examples_test.NumRows) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *mySpannerClientStreamInsertServer) Recv() (*ExampleTable, error) {
-	m := new(ExampleTable)
+func (x *mySpannerClientStreamInsertServer) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -530,8 +521,8 @@ func _MySpanner_ClientStreamDelete_Handler(srv interface{}, stream grpc.ServerSt
 }
 
 type MySpanner_ClientStreamDeleteServer interface {
-	SendAndClose(*NumRows) error
-	Recv() (*ExampleTable, error)
+	SendAndClose(*examples_test.NumRows) error
+	Recv() (*examples_test.ExampleTable, error)
 	grpc.ServerStream
 }
 
@@ -539,12 +530,12 @@ type mySpannerClientStreamDeleteServer struct {
 	grpc.ServerStream
 }
 
-func (x *mySpannerClientStreamDeleteServer) SendAndClose(m *NumRows) error {
+func (x *mySpannerClientStreamDeleteServer) SendAndClose(m *examples_test.NumRows) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *mySpannerClientStreamDeleteServer) Recv() (*ExampleTable, error) {
-	m := new(ExampleTable)
+func (x *mySpannerClientStreamDeleteServer) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -556,8 +547,8 @@ func _MySpanner_ClientStreamUpdate_Handler(srv interface{}, stream grpc.ServerSt
 }
 
 type MySpanner_ClientStreamUpdateServer interface {
-	SendAndClose(*NumRows) error
-	Recv() (*ExampleTable, error)
+	SendAndClose(*examples_test.NumRows) error
+	Recv() (*examples_test.ExampleTable, error)
 	grpc.ServerStream
 }
 
@@ -565,12 +556,131 @@ type mySpannerClientStreamUpdateServer struct {
 	grpc.ServerStream
 }
 
-func (x *mySpannerClientStreamUpdateServer) SendAndClose(m *NumRows) error {
+func (x *mySpannerClientStreamUpdateServer) SendAndClose(m *examples_test.NumRows) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *mySpannerClientStreamUpdateServer) Recv() (*ExampleTable, error) {
-	m := new(ExampleTable)
+func (x *mySpannerClientStreamUpdateServer) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _MySpanner_UniaryInsertWithHooks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(examples_test.ExampleTable)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MySpannerServer).UniaryInsertWithHooks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/examples.MySpanner/UniaryInsertWithHooks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MySpannerServer).UniaryInsertWithHooks(ctx, req.(*examples_test.ExampleTable))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MySpanner_UniarySelectWithHooks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(examples_test.ExampleTable)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MySpannerServer).UniarySelectWithHooks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/examples.MySpanner/UniarySelectWithHooks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MySpannerServer).UniarySelectWithHooks(ctx, req.(*examples_test.ExampleTable))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MySpanner_UniaryUpdateWithHooks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(examples_test.ExampleTable)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MySpannerServer).UniaryUpdateWithHooks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/examples.MySpanner/UniaryUpdateWithHooks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MySpannerServer).UniaryUpdateWithHooks(ctx, req.(*examples_test.ExampleTable))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MySpanner_UniaryDeleteWithHooks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(examples_test.ExampleTableRange)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MySpannerServer).UniaryDeleteWithHooks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/examples.MySpanner/UniaryDeleteWithHooks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MySpannerServer).UniaryDeleteWithHooks(ctx, req.(*examples_test.ExampleTableRange))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MySpanner_ServerStreamWithHooks_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(examples_test.Name)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(MySpannerServer).ServerStreamWithHooks(m, &mySpannerServerStreamWithHooksServer{stream})
+}
+
+type MySpanner_ServerStreamWithHooksServer interface {
+	Send(*examples_test.ExampleTable) error
+	grpc.ServerStream
+}
+
+type mySpannerServerStreamWithHooksServer struct {
+	grpc.ServerStream
+}
+
+func (x *mySpannerServerStreamWithHooksServer) Send(m *examples_test.ExampleTable) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _MySpanner_ClientStreamUpdateWithHooks_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(MySpannerServer).ClientStreamUpdateWithHooks(&mySpannerClientStreamUpdateWithHooksServer{stream})
+}
+
+type MySpanner_ClientStreamUpdateWithHooksServer interface {
+	SendAndClose(*examples_test.NumRows) error
+	Recv() (*examples_test.ExampleTable, error)
+	grpc.ServerStream
+}
+
+type mySpannerClientStreamUpdateWithHooksServer struct {
+	grpc.ServerStream
+}
+
+func (x *mySpannerClientStreamUpdateWithHooksServer) SendAndClose(m *examples_test.NumRows) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *mySpannerClientStreamUpdateWithHooksServer) Recv() (*examples_test.ExampleTable, error) {
+	m := new(examples_test.ExampleTable)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -601,6 +711,22 @@ var _MySpanner_serviceDesc = grpc.ServiceDesc{
 			MethodName: "NoArgs",
 			Handler:    _MySpanner_NoArgs_Handler,
 		},
+		{
+			MethodName: "UniaryInsertWithHooks",
+			Handler:    _MySpanner_UniaryInsertWithHooks_Handler,
+		},
+		{
+			MethodName: "UniarySelectWithHooks",
+			Handler:    _MySpanner_UniarySelectWithHooks_Handler,
+		},
+		{
+			MethodName: "UniaryUpdateWithHooks",
+			Handler:    _MySpanner_UniaryUpdateWithHooks_Handler,
+		},
+		{
+			MethodName: "UniaryDeleteWithHooks",
+			Handler:    _MySpanner_UniaryDeleteWithHooks_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -623,6 +749,16 @@ var _MySpanner_serviceDesc = grpc.ServiceDesc{
 			Handler:       _MySpanner_ClientStreamUpdate_Handler,
 			ClientStreams: true,
 		},
+		{
+			StreamName:    "ServerStreamWithHooks",
+			Handler:       _MySpanner_ServerStreamWithHooks_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ClientStreamUpdateWithHooks",
+			Handler:       _MySpanner_ClientStreamUpdateWithHooks_Handler,
+			ClientStreams: true,
+		},
 	},
 	Metadata: "examples/spanner/basic/basic_example.proto",
 }
@@ -630,55 +766,63 @@ var _MySpanner_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("examples/spanner/basic/basic_example.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 798 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x95, 0x61, 0x8f, 0xdb, 0x34,
-	0x18, 0xc7, 0x95, 0x6c, 0xdc, 0x76, 0x5e, 0x35, 0x31, 0x8b, 0xa1, 0xd2, 0x09, 0xcd, 0x0a, 0x42,
-	0x4b, 0xab, 0xae, 0x65, 0x43, 0x9a, 0x40, 0xa8, 0xca, 0x7a, 0x6d, 0x90, 0x3a, 0x7a, 0xe9, 0x94,
-	0xa4, 0x9b, 0x86, 0xa6, 0x1d, 0x6e, 0xe2, 0x75, 0x46, 0x89, 0x13, 0xd9, 0x2e, 0xa3, 0x6f, 0xf7,
-	0x0a, 0xf1, 0x8a, 0x93, 0x90, 0xe0, 0x2d, 0xdf, 0xe2, 0xbe, 0x0d, 0x5f, 0x05, 0x39, 0x6e, 0xb3,
-	0xb4, 0x5c, 0xd9, 0x15, 0xed, 0x8d, 0xef, 0x9e, 0xfa, 0xb1, 0xff, 0xbf, 0x3e, 0xcf, 0xf3, 0xaf,
-	0x41, 0x8b, 0xfc, 0x8c, 0xd3, 0x3c, 0x21, 0xa2, 0x2b, 0x72, 0xcc, 0x18, 0xe1, 0xdd, 0x19, 0x16,
-	0x34, 0xd2, 0xeb, 0xc9, 0x6a, 0xb3, 0x93, 0xf3, 0x4c, 0x66, 0xf0, 0xea, 0x3a, 0xb7, 0x71, 0x33,
-	0x27, 0x5c, 0x50, 0x21, 0xbb, 0x59, 0x2e, 0x69, 0xc6, 0x84, 0x4e, 0x68, 0xdc, 0x9e, 0x67, 0xd9,
-	0x3c, 0x21, 0xdd, 0x22, 0x9a, 0x2d, 0x5e, 0x76, 0x25, 0x4d, 0x89, 0x90, 0x38, 0xcd, 0x57, 0x09,
-	0x68, 0x3b, 0x21, 0x26, 0x22, 0xe2, 0x34, 0x97, 0x19, 0x5f, 0x65, 0xd4, 0x4b, 0x1e, 0x49, 0x84,
-	0x2c, 0x16, 0xbd, 0x63, 0xa5, 0xa0, 0xe6, 0xea, 0xbd, 0x10, 0xcf, 0x12, 0x02, 0xaf, 0x03, 0x93,
-	0xc6, 0x75, 0x03, 0x19, 0xf6, 0x25, 0xdf, 0xa4, 0x31, 0xfc, 0x1a, 0x00, 0x21, 0x31, 0x97, 0x27,
-	0x4a, 0xb4, 0x6e, 0x22, 0xc3, 0xbe, 0x76, 0xbf, 0xd1, 0xd1, 0x82, 0x9d, 0xb5, 0x60, 0x27, 0x5c,
-	0x13, 0xf9, 0x87, 0x45, 0xb6, 0x8a, 0x21, 0x04, 0x97, 0x19, 0x4e, 0x49, 0xfd, 0x12, 0x32, 0xec,
-	0x43, 0xbf, 0xf8, 0xdf, 0x7a, 0x06, 0x6a, 0x8f, 0x31, 0x97, 0x14, 0x27, 0xef, 0x5b, 0xce, 0x6a,
-	0x80, 0xcb, 0x1e, 0xae, 0xc8, 0x1a, 0x15, 0xd9, 0xdb, 0xe0, 0x8a, 0xb7, 0x48, 0xfd, 0xec, 0xb5,
-	0x80, 0x1f, 0x81, 0x0f, 0xa2, 0x6c, 0xc1, 0xe4, 0x4a, 0x54, 0x07, 0x96, 0x0b, 0x6e, 0x54, 0xcb,
-	0xe0, 0x63, 0x36, 0x27, 0xf0, 0x13, 0x70, 0x55, 0xc3, 0x94, 0x88, 0x57, 0x8a, 0x78, 0x14, 0xc3,
-	0x9b, 0xe0, 0x80, 0xb0, 0x58, 0x6d, 0x98, 0xfa, 0x1a, 0xc2, 0xe2, 0x51, 0x7c, 0xff, 0x6f, 0x00,
-	0x0e, 0x8f, 0x97, 0x81, 0xee, 0x39, 0xfc, 0xcb, 0x00, 0xb5, 0x29, 0xa3, 0x98, 0x2f, 0x47, 0x4c,
-	0x10, 0x2e, 0xe1, 0xc7, 0x9d, 0x75, 0x1f, 0x3a, 0x55, 0xb5, 0xc6, 0x8e, 0xcf, 0x2d, 0xfc, 0xe6,
-	0xec, 0xd4, 0x7c, 0x0e, 0x1e, 0xe9, 0xe3, 0x88, 0x32, 0x99, 0xa1, 0x55, 0xe6, 0x89, 0x54, 0x19,
-	0xc8, 0xa6, 0x71, 0x1b, 0xbd, 0xad, 0x58, 0x1b, 0xa9, 0xaf, 0xdb, 0x44, 0xe8, 0x09, 0x4e, 0x16,
-	0x44, 0x20, 0xdb, 0x69, 0x23, 0xa7, 0x8d, 0xac, 0x19, 0x66, 0x98, 0x61, 0x61, 0x35, 0xa1, 0x2a,
-	0x72, 0xa5, 0xc4, 0xf0, 0x4d, 0xc9, 0x18, 0x90, 0x84, 0x44, 0xfb, 0x33, 0x1e, 0x29, 0xc6, 0x1e,
-	0xb8, 0x17, 0xb8, 0x63, 0x77, 0x10, 0xa2, 0x16, 0x7a, 0xc9, 0xb3, 0x74, 0x8b, 0xf2, 0xe9, 0x2b,
-	0xc2, 0x09, 0xa2, 0x71, 0xcf, 0x41, 0x7d, 0x6f, 0x58, 0x30, 0xf6, 0x9c, 0x02, 0xa5, 0x68, 0x0f,
-	0xfc, 0xa3, 0x84, 0x98, 0xe6, 0x31, 0x96, 0xe4, 0x22, 0x10, 0xd5, 0x31, 0xb2, 0x9e, 0x2a, 0x08,
-	0x1f, 0x3c, 0xd4, 0xc7, 0xb7, 0xd4, 0x05, 0x91, 0x95, 0x12, 0xf5, 0x1c, 0x5d, 0xa4, 0x9e, 0x95,
-	0x71, 0xd5, 0x65, 0x61, 0xa1, 0xd7, 0x25, 0xde, 0x46, 0x69, 0x14, 0xdf, 0xef, 0x25, 0xd9, 0x90,
-	0x24, 0x44, 0x12, 0x78, 0xeb, 0x7c, 0xb2, 0x62, 0x60, 0x76, 0xd6, 0x68, 0xa2, 0xf0, 0x1e, 0x81,
-	0x07, 0x43, 0x77, 0xec, 0x86, 0x2e, 0x0a, 0xfb, 0x47, 0x63, 0xd7, 0xbe, 0xb3, 0x41, 0x79, 0xa7,
-	0x89, 0x82, 0xb0, 0xef, 0x87, 0xb6, 0xd3, 0x44, 0xae, 0x37, 0x54, 0x7f, 0xbe, 0x1b, 0x79, 0x43,
-	0x7b, 0x30, 0x69, 0xc2, 0x72, 0x0a, 0xe1, 0x6a, 0xe8, 0x60, 0x0c, 0x0e, 0xbc, 0xac, 0xcf, 0xe7,
-	0x62, 0xef, 0x76, 0xb5, 0x14, 0xca, 0xe7, 0xe0, 0x33, 0x51, 0x74, 0xfb, 0xfc, 0x76, 0x25, 0x34,
-	0xa5, 0x12, 0xdd, 0x83, 0xcf, 0x41, 0x2d, 0x20, 0xfc, 0x27, 0xc2, 0x03, 0xc9, 0x09, 0x4e, 0xe1,
-	0xf5, 0xb7, 0x77, 0x2a, 0xa7, 0xed, 0xd4, 0xb0, 0x94, 0xc6, 0xa7, 0xe0, 0x56, 0x39, 0x12, 0xdf,
-	0xfa, 0x93, 0xe3, 0x4d, 0x8d, 0x2f, 0x0c, 0xe5, 0x0e, 0x38, 0x48, 0x28, 0x61, 0x52, 0x5f, 0xff,
-	0x0e, 0x8f, 0xdc, 0xa8, 0x88, 0x6b, 0x2b, 0x5b, 0x2f, 0x94, 0xce, 0x33, 0xd0, 0x1f, 0x79, 0x81,
-	0xeb, 0x87, 0x68, 0xe4, 0x85, 0x93, 0x8b, 0xd9, 0xe3, 0x49, 0x7f, 0x3c, 0x75, 0x83, 0xb5, 0x3b,
-	0x9c, 0x7f, 0xbb, 0xa2, 0x18, 0x4b, 0xdb, 0x80, 0xbf, 0x6c, 0x31, 0xae, 0x86, 0x60, 0x0f, 0x46,
-	0x57, 0x31, 0x3e, 0xfc, 0x7f, 0xad, 0x1f, 0x68, 0x30, 0x93, 0xc6, 0xb6, 0x01, 0xff, 0xdc, 0x42,
-	0x79, 0x87, 0x53, 0xce, 0x41, 0x99, 0x2a, 0x94, 0xc7, 0xe0, 0xab, 0xc5, 0x1e, 0x26, 0x71, 0x76,
-	0x99, 0x43, 0x1b, 0xb7, 0x40, 0x6b, 0xfc, 0xf8, 0xeb, 0xd9, 0xa9, 0xf9, 0x03, 0x78, 0x01, 0xfe,
-	0xe3, 0x97, 0xfa, 0xc3, 0x6b, 0xd6, 0xc1, 0xf1, 0x52, 0x85, 0xad, 0x07, 0x73, 0x2a, 0x5f, 0x2d,
-	0x66, 0x9d, 0x28, 0x4b, 0xbb, 0x32, 0x62, 0x51, 0x92, 0x2d, 0x62, 0xfd, 0x76, 0x45, 0x77, 0xe7,
-	0x84, 0xdd, 0x5d, 0xbf, 0x82, 0xe5, 0x9b, 0x95, 0x2e, 0x95, 0xe4, 0x6f, 0x67, 0xa7, 0xa6, 0x71,
-	0xe4, 0x7e, 0x3f, 0xd8, 0xf7, 0xf8, 0xc6, 0x13, 0xfc, 0x4d, 0xb1, 0xce, 0x0e, 0x8a, 0x03, 0x5f,
-	0xfe, 0x13, 0x00, 0x00, 0xff, 0xff, 0x29, 0x3a, 0x49, 0x0c, 0xa9, 0x07, 0x00, 0x00,
+	// 922 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x97, 0xcf, 0x6f, 0xe3, 0x44,
+	0x14, 0xc7, 0x65, 0x0b, 0x55, 0xcb, 0xb0, 0x07, 0x34, 0xa8, 0x2b, 0x94, 0x82, 0x18, 0x19, 0xc1,
+	0x3a, 0x51, 0x37, 0xd9, 0x05, 0x69, 0x85, 0x84, 0x22, 0x6f, 0x9a, 0x18, 0xd1, 0xa5, 0x4d, 0x57,
+	0xb6, 0xdb, 0x8a, 0xd5, 0xb2, 0x65, 0x12, 0x4f, 0xd2, 0x01, 0xdb, 0x63, 0xcd, 0x4c, 0x58, 0x7a,
+	0x04, 0xc4, 0x01, 0x04, 0x12, 0x85, 0xfb, 0x4a, 0xec, 0x95, 0x3f, 0x80, 0xfe, 0x15, 0x9c, 0x38,
+	0x21, 0xf6, 0xc4, 0x81, 0x3f, 0x82, 0x03, 0x68, 0x3c, 0x89, 0xf3, 0xa3, 0x3f, 0x48, 0x1b, 0xf7,
+	0xb0, 0x17, 0x27, 0x96, 0xdf, 0xbc, 0xf7, 0xf1, 0xd7, 0xef, 0xcd, 0x57, 0x03, 0x2a, 0xe4, 0x73,
+	0x1c, 0xa7, 0x11, 0x11, 0x35, 0x91, 0xe2, 0x24, 0x21, 0xbc, 0xd6, 0xc1, 0x82, 0x76, 0xf5, 0x75,
+	0x6f, 0xf8, 0xb0, 0x9a, 0x72, 0x26, 0x19, 0xbc, 0x32, 0x8a, 0x2d, 0x2d, 0xa7, 0x84, 0x0b, 0x2a,
+	0x64, 0x8d, 0xa5, 0x92, 0xb2, 0x44, 0xe8, 0x80, 0xd2, 0x6b, 0x7d, 0xc6, 0xfa, 0x11, 0xa9, 0x65,
+	0x77, 0x9d, 0x41, 0xaf, 0x26, 0x69, 0x4c, 0x84, 0xc4, 0x71, 0x3a, 0x0c, 0x40, 0xb3, 0x01, 0x21,
+	0x11, 0x5d, 0x4e, 0x53, 0xc9, 0xf8, 0x30, 0xe2, 0xe5, 0x9c, 0x47, 0x12, 0x21, 0xb3, 0x8b, 0x7e,
+	0xf2, 0xd6, 0xe3, 0x15, 0xf0, 0xfc, 0xe6, 0x81, 0xaf, 0x29, 0xe1, 0x2f, 0x06, 0xb8, 0xba, 0x9d,
+	0x50, 0xcc, 0x0f, 0xd6, 0x13, 0x41, 0xb8, 0x84, 0x2b, 0xd5, 0xd1, 0xca, 0x6a, 0xb6, 0xc8, 0xd5,
+	0x77, 0x01, 0xee, 0x44, 0xa4, 0x74, 0xd6, 0x43, 0x0b, 0x7f, 0x79, 0x74, 0x68, 0x3e, 0x00, 0x77,
+	0x75, 0x22, 0x44, 0x13, 0xc9, 0xd0, 0x30, 0x7c, 0x4f, 0xaa, 0x08, 0x64, 0xd3, 0x70, 0x15, 0x09,
+	0x89, 0xb9, 0xdc, 0x53, 0x6f, 0xb4, 0x8a, 0x12, 0x1c, 0x93, 0x32, 0x42, 0x3b, 0x38, 0x1a, 0x10,
+	0x81, 0x6c, 0x67, 0x15, 0x39, 0xab, 0xc8, 0xea, 0xe0, 0x04, 0x27, 0x58, 0x58, 0x65, 0x68, 0xd2,
+	0x10, 0x82, 0xf1, 0x02, 0xf8, 0x5d, 0x4e, 0xeb, 0x93, 0x88, 0x74, 0x17, 0xa1, 0x5d, 0x53, 0xb4,
+	0x75, 0x70, 0xcb, 0x77, 0x37, 0xdc, 0x66, 0x80, 0x2a, 0xa8, 0xc7, 0x59, 0x3c, 0xc3, 0xbb, 0xbb,
+	0x4f, 0x38, 0x41, 0x34, 0xac, 0x3b, 0xa8, 0xd1, 0x6e, 0x65, 0xb4, 0x75, 0x27, 0x83, 0x7a, 0x4e,
+	0xfd, 0x87, 0x3f, 0xe7, 0x38, 0xdb, 0x69, 0x88, 0x25, 0x39, 0x1f, 0xce, 0x3d, 0xcc, 0x25, 0xc5,
+	0x91, 0xc6, 0xd9, 0x55, 0x38, 0x1e, 0xb8, 0xa3, 0x13, 0xcd, 0x70, 0x08, 0x22, 0x27, 0x64, 0xab,
+	0x3b, 0x5a, 0xb8, 0xba, 0xc5, 0x38, 0x4e, 0xfa, 0x44, 0x58, 0xe8, 0x51, 0x0e, 0x3a, 0x25, 0x97,
+	0x22, 0x7d, 0x9c, 0x33, 0xb6, 0x48, 0x44, 0x24, 0x81, 0xe8, 0x0c, 0x46, 0x4f, 0xe5, 0x3b, 0x5b,
+	0xb7, 0x2d, 0x05, 0x7a, 0x17, 0xdc, 0x6e, 0xb9, 0x1b, 0x6e, 0xe0, 0xa2, 0xa0, 0xb1, 0xb6, 0xe1,
+	0xda, 0xd7, 0xa7, 0x78, 0xaf, 0x97, 0x91, 0x1f, 0x34, 0xbc, 0xc0, 0x76, 0xca, 0xc8, 0x6d, 0xb7,
+	0xd4, 0xcf, 0x07, 0xeb, 0xed, 0x96, 0xdd, 0xdc, 0x2a, 0xc3, 0x2b, 0x1a, 0x8f, 0x86, 0x70, 0x89,
+	0x24, 0xa1, 0xfa, 0x4d, 0xc0, 0x52, 0x9b, 0x35, 0x78, 0x5f, 0x2c, 0xf0, 0x31, 0x2b, 0x0a, 0xea,
+	0x0d, 0xf0, 0xba, 0xc8, 0xba, 0xe2, 0xe4, 0x8f, 0x19, 0xd1, 0x98, 0x4a, 0x74, 0x0b, 0xf6, 0xc0,
+	0x55, 0x9f, 0xf0, 0xcf, 0x08, 0xf7, 0x25, 0x27, 0x38, 0x86, 0x2f, 0xcd, 0x24, 0x6e, 0xe3, 0xf8,
+	0x7f, 0xaa, 0x59, 0xaa, 0xda, 0xab, 0x60, 0x25, 0x6f, 0x9d, 0xf7, 0xbc, 0xad, 0xcd, 0xe9, 0x6a,
+	0x37, 0x0d, 0x35, 0x59, 0xb0, 0x19, 0x51, 0x92, 0x48, 0x5d, 0x68, 0x9e, 0xf9, 0xba, 0x36, 0xcb,
+	0x32, 0x88, 0x3d, 0xf6, 0x48, 0x58, 0x0f, 0x55, 0xc5, 0x0f, 0x41, 0x63, 0xbd, 0xed, 0xbb, 0x5e,
+	0x80, 0xd6, 0xdb, 0xc1, 0xd6, 0x7c, 0xa3, 0xb5, 0xd3, 0xd8, 0xd8, 0x76, 0xfd, 0xd1, 0x64, 0x39,
+	0xc7, 0x27, 0x2a, 0x6b, 0x64, 0xdb, 0x80, 0x3f, 0xce, 0xd0, 0x0e, 0x9b, 0xe5, 0x42, 0xb4, 0xae,
+	0xa2, 0xbd, 0x73, 0xb1, 0x16, 0x69, 0x6a, 0x44, 0x93, 0x86, 0xb6, 0x01, 0x9f, 0xcc, 0x40, 0xcd,
+	0x33, 0x65, 0xa7, 0x41, 0x6d, 0x2b, 0xa8, 0x7b, 0xe0, 0x9d, 0xc1, 0x39, 0x06, 0xcc, 0x39, 0x6d,
+	0xb0, 0xf4, 0xf8, 0x6b, 0xc8, 0xbf, 0x4d, 0xb0, 0x3c, 0xb9, 0x83, 0xee, 0x52, 0xb9, 0xff, 0x3e,
+	0x63, 0x9f, 0x2e, 0xd2, 0xcf, 0x3f, 0x99, 0x8a, 0xf6, 0x7b, 0xf3, 0x32, 0x37, 0x53, 0x6f, 0x17,
+	0x5c, 0x9b, 0xe4, 0x5e, 0x23, 0x3d, 0xc6, 0x89, 0x22, 0x87, 0xf5, 0x3e, 0x95, 0xfb, 0x83, 0x4e,
+	0xb5, 0xcb, 0xe2, 0x9a, 0xec, 0x26, 0xdd, 0x88, 0x0d, 0x42, 0xed, 0x35, 0xdd, 0x1b, 0x7d, 0x92,
+	0xdc, 0x18, 0xb9, 0xd6, 0x31, 0xcf, 0xdb, 0x57, 0xef, 0x7d, 0x7f, 0x67, 0x5a, 0x90, 0x46, 0x4f,
+	0x12, 0x5e, 0x40, 0x5e, 0xf8, 0x6b, 0xae, 0xb4, 0xde, 0xfd, 0x8b, 0x50, 0xfa, 0x2f, 0x43, 0x29,
+	0xfd, 0xd4, 0x00, 0x6f, 0xce, 0x67, 0x04, 0x4a, 0xc5, 0x67, 0x4f, 0xb9, 0xa7, 0xb9, 0x72, 0x7a,
+	0x84, 0x2e, 0xa8, 0xdc, 0x94, 0x63, 0x7d, 0x93, 0xf5, 0xe8, 0x57, 0x66, 0xf1, 0x9e, 0x35, 0xd6,
+	0x57, 0x67, 0xbe, 0x04, 0x7d, 0x75, 0xe2, 0xc2, 0xf4, 0xfd, 0x23, 0xd7, 0x57, 0xef, 0x9b, 0x63,
+	0x7d, 0x17, 0x74, 0xdb, 0x2f, 0x32, 0x91, 0xff, 0x31, 0x8a, 0xf3, 0xdb, 0xb1, 0xb8, 0x1a, 0xf5,
+	0x12, 0xc4, 0xd5, 0x89, 0x0b, 0x13, 0xf7, 0x89, 0x09, 0x96, 0x27, 0x1d, 0x7b, 0x2c, 0xee, 0xf9,
+	0xad, 0xfb, 0xf7, 0x6c, 0xdc, 0x7f, 0x33, 0xce, 0x34, 0x6f, 0x25, 0xd1, 0x64, 0xc1, 0x42, 0x25,
+	0x9a, 0x4c, 0x5c, 0x94, 0x44, 0x37, 0x0d, 0xf8, 0xa7, 0x09, 0x56, 0x8e, 0x5b, 0xe5, 0x9c, 0x73,
+	0x7e, 0x9a, 0x67, 0x7e, 0x9d, 0x75, 0xdf, 0xbf, 0x06, 0xa8, 0x9c, 0xea, 0x9a, 0x73, 0xfa, 0xa4,
+	0xf7, 0x11, 0x78, 0xe5, 0x38, 0x5e, 0x71, 0xc2, 0x3e, 0x38, 0xe9, 0xed, 0x8b, 0x92, 0xd7, 0x36,
+	0x4a, 0x9f, 0x7c, 0x7b, 0x74, 0x68, 0x7e, 0x0c, 0x1e, 0x82, 0x52, 0x55, 0x1f, 0xbd, 0xaa, 0xa3,
+	0xa3, 0x57, 0x35, 0x18, 0x9d, 0xcd, 0x5e, 0x7c, 0xc1, 0x5a, 0xda, 0x3c, 0x50, 0xb7, 0x95, 0xdb,
+	0xe7, 0xad, 0x17, 0x1f, 0x28, 0xbd, 0x7e, 0x38, 0x3a, 0x34, 0x8d, 0x35, 0xf7, 0x7e, 0xf3, 0xa2,
+	0xb8, 0xd9, 0x69, 0xf3, 0xdd, 0xec, 0xda, 0x59, 0xca, 0x16, 0xbc, 0xfd, 0x5f, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0x65, 0x61, 0x52, 0x2d, 0x9a, 0x0e, 0x00, 0x00,
 }

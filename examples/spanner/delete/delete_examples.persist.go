@@ -34,6 +34,7 @@ func NewDeleteImpl(d string, conf *spanner.ClientConfig, opts ...option.ClientOp
 // spanner unary select DeleteEquals
 func (s *DeleteImpl) DeleteEquals(ctx context.Context, req *Empty) (*Empty, error) {
 	var err error
+
 	start := make([]interface{}, 0)
 	end := make([]interface{}, 0)
 	start = append(start, 1)
@@ -51,13 +52,15 @@ func (s *DeleteImpl) DeleteEquals(ctx context.Context, req *Empty) (*Empty, erro
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := &Empty{}
-	return res, nil
+	res := Empty{}
+
+	return &res, nil
 }
 
 // spanner unary select DeleteGreater
 func (s *DeleteImpl) DeleteGreater(ctx context.Context, req *Empty) (*Empty, error) {
 	var err error
+
 	start := make([]interface{}, 0)
 	end := make([]interface{}, 0)
 	start = append(start, 1)
@@ -74,13 +77,15 @@ func (s *DeleteImpl) DeleteGreater(ctx context.Context, req *Empty) (*Empty, err
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := &Empty{}
-	return res, nil
+	res := Empty{}
+
+	return &res, nil
 }
 
 // spanner unary select DeleteLess
 func (s *DeleteImpl) DeleteLess(ctx context.Context, req *Empty) (*Empty, error) {
 	var err error
+
 	start := make([]interface{}, 0)
 	end := make([]interface{}, 0)
 	start = append(start, "b123b_asdf")
@@ -99,13 +104,15 @@ func (s *DeleteImpl) DeleteLess(ctx context.Context, req *Empty) (*Empty, error)
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := &Empty{}
-	return res, nil
+	res := Empty{}
+
+	return &res, nil
 }
 
 // spanner unary select DeleteMultiEquals
 func (s *DeleteImpl) DeleteMultiEquals(ctx context.Context, req *Empty) (*Empty, error) {
 	var err error
+
 	start := make([]interface{}, 0)
 	end := make([]interface{}, 0)
 	start = append(start, 1)
@@ -125,6 +132,7 @@ func (s *DeleteImpl) DeleteMultiEquals(ctx context.Context, req *Empty) (*Empty,
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := &Empty{}
-	return res, nil
+	res := Empty{}
+
+	return &res, nil
 }

@@ -29,67 +29,6 @@
 
 package templates
 
-const ReturnConvertHelpers= `
-	{{define "addr"}}{{if .IsMessage}}&{{end}}{{end}}
-	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.Name}}){{else}}{{.Name}}{{end}}{{end}}
-	{{define "mapping"}}{{if .IsMapped}}.ToProto(){{end}}{{end}}
-`
-const BeforeHook = `
-	{{define "before_hook"}}
-	{{/* give it a Method as dot, assumes a "req" exists to give to the hook as parameter*/}}
-	{{/* works for all method types, but assumes we are in a loop to continue on for */}}
-	{{/* client streaming and bidi streaming methods */}}
-	{{$before := .GetMethodOption.GetBefore}}
-		{{if $before}}
-			beforeRes, err := {{.GetGoPackage $before.GetPackage}}.{{$before.GetName}}(req)
-			if err != nil {
-				{{if .IsUnary}}
-					return nil, grpc.Errorf(codes.Unknown, err.Error())
-				{{else}}
-					return grpc.Errorf(codes.Unknown, err.Error())
-				{{end}}
-			}
-			if beforeRes != nil {
-				{{if .IsClientStreaming}}
-					continue
-				{{end}}
-				{{if and .IsBidiStreaming (not .IsSpanner)}}
-					err = stream.Send(beforeRes)
-					if err != nil {
-						return grpc.Errorf(codes.Unknown, err.Error())
-					}
-					continue
-				{{end}}
-				{{if or .IsUnary}}
-					return beforeRes, nil
-				{{end}}
-				{{if .IsServerStreaming}}
-					err = stream.Send(beforeRes)
-					if err != nil {
-						return err
-					}
-				{{end}}
-			}
-		{{end}}
-	{{end}}
-`
-const AfterHook = `
-	{{define "after_hook"}}
-	{{/* give it a Method as dot, assumes a "res" exists to give the hook as parameter */}}
-	{{/* does not do anything for client streaming methods */}}
-	{{$after := .GetMethodOption.GetAfter}}
-		{{if and $after (not .IsClientStreaming)}}
-			err = {{.GetGoPackage $after.GetPackage}}.{{$after.GetName}}(res)
-			if err != nil {
-				{{if .IsUnary}}
-					return nil, grpc.Errorf(codes.Unknown, err.Error())
-				{{else}}
-					return grpc.Errorf(codes.Unknown, err.Error())
-				{{end}}
-			}
-		{{end}}
-	{{end}}
-`
 const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
@@ -110,13 +49,13 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := &{{.GetOutputType}}{
+	res := {{.GetOutputType}}{
 	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
 	{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 	}
 
 	{{template "after_hook" .}}
-	return res, nil
+	return &res, nil
 }
 {{end}}`
 
@@ -151,14 +90,14 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &{{.GetOutputType}}{
+		res := {{.GetOutputType}}{
 		{{range $field, $type := .GetTypeDescForFieldsInStruct  .GetOutputTypeStruct}}
 		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
 
 		{{template "after_hook" .}}
 
-		stream.Send(res)
+		stream.Send(&res)
 	}
 	return nil
 }{{end}}`
@@ -174,7 +113,9 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 	if err != nil {
 		return err
 	}
-	totalAffected := int64(0)
+	{{/* setup the response for aggregation in the after hook */}}
+	res := {{.GetOutputType}}{}
+
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -187,7 +128,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 
 		{{template "before_hook" .}}
 
-		affected, err := stmt.Exec({{.GetQueryParamString false}})
+		_, err = stmt.Exec({{.GetQueryParamString false}})
 		if err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
@@ -197,20 +138,14 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-
-		num, err := affected.RowsAffected()
-		if err != nil {
-			tx.Rollback()
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		totalAffected += num
+		{{template "after_hook" .}}
 	}
 	err = tx.Commit()
 	if err != nil {
 		fmt.Println("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
-	stream.SendAndClose(&{{.GetOutputType}}{ Count: totalAffected })
+	stream.SendAndClose(&res)
 	return nil
 }{{end}}`
 
@@ -245,14 +180,14 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &{{.GetOutputType}}{
+		res := {{.GetOutputType}}{
 		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
 		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
 
 		{{template "after_hook" .}}
 
-		if err := stream.Send(res); err != nil {
+		if err := stream.Send(&res); err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}

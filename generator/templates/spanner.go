@@ -44,6 +44,7 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 		{{$field}} {{$type}}{{end}}
 	)
 
+	{{template "before_hook" .}}
 	{{template "declare_spanner_arg_map" .}}
 
 	//stmt := spanner.Statement{SQL: "{ {.Spanner.Query} }", Params: params}
@@ -82,17 +83,20 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	if err != iterator.Done {
 		fmt.Println("Unary select that returns more than one row..")
 	}
-	//res := &{ {.GetOutputType} }{
-	res := &{{.GetOutputType}}{
+	res := {{.GetOutputType}}{
 	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
 	{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 	}
-	return res, nil
+
+	{{template "after_hook" .}}
+
+	return &res, nil
 }
 {{end}}`
 
 const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
 	var err error
+	{{template "before_hook" .}}
 	{{template "declare_spanner_arg_slice" .}}
 
 	muts := make([]*spanner.Mutation, 1)
@@ -105,14 +109,18 @@ const SpannerUnaryInsertTemplate = `{{define "spanner_unary_insert"}}
 			return nil, grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
-	res := &{{.GetOutputType}}{}
+	res := {{.GetOutputType}}{}
 
-	return res, nil
+	{{template "after_hook" .}}
+
+	return &res, nil
 }
 {{end}}`
 
 const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
 	var err error
+
+	{{template "before_hook" .}}
 	{{template "declare_spanner_arg_map" .}}
 
 	muts := make([]*spanner.Mutation, 1)
@@ -125,15 +133,19 @@ const SpannerUnaryUpdateTemplate = `{{define "spanner_unary_update"}}
 			return nil, grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
-	res := &{{.GetOutputType}}{}
+	res := {{.GetOutputType}}{}
 
-	return res, nil
+	{{template "after_hook" .}}
+
+	return &res, nil
 }
 {{end}}`
 
 const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
 	var err error
-{{template "declare_spanner_delete_key" .}}
+
+	{{template "before_hook" .}}
+	{{template "declare_spanner_delete_key" .}}
 
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.DeleteKeyRange({{.Spanner.TableName}}, key)
@@ -143,16 +155,22 @@ const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := &{{.GetOutputType}}{}
+	res := {{.GetOutputType}}{}
 
-	return res, nil
+	{{template "after_hook" .}}
+
+	return &res, nil
 }
 {{end}}`
 
 const SpannerClientStreamingMethodTemplate = `{{define "spanner_client_streaming_method"}}// spanner client streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
-	var totalAffected int64
 	var err error
+	res := {{.GetOutputType}}{}
+	{{$aft := .GetMethodOption.GetAfter}}
+	{{if $aft}}
+		reqs := make([]*{{.GetInputType}}, 0)
+	{{end}}
 	muts := make([]*spanner.Mutation, 0)
 	for {
 		req, err := stream.Recv()
@@ -161,13 +179,19 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		} else if err  != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		totalAffected += 1
+		{{template "before_hook" .}}
+		{{if $aft}}
+			reqs = append(reqs, req)
+		{{end}}
 
 		{{if .Spanner.IsInsert}}{{template "spanner_client_streaming_insert" .}}{{end}}
 		{{if .Spanner.IsUpdate}}{{template "spanner_client_streaming_update" .}}{{end}}
 		{{if .Spanner.IsDelete}}{{template "spanner_client_streaming_delete" .}}{{end}}
-		//In the future, we might do apply if muts gets really big,  but for now,
+
+		////////////////////////////// NOTE //////////////////////////////////////
+		// In the future, we might do apply if muts gets really big,  but for now,
 		// we only do one apply on the database with all the records stored in muts
+		//////////////////////////////////////////////////////////////////////////
 	}
 	_, err = s.SpannerDB.Apply(context.Background(), muts)
 	if err != nil {
@@ -177,7 +201,12 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
-	stream.SendAndClose(&{{.GetOutputType}}{Count: totalAffected})
+	{{if $aft}}
+		for _, req := range reqs {
+			{{template "after_hook" .}}
+		}
+	{{end}}
+	stream.SendAndClose(&res)
 	return nil
 }
 {{end}}`
@@ -206,6 +235,9 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		{{$field}} {{$type}}{{end}}
 	)
+
+	{{template "before_hook" .}}
+
 	{{if ne (len .Spanner.QueryArgs) 0}}
 	var err error
 	{{end}}
@@ -243,11 +275,14 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		{{end}}{{end}}
-		res := &{{.GetOutputType}}{
+		res := {{.GetOutputType}}{
 		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
 		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
-		stream.Send(res)
+
+		{{template "after_hook" .}}
+
+		stream.Send(&res)
 	}
 	return  nil
 }

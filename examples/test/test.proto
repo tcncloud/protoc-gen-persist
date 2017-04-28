@@ -55,6 +55,15 @@ message Name {
   string name = 1;
 }
 
+message Ids {
+  repeated int64 ids = 1;
+}
+
 message NumRows {
   int64 count = 1;
+}
+
+message ExampleTableRange {
+  int64 start_id = 1;
+  int64 end_id = 2;
 }
