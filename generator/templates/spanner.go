@@ -167,6 +167,10 @@ const SpannerClientStreamingMethodTemplate = `{{define "spanner_client_streaming
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	var err error
 	res := {{.GetOutputType}}{}
+	{{$aft := .GetMethodOption.GetAfter}}
+	{{if $aft}}
+		reqs := make([]*{{.GetInputType}}, 0)
+	{{end}}
 	muts := make([]*spanner.Mutation, 0)
 	for {
 		req, err := stream.Recv()
@@ -175,19 +179,19 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 		} else if err  != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-
 		{{template "before_hook" .}}
+		{{if $aft}}
+			reqs = append(reqs, req)
+		{{end}}
+
 		{{if .Spanner.IsInsert}}{{template "spanner_client_streaming_insert" .}}{{end}}
 		{{if .Spanner.IsUpdate}}{{template "spanner_client_streaming_update" .}}{{end}}
 		{{if .Spanner.IsDelete}}{{template "spanner_client_streaming_delete" .}}{{end}}
+
 		////////////////////////////// NOTE //////////////////////////////////////
 		// In the future, we might do apply if muts gets really big,  but for now,
 		// we only do one apply on the database with all the records stored in muts
 		//////////////////////////////////////////////////////////////////////////
-		// This isn't technically an "after" hook because it happens before the mutations
-		// are applied to the database.  Think of it as more of an aggregation hook for
-		// gathering the proto response
-		{{template "after_hook" .}}
 	}
 	_, err = s.SpannerDB.Apply(context.Background(), muts)
 	if err != nil {
@@ -197,6 +201,11 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
+	{{if $aft}}
+		for _, req := range reqs {
+			{{template "after_hook" .}}
+		}
+	{{end}}
 	stream.SendAndClose(&res)
 	return nil
 }
