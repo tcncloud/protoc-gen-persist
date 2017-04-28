@@ -34,7 +34,7 @@ func UniarySelectAfterHook(req *pb.PartialTable, res *pb.ExampleTable) error {
 	return nil
 }
 
-func ServerStreamBeforeHook(req *pb.Name) (*pb.ExampleTable, error) {
+func ServerStreamBeforeHook(req *pb.Name) ([]*pb.ExampleTable, error) {
 	fmt.Printf("ServerStreamBeforeHook: %+v\n", req)
 	return nil, nil
 }

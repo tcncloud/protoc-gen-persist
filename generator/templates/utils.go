@@ -69,10 +69,13 @@ const BeforeHook = `
 					return beforeRes, nil
 				{{end}}
 				{{if .IsServerStreaming}}
-					err = stream.Send(beforeRes)
-					if err != nil {
-						return err
+					for _, res := range beforeRes {
+						err = stream.Send(res)
+						if err != nil {
+							return err
+						}
 					}
+					return nil
 				{{end}}
 			}
 		{{end}}
