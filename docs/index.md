@@ -665,8 +665,13 @@ After hooks are called after the query is executed, and given the request, and t
 It is safe to dereference the response in your hook, so data aggregation is possible in client stream hooks.
 
 __Before Hook Notes__
-The only thing that works not quite as expected is that before hooks for server stream methods will only stream
-back one response, and it is not currently possible to stream back more than one response
+All before hooks share the same signature: ```func(*protoReq) (*protoRes, error)```
+
+but server streaming responses have the signature of: ```func(*protoRes) ([]*protores, error)```
+
+the responses are looped through and streamed back to the client for server streaming calls if the array is not nil
+or empty, and then the function early returns without querying the database
+
 
 
 __After Hook Notes__
@@ -674,6 +679,7 @@ __After Hook Notes__
 for each request in the transaction
 - Server streaming methods call the after hook with one response for each row returned from the database
 - Other grpc method types call the after hook once
+- after hooks only support one function signature: ```func(*protoReq, *protoRes) error```
 
 ### Example
 
