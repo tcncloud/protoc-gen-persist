@@ -124,7 +124,7 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 func (f *FileStruct) ProcessImports() {
 	logrus.Debug("processing imports for file")
 	for _, srv := range *f.ServiceList {
-		logrus.Infof("is service enabled? %t", srv.IsServiceEnabled())
+		logrus.Debug("is service enabled? %t", srv.IsServiceEnabled())
 		if srv.IsServiceEnabled() {
 			srv.ProcessImports()
 			for _, m := range *srv.Methods {
