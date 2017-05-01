@@ -134,7 +134,7 @@ func (s *Service) IsServiceEnabled() bool {
 }
 
 func (s *Service) ProcessImports() {
-	logrus.Warn("PROCESS IMPORTS FOR SERVICE CALLED")
+	logrus.Info("PROCESS IMPORTS FOR SERVICE CALLED")
 	s.File.ImportList.GetOrAddImport("io", "io")
 	s.File.ImportList.GetOrAddImport("strings", "strings")
 	s.File.ImportList.GetOrAddImport("context", "golang.org/x/net/context")

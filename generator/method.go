@@ -461,7 +461,7 @@ func (m *Method) IsBidiStreaming() bool {
 }
 
 func (m *Method) Process() error {
-	logrus.Debugf("Process method %s", m.GetName())
+	logrus.Debug("Process method %s", m.GetName())
 	if m.IsSpanner() {
 		logrus.Debug("We are a spanner method")
 		s, err := NewSpannerHelper(m)
@@ -483,17 +483,16 @@ func (m *Method) ProcessImports() {
 			for _, mapping := range m.GetMethodOption().GetMapping().GetTypes() {
 				m.Service.File.ImportList.GetOrAddImport(GetGoPackage(mapping.GetGoPackage()), GetGoPath(mapping.GetGoPackage()))
 			}
-			// if CallbackFunction options exist,  import the packages
-			// name string, package string
-			beforeOpt := m.GetMethodOption().GetBefore()
-			afterOpt := m.GetMethodOption().GetAfter()
-			if beforeOpt != nil {
-				m.Service.File.ImportList.GetOrAddImport(GetGoPackage(beforeOpt.GetPackage()), GetGoPath(beforeOpt.GetPackage()))
-			}
-			if afterOpt != nil {
-				m.Service.File.ImportList.GetOrAddImport(GetGoPackage(afterOpt.GetPackage()), GetGoPath(afterOpt.GetPackage()))
-			}
-
+		}
+		// if CallbackFunction options exist,  import the packages
+		// name string, package string
+		beforeOpt := m.GetMethodOption().GetBefore()
+		afterOpt := m.GetMethodOption().GetAfter()
+		if beforeOpt != nil {
+			m.Service.File.ImportList.GetOrAddImport(GetGoPackage(beforeOpt.GetPackage()), GetGoPath(beforeOpt.GetPackage()))
+		}
+		if afterOpt != nil {
+			m.Service.File.ImportList.GetOrAddImport(GetGoPackage(afterOpt.GetPackage()), GetGoPath(afterOpt.GetPackage()))
 		}
 	}
 }
