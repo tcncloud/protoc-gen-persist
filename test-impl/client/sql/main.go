@@ -1,18 +1,19 @@
 package main
 
-import(
-	"fmt"
-	"io"
-	"time"
+import (
 	"context"
-	"google.golang.org/grpc"
+	"fmt"
+	ptypes "github.com/golang/protobuf/ptypes"
+	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
 	pbclient "github.com/tcncloud/protoc-gen-persist/examples/sql/basic"
 	pb "github.com/tcncloud/protoc-gen-persist/examples/test"
-	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
-	ptypes "github.com/golang/protobuf/ptypes"
+	"google.golang.org/grpc"
+	"io"
+	"time"
 )
+
 func setupClient() pbclient.AmazingClient {
-	conn, err := grpc.Dial("s:50051",  grpc.WithInsecure())
+	conn, err := grpc.Dial("s:50051", grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -23,28 +24,28 @@ func clientStreamInsert(client pbclient.AmazingClient, name string) error {
 	now := time.Now().Truncate(time.Millisecond)
 	docs := []*pb.ExampleTable{
 		&pb.ExampleTable{
-			Id: int64(1),
+			Id:        int64(1),
 			StartTime: ToProtobufTime(&now),
-			Name: "george",
+			Name:      "george",
 		},
 		&pb.ExampleTable{
-			Id: int64(2),
+			Id:        int64(2),
 			StartTime: ToProtobufTime(&now),
-			Name: name,
+			Name:      name,
 		},
 		&pb.ExampleTable{
-			Id: int64(3),
+			Id:        int64(3),
 			StartTime: ToProtobufTime(&now),
-			Name: name,
+			Name:      name,
 		},
 		&pb.ExampleTable{
-			Id: int64(4),
+			Id:        int64(4),
 			StartTime: ToProtobufTime(&now),
-			Name: name,
+			Name:      name,
 		},
 	}
 	stream, err := client.ClientStreamWithHook(context.Background())
-	for _, doc := range(docs) {
+	for _, doc := range docs {
 		fmt.Printf("clientStreaming doc: %+v\n", doc)
 		err := stream.Send(doc)
 		if err != nil {
@@ -62,14 +63,14 @@ func clientStreamInsert(client pbclient.AmazingClient, name string) error {
 func serverStreamFromName(client pbclient.AmazingClient, name string) (*[]*pb.ExampleTable, error) {
 	res := make([]*pb.ExampleTable, 0)
 	fmt.Printf("Getting all docs that match name %s with server stream\n", name)
-	stream, err := client.ServerStreamWithHooks(context.Background(), &pb.Name{ Name: name })
+	stream, err := client.ServerStreamWithHooks(context.Background(), &pb.Name{Name: name})
 	if err != nil {
 		return nil, err
 	}
 	for {
 		doc, err := stream.Recv()
 		if err == io.EOF {
-			break;
+			break
 		} else if err != nil {
 			return nil, err
 		}
@@ -89,7 +90,7 @@ func bidirectionalStream(client pbclient.AmazingClient, recs []*pb.ExampleTable)
 
 	tomorrow := time.Now().Add(time.Hour * 24)
 
-	for _, rec := range(recs) {
+	for _, rec := range recs {
 		if rec != nil {
 			fmt.Printf("Before Bidirectional Update: %+v\n", rec)
 			rec.Name = "jenkins"
@@ -102,7 +103,7 @@ func bidirectionalStream(client pbclient.AmazingClient, recs []*pb.ExampleTable)
 
 			changed, err := stream.Recv()
 			if err == io.EOF {
-				break;
+				break
 			} else if err != nil {
 				return err
 			}
@@ -118,7 +119,7 @@ func bidirectionalStream(client pbclient.AmazingClient, recs []*pb.ExampleTable)
 func uniaryCacheTest(client pbclient.AmazingClient) error {
 	yesterday := time.Now().Add(time.Hour * -24).Truncate(time.Millisecond)
 	req := &pb.PartialTable{
-		Id: int64(1),
+		Id:        int64(1),
 		StartTime: ToProtobufTime(&yesterday),
 	}
 	res1, err := client.UniarySelectWithHooks(context.Background(), req)

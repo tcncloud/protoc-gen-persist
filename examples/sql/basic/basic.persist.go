@@ -9,7 +9,7 @@ import (
 	io "io"
 	strings "strings"
 
-	"github.com/tcncloud/protoc-gen-persist/examples/hooks"
+	hooks "github.com/tcncloud/protoc-gen-persist/examples/hooks"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
 	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"

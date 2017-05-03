@@ -65,7 +65,7 @@ service Bobs {
   // Delete all bob events before the time in the end key
   rpc DeleteBobs(Bob) returns (Empty) {
     option (persist.ql) = {
-      query: "DELETE TABLE('bob_table') START('Bob') END('Bob', ?) KIND(CO)"
+      query: "DELETE FROM bob_table START('Bob') END('Bob', ?) KIND(CO)"
       arguments: ["start_time"]
     };
   };

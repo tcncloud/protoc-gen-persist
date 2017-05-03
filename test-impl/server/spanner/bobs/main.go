@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
-	"net"
-	_"github.com/lib/pq"
+	_ "github.com/lib/pq"
 	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/bob_example"
 	"google.golang.org/grpc"
+	"net"
 )
-
 
 func main() {
 	lis, err := net.Listen("tcp", ":50051")

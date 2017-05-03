@@ -635,7 +635,7 @@ Spanner only allows you to delete by a key in the table, or a range of keys in t
 Because of this, We do not allow sql queries for Delete calls.  Instead we support a simple
 KeyRange syntax for deleteion. Example:
 
-```"DELETE TABLE('my_table') START('Bob') END('Bob', '01/01/2001') KIND(CO)"```
+```"DELETE FROM my_table START('Bob') END('Bob', '01/01/2001') KIND(CO)"```
 
 Rules:
 - Start the definition with the keyword  DELETE (in all caps), all other definitions can come in any order.
@@ -646,7 +646,8 @@ floats, ints strings, or ?  like sql.
   - CO  ClosedOpen
   - OC  OpenClosed
   - OO  OpenOpen
--  TABLE()  takes a string argument refering to the table in spanner that the deletion will take place
+-  FROM  expects an identifier as next non-whitespace token refering to the table in spanner
+that the deletion will take place.
 -  Strings are represented with single quotes: 'example_string'
 -  ? in a START() or END()  definition will put your arguments at that position, just
 like the other query examples

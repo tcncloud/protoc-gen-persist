@@ -1,68 +1,102 @@
 package main
 
-
-import(
-	"fmt"
-	"io"
-	"time"
+import (
 	"context"
-	"google.golang.org/grpc"
+	"fmt"
+	ptypes "github.com/golang/protobuf/ptypes"
+	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
 	pbclient "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic"
 	pb "github.com/tcncloud/protoc-gen-persist/examples/test"
-	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
-	ptypes "github.com/golang/protobuf/ptypes"
+	"google.golang.org/grpc"
+	"io"
+	"time"
 )
 
-
 func setupClient() pbclient.MySpannerClient {
-	conn, err := grpc.Dial("127.0.0.1:50051",  grpc.WithInsecure())
+	conn, err := grpc.Dial("127.0.0.1:50051", grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
 	return pbclient.NewMySpannerClient(conn)
 }
+
 var ctx = context.Background()
 
 func main() {
 	client := setupClient()
 	var err error
 	err = uniaryInsert(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = clientStreamInsert(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = uniarySelect(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = noArgs(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = serverStream(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = uniaryUpdate(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = serverStream(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = clientStreamUpdate(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = uniaryDelete(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = clientStreamDelete(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	err = uniaryInsertWithHooks(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = uniarySelectWithHooks(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = uniaryUpdateWithHooks(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = uniarySelectWithHooks(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = clientStreamUpdateWithHooks(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = serverStreamWithHooks(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = uniaryDeleteWithHooks(client)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	err = serverStream(client)
 }
+
 // query: "Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"
 func uniaryInsert(client pbclient.MySpannerClient) error {
 	now := time.Now().Truncate(time.Millisecond)
@@ -106,13 +140,14 @@ func uniarySelectWithHooks(client pbclient.MySpannerClient) error {
 	fmt.Printf("received res: %+v\n\n", res)
 	return nil
 }
+
 // query: "Update example_table set start_time=?, name=\"oranges\" where id=?",
 func uniaryUpdate(client pbclient.MySpannerClient) error {
 	fmt.Println("performing uniaryUpdate")
 	now := time.Now().Truncate(time.Millisecond)
 	_, err := client.UniaryUpdate(ctx, &pb.ExampleTable{
 		StartTime: ToProtobufTime(&now),
-		Id: int64(1),
+		Id:        int64(1),
 	})
 	if err != nil {
 		return err
@@ -160,14 +195,14 @@ func noArgs(client pbclient.MySpannerClient) error {
 // query: "SELECT * FROM example_table"
 func serverStream(client pbclient.MySpannerClient) error {
 	fmt.Printf("Getting all docs with server stream\n\n")
-	stream, err := client.ServerStream(ctx, &pb.Name{ })
+	stream, err := client.ServerStream(ctx, &pb.Name{})
 	if err != nil {
-		return  err
+		return err
 	}
 	for {
 		doc, err := stream.Recv()
 		if err == io.EOF {
-			break;
+			break
 		} else if err != nil {
 			return err
 		}
@@ -180,14 +215,14 @@ func serverStream(client pbclient.MySpannerClient) error {
 
 func serverStreamWithHooks(client pbclient.MySpannerClient) error {
 	fmt.Println("procesing server stream with hooks")
-	stream, err := client.ServerStream(ctx, &pb.Name{ })
+	stream, err := client.ServerStream(ctx, &pb.Name{})
 	if err != nil {
 		return err
 	}
 	for {
 		doc, err := stream.Recv()
 		if err == io.EOF {
-			break;
+			break
 		} else if err != nil {
 			return err
 		}
@@ -203,28 +238,28 @@ func clientStreamInsert(client pbclient.MySpannerClient) error {
 	now := time.Now().Truncate(time.Millisecond)
 	docs := []*pb.ExampleTable{
 		&pb.ExampleTable{
-			Id: int64(1),
+			Id:        int64(1),
 			StartTime: ToProtobufTime(&now),
-			Name: "george",
+			Name:      "george",
 		},
 		&pb.ExampleTable{
-			Id: int64(2),
+			Id:        int64(2),
 			StartTime: ToProtobufTime(&now),
-			Name: "michelle",
+			Name:      "michelle",
 		},
 		&pb.ExampleTable{
-			Id: int64(3),
+			Id:        int64(3),
 			StartTime: ToProtobufTime(&now),
-			Name: "frank",
+			Name:      "frank",
 		},
 		&pb.ExampleTable{
-			Id: int64(4),
+			Id:        int64(4),
 			StartTime: ToProtobufTime(&now),
-			Name: "amy",
+			Name:      "amy",
 		},
 	}
 	stream, err := client.ClientStreamInsert(ctx)
-	for _, doc := range(docs) {
+	for _, doc := range docs {
 		fmt.Printf("clientStreaming doc: %+v\n", doc)
 		err := stream.Send(doc)
 		if err != nil {
@@ -248,7 +283,7 @@ func clientStreamDelete(client pbclient.MySpannerClient) error {
 		},
 	}
 	stream, err := client.ClientStreamDelete(ctx)
-	for _, doc := range(docs) {
+	for _, doc := range docs {
 		fmt.Printf("clientStreaming doc: %+v\n", doc)
 		err := stream.Send(doc)
 		if err != nil {
@@ -269,28 +304,28 @@ func clientStreamUpdate(client pbclient.MySpannerClient) error {
 	now := time.Now().Truncate(time.Millisecond)
 	docs := []*pb.ExampleTable{
 		&pb.ExampleTable{
-			Id: int64(1),
+			Id:        int64(1),
 			StartTime: ToProtobufTime(&now),
-			Name: "notgeorge",
+			Name:      "notgeorge",
 		},
 		&pb.ExampleTable{
-			Id: int64(2),
+			Id:        int64(2),
 			StartTime: ToProtobufTime(&now),
-			Name: "notmichelle",
+			Name:      "notmichelle",
 		},
 		&pb.ExampleTable{
-			Id: int64(3),
+			Id:        int64(3),
 			StartTime: ToProtobufTime(&now),
-			Name: "notfrank",
+			Name:      "notfrank",
 		},
 		&pb.ExampleTable{
-			Id: int64(4),
+			Id:        int64(4),
 			StartTime: ToProtobufTime(&now),
-			Name: "notamy",
+			Name:      "notamy",
 		},
 	}
 	stream, err := client.ClientStreamUpdate(ctx)
-	for _, doc := range(docs) {
+	for _, doc := range docs {
 		fmt.Printf("clientStreaming doc: %+v\n", doc)
 		err := stream.Send(doc)
 		if err != nil {

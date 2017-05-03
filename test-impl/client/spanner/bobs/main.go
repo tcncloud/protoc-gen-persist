@@ -1,19 +1,17 @@
 package main
 
-
-import(
+import (
+	"context"
 	"fmt"
+	ptypes "github.com/golang/protobuf/ptypes"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/bob_example"
+	"google.golang.org/grpc"
 	"io"
 	"time"
-	"context"
-	"google.golang.org/grpc"
-	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/bob_example"
-	ptypes "github.com/golang/protobuf/ptypes"
 )
 
-
-func setupClient() pb.BobsClient{
-	conn, err := grpc.Dial("127.0.0.1:50051",  grpc.WithInsecure())
+func setupClient() pb.BobsClient {
+	conn, err := grpc.Dial("127.0.0.1:50051", grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -49,14 +47,14 @@ func main() {
 
 func PrintBobs(client pb.BobsClient) error {
 	fmt.Printf("Getting all docs with server stream\n\n")
-	stream, err := client.GetBobs(context.Background(), &pb.Empty{ })
+	stream, err := client.GetBobs(context.Background(), &pb.Empty{})
 	if err != nil {
-		return  err
+		return err
 	}
 	for {
 		doc, err := stream.Recv()
 		if err == io.EOF {
-			break;
+			break
 		} else if err != nil {
 			return err
 		}
