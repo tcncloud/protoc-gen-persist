@@ -2,12 +2,12 @@ package delete_parser
 
 import (
 	"fmt"
-	"unicode"
 	"strconv"
+	"unicode"
 )
 
 type Token struct {
-	Type string
+	Type  string
 	Value string
 }
 
@@ -17,25 +17,25 @@ func (t *Token) String() string {
 
 type ParsedKeyRange struct {
 	Start []*Token
-	End []*Token
-	Kind string
+	End   []*Token
+	Kind  string
 	Table string
 }
 
 type Parser struct {
-	State string
-	Query string
-	Pos int
-	Char rune
+	State        string
+	Query        string
+	Pos          int
+	Char         rune
 	CurrentToken *Token
-	KeyRange *ParsedKeyRange
-	EOF bool
+	KeyRange     *ParsedKeyRange
+	EOF          bool
 }
 
 func NewParser(q string) *Parser {
 	kr := &ParsedKeyRange{
-		Start:  make([]*Token, 0),
-		End: make([]*Token, 0),
+		Start: make([]*Token, 0),
+		End:   make([]*Token, 0),
 	}
 	return &Parser{Query: q, KeyRange: kr}
 }
@@ -120,9 +120,9 @@ func (in *Parser) Scan() string {
 	}
 	str := ""
 	for {
-		if in.IsKeyword(str) || in.EOF || in.IsSeperator(in.Char){
+		if in.IsKeyword(str) || in.EOF || in.IsSeperator(in.Char) {
 			//fmt.Printf("Cur char is something important: %s\n", str)
-			break;
+			break
 		}
 		str += string(in.Char)
 		//fmt.Printf("str now: %s\n", str)
@@ -140,13 +140,12 @@ func (in *Parser) IsSeperator(c rune) bool {
 
 func (in *Parser) IsKeyword(st string) bool {
 	if contains([]string{"DELETE", "FROM", "START(", "END(", "KIND(", ",", ")", "'", ".", "CC", "CO", "OC", "OO", "?"}, st) {
-		return  true
+		return true
 	}
 	return false
 }
 
-
-func (in *Parser)  Advance() {
+func (in *Parser) Advance() {
 	in.Pos += 1
 	if in.Pos >= len(in.Query) {
 		in.EOF = true
@@ -167,7 +166,7 @@ func (in *Parser) SkipWhitespace() {
 // compare current token type to t, if they match
 // eat the current token, assign the current token to the
 // next token, otherwise return an error
-func (in *Parser) Eat(t string)error {
+func (in *Parser) Eat(t string) error {
 	//fmt.Printf("eat: %+v, expected: %+v\n", in.CurrentToken, ts)
 	if t == in.CurrentToken.Type {
 		tok, err := in.GetNextToken()
@@ -185,18 +184,24 @@ func (in *Parser) Eat(t string)error {
 // eats a ' token, identifier token, and ' token (' IDENTIFIER ') and returns a new token
 // of type STRING  with the token's value being the string value of the identifier
 func (in *Parser) GetStringIdentifier() (*Token, error) {
-	if err := in.Eat("STRING_BEGIN"); err != nil { return nil, err }
+	if err := in.Eat("STRING_BEGIN"); err != nil {
+		return nil, err
+	}
 	strVal := ""
 	for {
 		if in.CurrentToken.Type == "STRING_END" {
-			break;
+			break
 		}
 		ident := in.CurrentToken
 		strVal += string(ident.Value)
-		if err := in.Eat("IDENTIFIER"); err != nil { return nil, err }
+		if err := in.Eat("IDENTIFIER"); err != nil {
+			return nil, err
+		}
 	}
-	if err := in.Eat("STRING_END"); err != nil { return nil, err }
-	return &Token{ Type: "STRING", Value: "\"" + strVal + "\""}, nil
+	if err := in.Eat("STRING_END"); err != nil {
+		return nil, err
+	}
+	return &Token{Type: "STRING", Value: "\"" + strVal + "\""}, nil
 }
 
 // eats an identifier token, and if there is a . token, it eats that
@@ -205,12 +210,18 @@ func (in *Parser) GetStringIdentifier() (*Token, error) {
 // It leaves the value as a string
 func (in *Parser) GetNumberIdentifier() (*Token, error) {
 	first := in.CurrentToken
-	if err := in.Eat("IDENTIFIER"); err != nil { return nil, err }
+	if err := in.Eat("IDENTIFIER"); err != nil {
+		return nil, err
+	}
 	cur := in.CurrentToken
 	if cur.Type == "." {
-		if err := in.Eat("."); err != nil { return nil, err }
+		if err := in.Eat("."); err != nil {
+			return nil, err
+		}
 		second := in.CurrentToken
-		if err := in.Eat("IDENTIFIER"); err != nil { return nil, err }
+		if err := in.Eat("IDENTIFIER"); err != nil {
+			return nil, err
+		}
 		if isNumeric(first.Value + "." + second.Value) {
 			return &Token{Type: "FLOAT", Value: first.Value + "." + second.Value}, nil
 		} else {
@@ -226,7 +237,9 @@ func (in *Parser) GetNumberIdentifier() (*Token, error) {
 }
 
 func (in *Parser) DeclareTable() error {
-	if err := in.Eat("TABLE_DECLARATION"); err != nil { return err }
+	if err := in.Eat("TABLE_DECLARATION"); err != nil {
+		return err
+	}
 	ident := in.CurrentToken
 	if err := in.Eat("IDENTIFIER"); err != nil {
 		return err
@@ -235,17 +248,23 @@ func (in *Parser) DeclareTable() error {
 		return fmt.Errorf("invalid table declaration near position: %d  table name cannot be numeric: %s", in.Pos, ident.Value)
 	}
 	// WRAP TABLE IN ""
-	in.KeyRange.Table =  fmt.Sprintf("\"%s\"", ident.Value)
+	in.KeyRange.Table = fmt.Sprintf("\"%s\"", ident.Value)
 	return nil
 }
 
 //Gets the
 func (in *Parser) DeclareKind() error {
-	if err := in.Eat("KIND_DECLARATION"); err != nil { return err }
+	if err := in.Eat("KIND_DECLARATION"); err != nil {
+		return err
+	}
 	ident := in.CurrentToken
 	in.KeyRange.Kind = ident.Value
-	if err := in.Eat("KIND_TYPE"); err != nil { return err }
-	if err := in.Eat(")"); err != nil { return err }
+	if err := in.Eat("KIND_TYPE"); err != nil {
+		return err
+	}
+	if err := in.Eat(")"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -318,7 +337,6 @@ func (in *Parser) DeclareEnd() error {
 // STRING => "CHARS"
 // CHARS => CHAR | CHARS CHAR
 
-
 func (in *Parser) Expr() (*ParsedKeyRange, error) {
 	if len(in.Query) > 0 {
 		in.Char = rune(in.Query[0])
@@ -356,7 +374,7 @@ func (in *Parser) Expr() (*ParsedKeyRange, error) {
 			if err != nil {
 				return nil, err
 			}
-			hasKind= true
+			hasKind = true
 		case "START_DECLARATION":
 			if hasStart {
 				return nil, fmt.Errorf("you already declared a start")

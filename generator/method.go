@@ -47,7 +47,6 @@ type Method struct {
 	Spanner *SpannerHelper
 }
 
-
 func NewMethod(desc *descriptor.MethodDescriptorProto, srv *Service) (*Method, error) {
 	meth := &Method{Desc: desc, Service: srv}
 	return meth, nil

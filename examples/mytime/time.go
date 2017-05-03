@@ -1,11 +1,11 @@
 package mytime
 
 import (
-	"strings"
-	"strconv"
-	"database/sql/driver"
 	"cloud.google.com/go/spanner"
+	"database/sql/driver"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"strconv"
+	"strings"
 )
 
 type MyTime struct {

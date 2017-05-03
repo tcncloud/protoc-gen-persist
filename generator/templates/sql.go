@@ -195,4 +195,3 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 }
 
 {{end}}`
-

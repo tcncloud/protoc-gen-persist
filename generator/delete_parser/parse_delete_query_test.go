@@ -2,10 +2,10 @@ package delete_parser_test
 
 import (
 	"fmt"
-	"testing"
-	d "github.com/tcncloud/protoc-gen-persist/generator/delete_parser"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	d "github.com/tcncloud/protoc-gen-persist/generator/delete_parser"
+	"testing"
 )
 
 func TestDeleteParser(t *testing.T) {
@@ -126,4 +126,3 @@ var _ = Describe("Delete Parser", func() {
 	})
 
 })
-
