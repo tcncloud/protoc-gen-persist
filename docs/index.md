@@ -47,7 +47,10 @@ service UsersTalker {
   rpc SelectById(Id) returns (User) {
     option (persist.ql) = {
       // the query to run,  and the arguments to use. ?  will be replaced with the "id" field of the request
-      query: "SELECT * from users WHERE id=? LIMIT 1"
+      // the query is an array, to allow you to split it on multiple lines if it gets too long
+      // it will be joined at generation time into a single string with each item that was in the
+      // array separated by a space
+      query: ["SELECT * from users WHERE id=? LIMIT 1"]
       arguments: ["id"]
     };
   };
@@ -224,7 +227,7 @@ service UserTalker {
   rpc UpdateUserLastName(stream User) returns (stream User) {
     option (persist.ql) = {
       // using the lib/pq driver you could do a query like this
-      query: "UPDATE users SET(last_name) = ($1) Where id=$2 RETURNING *"
+      query: ["UPDATE users SET(last_name) = ($1) Where id=$2 RETURNING *"]
       arguments: ["last_name", "id"]
     };
   };
@@ -250,13 +253,17 @@ message User {
 service UserTalker {
   rpc GetRichPeople(User) returns (stream User) {
     option (persist.ql) = {
-      query: "SELECT last_name from users WHERE firstName=? AND money=?
+      query: ["SELECT last_name from users WHERE firstName=? AND money=?]
       arguments: ["first_name", "money"]
     };
   };
 }
 ```
-The ```query``` option is the query that will be executed on the database.  parameter placeholders ex: (?, $1, :col)
+The ```query``` option is the query that will be executed on the database. It is an array to allow
+the query to span multiple lines in the proto.  The array will be joined into a single string at generation
+time, separated by a space character for each item in the array.
+
+parameter placeholders ex: (?, $1, :col)
 are replaced in order  with with the the field on the request that matches the argument in the arguments array. So using
 the above example,  sent a request to the server with a user that looked like this (go syntax):
 ```go
@@ -331,7 +338,7 @@ message Person {
 service Person {
   rpc FindOnePerson(Empty) returns (Person) {
     option (persist.ql) = {
-      query: "SELECT * from example_table Limit 1"
+      query: ["SELECT * from example_table Limit 1"]
       arguments: []
     };
   };
@@ -357,7 +364,7 @@ message Person {
 service Person {
   rpc FindOnePerson(Empty) returns (Person) {
     option (persist.ql) = {
-      query: "SELECT * from example_table Limit 1"
+      query: ["SELECT * from example_table Limit 1"]
       arguments: []
     };
   };
@@ -384,7 +391,7 @@ message Person {
 service Person {
   rpc FindOnePerson(Empty) returns (Person) {
     option (persist.ql) = {
-      query: "SELECT id, name, phone from example_table Limit 1"
+      query: ["SELECT id, name, phone from example_table Limit 1"]
       arguments: []
     };
   };
@@ -560,7 +567,7 @@ service Appointments {
     ]
   rpc GetAppointmentsAfterTime(Appointment) returns(stream Appointment){
     option (persist.ql) = {
-      query: "SELECT * FROM appointments WHERE time > ?"
+      query: ["SELECT * FROM appointments WHERE time > ?"]
       arguments["time"]
     };
   }
@@ -612,7 +619,12 @@ message Person {
 service Test {
   rpc UpdateMyFood(Person) returns (Empty) {
     option(persist.ql) {
-      query: "UPDATE example_table SET fav_fruit=?, fav_veggie=\"peas\" WHERE id=? AND ssn=?"
+      query: [
+        "UPDATE example_table",
+          "SET fav_fruit=?,",
+          "fav_veggie=\"peas\"",
+        "WHERE id=? AND ssn=?"
+      ]
       arguments: ["fav_fruit" "id", "ssn"]
     };
   };
@@ -695,7 +707,7 @@ service Amazing {
 
   rpc UniarySelectWithHooks(test.PartialTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: "SELECT * from example_table Where id=$1 AND start_time>$2"
+      query: ["SELECT * from example_table Where id=$1 AND start_time>$2"]
       arguments: ["id", "start_time"]
       before: {
         name: "UniarySelectBeforeHook"

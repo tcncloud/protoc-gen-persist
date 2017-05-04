@@ -43,26 +43,26 @@ service Delete {
   // single primary key deletes (easy)
   rpc DeleteEquals(Empty) returns (Empty){
     option (persist.ql) = {
-      query: "DELETE FROM mytable START(1) END(1) KIND(CC)",
+      query: ["DELETE FROM mytable START(1) END(1) KIND(CC)"]
       arguments: []
     };
   };
   rpc DeleteGreater(Empty) returns (Empty) {
     option (persist.ql) = {
-      query:"DELETE FROM mytable START(1) END() KIND(CO)"
+      query:["DELETE FROM mytable START(1) END() KIND(CO)"]
       arguments:[]
     };
   };
   rpc DeleteLess(Empty) returns (Empty) {
     option (persist.ql) = {
-      query:"DELETE FROM mytable START('b123b_asdf', 1.1) END(10) KIND(OC)"
+      query:["DELETE FROM mytable START('b123b_asdf', 1.1) END(10) KIND(OC)"]
       arguments:[]
     };
   };
   // multi primary key deletes (hard)
   rpc DeleteMultiEquals(Empty) returns (Empty) {
     option (persist.ql) = {
-      query:"DELETE FROM mytable START(1, 50) END(1, 50) KIND(CC)"
+      query:["DELETE FROM mytable START(1, 50) END(1, 50) KIND(CC)"]
       arguments:[]
     };
   };

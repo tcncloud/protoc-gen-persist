@@ -57,7 +57,9 @@ enum PersistenceOptions {
 
 message QLImpl {
     // the query string with numeric placeholders for parameters
-    required string query = 1;
+    // its an array to allow the query to span across multiple lines but it
+    // will be joined and used as a single sql query string at generation time
+    repeated string query = 1;
 
     // in order list of argument names that will be used as parameters for the query
     // the list of arguments represents the field names of the input type message

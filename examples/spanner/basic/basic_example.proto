@@ -55,62 +55,62 @@ service MySpanner {
 
   rpc UniaryInsert(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: "Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"
+      query: ["Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"]
       arguments: ["id", "start_time"]
     };
   };
   rpc UniarySelect(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: "SELECT * from example_table Where id=? AND name=?"
+      query: ["SELECT * from example_table Where id=? AND name=?"]
       arguments: ["id", "name"]
     };
   };
   rpc UniaryUpdate(test.ExampleTable) returns (test.PartialTable) {
     option (persist.ql) = {
-      query: "Update example_table set start_time=?, name=\"oranges\" where id=?",
+      query: ["Update example_table set start_time=?, name=\"oranges\" where id=?"]
       arguments: ["start_time", "id"],
     };
   };
   rpc UniaryDelete(test.ExampleTableRange) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: "DELETE FROM example_table START(?) END(?) KIND(CO)",
+      query: ["DELETE FROM example_table START(?) END(?) KIND(CO)"]
       arguments: ["start_id", "end_id"]
     };
   };
   rpc NoArgs(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: "select * from example_table limit 1",
+      query: ["select * from example_table limit 1"]
       arguments: []
     };
   };
   rpc ServerStream(test.Name) returns (stream test.ExampleTable) {
     option (persist.ql) = {
-      query: "SELECT * FROM example_table"
+      query: ["SELECT * FROM example_table"]
       arguments: []
     };
   };
   rpc ClientStreamInsert(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
-      query: "INSERT INTO example_table (id, start_time, name) VALUES (?, ?, ?)"
+      query: ["INSERT INTO example_table (id, start_time, name) VALUES (?, ?, ?)"]
       arguments: ["id", "start_time", "name"]
     };
   };
   rpc ClientStreamDelete(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
-      query: "DELETE FROM example_table START(?) END(?) KIND(CC)",
+      query: ["DELETE FROM example_table START(?) END(?) KIND(CC)"]
       arguments: ["id", "id"],
     };
   };
   rpc ClientStreamUpdate(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
-      query: "update example_table set start_time=?, name=? where id=?",
+      query: ["update example_table set start_time=?, name=? where id=?"]
       arguments: ["start_time", "name", "id"]
     };
   }
   // hook examples
   rpc UniaryInsertWithHooks(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: "Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"
+      query: ["Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"]
       arguments: ["id", "start_time"]
       before: {
         name: "UniaryInsertBeforeHook"
@@ -124,7 +124,7 @@ service MySpanner {
   };
   rpc UniarySelectWithHooks(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: "SELECT * from example_table Where id=?"
+      query: ["SELECT * from example_table Where id=?"]
       arguments: ["id"]
       before: {
         name: "UniaryInsertBeforeHook"
@@ -138,7 +138,7 @@ service MySpanner {
   };
   rpc UniaryUpdateWithHooks(test.ExampleTable) returns (test.PartialTable) {
     option (persist.ql) = {
-      query: "Update example_table set start_time=?, name=\"oranges\" where id=?",
+      query: ["Update example_table set start_time=?, name=\"oranges\" where id=?"]
       arguments: ["start_time", "id"]
       before: {
         name: "UniaryUpdateBeforeHook"
@@ -150,9 +150,15 @@ service MySpanner {
       }
     };
   };
+  //really ugly, but tests multi-line
   rpc UniaryDeleteWithHooks(test.ExampleTableRange) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: "DELETE FROM example_table START(?) END(?) KIND(CO)",
+      query: ["DELETE",
+      "FROM",
+      "example_table",
+      "START(? ",
+      ") END(?) ",
+      "KIND(CO)"]
       arguments: ["start_id", "end_id"]
       before: {
         name: "UniaryDeleteBeforeHook"
@@ -166,7 +172,7 @@ service MySpanner {
   };
   rpc ServerStreamWithHooks(test.Name) returns (stream test.ExampleTable) {
     option (persist.ql) = {
-      query: "SELECT * FROM example_table"
+      query: ["SELECT * FROM example_table"]
       arguments: []
       before: {
         name: "ServerStreamBeforeHook"
@@ -180,7 +186,7 @@ service MySpanner {
   };
   rpc ClientStreamUpdateWithHooks(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
-      query: "update example_table set name=? where id=?",
+      query: ["update example_table set name=? where id=?"]
       arguments: ["start_time", "name", "id"]
       before: {
         name: "ClientStreamUpdateBeforeHook"

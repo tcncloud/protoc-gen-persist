@@ -39,7 +39,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 
 	{{template "before_hook" .}}
 
-	err = s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
+	err = s.SqlDB.QueryRow("{{.GetQuery}}" {{.GetQueryParamString true}}).
 		Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -69,7 +69,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 
 	{{template "before_hook" .}}
 
-	rows, err := s.SqlDB.Query({{.GetQuery}} {{.GetQueryParamString true}})
+	rows, err := s.SqlDB.Query("{{.GetQuery}}" {{.GetQueryParamString true}})
 
 	if err != nil {
 		return grpc.Errorf(codes.Unknown, err.Error())
@@ -109,7 +109,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 	if err != nil {
 		return err
 	}
-	stmt, err:= tx.Prepare({{.GetQuery}})
+	stmt, err:= tx.Prepare("{{.GetQuery}}")
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.Get
 const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}}
 func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	var err error
-	stmt, err := s.SqlDB.Prepare({{.GetQuery}})
+	stmt, err := s.SqlDB.Prepare("{{.GetQuery}}")
 	if err != nil {
 		return err
 	}
