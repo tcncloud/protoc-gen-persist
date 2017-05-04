@@ -115,6 +115,8 @@ func (sh *SpannerHelper) Parse() error {
 			return err
 		}
 		return sh.HandleDelete(pdq)
+	} else if strings.HasPrefix(strings.ToUpper(sh.RawQuery), "SELECT"){
+		return sh.ParseSelect()
 	} else {
 		parsed, err := sqlparser.Parse(sh.RawQuery)
 		if err != nil {
@@ -123,8 +125,6 @@ func (sh *SpannerHelper) Parse() error {
 		}
 		sh.ParsedQuery = parsed
 		switch pq := sh.ParsedQuery.(type) {
-		case *sqlparser.Select:
-			return sh.ParseSelect(pq)
 		case *sqlparser.Insert:
 			return sh.ParseInsert(pq)
 		case *sqlparser.Delete:
@@ -193,7 +193,7 @@ func (sh *SpannerHelper) ParseInsert(pq *sqlparser.Insert) error {
 	sh.TableName = table
 	return nil
 }
-func (sh *SpannerHelper) ParseSelect(pq *sqlparser.Select) error {
+func (sh *SpannerHelper) ParseSelect() error {
 	sh.IsSelect = true
 	spl := strings.Split(sh.RawQuery, "?")
 	var updatedQuery string
