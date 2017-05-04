@@ -44,6 +44,9 @@ message Bob {
 message NumRows {
   int64 count = 1;
 }
+message Names {
+  repeated string names = 1;
+}
 message Empty { }
 
 // table: bob_table
@@ -78,6 +81,12 @@ service Bobs {
   rpc GetBobs(Empty) returns (stream Bob) {
     option (persist.ql) = {
       query: "SELECT * from bob_table"
+    };
+  };
+  rpc GetPeopleFromNames(Names) returns(stream Bob) {
+    option (persist.ql) = {
+      query: "SELECT * FROM bob_table WHERE name IN UNNEST(?)"
+      arguments: ["names"]
     };
   };
 }
