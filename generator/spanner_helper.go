@@ -85,7 +85,7 @@ func NewSpannerHelper(p *Method) (*SpannerHelper, error) {
 		return nil, fmt.Errorf("no options found on proto method")
 	}
 	args := opts.GetArguments()
-	query := opts.GetQuery()
+	query := p.GetQuery()
 	logrus.Debugf("query: %#v", query)
 	// get the fields descriptions to construct query args
 	input := p.GetInputTypeStruct()

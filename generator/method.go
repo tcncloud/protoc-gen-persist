@@ -37,7 +37,6 @@ import (
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/tcncloud/protoc-gen-persist/persist"
-	"strconv"
 	"strings"
 )
 
@@ -133,7 +132,9 @@ func (m *Method) GetOutputTypeStruct() *Struct {
 
 func (m *Method) GetQuery() string {
 	if opt := m.GetMethodOption(); opt != nil {
-		return strconv.Quote(opt.GetQuery())
+		if q := opt.GetQuery(); q != nil {
+			return strings.Trim(strings.Join(q, " ")," ")
+		}
 	}
 	return ""
 }
