@@ -133,7 +133,7 @@ func (m *Method) GetOutputTypeStruct() *Struct {
 func (m *Method) GetQuery() string {
 	if opt := m.GetMethodOption(); opt != nil {
 		if q := opt.GetQuery(); q != nil {
-			return strings.Trim(strings.Join(q, " ")," ")
+			return strings.Trim(strings.Join(q, " "), " ")
 		}
 	}
 	return ""

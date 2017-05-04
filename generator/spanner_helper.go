@@ -115,7 +115,7 @@ func (sh *SpannerHelper) Parse() error {
 			return err
 		}
 		return sh.HandleDelete(pdq)
-	} else if strings.HasPrefix(strings.ToUpper(sh.RawQuery), "SELECT"){
+	} else if strings.HasPrefix(strings.ToUpper(sh.RawQuery), "SELECT") {
 		return sh.ParseSelect()
 	} else {
 		parsed, err := sqlparser.Parse(sh.RawQuery)
