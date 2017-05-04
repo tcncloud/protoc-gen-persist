@@ -178,3 +178,68 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 	}
 	return nil
 }
+
+// spanner server streaming GetPeopleFromNames
+func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNamesServer) error {
+	var (
+		Id        int64
+		Name      string
+		StartTime mytime.MyTime
+	)
+
+	var err error
+
+	params := make(map[string]interface{})
+	var conv interface{}
+
+	conv = req.Names
+
+	if err != nil {
+		return grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["string0"] = conv
+	stmt := spanner.Statement{SQL: "SELECT * FROM bob_table WHERE name IN UNNEST( @string0)", Params: params}
+	tx := s.SpannerDB.Single()
+	defer tx.Close()
+	iter := tx.Query(context.Background(), stmt)
+	defer iter.Stop()
+	for {
+		row, err := iter.Next()
+		if err == iterator.Done {
+			break
+		} else if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		// scan our values out of the row
+
+		err = row.ColumnByName("id", &Id)
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+
+		gcv := new(spanner.GenericColumnValue)
+		err = row.ColumnByName("start_time", gcv)
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		err = StartTime.SpannerScan(gcv)
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+
+		err = row.ColumnByName("name", &Name)
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+
+		res := Bob{
+
+			Id:        Id,
+			Name:      Name,
+			StartTime: StartTime.ToProto(),
+		}
+
+		stream.Send(&res)
+	}
+	return nil
+}
