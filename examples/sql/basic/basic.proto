@@ -138,4 +138,5 @@ service Amazing {
       }
     };
   };
+  rpc UnImplementedPersistMethod(test.ExampleTable) returns (test.ExampleTable) {}
 }

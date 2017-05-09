@@ -81,9 +81,6 @@ func (sh *SpannerHelper) String() string {
 func NewSpannerHelper(p *Method) (*SpannerHelper, error) {
 	// get the query, and parse it
 	opts := p.GetMethodOption()
-	if opts == nil {
-		return nil, fmt.Errorf("no options found on proto method")
-	}
 	args := opts.GetArguments()
 	query := p.GetQuery()
 	logrus.Debugf("query: %#v", query)
