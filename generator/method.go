@@ -514,7 +514,9 @@ func (m *Methods) AddMethod(desc *descriptor.MethodDescriptorProto, service *Ser
 	if err != nil {
 		return err
 	}
-	*m = append(*m, meth)
+	if meth.GetMethodOption() != nil {
+		*m = append(*m, meth)
+	}
 	return nil
 }
 
