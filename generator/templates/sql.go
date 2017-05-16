@@ -32,35 +32,44 @@ package templates
 const SqlUnaryMethodTemplate = `{{define "sql_unary_method"}}// sql unary {{.GetName}}
 func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.GetInputType}}) (*{{.GetOutputType}}, error) {
 	var (
-{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-{{$field}} {{$type.GoName}}
-{{end}}
+		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		{{$field}} {{$type}}{{end}}
+		err error
 	)
-	err := s.SqlDB.QueryRow({{.GetQuery}} {{.GetQueryParamString true}}).
-		Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+
+	{{template "before_hook" .}}
+
+	err = s.SqlDB.QueryRow("{{.GetQuery}}" {{.GetQueryParamString true}}).
+		Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 		} else if strings.Contains(err.Error(), "duplicate key") {
-			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := &{{.GetOutputType}}{
-	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-	{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+	res := {{.GetOutputType}}{
+	{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
+	{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 	}
-	return res, nil
+
+	{{template "after_hook" .}}
+	return &res, nil
 }
 {{end}}`
 
 const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"}}// sql server streaming {{.GetName}}
- func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetOutputType}}_ServerStreamServer) error {
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetServiceName}}_{{.GetName}}Server) error {
 	var (
  {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
- {{$field}} {{$type.GoName}} {{end}}
+ {{$field}} {{$type}}{{end}}
+ 	err error
  	)
-	rows, err := s.SqlDB.Query({{.GetQuery}} {{.GetQueryParamString true}})
+
+	{{template "before_hook" .}}
+
+	rows, err := s.SqlDB.Query("{{.GetQuery}}" {{.GetQueryParamString true}})
 
 	if err != nil {
 		return grpc.Errorf(codes.Unknown, err.Error())
@@ -72,35 +81,41 @@ const SqlServerStreamingMethodTemplate = `{{define "sql_server_streaming_method"
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		err := rows.Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+		err := rows.Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &{{.GetOutputType}}{
-		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-		{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+		res := {{.GetOutputType}}{
+		{{range $field, $type := .GetTypeDescForFieldsInStruct  .GetOutputTypeStruct}}
+		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
-		stream.Send(res)
+
+		{{template "after_hook" .}}
+
+		stream.Send(&res)
 	}
 	return nil
 }{{end}}`
 
 const SqlClientStreamingMethodTemplate = `{{define "sql_client_streaming_method"}}// sql client streaming {{.GetName}}
-func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientStreamServer) error {
-	stmt, err:= s.SqlDB.Prepare({{.GetQuery}})
-	if err != nil {
-		return err
-	}
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
+	var err error
 	tx, err := s.SqlDB.Begin()
 	if err != nil {
 		return err
 	}
-	totalAffected := int64(0)
+	stmt, err:= tx.Prepare("{{.GetQuery}}")
+	if err != nil {
+		return err
+	}
+	{{/* setup the response for aggregation in the after hook */}}
+	res := {{.GetOutputType}}{}
+
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -111,44 +126,37 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_ClientSt
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		affected, err := tx.Stmt(stmt).Exec( {{.GetQueryParamString false}})
+		{{template "before_hook" .}}
+
+		_, err = stmt.Exec({{.GetQueryParamString false}})
 		if err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-
-		num, err := affected.RowsAffected()
-		if err != nil {
-			tx.Rollback()
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		totalAffected += num
+		{{template "after_hook" .}}
 	}
 	err = tx.Commit()
 	if err != nil {
-		fmt.Errorf("Commiting transaction failed, rolling back...")
+		fmt.Println("Commiting transaction failed, rolling back...")
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}
-	stream.SendAndClose(&pb.NumRows{ Count: totalAffected })
+	stream.SendAndClose(&res)
 	return nil
 }{{end}}`
 
 const SqlBidiStreamingMethodTemplate = `{{define "sql_bidi_streaming_method"}}// sql bidi streaming {{.GetName}}
-func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_BidirectionalServer) error {
-	var (
- {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
- {{$field}} {{$type.GoName}} {{end}}
- 	)
-	stmt, err := s.SqlDB.Prepare({{.GetQuery}})
-	defer stmt.Close()
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetServiceName}}_{{.GetName}}Server) error {
+	var err error
+	stmt, err := s.SqlDB.Prepare("{{.GetQuery}}")
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -157,22 +165,29 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetInputType}}_Bidirect
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-
+		{{template "before_hook" .}}
+		var (
+		 {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
+		 {{$field}} {{$type}}{{end}}
+		)
 		err = stmt.QueryRow({{.GetQueryParamString false}}).
-			Scan({{range $fld,$t :=.GetFieldsWithLocalTypesFor .GetOutputTypeStruct}} {{$fld}},{{end}})
+			Scan({{range $index,$t :=.GetTypeDescArrayForStruct .GetOutputTypeStruct}} &{{$t.Name}},{{end}})
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
 			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
 			}
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := &{{.GetOutputType}}{
-		{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-		{{$field}}: {{$field}}{{if $type.IsMapped}}.ToProto(){{end}},{{end}}
+		res := {{.GetOutputType}}{
+		{{range $field, $type := .GetTypeDescForFieldsInStruct .GetOutputTypeStruct}}
+		{{$field}}: {{template "addr" $type}}{{template "base" $type}}{{template "mapping" $type}},{{end}}
 		}
-		if err := stream.Send(res); err != nil {
+
+		{{template "after_hook" .}}
+
+		if err := stream.Send(&res); err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}

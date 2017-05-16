@@ -1,15 +1,34 @@
 # protoc-gen-persist
-[![wercker status](https://app.wercker.com/status/17256e7e44980466f184c85f4bf14166/m/ "wercker status")](https://app.wercker.com/project/byKey/17256e7e44980466f184c85f4bf14166)
 
-Protobuf plugin that generate a persistence layer backed by SQL database
+[![Build Status](https://www.travis-ci.org/tcncloud/protoc-gen-persist.svg?branch=master)](https://www.travis-ci.org/tcncloud/protoc-gen-persist)
 
-## NOTE: This project is under development and is not usable yet!
+Protobuf plugin that generate a persistence layer backed by SQL or Spanner database
+
+
+## Rationale
+An opinionated protoc plugin that will help generate boiler plate go code for GRPC micro services projects that need to interact with a SQL or Spanner database.
+The code generation is accomplished by providing a protobuf file with proper annotations, and then running the protoc cli tool with the `--go_out` option, and the `--persist_out` options set to the same directory.
+
+## Installation
+This project requires [protoc](https://github.com/google/protobuf) and [protoc-gen-go](https://developers.google.com/protocol-buffers/docs/gotutorial) be installed
+
+Then install with ```go get github.com/tcncloud/protoc-gen-persist```
+## Documentation
+documentation for the project can be found [Here](docs/index.md)
+The documentation goes over the persist options, how to structure your proto file,
+custom type mapping to/from the database, and spanner query parsing
+
+## NOTE: This project is under development, use it at your own risk!
+
+
+## Version 0.2.0
+
 
 ## Roadmap
  1. ~~type mapping~~
- 1. before & after callback function
+ 1. ~~before & after callback function~~
  1. add tests, lots of tests
- 1. mongo 
+ 1. mongo
 
 
 ## Authors

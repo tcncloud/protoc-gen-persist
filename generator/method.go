@@ -30,20 +30,38 @@
 package generator
 
 import (
-	"strconv"
-	"strings"
-
+	"fmt"
 	"github.com/Shrugs/fauxgaux"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/tcncloud/protoc-gen-persist/persist"
+	"strings"
 )
 
 type Method struct {
 	Desc    *descriptor.MethodDescriptorProto
 	Service *Service
+	Spanner *SpannerHelper
+}
+
+func NewMethod(desc *descriptor.MethodDescriptorProto, srv *Service) (*Method, error) {
+	meth := &Method{Desc: desc, Service: srv}
+	return meth, nil
+}
+
+func (m *Method) String() string {
+	if m == nil {
+		return "METHOD: <nil>"
+	}
+	isSql := fmt.Sprintf("%t", m.IsSQL())
+	isSpanner := fmt.Sprintf("%t", m.IsSpanner())
+	name := m.Desc.GetName()
+	input := m.Desc.GetInputType()
+	output := m.Desc.GetOutputType()
+	return fmt.Sprintf("Method:\n\tName: %s\n\tisSql: %s\n\tisSpanner: %s\n\tinput: %s\n\toutput: %s\n\tSpanner: %s\n\n",
+		name, isSql, isSpanner, input, output, m.Spanner)
 }
 
 func (m *Method) GetMethodOption() *persist.QLImpl {
@@ -68,7 +86,7 @@ func (m *Method) GetQueryParamString(comma bool) string {
 					// TODO check if the type is a mapped type
 					if fld := inputTypeStruct.GetFieldType(arg); fld != nil {
 						if m.IsTypeMapped(fld) {
-							return m.GetMappedObject(fld) + ".ToSql(" + "req." + _gen.CamelCase(arg) + ")"
+							return m.GetMappedObject(fld) + "{}.ToSql(" + "req." + _gen.CamelCase(arg) + ")"
 						}
 					}
 
@@ -78,6 +96,27 @@ func (m *Method) GetQueryParamString(comma bool) string {
 		}
 	}
 	return ""
+}
+
+func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string {
+	if st == nil {
+		return nil
+	}
+	// The Fields on the struct
+	mapping := make(map[string]string)
+	//ranges over the proto fields
+	for _, field := range st.MsgDesc.GetField() {
+		// dont support oneof fields yet
+		if field.Name != nil && field.OneofIndex == nil {
+			name := _gen.CamelCase(*field.Name)
+			if m.IsTypeMapped(field) {
+				mapping[name] = m.GetMappedType(field)
+			} else {
+				mapping[name] = m.DefaultMapping(field)
+			}
+		}
+	}
+	return mapping
 }
 
 func (m *Method) GetTypeStructByProtoName(proto string) *Struct {
@@ -93,14 +132,16 @@ func (m *Method) GetOutputTypeStruct() *Struct {
 
 func (m *Method) GetQuery() string {
 	if opt := m.GetMethodOption(); opt != nil {
-		return strconv.Quote(opt.GetQuery())
+		if q := opt.GetQuery(); q != nil {
+			return strings.Trim(strings.Join(q, " "), " ")
+		}
 	}
 	return ""
 }
 
 func (m *Method) GetGoTypeName(typ string) string {
 	str := m.GetAllStructs().GetStructByProtoName(typ)
-	if str.File.GetOrigName() != m.Service.File.GetOrigName() {
+	if m.Service.File.GetPackageName() != str.File.GetPackageName() {
 		if imp := m.Service.File.ImportList.GetGoNameByStruct(str); imp != nil {
 			return imp.GoPackageName + "." + str.GetGoName()
 		} else {
@@ -163,6 +204,17 @@ func (m *Method) GetMappedObject(typ *descriptor.FieldDescriptorProto) string {
 	return ""
 }
 
+func (m *Method) GetTypeNameMinusPackage(ty *descriptor.FieldDescriptorProto) string {
+	if structure := m.Service.AllStructs.GetStructByProtoName(ty.GetTypeName()); structure != nil {
+		if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil {
+			return imp.GoPackageName + "." + structure.GetGoName()
+		} else {
+			return structure.GetGoName()
+		}
+	}
+	return ""
+}
+
 func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	switch typ.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
@@ -170,12 +222,8 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	case descriptor.FieldDescriptorProto_TYPE_GROUP:
 		logrus.Fatalf("we currently don't support groups/oneof structures %s", typ.GetName())
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
-		if structure := m.Service.AllStructs.GetStructByProtoName(typ.GetTypeName()); structure != nil {
-			if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil {
-				return "*" + imp.GoPackageName + "." + structure.GetGoName()
-			} else {
-				return "*" + structure.GetGoName()
-			}
+		if ret := m.GetTypeNameMinusPackage(typ); ret != "" {
+			return ret
 		}
 	case descriptor.FieldDescriptorProto_TYPE_BOOL:
 		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
@@ -281,10 +329,11 @@ func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 			if mapp.GetProtoType() == typ.GetType() &&
 				mapp.GetProtoLabel() == typ.GetLabel() &&
 				mapp.GetProtoTypeName() == typ.GetTypeName() {
-				return "*" + m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
+				return m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
 			}
 		}
 	}
+	logrus.Debug("returning default mapping")
 	return m.DefaultMapping(typ)
 }
 
@@ -303,36 +352,60 @@ func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeM
 }
 
 type TypeDesc struct {
-	Name       string
-	ProtoName  string
-	GoName     string
-	OrigGoName string
+	Name       string // ex. StartTime
+	ProtoName  string // start_time
+	GoName     string // mytime.MyTime (if it is mapped)
+	OrigGoName string // Timestamp
 	Struct     *Struct
 	Mapping    *persist.TypeMapping_TypeDescriptor
+	EnumName   string // Timestamp
+	IsMapped   bool
+	IsEnum     bool
+	IsMessage  bool
+	ResultHook bool
 }
 
-func (t *TypeDesc) IsMapped() bool {
-	return t.Mapping == nil
+type ResultHook interface {
+	AddResult(req, row interface{}) error
 }
 
-func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
-	ret := map[string]TypeDesc{}
-	if str.IsMessage {
-		// NOTE we don't process oneof fields
-		// for _, mapping := range str.MsgDesc.GetOneofDecl() {}
+func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
+	ret := make([]TypeDesc, 0)
+	if str != nil && str.IsMessage {
 		for _, mp := range str.MsgDesc.GetField() {
-			// skip oneof fields
+			logrus.Debugf("mp name: %s\n", mp.GetName())
 			if mp.OneofIndex == nil {
-				ret[_gen.CamelCase(mp.GetName())] = TypeDesc{
+				typeDesc := TypeDesc{
 					Name:       _gen.CamelCase(mp.GetName()),
 					Struct:     m.Service.AllStructs.GetStructByFieldDesc(mp),
 					ProtoName:  mp.GetName(),
 					GoName:     m.GetMappedType(mp),
 					OrigGoName: m.DefaultMapping(mp),
 					Mapping:    m.GetMapping(mp),
+					EnumName:   m.GetTypeNameMinusPackage(mp),
+					IsMapped:   (m.GetMapping(mp) != nil),
+					IsEnum:     (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
+					IsMessage:  (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
 				}
+				ret = append(ret, typeDesc)
 			}
 		}
+	}
+	return ret
+}
+
+func (m *Method) GetTypeDescForFieldsInStruct(str *Struct) map[string]TypeDesc {
+	ret := map[string]TypeDesc{}
+	for _, typeDesc := range m.GetTypeDescArrayForStruct(str) {
+		ret[typeDesc.Name] = typeDesc
+	}
+	return ret
+}
+
+func (m *Method) GetTypeDescForFieldsInStructSnakeCase(str *Struct) map[string]TypeDesc {
+	ret := map[string]TypeDesc{}
+	for _, typeDesc := range m.GetTypeDescArrayForStruct(str) {
+		ret[typeDesc.ProtoName] = typeDesc
 	}
 	return ret
 }
@@ -357,10 +430,7 @@ func (m *Method) IsEnabled() bool {
 }
 
 func (m *Method) IsSQL() bool {
-	if opt := m.GetMethodOption(); opt != nil {
-		return opt.GetPersist() == persist.PersistenceOptions_SQL
-	}
-	return false
+	return m.Service.IsSQL()
 }
 
 // func (m *Method) IsMongo() bool {
@@ -369,13 +439,10 @@ func (m *Method) IsSQL() bool {
 // 	}
 // 	return false
 // }
-//
-// func (m *Method) IsSpanner() bool {
-// 	if opt := m.GetMethodOption(); opt != nil {
-// 		return opt.GetPersist() == persist.PersistenceOptions_SPANNER
-// 	}
-// 	return false
-// }
+
+func (m *Method) IsSpanner() bool {
+	return m.Service.IsSpanner()
+}
 
 func (m *Method) IsUnary() bool {
 	return !m.Desc.GetClientStreaming() && !m.Desc.GetServerStreaming()
@@ -393,8 +460,21 @@ func (m *Method) IsBidiStreaming() bool {
 	return m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming()
 }
 
-func (m *Method) Process() {
-	logrus.Debugf("Process method %s", m.GetName())
+func (m *Method) Process() error {
+	logrus.Debug("Process method %s", m.GetName())
+	if m.IsSpanner() {
+		logrus.Debug("We are a spanner method")
+		s, err := NewSpannerHelper(m)
+		if err != nil {
+			return err
+		}
+		m.Spanner = s
+	} else if m.IsSQL() {
+		logrus.Debug("we are a sql method")
+	} else {
+		logrus.Debug("we are neither?")
+	}
+	return nil
 }
 
 func (m *Method) ProcessImports() {
@@ -404,19 +484,56 @@ func (m *Method) ProcessImports() {
 				m.Service.File.ImportList.GetOrAddImport(GetGoPackage(mapping.GetGoPackage()), GetGoPath(mapping.GetGoPackage()))
 			}
 		}
+		// if CallbackFunction options exist,  import the packages
+		// name string, package string
+		beforeOpt := m.GetMethodOption().GetBefore()
+		afterOpt := m.GetMethodOption().GetAfter()
+		if beforeOpt != nil {
+			m.Service.File.ImportList.GetOrAddImport(GetGoPackage(beforeOpt.GetPackage()), GetGoPath(beforeOpt.GetPackage()))
+		}
+		if afterOpt != nil {
+			m.Service.File.ImportList.GetOrAddImport(GetGoPackage(afterOpt.GetPackage()), GetGoPath(afterOpt.GetPackage()))
+		}
 	}
+}
+
+func (m *Method) GetGoPackage(path string) string {
+	return GetGoPackage(path)
+}
+
+func (m *Method) GeGoPath(path string) string {
+	return GetGoPath(path)
 }
 
 // -- Methods
 
 type Methods []*Method
 
-func (m *Methods) AddMethod(desc *descriptor.MethodDescriptorProto, service *Service) {
-	*m = append(*m, &Method{Desc: desc, Service: service})
+func (m *Methods) AddMethod(desc *descriptor.MethodDescriptorProto, service *Service) error {
+	meth, err := NewMethod(desc, service)
+	if err != nil {
+		return err
+	}
+	if meth.GetMethodOption() != nil {
+		*m = append(*m, meth)
+	}
+	return nil
 }
 
-func (m *Methods) Process() {
-	for _, meth := range *m {
-		meth.Process()
+func (m *Methods) String() string {
+	ret := "Methods:\n"
+	for i, met := range *m {
+		ret += fmt.Sprintf("\ti:%d val: %v", i, met)
 	}
+	return ret
+}
+
+func (m *Methods) PreGenerate() error {
+	for _, meth := range *m {
+		err := meth.Process()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

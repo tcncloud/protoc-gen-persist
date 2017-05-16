@@ -1,22 +1,40 @@
 hash: 05fe4e50ca1cbd9b00a68bfeb558d8956dc98475b6991c1e67c6850e385c4730
-updated: 2017-02-23T12:11:01.335020327-07:00
+updated: 2017-04-14T16:02:52.473635104-06:00
 imports:
+- name: cloud.google.com/go
+  version: 49ffa971a17c4464904b69edf6e39708d4a542a9
+  subpackages:
+  - civil
+  - compute/metadata
+  - internal
+  - internal/atomiccache
+  - internal/fields
+  - internal/version
+  - spanner
+- name: github.com/golang/glog
+  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 - name: github.com/golang/protobuf
   version: 8ee79997227bf9b34611aee7946ae64735e6fd93
   subpackages:
   - proto
   - protoc-gen-go/descriptor
+  - protoc-gen-go/generator
   - protoc-gen-go/plugin
   - ptypes
   - ptypes/any
   - ptypes/duration
+  - ptypes/empty
+  - ptypes/struct
   - ptypes/timestamp
+  - ptypes/wrappers
+- name: github.com/googleapis/gax-go
+  version: 9af46dd5a1713e8b5cd71106287eba3cefdde50b
 - name: github.com/lib/pq
   version: 0477eb88c5ca4009cb281f13c90633375b6a9987
   subpackages:
   - oid
 - name: github.com/onsi/ginkgo
-  version: 462326b1628e124b23f42e87a8f2750e3c4e2d24
+  version: 77a8c1e5c40d6bb6c5eb4dd4bdce9763564f6298
   subpackages:
   - config
   - internal/codelocation
@@ -25,19 +43,23 @@ imports:
   - internal/leafnodes
   - internal/remote
   - internal/spec
+  - internal/spec_iterator
   - internal/specrunner
   - internal/suite
   - internal/testingtproxy
   - internal/writer
   - reporters
   - reporters/stenographer
+  - reporters/stenographer/support/go-colorable
+  - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: a78ae492d53aad5a7a232d0d0462c14c400e3ee7
+  version: 334b8f472b3af5d541c5642701c1e29e2126f486
   subpackages:
   - format
   - internal/assertion
   - internal/asyncassertion
+  - internal/oraclematcher
   - internal/testingtsupport
   - matchers
   - matchers/support/goraph/bipartitegraph
@@ -45,18 +67,35 @@ imports:
   - matchers/support/goraph/node
   - matchers/support/goraph/util
   - types
+- name: github.com/Shrugs/fauxgaux
+  version: 4eb622ccb8f20eb26890444a4a908a1fc3ffbcc7
 - name: github.com/Sirupsen/logrus
-  version: c078b1e43f58d563c74cebe63c85789e76ddb627
+  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
+- name: github.com/xwb1989/sqlparser
+  version: a9cdf22bd561e715bba34ee228cb1c06bfa2719c
+  subpackages:
+  - dependency/bson
+  - dependency/bytes2
+  - dependency/hack
+  - dependency/sqltypes
 - name: golang.org/x/net
   version: 61557ac0112b576429a0df080e1c2cef5dfbb642
   subpackages:
   - context
+  - context/ctxhttp
   - http2
   - http2/hpack
   - idna
   - internal/timeseries
   - lex/httplex
   - trace
+- name: golang.org/x/oauth2
+  version: 7fdf09982454086d5570c7db3e11f360194830ca
+  subpackages:
+  - google
+  - internal
+  - jws
+  - jwt
 - name: golang.org/x/sys
   version: aaabbdc969c3935a2a7f61efac801e7163c73a2a
   subpackages:
@@ -66,11 +105,48 @@ imports:
   subpackages:
   - go/ast/astutil
   - imports
+- name: google.golang.org/api
+  version: 16ab375f94503bfa0d19db78e96bffbe1a34354f
+  subpackages:
+  - googleapi/transport
+  - internal
+  - iterator
+  - option
+  - transport
+- name: google.golang.org/appengine
+  version: 56d253d1dd14aa01937e12c73a0971bcfd797ff2
+  subpackages:
+  - internal
+  - internal/app_identity
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/modules
+  - internal/remote_api
+  - internal/socket
+  - internal/urlfetch
+  - socket
+  - urlfetch
+- name: google.golang.org/genproto
+  version: de9f5e90fe9b278809363f08c2072d2f2a429de7
+  subpackages:
+  - googleapis/api
+  - googleapis/api/annotations
+  - googleapis/api/label
+  - googleapis/api/metric
+  - googleapis/api/monitoredres
+  - googleapis/api/serviceconfig
+  - googleapis/rpc/errdetails
+  - googleapis/spanner/v1
+  - protobuf/api
+  - protobuf/ptype
+  - protobuf/source_context
 - name: google.golang.org/grpc
   version: 708a7f9f3283aa2d4f6132d287d78683babe55c8
   subpackages:
   - codes
   - credentials
+  - credentials/oauth
   - grpclog
   - internal
   - metadata
@@ -79,4 +155,6 @@ imports:
   - stats
   - tap
   - transport
-testImports: []
+testImports:
+- name: gopkg.in/yaml.v2
+  version: 4c78c975fe7c825c6d1466c42be594d1d6f3aba6

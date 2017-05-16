@@ -30,3 +30,16 @@ src
 examples/*.go
 examples/test/*.go
 *.cover*
+
+# test client, and test server binaries
+test-impl/client.main
+test-impl/server.main
+
+# docs
+docs/_site
+docs/Gemfile
+docs/Gemfile.lock
+.DS_Store
+
+protoc-gen-persist*
+*~

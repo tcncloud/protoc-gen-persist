@@ -29,39 +29,81 @@
 
 
 PROTO_FILES:= persist/options.proto examples/example1.proto
+PROTOC_DIR?=/usr/local
+
+PROTOC_INCLUDE:=$(PROTOC_DIR)/include
+
+PROTOC:=$(PROTOC_DIR)/bin/protoc
 
 all: build
 
 generate: deps proto-persist proto-examples
 
 proto-persist:
-	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 		persist/*.proto
 
 proto-examples:
-	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-		examples/*.proto
-	protoc -I/usr/local/include -I. -I$$GOPATH/src \
+		examples/sql/basic/*.proto
+	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/sql/little_of_everything/*.proto
+	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/spanner/basic/*.proto
+	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/spanner/delete/*.proto
+	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+		examples/spanner/bob_example/*.proto
+	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 		examples/test/*.proto
 
-build: generate 
+build: generate
 	glide install
-	go build 
+	go build
 
 install: build
 	go install
 
 test: deps build
-	ginkgo -r 
+	ginkgo -r
 
-test-compile: build
-	DEBUG=true protoc -I/usr/local/include -I. -I$$GOPATH/src \
+test-compile:
+	go build
+	DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
-		--persist_out=. \
-		examples/*.proto
+		--persist_out=.  examples/sql/little_of_everything/*.proto
+	DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/sql/basic/*.proto
+	DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/spanner/basic/*.proto
+	DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/spanner/delete/*.proto
+	DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/spanner/bob_example/*.proto
+
+
+test-sql-impl: build
+	env GOOS=linux go build -o ./test-impl/server.main ./test-impl/server/sql
+	env GOOS=linux go build -o ./test-impl/client.main ./test-impl/client/sql
+
+test-spanner-impl: build
+	go build -o ./test-impl/server.main ./test-impl/server/spanner/basic
+	go build -o ./test-impl/client.main ./test-impl/client/spanner/basic
+
+test-bobs: build
+	go build -o ./test-impl/server.main ./test-impl/server/spanner/bobs
+	go build -o ./test-impl/client.main ./test-impl/client/spanner/bobs
 
 deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/glide
 
@@ -69,9 +111,9 @@ deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/glide
 $(GOPATH)/bin/protoc-gen-go:
 	go get -u github.com/golang/protobuf/protoc-gen-go
 
-$(GOPATH)/bin/ginkgo:	
+$(GOPATH)/bin/ginkgo:
 	go get -u github.com/onsi/ginkgo/ginkgo
-	go get -u github.com/onsi/gomega  
+	go get -u github.com/onsi/gomega
 
 $(GOPATH)/bin/glide:
 	go get -u github.com/Masterminds/glide
