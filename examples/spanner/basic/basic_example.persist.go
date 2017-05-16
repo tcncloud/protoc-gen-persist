@@ -19,10 +19,16 @@ import (
 	codes "google.golang.org/grpc/codes"
 )
 
-type MySpannerImpl struct {
-	SpannerDB *spanner.Client
-}
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+// In order for your code to work you have to create a file
+// in this package with the following content:
+//
+// type MySpannerImpl struct {
+// 	SpannerDB *spanner.Client
+// }
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 func NewMySpannerImpl(d string, conf *spanner.ClientConfig, opts ...option.ClientOption) (*MySpannerImpl, error) {
 	var client *spanner.Client
 	var err error
@@ -657,13 +663,6 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 
 	params := make(map[string]interface{})
 	var conv interface{}
-
-	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
-
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	params["start_time"] = conv
 	conv = "oranges"
 	params["name"] = conv
 
@@ -673,6 +672,13 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
 	params["id"] = conv
+
+	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
+
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["start_time"] = conv
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.UpdateMap("example_table", params)
 	_, err = s.SpannerDB.Apply(ctx, muts)

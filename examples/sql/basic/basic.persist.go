@@ -17,10 +17,16 @@ import (
 	codes "google.golang.org/grpc/codes"
 )
 
-type AmazingImpl struct {
-	SqlDB *sql.DB
-}
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+// In order for your code to work you have to create a file
+// in this package with the following content:
+//
+// type AmazingImpl struct {
+// 	SqlDB *sql.DB
+// }
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 func NewAmazingImpl(driver, connString string) (*AmazingImpl, error) {
 	db, err := sql.Open(driver, connString)
 	if err != nil {
@@ -39,7 +45,10 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) 
 	)
 
 	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time>$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
-		Scan(&Id, &StartTime, &Name)
+		Scan(&Id,
+			&StartTime,
+			&Name,
+		)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
@@ -80,7 +89,10 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 	}
 
 	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time>$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
-		Scan(&Id, &StartTime, &Name)
+		Scan(&Id,
+			&StartTime,
+			&Name,
+		)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
