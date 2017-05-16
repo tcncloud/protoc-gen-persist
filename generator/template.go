@@ -31,6 +31,7 @@ package generator
 
 import (
 	"bytes"
+	"strconv"
 	"text/template"
 
 	"github.com/Sirupsen/logrus"
@@ -81,6 +82,10 @@ func init() {
 	if err != nil {
 		logrus.WithError(err).Fatal("Fail to parse file template")
 	}
+	fileTemplate := fileTemplate.Funcs(template.FuncMap{
+		"Quotes": strconv.Quote,
+	})
+
 	for n, tmpl := range TemplateList {
 		_, err = fileTemplate.Parse(tmpl)
 		if err != nil {

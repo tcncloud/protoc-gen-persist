@@ -16,10 +16,16 @@ import (
 	codes "google.golang.org/grpc/codes"
 )
 
-type BobsImpl struct {
-	SpannerDB *spanner.Client
-}
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+// In order for your code to work you have to create a file
+// in this package with the following content:
+//
+// type BobsImpl struct {
+// 	SpannerDB *spanner.Client
+// }
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 func NewBobsImpl(d string, conf *spanner.ClientConfig, opts ...option.ClientOption) (*BobsImpl, error) {
 	var client *spanner.Client
 	var err error

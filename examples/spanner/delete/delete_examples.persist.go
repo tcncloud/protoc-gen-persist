@@ -13,10 +13,16 @@ import (
 	codes "google.golang.org/grpc/codes"
 )
 
-type DeleteImpl struct {
-	SpannerDB *spanner.Client
-}
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+// In order for your code to work you have to create a file
+// in this package with the following content:
+//
+// type DeleteImpl struct {
+// 	SpannerDB *spanner.Client
+// }
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 func NewDeleteImpl(d string, conf *spanner.ClientConfig, opts ...option.ClientOption) (*DeleteImpl, error) {
 	var client *spanner.Client
 	var err error

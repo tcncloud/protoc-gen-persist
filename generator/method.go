@@ -31,13 +31,14 @@ package generator
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/Shrugs/fauxgaux"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/tcncloud/protoc-gen-persist/persist"
-	"strings"
 )
 
 type Method struct {
@@ -133,7 +134,7 @@ func (m *Method) GetOutputTypeStruct() *Struct {
 func (m *Method) GetQuery() string {
 	if opt := m.GetMethodOption(); opt != nil {
 		if q := opt.GetQuery(); q != nil {
-			return strings.Trim(strings.Join(q, " "), " ")
+			return strings.Join(q, " ")
 		}
 	}
 	return ""
