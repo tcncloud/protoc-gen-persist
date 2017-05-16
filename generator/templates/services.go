@@ -33,9 +33,17 @@ const ServicesTemplate = `{{define "implement_services"}}
 {{range $srv := .}}
 {{if $srv.IsServiceEnabled}}
 {{if $srv.IsSQL}}
-type {{$srv.GetName}}Impl struct {
-	SqlDB *sql.DB
-}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+// In order for your code to work you have to create a file 
+// in this package with the following content:
+// 
+// type {{$srv.GetName}}Impl struct {
+// 	SqlDB *sql.DB
+// }
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 func New{{$srv.GetName}}Impl(driver, connString string) (*{{$srv.GetName}}Impl, error) {
 	db, err := sql.Open(driver, connString)
@@ -46,9 +54,16 @@ func New{{$srv.GetName}}Impl(driver, connString string) (*{{$srv.GetName}}Impl, 
 }
 {{end}}
 {{if $srv.IsSpanner}}
-type {{$srv.GetName}}Impl struct {
-	SpannerDB *spanner.Client
-}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+// In order for your code to work you have to create a file 
+// in this package with the following content:
+// 
+// type {{$srv.GetName}}Impl struct {
+// 	SpannerDB *spanner.Client
+// }
+// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func New{{$srv.GetName}}Impl(d string, conf *spanner.ClientConfig, opts ...option.ClientOption) (*{{$srv.GetName}}Impl, error) {
 	var client *spanner.Client
