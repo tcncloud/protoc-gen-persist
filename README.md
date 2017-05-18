@@ -22,6 +22,9 @@ custom type mapping to/from the database, and spanner query parsing
 
 
 ## Version 0.2.0
+ - multiline query strings 
+ - Removed type struct code generation in order to add more flexibility
+ - bug fixes 
 
 
 ## Roadmap
