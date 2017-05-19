@@ -159,6 +159,13 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 	params := make(map[string]interface{})
 	var conv interface{}
 
+	conv = req.Id
+
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["id"] = conv
+
 	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
 
 	if err != nil {
@@ -167,13 +174,6 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 	params["start_time"] = conv
 	conv = "oranges"
 	params["name"] = conv
-
-	conv = req.Id
-
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	params["id"] = conv
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.UpdateMap("example_table", params)
 	_, err = s.SpannerDB.Apply(ctx, muts)
@@ -465,6 +465,13 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		params := make(map[string]interface{})
 		var conv interface{}
 
+		conv = req.Id
+
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		params["id"] = conv
+
 		conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
 
 		if err != nil {
@@ -478,13 +485,6 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		params["name"] = conv
-
-		conv = req.Id
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		params["id"] = conv
 		muts = append(muts, spanner.UpdateMap("example_table", params))
 
 		////////////////////////////// NOTE //////////////////////////////////////
@@ -869,19 +869,19 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 		params := make(map[string]interface{})
 		var conv interface{}
 
-		conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		params["name"] = conv
-
 		conv = req.Name
 
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		params["id"] = conv
+
+		conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
+
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		params["name"] = conv
 		muts = append(muts, spanner.UpdateMap("example_table", params))
 
 		////////////////////////////// NOTE //////////////////////////////////////
@@ -911,4 +911,94 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 
 	stream.SendAndClose(&res)
 	return nil
+}
+
+// spanner unary select TestMultiMappedFields
+func (s *MySpannerImpl) TestMultiMappedFields(ctx context.Context, req *test.TwoMappedAndEnum) (*test.TwoMappedAndEnum, error) {
+	var err error
+	var (
+		EndTime   mytime.MyTime
+		GenEnum   mytime.MyEnum
+		StartTime mytime.MyTime
+	)
+
+	params := make(map[string]interface{})
+	var conv interface{}
+
+	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
+
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["string0"] = conv
+
+	conv, err = mytime.MyTime{}.ToSpanner(req.EndTime).SpannerValue()
+
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["string1"] = conv
+
+	conv, err = mytime.MyEnum{}.ToSpanner(req.GenEnum).SpannerValue()
+
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["string2"] = conv
+	//stmt := spanner.Statement{SQL: "{ {.Spanner.Query} }", Params: params}
+	stmt := spanner.Statement{SQL: "SELECT * FROM example_table WHERE start_time =  @string0 AND end_time =  @string1 AND gen_enum =  @string2", Params: params}
+	tx := s.SpannerDB.Single()
+	defer tx.Close()
+	iter := tx.Query(ctx, stmt)
+	defer iter.Stop()
+	row, err := iter.Next()
+	if err == iterator.Done {
+		return nil, grpc.Errorf(codes.NotFound, "no rows found")
+	} else if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	// scan our values out of the row
+
+	gcv := new(spanner.GenericColumnValue)
+	err = row.ColumnByName("start_time", gcv)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	err = StartTime.SpannerScan(gcv)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+
+	gcv := new(spanner.GenericColumnValue)
+	err = row.ColumnByName("end_time", gcv)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	err = EndTime.SpannerScan(gcv)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+
+	gcv := new(spanner.GenericColumnValue)
+	err = row.ColumnByName("gen_enum", gcv)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	err = GenEnum.SpannerScan(gcv)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+
+	_, err = iter.Next()
+	if err != iterator.Done {
+		fmt.Println("Unary select that returns more than one row..")
+	}
+	res := test.TwoMappedAndEnum{
+
+		EndTime:   EndTime.ToProto(),
+		GenEnum:   test.TestEnum(GenEnum.ToProto()),
+		StartTime: StartTime.ToProto(),
+	}
+
+	return &res, nil
 }

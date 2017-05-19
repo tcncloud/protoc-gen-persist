@@ -71,7 +71,7 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 	res := ExampleTable1{
 
 		BytesField:   BytesField,
-		InnerEnum:    ExampleTable1_InnerEnum(InnerEnum),
+		InnerEnum:    ExampleTable1_InnerEnum(InnerEnum.ToProto()),
 		InnerMessage: &InnerMessage,
 		Key:          Key,
 		StartTime:    StartTime.ToProto(),
@@ -121,7 +121,7 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 	res := ExampleTable1{
 
 		BytesField:   BytesField,
-		InnerEnum:    ExampleTable1_InnerEnum(InnerEnum),
+		InnerEnum:    ExampleTable1_InnerEnum(InnerEnum.ToProto()),
 		InnerMessage: &InnerMessage,
 		Key:          Key,
 		StartTime:    StartTime.ToProto(),
@@ -171,7 +171,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 		res := ExampleTable1{
 
 			BytesField:   BytesField,
-			InnerEnum:    ExampleTable1_InnerEnum(InnerEnum),
+			InnerEnum:    ExampleTable1_InnerEnum(InnerEnum.ToProto()),
 			InnerMessage: &InnerMessage,
 			Key:          Key,
 			StartTime:    StartTime.ToProto(),
