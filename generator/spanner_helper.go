@@ -138,12 +138,16 @@ func (sh *SpannerHelper) InsertColsAsString() string {
 	return fmt.Sprintf("%#v", sh.InsertCols)
 }
 
-func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) []QueryArg {
+func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) ([]QueryArg, error) {
 	qas := make([]QueryArg, len(slice))
 	for i, arg := range slice {
 		var qa QueryArg
 		if ap, ok := arg.(PassedInArgPos); ok {
 			index := int(ap)
+			if index >= len(sh.OptionArguments) {
+				errMsg := "trying to read arg #%d, but only recieved arg array of length: %d\n  Args recieved: %+v"
+				return nil, fmt.Errorf(errMsg, index, len(sh.OptionArguments), sh.OptionArguments)
+			}
 			argName := sh.OptionArguments[index]
 			qa = QueryArg{
 				IsFieldValue: true,
@@ -164,7 +168,7 @@ func (sh *SpannerHelper) PopulateArgSlice(slice []interface{}) []QueryArg {
 		}
 		qas[i] = qa
 	}
-	return qas
+	return qas, nil
 }
 
 func (sh *SpannerHelper) ParseInsert(pq *sqlparser.Insert) error {
@@ -181,7 +185,7 @@ func (sh *SpannerHelper) ParseInsert(pq *sqlparser.Insert) error {
 	if err != nil {
 		return err
 	}
-	qas := sh.PopulateArgSlice(pas.args)
+	qas, err := sh.PopulateArgSlice(pas.args)
 	if err != nil {
 		return err
 	}
@@ -279,6 +283,10 @@ func (sh *SpannerHelper) ParseUpdate(pq *sqlparser.Update) error {
 		var qa QueryArg
 		if ap, ok := arg.(PassedInArgPos); ok {
 			index := int(ap)
+			if index >= len(sh.OptionArguments) {
+				errMsg := "trying to read arg #%d, but only recieved arg array of length: %d\n  Args recieved: %+v"
+				return fmt.Errorf(errMsg, index, len(sh.OptionArguments), sh.OptionArguments)
+			}
 			argName := sh.OptionArguments[index]
 			qa = QueryArg{
 				Name:         key,
