@@ -32,8 +32,8 @@ package templates
 const ReturnConvertHelpers = `
 	{{/* all three of these templates are used only in proto response construction */}}
 	{{define "addr"}}{{if .IsMessage}}&{{end}}{{end}}
-	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.Name}}){{else}}{{.Name}}{{end}}{{end}}
-	{{define "mapping"}}{{if .IsMapped}}.ToProto(){{end}}{{end}}
+	{{define "base"}}{{if .IsEnum}}{{.EnumName}}({{.Name}}.ToProto()){{else}}{{.Name}}{{end}}{{end}}
+	{{define "mapping"}}{{if and .IsMapped (not .IsEnum)}}.ToProto(){{end}}{{end}}
 `
 
 const BeforeHook = `
