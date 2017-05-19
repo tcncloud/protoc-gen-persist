@@ -158,12 +158,12 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		gcv := new(spanner.GenericColumnValue)
-		err = row.ColumnByName("start_time", gcv)
+		gcv1 := new(spanner.GenericColumnValue)
+		err = row.ColumnByName("start_time", gcv1)
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		err = StartTime.SpannerScan(gcv)
+		err = StartTime.SpannerScan(gcv1)
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
@@ -223,12 +223,12 @@ func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNames
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		gcv := new(spanner.GenericColumnValue)
-		err = row.ColumnByName("start_time", gcv)
+		gcv1 := new(spanner.GenericColumnValue)
+		err = row.ColumnByName("start_time", gcv1)
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		err = StartTime.SpannerScan(gcv)
+		err = StartTime.SpannerScan(gcv1)
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}

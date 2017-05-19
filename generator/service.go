@@ -69,7 +69,11 @@ func (s *Service) ProcessMethods() error {
 }
 
 func (s *Service) Process() error {
-	return s.ProcessMethods()
+	err := s.ProcessMethods()
+	if err != nil {
+		return fmt.Errorf("%s\n  service: %s", err,  s.GetName())
+	}
+	return nil
 }
 
 func (s *Service) GetName() string {
@@ -174,7 +178,7 @@ func (s *Services) Process() error {
 	for _, srv := range *s {
 		err := srv.Process()
 		if err != nil {
-			return err
+			return fmt.Errorf("%s\n  service: %s", err, srv.GetName())
 		}
 	}
 	return nil
@@ -184,7 +188,7 @@ func (s *Services) PreGenerate() error {
 	for _, srv := range *s {
 		err := srv.Methods.PreGenerate()
 		if err != nil {
-			return err
+			return fmt.Errorf("%s\n  service: %s", err, srv.GetName())
 		}
 	}
 	return nil

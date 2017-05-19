@@ -63,12 +63,12 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	// scan our values out of the row
 	{{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}}
 	{{if $t.IsMapped}}
-	gcv := new(spanner.GenericColumnValue)
-	err = row.ColumnByName("{{$t.ProtoName}}", gcv)
+	gcv{{$index}} := new(spanner.GenericColumnValue)
+	err = row.ColumnByName("{{$t.ProtoName}}", gcv{{$index}})
 	if err != nil {
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	err = {{$t.Name}}.SpannerScan(gcv)
+	err = {{$t.Name}}.SpannerScan(gcv{{$index}})
 	if err != nil {
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
@@ -260,12 +260,12 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 		// scan our values out of the row
 		{{range $index, $t := .GetTypeDescArrayForStruct .GetOutputTypeStruct}}
 		{{if $t.IsMapped}}
-		gcv := new(spanner.GenericColumnValue)
-		err = row.ColumnByName("{{$t.ProtoName}}", gcv)
+		gcv{{$index}} := new(spanner.GenericColumnValue)
+		err = row.ColumnByName("{{$t.ProtoName}}", gcv{{$index}})
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		err = {{$t.Name}}.SpannerScan(gcv)
+		err = {{$t.Name}}.SpannerScan(gcv{{$index}})
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}

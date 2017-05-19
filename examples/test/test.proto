@@ -35,6 +35,12 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/tcncloud/protoc-gen-persist/examples/test;test";
 
+
+enum TestEnum {
+  first = 0;
+  second = 1;
+}
+
 message Test {
     int32 id = 1;
     string name = 2;
@@ -49,6 +55,12 @@ message ExampleTable {
 message PartialTable {
   int64 id = 1;
   google.protobuf.Timestamp start_time = 2;
+}
+
+message TwoMappedAndEnum {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  TestEnum gen_enum = 3;
 }
 
 message Name {

@@ -49,10 +49,15 @@ service MySpanner {
         proto_type:  TYPE_MESSAGE
         go_type: "MyTime"
         go_package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+      },
+      {
+        proto_type_name: ".examples.test.TestEnum"
+        proto_type: TYPE_ENUM
+        go_type: "MyEnum"
+        go_package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
       }
     ]
   };
-
   rpc UniaryInsert(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
       query: ["Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"]
@@ -196,6 +201,12 @@ service MySpanner {
         name: "ClientStreamUpdateAfterHook"
         package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
       }
+    };
+  };
+  rpc TestMultiMappedFields(test.TwoMappedAndEnum) returns (test.TwoMappedAndEnum) {
+    option (persist.ql) = {
+      query: ["SELECT * FROM example_table WHERE start_time = ? AND end_time = ? AND gen_enum = ?"]
+      arguments: ["start_time", "end_time", "gen_enum"]
     };
   };
 }
