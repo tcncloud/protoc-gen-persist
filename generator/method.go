@@ -467,7 +467,7 @@ func (m *Method) Process() error {
 		logrus.Debug("We are a spanner method")
 		s, err := NewSpannerHelper(m)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s\n  method: %s", err, m.GetName())
 		}
 		m.Spanner = s
 	} else if m.IsSQL() {
