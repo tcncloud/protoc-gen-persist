@@ -158,13 +158,6 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 
 	params := make(map[string]interface{})
 	var conv interface{}
-
-	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
-
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	params["start_time"] = conv
 	conv = "oranges"
 	params["name"] = conv
 
@@ -174,6 +167,13 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
 	params["id"] = conv
+
+	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
+
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["start_time"] = conv
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.UpdateMap("example_table", params)
 	_, err = s.SpannerDB.Apply(ctx, muts)
