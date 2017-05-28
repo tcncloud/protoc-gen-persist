@@ -424,10 +424,7 @@ func (m *Method) GetName() string {
 }
 
 func (m *Method) IsEnabled() bool {
-	if m.GetMethodOption() != nil {
-		return true
-	}
-	return false
+	return m.GetMethodOption() != nil
 }
 
 func (m *Method) IsSQL() bool {
