@@ -51,7 +51,7 @@ func (s *DeleteImpl) DeleteEquals(ctx context.Context, req *Empty) (*Empty, erro
 		Kind:  spanner.ClosedClosed,
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange("mytable", key)
+	muts[0] = spanner.Delete("mytable", key)
 	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
@@ -76,7 +76,7 @@ func (s *DeleteImpl) DeleteGreater(ctx context.Context, req *Empty) (*Empty, err
 		Kind:  spanner.ClosedOpen,
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange("mytable", key)
+	muts[0] = spanner.Delete("mytable", key)
 	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
@@ -103,7 +103,7 @@ func (s *DeleteImpl) DeleteLess(ctx context.Context, req *Empty) (*Empty, error)
 		Kind:  spanner.OpenClosed,
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange("mytable", key)
+	muts[0] = spanner.Delete("mytable", key)
 	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
@@ -131,7 +131,7 @@ func (s *DeleteImpl) DeleteMultiEquals(ctx context.Context, req *Empty) (*Empty,
 		Kind:  spanner.ClosedClosed,
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange("mytable", key)
+	muts[0] = spanner.Delete("mytable", key)
 	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
