@@ -65,7 +65,7 @@ proto-examples:
 		examples/test/*.proto
 
 build: generate
-	glide install
+	dep ensure
 	go build
 
 install: build
@@ -91,6 +91,9 @@ test-compile:
 	DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
 		--persist_out=.  examples/spanner/bob_example/*.proto
+	DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/test_issue_32/*.proto
 
 
 test-sql-impl: build
@@ -105,7 +108,7 @@ test-bobs: build
 	go build -o ./test-impl/server.main ./test-impl/server/spanner/bobs
 	go build -o ./test-impl/client.main ./test-impl/client/spanner/bobs
 
-deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/glide
+deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/dep
 
 
 $(GOPATH)/bin/protoc-gen-go:
@@ -115,8 +118,8 @@ $(GOPATH)/bin/ginkgo:
 	go get -u github.com/onsi/ginkgo/ginkgo
 	go get -u github.com/onsi/gomega
 
-$(GOPATH)/bin/glide:
-	go get -u github.com/Masterminds/glide
+$(GOPATH)/bin/dep:
+	go get -u github.com/golang/dep/cmd/dep
 
 clean:
 	rm -f examples/*.pb.go examples/*.persist.go examples/test/*.pb.go

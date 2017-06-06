@@ -48,7 +48,8 @@ type Service struct {
 func (s *Service) String() string {
 	var ms string
 	if s.Methods != nil {
-		ms = fmt.Sprintf("%s", s.Methods)
+		//ms = fmt.Sprintf("%s", s.Methods)
+		ms = s.Methods.String()
 	} else {
 		ms = "<nil>"
 	}
@@ -71,7 +72,7 @@ func (s *Service) ProcessMethods() error {
 func (s *Service) Process() error {
 	err := s.ProcessMethods()
 	if err != nil {
-		return fmt.Errorf("%s\n  service: %s", err,  s.GetName())
+		return fmt.Errorf("%s\n  service: %s", err, s.GetName())
 	}
 	return nil
 }

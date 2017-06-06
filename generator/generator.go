@@ -32,7 +32,7 @@ package generator
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	//"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
 )
 
@@ -45,7 +45,7 @@ type Generator struct {
 	AllStructures   *StructList // all structures present in the files
 	Files           *FileList
 
-	crtFile *descriptor.FileDescriptorProto
+	//crtFile *descriptor.FileDescriptorProto
 }
 
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
