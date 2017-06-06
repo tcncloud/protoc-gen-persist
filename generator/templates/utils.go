@@ -89,14 +89,13 @@ const BeforeHook = `
 const AfterHook = `
 	{{define "after_hook"}}
 	{{/* give it a Method as dot, assumes a "res" exists to give the hook as parameter */}}
-	{{/* does not do anything for client streaming methods */}}
 	{{$after := .GetMethodOption.GetAfter}}
 		{{if $after}}
 			{{$pkg := .GetGoPackage $after.GetPackage}}
 			{{if eq $pkg ""}}
-				beforeRes, err := {{$after.GetName}}(req)
+				err = {{$after.GetName}}(req, &res)
 			{{else}}
-				beforeRes, err := {{$pkg}}.{{$after.GetName}}(req)
+				err = {{.GetGoPackage $after.GetPackage}}.{{$after.GetName}}(req, &res)
 			{{end}}
 			if err != nil {
 				{{if .IsUnary}}
