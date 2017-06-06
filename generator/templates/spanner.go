@@ -41,7 +41,7 @@ const SpannerUnarySelectTemplate = `{{define "spanner_unary_select"}}
 	var err error
 	var (
 {{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
-		{{$field}} {{$type}}{{end}}
+	{{$field}} {{$type}}{{end}}
 	)
 
 	{{template "before_hook" .}}
@@ -148,7 +148,7 @@ const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
 	{{template "declare_spanner_delete_key" .}}
 
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange({{.Spanner.TableName}}, key)
+	muts[0] = spanner.Delete({{.Spanner.TableName}}, key)
 	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
@@ -226,7 +226,7 @@ const SpannerClientStreamingInsertTemplate = `{{define "spanner_client_streaming
 const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming_delete"}}//spanner client streaming delete
 {{template "declare_spanner_delete_key" .}}
 
-	muts = append(muts, spanner.DeleteKeyRange({{.Spanner.TableName}}, key))
+	muts = append(muts, spanner.Delete({{.Spanner.TableName}}, key))
 {{end}}`
 
 const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming_method"}}// spanner server streaming {{.GetName}}
