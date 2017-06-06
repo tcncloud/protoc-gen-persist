@@ -91,6 +91,9 @@ test-compile:
 	DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
 		--persist_out=.  examples/spanner/bob_example/*.proto
+	DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+		--plugin=./protoc-gen-persist \
+		--persist_out=.  examples/test_issue_32/*.proto
 
 
 test-sql-impl: build
