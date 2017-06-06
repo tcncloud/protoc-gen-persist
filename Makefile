@@ -66,7 +66,6 @@ proto-examples:
 
 build: generate
 	dep ensure
-	dep stats
 	go build
 
 install: build
