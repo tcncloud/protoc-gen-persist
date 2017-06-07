@@ -212,7 +212,7 @@ func (s *MySpannerImpl) UniaryDelete(ctx context.Context, req *test.ExampleTable
 		Kind:  spanner.ClosedOpen,
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange("example_table", key)
+	muts[0] = spanner.Delete("example_table", key)
 	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
@@ -428,7 +428,7 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 			End:   end,
 			Kind:  spanner.ClosedClosed,
 		}
-		muts = append(muts, spanner.DeleteKeyRange("example_table", key))
+		muts = append(muts, spanner.Delete("example_table", key))
 		////////////////////////////// NOTE //////////////////////////////////////
 		// In the future, we might do apply if muts gets really big,  but for now,
 		// we only do one apply on the database with all the records stored in muts
@@ -465,6 +465,13 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		params := make(map[string]interface{})
 		var conv interface{}
 
+		conv = req.Id
+
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		params["id"] = conv
+
 		conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
 
 		if err != nil {
@@ -478,13 +485,6 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		params["name"] = conv
-
-		conv = req.Id
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		params["id"] = conv
 		muts = append(muts, spanner.UpdateMap("example_table", params))
 
 		////////////////////////////// NOTE //////////////////////////////////////
@@ -551,7 +551,7 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 	}
 	res := test.ExampleTable{}
 
-	beforeRes, err := hooks.UniaryInsertAfterHook(req)
+	err = hooks.UniaryInsertAfterHook(req, &res)
 
 	if err != nil {
 
@@ -638,7 +638,7 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 		StartTime: StartTime.ToProto(),
 	}
 
-	beforeRes, err := hooks.UniaryInsertAfterHook(req)
+	err = hooks.UniaryInsertAfterHook(req, &res)
 
 	if err != nil {
 
@@ -696,7 +696,7 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 	}
 	res := test.PartialTable{}
 
-	beforeRes, err := hooks.UniaryUpdateAfterHook(req)
+	err = hooks.UniaryUpdateAfterHook(req, &res)
 
 	if err != nil {
 
@@ -743,7 +743,7 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 		Kind:  spanner.ClosedOpen,
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange("example_table", key)
+	muts[0] = spanner.Delete("example_table", key)
 	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
@@ -752,7 +752,7 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 	}
 	res := test.ExampleTable{}
 
-	beforeRes, err := hooks.UniaryDeleteAfterHook(req)
+	err = hooks.UniaryDeleteAfterHook(req, &res)
 
 	if err != nil {
 
@@ -832,7 +832,7 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 			StartTime: StartTime.ToProto(),
 		}
 
-		beforeRes, err := hooks.ServerStreamAfterHook(req)
+		err = hooks.ServerStreamAfterHook(req, &res)
 
 		if err != nil {
 
@@ -911,7 +911,7 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 
 	for _, req := range reqs {
 
-		beforeRes, err := hooks.ClientStreamUpdateAfterHook(req)
+		err = hooks.ClientStreamUpdateAfterHook(req, &res)
 
 		if err != nil {
 

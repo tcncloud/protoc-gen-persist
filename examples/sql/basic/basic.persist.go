@@ -109,7 +109,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 		StartTime: StartTime.ToProto(),
 	}
 
-	beforeRes, err := hooks.UniarySelectAfterHook(req)
+	err = hooks.UniarySelectAfterHook(req, &res)
 
 	if err != nil {
 
@@ -214,7 +214,7 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 			StartTime: StartTime.ToProto(),
 		}
 
-		beforeRes, err := hooks.ServerStreamAfterHook(req)
+		err = hooks.ServerStreamAfterHook(req, &res)
 
 		if err != nil {
 
@@ -329,7 +329,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 			StartTime: StartTime.ToProto(),
 		}
 
-		beforeRes, err := hooks.BidirectionalAfterHook(req)
+		err = hooks.BidirectionalAfterHook(req, &res)
 
 		if err != nil {
 
@@ -436,7 +436,7 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		beforeRes, err := hooks.ClientStreamAfterHook(req)
+		err = hooks.ClientStreamAfterHook(req, &res)
 
 		if err != nil {
 

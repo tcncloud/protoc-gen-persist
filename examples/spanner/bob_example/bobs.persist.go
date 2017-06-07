@@ -60,7 +60,7 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 		Kind:  spanner.ClosedOpen,
 	}
 	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.DeleteKeyRange("bob_table", key)
+	muts[0] = spanner.Delete("bob_table", key)
 	_, err = s.SpannerDB.Apply(ctx, muts)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
