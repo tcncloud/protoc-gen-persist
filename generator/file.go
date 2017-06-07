@@ -88,7 +88,11 @@ func (f *FileStruct) GetPersistPackageOption() string {
 
 func (f *FileStruct) GetImplFileName() string {
 	_, file := filepath.Split(f.Desc.GetName())
-	return strings.Join([]string{f.GetImplDir(), string(os.PathSeparator), strings.Replace(file, ".proto", ".persist.go", -1)}, "")
+	return strings.Join([]string{
+		f.GetImplDir(),
+		string(os.PathSeparator),
+		strings.Replace(file, ".proto", ".persist.go", -1),
+	}, "")
 }
 
 func (f *FileStruct) GetImplDir() string {
