@@ -31,10 +31,21 @@ syntax = "proto3";
 
 package examples.test_issue_32;
 
+option go_package = "github.com/tcncloud/protoc-gen-persist/examples/test_issue_32;test";
+option (persist.package) = "github.com/tcncloud/persist;persist";
+
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
 
+message Fld {
+
+}
 message Request{
+    int32 id = 1;
+    Fld test = 2;
+}
+
+message Response  {
     int32 id = 1;
 }
 
@@ -51,7 +62,7 @@ service TestService {
         ]
     };
 
-    rpc GetTime(Request) returns (Request) {
+    rpc GetTime(Request) returns (Response) {
         option (persist.ql) = {
             query: ["SELECT time FROM timesource WHERE time = $1"]
             arguments: ["id"]

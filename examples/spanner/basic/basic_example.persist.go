@@ -465,13 +465,6 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		params := make(map[string]interface{})
 		var conv interface{}
 
-		conv = req.Id
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		params["id"] = conv
-
 		conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
 
 		if err != nil {
@@ -485,6 +478,13 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		params["name"] = conv
+
+		conv = req.Id
+
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		params["id"] = conv
 		muts = append(muts, spanner.UpdateMap("example_table", params))
 
 		////////////////////////////// NOTE //////////////////////////////////////

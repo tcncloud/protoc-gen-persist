@@ -30,10 +30,15 @@
 package generator
 
 import (
+	"path/filepath"
 	"strings"
 
+	"os"
+
 	"github.com/Sirupsen/logrus"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
 type FileStruct struct {
@@ -62,7 +67,93 @@ func (f *FileStruct) GetOrigName() string {
 }
 
 func (f *FileStruct) GetPackageName() string {
-	return f.Desc.GetPackage()
+	return f.GetImplPackage()
+	// return f.Desc.GetPackage()
+}
+
+// extract the persist.package file option
+// or return "" as default
+func (f *FileStruct) GetPersistPackageOption() string {
+	if proto.HasExtension(f.Desc.GetOptions(), persist.E_Package) {
+		pkg, err := proto.GetExtension(f.Desc.GetOptions(), persist.E_Package)
+		if err != nil {
+			logrus.WithError(err).Debug("Error")
+			return ""
+		}
+		logrus.WithField("pkg", *pkg.(*string)).Info("Package")
+		return *pkg.(*string)
+	}
+	logrus.WithField("File Options", f.Desc.GetOptions()).Debug("file options")
+	return ""
+}
+
+func (f *FileStruct) GetImplFileName() string {
+	_, file := filepath.Split(f.Desc.GetName())
+	return strings.Join([]string{
+		f.GetImplDir(),
+		string(os.PathSeparator),
+		strings.Replace(file, ".proto", ".persist.go", -1),
+	}, "")
+}
+
+func (f *FileStruct) GetImplDir() string {
+	pkg := f.GetPersistPackageOption()
+	if pkg == "" {
+		// if the persist.package option is not present we will use
+		// go_pacakge
+		if f.Desc.GetOptions().GetGoPackage() == "" {
+			pkg = f.Desc.GetOptions().GetGoPackage()
+		} else {
+			// last resort
+			pkg = f.Desc.GetPackage()
+		}
+	}
+	// process pkg
+	if strings.Contains(pkg, ";") {
+		// we need to split by ";"
+		p := strings.Split(pkg, ";")
+		if len(p) > 2 {
+			logrus.WithField("persist package", pkg).Panic("Invalid persist package")
+		}
+		return p[0]
+	}
+	return pkg
+}
+
+func (f *FileStruct) GetImplPackage() string {
+	pkg := f.GetPersistPackageOption()
+	if pkg == "" {
+		// if the persist.package option is not present we will use
+		// go_pacakge
+		if f.Desc.GetOptions().GetGoPackage() == "" {
+			pkg = f.Desc.GetOptions().GetGoPackage()
+		} else {
+			// last resort
+			pkg = f.Desc.GetPackage()
+		}
+	}
+	// process pkg
+	if strings.Contains(pkg, ";") {
+		// we need to split by ";"
+		p := strings.Split(pkg, ";")
+		if len(p) > 2 {
+			logrus.WithField("persist package", pkg).Panic("Invalid persist package")
+		}
+		return p[len(p)-1]
+	}
+
+	if strings.Contains(pkg, "/") {
+		// return package after last /
+		p := strings.Split(pkg, "/")
+		return p[len(p)-1]
+	}
+	return strings.Replace(pkg, ".", "_", -1)
+}
+
+// return the computed persist file taking in consideration
+// the persist.package option and original file name
+func (f *FileStruct) GetPersistFile() string {
+	return ""
 }
 
 func (f *FileStruct) GetFileName() string {
@@ -71,6 +162,25 @@ func (f *FileStruct) GetFileName() string {
 
 func (f *FileStruct) GetServices() *Services {
 	return f.ServiceList
+}
+
+func (f *FileStruct) GetFullGoPackage() string {
+	if f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
+		switch {
+		case strings.Contains(f.Desc.GetOptions().GetGoPackage(), ";"):
+			idx := strings.Index(f.Desc.GetOptions().GetGoPackage(), ";")
+			return f.Desc.GetOptions().GetGoPackage()[0:idx]
+		default:
+			return f.Desc.GetOptions().GetGoPackage()
+		}
+
+	} else {
+		return strings.Replace(f.Desc.GetPackage(), ".", "_", -1)
+	}
+}
+
+func (f *FileStruct) DifferentImpl() bool {
+	return f.GetFullGoPackage() != f.GetImplPackage()
 }
 
 func (f *FileStruct) GetGoPackage() string {
@@ -117,7 +227,7 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 			}
 		}
 	} else {
-		logrus.Fatalf("Can't find structure %s!", name)
+		logrus.WithField("all structures", f.AllStructures).Fatalf("Can't find structure %s!", name)
 	}
 }
 
