@@ -67,7 +67,8 @@ func (f *FileStruct) GetOrigName() string {
 }
 
 func (f *FileStruct) GetPackageName() string {
-	return f.Desc.GetPackage()
+	return f.GetImplPackage()
+	// return f.Desc.GetPackage()
 }
 
 // extract the persist.package file option
@@ -156,12 +157,30 @@ func (f *FileStruct) GetPersistFile() string {
 }
 
 func (f *FileStruct) GetFileName() string {
-	f.GetPersistFile()
 	return strings.Replace(f.Desc.GetName(), ".proto", ".persist.go", -1)
 }
 
 func (f *FileStruct) GetServices() *Services {
 	return f.ServiceList
+}
+
+func (f *FileStruct) GetFullGoPackage() string {
+	if f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
+		switch {
+		case strings.Contains(f.Desc.GetOptions().GetGoPackage(), ";"):
+			idx := strings.Index(f.Desc.GetOptions().GetGoPackage(), ";")
+			return f.Desc.GetOptions().GetGoPackage()[0:idx]
+		default:
+			return f.Desc.GetOptions().GetGoPackage()
+		}
+
+	} else {
+		return strings.Replace(f.Desc.GetPackage(), ".", "_", -1)
+	}
+}
+
+func (f *FileStruct) DifferentImpl() bool {
+	return f.GetFullGoPackage() != f.GetImplPackage()
 }
 
 func (f *FileStruct) GetGoPackage() string {
@@ -208,7 +227,7 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 			}
 		}
 	} else {
-		logrus.Fatalf("Can't find structure %s!", name)
+		logrus.WithField("all structures", f.AllStructures).Fatalf("Can't find structure %s!", name)
 	}
 }
 

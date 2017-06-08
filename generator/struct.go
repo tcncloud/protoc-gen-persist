@@ -32,6 +32,8 @@ package generator
 import (
 	"strings"
 
+	"fmt"
+
 	"github.com/Sirupsen/logrus"
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	gen "github.com/golang/protobuf/protoc-gen-go/generator"
@@ -52,6 +54,16 @@ type Struct struct {
 	File             *FileStruct // for determine go import path and go package
 	EnumDesc         *desc.EnumDescriptorProto
 	MsgDesc          *desc.DescriptorProto
+}
+
+func (s *Struct) String() string {
+	return fmt.Sprintf("[desc: %s, pkg: %s, file: %s, proto_pkg: %s, get_proto_name: %s]",
+		s.Descriptor.GetName(),
+		s.Package,
+		s.File.Desc.GetName(),
+		s.File.Desc.GetPackage(),
+		s.GetProtoName(),
+	)
 }
 
 func (s *Struct) GetGoPath() string {
@@ -101,7 +113,7 @@ func (s *Struct) GetGoName() string {
 
 func (s *Struct) GetProtoName() string {
 	if s.ParentDescriptor == nil {
-		return "." + s.Package + "." + s.Descriptor.GetName()
+		return "." + s.File.Desc.GetPackage() + "." + s.Descriptor.GetName()
 	} else {
 		return s.ParentDescriptor.GetProtoName() + "." + s.Descriptor.GetName()
 	}
@@ -124,6 +136,15 @@ type StructList []*Struct
 
 func NewStructList() *StructList {
 	return &StructList{}
+}
+
+func (s *StructList) String() string {
+	ret := ""
+	for _, st := range *s {
+		ret += st.String() + "\n"
+
+	}
+	return ret
 }
 
 func (s *StructList) GetStructByProtoName(name string) *Struct {
