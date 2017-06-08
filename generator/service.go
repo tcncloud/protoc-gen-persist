@@ -31,6 +31,7 @@ package generator
 
 import (
 	"fmt"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -145,6 +146,9 @@ func (s *Service) ProcessImports() {
 	s.File.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
 	s.File.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
 	s.File.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
+	if s.File.DifferentImpl() {
+		s.File.ImportList.GetOrAddImport("pb", s.File.GetFullGoPackage())
+	}
 	if s.IsSpanner() {
 		s.File.ImportList.GetOrAddImport("iterator", "google.golang.org/api/iterator")
 	}

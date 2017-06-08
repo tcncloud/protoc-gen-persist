@@ -46,6 +46,7 @@ type Generator struct {
 	Files           *FileList
 
 	//crtFile *descriptor.FileDescriptorProto
+	Response *plugin_go.CodeGeneratorResponse
 }
 
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
@@ -53,12 +54,13 @@ func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret.OriginalRequest = request
 	ret.AllStructures = NewStructList()
 	ret.Files = NewFileList()
+	ret.Response = new(plugin_go.CodeGeneratorResponse)
 	return ret
 }
 
 func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 	//logrus.WithField("structs", g.AllStructures).Debug("collected structures")
-	ret := new(plugin_go.CodeGeneratorResponse)
+	ret := g.Response
 	logrus.Debugf("going over %d files\n", len(*g.Files))
 	for _, fileStruct := range *g.Files {
 		// format file Content
@@ -70,7 +72,7 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 			}
 			ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
 				Content: proto.String(string(FormatCode(fileStruct.GetFileName(), fileContents))),
-				Name:    proto.String(fileStruct.GetFileName()),
+				Name:    proto.String(fileStruct.GetImplFileName()),
 			})
 		}
 	}

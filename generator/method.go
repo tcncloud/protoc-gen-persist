@@ -142,16 +142,16 @@ func (m *Method) GetQuery() string {
 
 func (m *Method) GetGoTypeName(typ string) string {
 	str := m.GetAllStructs().GetStructByProtoName(typ)
-	if m.Service.File.GetPackageName() != str.File.GetPackageName() {
-		if imp := m.Service.File.ImportList.GetGoNameByStruct(str); imp != nil {
-			return imp.GoPackageName + "." + str.GetGoName()
-		} else {
-			logrus.WithField("struct", str).Fatal("Can't find struct in import list")
-			return "__unknown__import__path__"
-		}
+	// if m.Service.File.GetPackageName() != str.File.GetPackageName() {
+	if imp := m.Service.File.ImportList.GetGoNameByStruct(str); imp != nil {
+		return imp.GoPackageName + "." + str.GetGoName()
 	} else {
-		return str.GetGoName()
+		logrus.WithField("struct", str).Fatal("Can't find struct in import list")
+		return "__unknown__import__path__"
 	}
+	// } else {
+	// 	return str.GetGoName()
+	// }
 }
 
 func (m *Method) GetInputType() string {
