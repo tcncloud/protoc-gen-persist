@@ -140,6 +140,16 @@ func (m *Method) GetQuery() string {
 	return ""
 }
 
+// helper method for getting a files package for stream calls
+func (m *Method) GetFilePackage() string {
+	if !m.Service.File.DifferentImpl() {
+		logrus.Debugf("the impl and file are in same package")
+		return ""
+	}
+	logrus.Debugf("the impl and file are different. file: %s", GetGoPackage(m.Service.File.GetFullGoPackage()))
+	return GetGoPackage(m.Service.File.GetFullGoPackage())
+}
+
 func (m *Method) GetGoTypeName(typ string) string {
 	str := m.GetAllStructs().GetStructByProtoName(typ)
 	// if m.Service.File.GetPackageName() != str.File.GetPackageName() {
