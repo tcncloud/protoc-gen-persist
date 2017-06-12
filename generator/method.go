@@ -147,7 +147,12 @@ func (m *Method) GetFilePackage() string {
 		return ""
 	}
 	logrus.Debugf("the impl and file are different. file: %s", GetGoPackage(m.Service.File.GetFullGoPackage()))
-	return GetGoPackage(m.Service.File.GetFullGoPackage())
+	//return GetGoPackage(m.Service.File.GetFullGoPackage())
+	if imp := m.Service.File.ImportList.GetImportPkgForPath(m.Service.File.GetFullGoPackage()); imp != "__invalid__import__" {
+		return imp
+	}
+	return ""
+
 }
 
 func (m *Method) GetGoTypeName(typ string) string {
