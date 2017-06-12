@@ -6,7 +6,11 @@ import (
 	"os"
 	"testing"
 
+<<<<<<< HEAD
 	//"github.com/Sirupsen/logrus"
+=======
+	"github.com/Sirupsen/logrus"
+>>>>>>> upstream/master
 	"github.com/golang/protobuf/proto"
 	google_protobuf "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
@@ -85,7 +89,11 @@ func ProcessFile(loc string) *plugin.CodeGeneratorResponse {
 	if err := proto.Unmarshal(data, &f); err != nil {
 		panic(fmt.Sprintf("could not Unmarshal file: %s", err))
 	}
+<<<<<<< HEAD
 	req.FileToGenerate = append(req.FileToGenerate, loc)
+=======
+
+>>>>>>> upstream/master
 	req.ProtoFile = f.File
 	//fmt.Printf("files to generate: %+v\n", req.FileToGenerate)
 	fmt.Printf("Protofile len: %d\n", len(req.ProtoFile))
