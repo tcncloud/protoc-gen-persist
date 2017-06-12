@@ -83,7 +83,7 @@ func (f *FileStruct) GetPersistPackageOption() string {
 			logrus.WithError(err).Debug("Error")
 			return ""
 		}
-		logrus.WithField("pkg", *pkg.(*string)).Info("Package")
+		//logrus.WithField("pkg", *pkg.(*string)).Info("Package")
 		return *pkg.(*string)
 	}
 	logrus.WithField("File Options", f.Desc.GetOptions()).Debug("file options")
