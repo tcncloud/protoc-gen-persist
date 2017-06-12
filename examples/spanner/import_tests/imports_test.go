@@ -2,6 +2,10 @@ package nested_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"testing"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	google_protobuf "github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -9,9 +13,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tcncloud/protoc-gen-persist/generator"
-	"io/ioutil"
-	"os"
-	"testing"
 )
 
 func TestNestedService(t *testing.T) {
@@ -80,17 +81,12 @@ func ProcessFile(loc string) *plugin.CodeGeneratorResponse {
 	if len(data) == 0 {
 		panic("no data read from file")
 	}
-	var f google_protobuf.FileDescriptorProto
+	var f google_protobuf.FileDescriptorSet
 	if err := proto.Unmarshal(data, &f); err != nil {
 		panic(fmt.Sprintf("could not Unmarshal file: %s", err))
 	}
-	fmt.Printf(`
-Name: %s,
-Package: %s,
-Dependency: %+v,
-`, f.GetName(), f.GetPackage(), f.GetDependency())
 
-	req.ProtoFile = append(req.ProtoFile, &f)
+	req.ProtoFile = f.File
 	//fmt.Printf("files to generate: %+v\n", req.FileToGenerate)
 	fmt.Printf("Protofile len: %d\n", len(req.ProtoFile))
 	g := generator.NewGenerator(&req)

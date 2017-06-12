@@ -74,6 +74,9 @@ func (f *FileStruct) GetPackageName() string {
 // extract the persist.package file option
 // or return "" as default
 func (f *FileStruct) GetPersistPackageOption() string {
+	if f.Desc == nil || f.Desc.GetOptions() == nil {
+		return ""
+	}
 	if proto.HasExtension(f.Desc.GetOptions(), persist.E_Package) {
 		pkg, err := proto.GetExtension(f.Desc.GetOptions(), persist.E_Package)
 		if err != nil {
