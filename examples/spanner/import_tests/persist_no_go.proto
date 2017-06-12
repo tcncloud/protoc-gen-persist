@@ -74,12 +74,12 @@ service MySpanner {
 				name: "TestBeforeHook"
 			}
 			after: {
-				package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/nested/service"
+				package: ""
 				name: "TestAfterHook"
 			}
     };
   };
-	rpc ServerStream(test.ExampleTable) returns (ExampleTable) {
+	rpc ServerStream(test.ExampleTable) returns (stream ExampleTable) {
 		option (persist.ql) = {
 			query: "SELECT * FROM example_table WHERE start_time < ?",
 			arguments: ["start_time"]

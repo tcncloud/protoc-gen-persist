@@ -11,6 +11,7 @@ import (
 
 	hooks "github.com/tcncloud/protoc-gen-persist/examples/hooks"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/sql/basic"
 	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
@@ -27,13 +28,6 @@ import (
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-func NewAmazingImpl(driver, connString string) (*AmazingImpl, error) {
-	db, err := sql.Open(driver, connString)
-	if err != nil {
-		return nil, err
-	}
-	return &AmazingImpl{SqlDB: db}, nil
-}
 
 // sql unary UniarySelect
 func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
@@ -121,7 +115,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 }
 
 // sql server streaming ServerStream
-func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
+func (s *AmazingImpl) ServerStream(req *test.Name, stream pb.Amazing_ServerStreamServer) error {
 	var (
 		Id        int64
 		Name      string
@@ -161,7 +155,7 @@ func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamSe
 }
 
 // sql server streaming ServerStreamWithHooks
-func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
+func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream pb.Amazing_ServerStreamWithHooksServer) error {
 	var (
 		Id        int64
 		Name      string
@@ -228,7 +222,7 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 }
 
 // sql bidi streaming Bidirectional
-func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
+func (s *AmazingImpl) Bidirectional(stream pb.Amazing_BidirectionalServer) error {
 	var err error
 	stmt, err := s.SqlDB.Prepare("UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *")
 	if err != nil {
@@ -274,7 +268,7 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 }
 
 // sql bidi streaming BidirectionalWithHooks
-func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHooksServer) error {
+func (s *AmazingImpl) BidirectionalWithHooks(stream pb.Amazing_BidirectionalWithHooksServer) error {
 	var err error
 	stmt, err := s.SqlDB.Prepare("UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *")
 	if err != nil {
@@ -345,7 +339,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 }
 
 // sql client streaming ClientStream
-func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
+func (s *AmazingImpl) ClientStream(stream pb.Amazing_ClientStreamServer) error {
 	var err error
 	tx, err := s.SqlDB.Begin()
 	if err != nil {
@@ -389,7 +383,7 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 }
 
 // sql client streaming ClientStreamWithHook
-func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookServer) error {
+func (s *AmazingImpl) ClientStreamWithHook(stream pb.Amazing_ClientStreamWithHookServer) error {
 	var err error
 	tx, err := s.SqlDB.Begin()
 	if err != nil {

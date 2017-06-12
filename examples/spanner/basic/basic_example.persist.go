@@ -10,11 +10,11 @@ import (
 
 	"cloud.google.com/go/spanner"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic"
 	hooks "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
 	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"
 	iterator "google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 )
@@ -29,19 +29,6 @@ import (
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-func NewMySpannerImpl(d string, conf *spanner.ClientConfig, opts ...option.ClientOption) (*MySpannerImpl, error) {
-	var client *spanner.Client
-	var err error
-	if conf != nil {
-		client, err = spanner.NewClientWithConfig(context.Background(), d, *conf, opts...)
-	} else {
-		client, err = spanner.NewClient(context.Background(), d, opts...)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &MySpannerImpl{SpannerDB: client}, nil
-}
 
 // spanner unary select UniaryInsert
 func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
@@ -158,13 +145,6 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 
 	params := make(map[string]interface{})
 	var conv interface{}
-
-	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
-
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	params["start_time"] = conv
 	conv = "oranges"
 	params["name"] = conv
 
@@ -174,6 +154,13 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
 	params["id"] = conv
+
+	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
+
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	params["start_time"] = conv
 	muts := make([]*spanner.Mutation, 1)
 	muts[0] = spanner.UpdateMap("example_table", params)
 	_, err = s.SpannerDB.Apply(ctx, muts)
@@ -283,7 +270,7 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 }
 
 // spanner server streaming ServerStream
-func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStreamServer) error {
+func (s *MySpannerImpl) ServerStream(req *test.Name, stream pb.MySpanner_ServerStreamServer) error {
 	var (
 		Id        int64
 		Name      string
@@ -338,7 +325,7 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 }
 
 // spanner client streaming ClientStreamInsert
-func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertServer) error {
+func (s *MySpannerImpl) ClientStreamInsert(stream pb.MySpanner_ClientStreamInsertServer) error {
 	var err error
 	res := test.NumRows{}
 
@@ -396,7 +383,7 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 }
 
 // spanner client streaming ClientStreamDelete
-func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteServer) error {
+func (s *MySpannerImpl) ClientStreamDelete(stream pb.MySpanner_ClientStreamDeleteServer) error {
 	var err error
 	res := test.NumRows{}
 
@@ -448,7 +435,7 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 }
 
 // spanner client streaming ClientStreamUpdate
-func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateServer) error {
+func (s *MySpannerImpl) ClientStreamUpdate(stream pb.MySpanner_ClientStreamUpdateServer) error {
 	var err error
 	res := test.NumRows{}
 
@@ -465,13 +452,6 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		params := make(map[string]interface{})
 		var conv interface{}
 
-		conv = req.Id
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		params["id"] = conv
-
 		conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
 
 		if err != nil {
@@ -485,6 +465,13 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		params["name"] = conv
+
+		conv = req.Id
+
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		params["id"] = conv
 		muts = append(muts, spanner.UpdateMap("example_table", params))
 
 		////////////////////////////// NOTE //////////////////////////////////////
@@ -764,7 +751,7 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 }
 
 // spanner server streaming ServerStreamWithHooks
-func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_ServerStreamWithHooksServer) error {
+func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream pb.MySpanner_ServerStreamWithHooksServer) error {
 	var (
 		Id        int64
 		Name      string
@@ -846,7 +833,7 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 }
 
 // spanner client streaming ClientStreamUpdateWithHooks
-func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
+func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream pb.MySpanner_ClientStreamUpdateWithHooksServer) error {
 	var err error
 	res := test.NumRows{}
 
@@ -880,19 +867,19 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 		params := make(map[string]interface{})
 		var conv interface{}
 
-		conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		params["name"] = conv
-
 		conv = req.Name
 
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 		params["id"] = conv
+
+		conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
+
+		if err != nil {
+			return grpc.Errorf(codes.Unknown, err.Error())
+		}
+		params["name"] = conv
 		muts = append(muts, spanner.UpdateMap("example_table", params))
 
 		////////////////////////////// NOTE //////////////////////////////////////

@@ -9,9 +9,9 @@ import (
 
 	"cloud.google.com/go/spanner"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/bob_example"
 	context "golang.org/x/net/context"
 	iterator "google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 )
@@ -26,22 +26,9 @@ import (
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-func NewBobsImpl(d string, conf *spanner.ClientConfig, opts ...option.ClientOption) (*BobsImpl, error) {
-	var client *spanner.Client
-	var err error
-	if conf != nil {
-		client, err = spanner.NewClientWithConfig(context.Background(), d, *conf, opts...)
-	} else {
-		client, err = spanner.NewClient(context.Background(), d, opts...)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &BobsImpl{SpannerDB: client}, nil
-}
 
 // spanner unary select DeleteBobs
-func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
+func (s *BobsImpl) DeleteBobs(ctx context.Context, req *pb.Bob) (*pb.Empty, error) {
 	var err error
 
 	start := make([]interface{}, 0)
@@ -67,15 +54,15 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := Empty{}
+	res := pb.Empty{}
 
 	return &res, nil
 }
 
 // spanner client streaming PutBobs
-func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
+func (s *BobsImpl) PutBobs(stream pb.Bobs_PutBobsServer) error {
 	var err error
-	res := NumRows{}
+	res := pb.NumRows{}
 
 	muts := make([]*spanner.Mutation, 0)
 	for {
@@ -131,7 +118,7 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 }
 
 // spanner server streaming GetBobs
-func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
+func (s *BobsImpl) GetBobs(req *pb.Empty, stream pb.Bobs_GetBobsServer) error {
 	var (
 		Id        int64
 		Name      string
@@ -173,7 +160,7 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		res := Bob{
+		res := pb.Bob{
 
 			Id:        Id,
 			Name:      Name,
@@ -186,7 +173,7 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 }
 
 // spanner server streaming GetPeopleFromNames
-func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNamesServer) error {
+func (s *BobsImpl) GetPeopleFromNames(req *pb.Names, stream pb.Bobs_GetPeopleFromNamesServer) error {
 	var (
 		Id        int64
 		Name      string
@@ -238,7 +225,7 @@ func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNames
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 
-		res := Bob{
+		res := pb.Bob{
 
 			Id:        Id,
 			Name:      Name,
