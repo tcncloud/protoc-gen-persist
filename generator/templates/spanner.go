@@ -164,7 +164,7 @@ const SpannerUnaryDeleteTemplate = `{{define "spanner_unary_delete"}}
 {{end}}`
 
 const SpannerClientStreamingMethodTemplate = `{{define "spanner_client_streaming_method"}}// spanner client streaming {{.GetName}}
-func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetFilePackage}}{{.GetServiceName}}_{{.GetName}}Server) error {
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetFilePackage}}.{{.GetServiceName}}_{{.GetName}}Server) error {
 	var err error
 	res := {{.GetOutputType}}{}
 	{{$aft := .GetMethodOption.GetAfter}}
@@ -230,7 +230,7 @@ const SpannerClientStreamingDeleteTemplate = `{{define "spanner_client_streaming
 {{end}}`
 
 const SpannerServerStreamingMethodTemplate = `{{define "spanner_server_streaming_method"}}// spanner server streaming {{.GetName}}
-func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetFilePackage}}{{.GetServiceName}}_{{.GetName}}Server) error {
+func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{.GetFilePackage}}.{{.GetServiceName}}_{{.GetName}}Server) error {
 	var (
 	{{range $field, $type := .GetFieldsWithLocalTypesFor .GetOutputTypeStruct}}
 		{{$field}} {{$type}}{{end}}
