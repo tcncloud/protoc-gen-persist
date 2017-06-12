@@ -141,6 +141,9 @@ func (m *Method) GetQuery() string {
 }
 
 // helper method for getting a files package for stream calls
+// if the service.pb.go and the persist.go are in different packages
+// it will return the import prefix+.  of the package,  otherwise it returns
+// the empty string
 func (m *Method) GetFilePackage() string {
 	if !m.Service.File.DifferentImpl() {
 		logrus.Debugf("the impl and file are in same package")
@@ -149,7 +152,7 @@ func (m *Method) GetFilePackage() string {
 	logrus.Debugf("the impl and file are different. file: %s", GetGoPackage(m.Service.File.GetFullGoPackage()))
 	//return GetGoPackage(m.Service.File.GetFullGoPackage())
 	if imp := m.Service.File.ImportList.GetImportPkgForPath(m.Service.File.GetFullGoPackage()); imp != "__invalid__import__" {
-		return imp
+		return imp + "."
 	}
 	return ""
 
