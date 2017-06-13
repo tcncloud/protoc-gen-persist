@@ -81,9 +81,9 @@ func (il *Imports) GetGoNameByStruct(str *Struct) *Import {
 }
 
 func (il *Imports) GetImportPkgForPath(path string) string {
-	logrus.Infof("import path %s", path)
+	logrus.Debugf("import path %s", path)
 	for _, i := range *il {
-		logrus.Infof("check with import path %s", i.GoImportPath)
+		logrus.Debugf("check with import path %s", i.GoImportPath)
 		if i.GoImportPath == path {
 			return i.GoPackageName
 		}

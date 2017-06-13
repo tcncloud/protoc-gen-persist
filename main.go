@@ -42,7 +42,7 @@ import (
 )
 
 func init() {
-	if os.Getenv("DEBUG") != "" {
+	if os.Getenv("DEBUG") == "true" {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 	logrus.Debug("main init()")
@@ -77,6 +77,7 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("recieved err getting the file response: %s", err)
 	}
+	logrus.Debugf("file length: %d\n", len(resp.File))
 	data, err = proto.Marshal(resp)
 	if err != nil {
 		logrus.Fatal("I can't serialize response")

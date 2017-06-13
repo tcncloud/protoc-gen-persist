@@ -204,7 +204,7 @@ func (s *StructList) GetStructByFieldDesc(fld *desc.FieldDescriptorProto) *Struc
 	for _, str := range *s {
 		//logrus.Debugf("checking str:  %s", str.GetProtoName())
 		if str.GetProtoName() == fld.GetName() {
-			logrus.Warnf("the struct name matches. Struct: %s  fld: %s", str.GetProtoName, fld.GetName())
+			logrus.Debugf("the struct name matches. Struct: %s  fld: %s", str.GetProtoName, fld.GetName())
 			return str
 		}
 	}

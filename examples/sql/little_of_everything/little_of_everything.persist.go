@@ -10,6 +10,7 @@ import (
 	strings "strings"
 
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/sql/little_of_everything"
 	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
@@ -26,20 +27,13 @@ import (
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-func NewExampleService1Impl(driver, connString string) (*ExampleService1Impl, error) {
-	db, err := sql.Open(driver, connString)
-	if err != nil {
-		return nil, err
-	}
-	return &ExampleService1Impl{SqlDB: db}, nil
-}
 
 // sql unary UnaryExample1
-func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTable1) (*ExampleTable1, error) {
+func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *pb.ExampleTable1) (*pb.ExampleTable1, error) {
 	var (
 		BytesField   []byte
 		InnerEnum    int32
-		InnerMessage ExampleTable1_InnerMessage
+		InnerMessage pb.ExampleTable1_InnerMessage
 		Key          string
 		StartTime    mytime.MyTime
 		StringArray  []string
@@ -68,10 +62,10 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := ExampleTable1{
+	res := pb.ExampleTable1{
 
 		BytesField:   BytesField,
-		InnerEnum:    ExampleTable1_InnerEnum(InnerEnum.ToProto()),
+		InnerEnum:    pb.ExampleTable1_InnerEnum(InnerEnum.ToProto()),
 		InnerMessage: &InnerMessage,
 		Key:          Key,
 		StartTime:    StartTime.ToProto(),
@@ -85,11 +79,11 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 }
 
 // sql unary UnaryExample2
-func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test) (*ExampleTable1, error) {
+func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test) (*pb.ExampleTable1, error) {
 	var (
 		BytesField   []byte
 		InnerEnum    int32
-		InnerMessage ExampleTable1_InnerMessage
+		InnerMessage pb.ExampleTable1_InnerMessage
 		Key          string
 		StartTime    mytime.MyTime
 		StringArray  []string
@@ -118,10 +112,10 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 		}
 		return nil, grpc.Errorf(codes.Unknown, err.Error())
 	}
-	res := ExampleTable1{
+	res := pb.ExampleTable1{
 
 		BytesField:   BytesField,
-		InnerEnum:    ExampleTable1_InnerEnum(InnerEnum.ToProto()),
+		InnerEnum:    pb.ExampleTable1_InnerEnum(InnerEnum.ToProto()),
 		InnerMessage: &InnerMessage,
 		Key:          Key,
 		StartTime:    StartTime.ToProto(),
@@ -135,11 +129,11 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 }
 
 // sql server streaming ServerStreamSelect
-func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream ExampleService1_ServerStreamSelectServer) error {
+func (s *ExampleService1Impl) ServerStreamSelect(req *pb.ExampleTable1, stream pb.ExampleService1_ServerStreamSelectServer) error {
 	var (
 		BytesField   []byte
 		InnerEnum    int32
-		InnerMessage ExampleTable1_InnerMessage
+		InnerMessage pb.ExampleTable1_InnerMessage
 		Key          string
 		StartTime    mytime.MyTime
 		StringArray  []string
@@ -168,10 +162,10 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 		if err != nil {
 			return grpc.Errorf(codes.Unknown, err.Error())
 		}
-		res := ExampleTable1{
+		res := pb.ExampleTable1{
 
 			BytesField:   BytesField,
-			InnerEnum:    ExampleTable1_InnerEnum(InnerEnum.ToProto()),
+			InnerEnum:    pb.ExampleTable1_InnerEnum(InnerEnum.ToProto()),
 			InnerMessage: &InnerMessage,
 			Key:          Key,
 			StartTime:    StartTime.ToProto(),
@@ -187,7 +181,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 }
 
 // sql client streaming ClientStreamingExample
-func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_ClientStreamingExampleServer) error {
+func (s *ExampleService1Impl) ClientStreamingExample(stream pb.ExampleService1_ClientStreamingExampleServer) error {
 	var err error
 	tx, err := s.SqlDB.Begin()
 	if err != nil {
@@ -198,7 +192,7 @@ func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_Clie
 		return err
 	}
 
-	res := CountRows{}
+	res := pb.CountRows{}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {

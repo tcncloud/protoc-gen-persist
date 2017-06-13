@@ -7,8 +7,8 @@ import (
 	strings "strings"
 
 	"cloud.google.com/go/spanner"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/delete"
 	context "golang.org/x/net/context"
-	"google.golang.org/api/option"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 )
@@ -23,22 +23,9 @@ import (
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-func NewDeleteImpl(d string, conf *spanner.ClientConfig, opts ...option.ClientOption) (*DeleteImpl, error) {
-	var client *spanner.Client
-	var err error
-	if conf != nil {
-		client, err = spanner.NewClientWithConfig(context.Background(), d, *conf, opts...)
-	} else {
-		client, err = spanner.NewClient(context.Background(), d, opts...)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &DeleteImpl{SpannerDB: client}, nil
-}
 
 // spanner unary select DeleteEquals
-func (s *DeleteImpl) DeleteEquals(ctx context.Context, req *Empty) (*Empty, error) {
+func (s *DeleteImpl) DeleteEquals(ctx context.Context, req *pb.Empty) (*pb.Empty, error) {
 	var err error
 
 	start := make([]interface{}, 0)
@@ -58,13 +45,13 @@ func (s *DeleteImpl) DeleteEquals(ctx context.Context, req *Empty) (*Empty, erro
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := Empty{}
+	res := pb.Empty{}
 
 	return &res, nil
 }
 
 // spanner unary select DeleteGreater
-func (s *DeleteImpl) DeleteGreater(ctx context.Context, req *Empty) (*Empty, error) {
+func (s *DeleteImpl) DeleteGreater(ctx context.Context, req *pb.Empty) (*pb.Empty, error) {
 	var err error
 
 	start := make([]interface{}, 0)
@@ -83,13 +70,13 @@ func (s *DeleteImpl) DeleteGreater(ctx context.Context, req *Empty) (*Empty, err
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := Empty{}
+	res := pb.Empty{}
 
 	return &res, nil
 }
 
 // spanner unary select DeleteLess
-func (s *DeleteImpl) DeleteLess(ctx context.Context, req *Empty) (*Empty, error) {
+func (s *DeleteImpl) DeleteLess(ctx context.Context, req *pb.Empty) (*pb.Empty, error) {
 	var err error
 
 	start := make([]interface{}, 0)
@@ -110,13 +97,13 @@ func (s *DeleteImpl) DeleteLess(ctx context.Context, req *Empty) (*Empty, error)
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := Empty{}
+	res := pb.Empty{}
 
 	return &res, nil
 }
 
 // spanner unary select DeleteMultiEquals
-func (s *DeleteImpl) DeleteMultiEquals(ctx context.Context, req *Empty) (*Empty, error) {
+func (s *DeleteImpl) DeleteMultiEquals(ctx context.Context, req *pb.Empty) (*pb.Empty, error) {
 	var err error
 
 	start := make([]interface{}, 0)
@@ -138,7 +125,7 @@ func (s *DeleteImpl) DeleteMultiEquals(ctx context.Context, req *Empty) (*Empty,
 			return nil, grpc.Errorf(codes.NotFound, err.Error())
 		}
 	}
-	res := Empty{}
+	res := pb.Empty{}
 
 	return &res, nil
 }

@@ -32,6 +32,7 @@ syntax = "proto3";
 package examples;
 
 option go_package="github.com/tcncloud/protoc-gen-persist/examples/sql/little_of_everything;little_of_everything";
+option (persist.package)="github.com/tcncloud/protoc-gen-persist/examples/sql/little_of_everything;little_of_everything";
 
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";

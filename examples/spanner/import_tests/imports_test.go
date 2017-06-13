@@ -1,4 +1,4 @@
-package nested_test
+package import_tests_test
 
 import (
 	"fmt"
@@ -6,7 +6,11 @@ import (
 	"os"
 	"testing"
 
+<<<<<<< HEAD
+	//"github.com/Sirupsen/logrus"
+=======
 	"github.com/Sirupsen/logrus"
+>>>>>>> upstream/master
 	"github.com/golang/protobuf/proto"
 	google_protobuf "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
@@ -22,8 +26,8 @@ func TestNestedService(t *testing.T) {
 
 var _ = Describe("when processing imports", func() {
 	_ = Describe("When go_package and persist.package are defined and the same", func() {
-		out := ProcessFile("persist_and_go_same.pb")
 		It("generates service_impl in same package as service.pb.go definition", func() {
+			out := ProcessFile("persist_and_go_same.pb")
 			fmt.Printf("out? %+v\n", *out)
 			fmt.Printf("len of files: %d\n", len(out.File))
 		})
@@ -67,7 +71,7 @@ var _ = Describe("when processing imports", func() {
 })
 
 func ProcessFile(loc string) *plugin.CodeGeneratorResponse {
-	logrus.SetLevel(logrus.DebugLevel)
+	//logrus.SetLevel(logrus.DebugLevel)
 	var req plugin.CodeGeneratorRequest
 	file, err := os.Open(loc)
 	if err != nil {
@@ -85,7 +89,11 @@ func ProcessFile(loc string) *plugin.CodeGeneratorResponse {
 	if err := proto.Unmarshal(data, &f); err != nil {
 		panic(fmt.Sprintf("could not Unmarshal file: %s", err))
 	}
+<<<<<<< HEAD
+	req.FileToGenerate = append(req.FileToGenerate, loc)
+=======
 
+>>>>>>> upstream/master
 	req.ProtoFile = f.File
 	//fmt.Printf("files to generate: %+v\n", req.FileToGenerate)
 	fmt.Printf("Protofile len: %d\n", len(req.ProtoFile))
