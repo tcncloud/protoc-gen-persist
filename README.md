@@ -35,8 +35,8 @@ custom type mapping to/from the database, and spanner query parsing
 
 
 ## Authors
- * Florin Stan (@namtzigla)
- * Neal Cooper (@iamneal)
+ * [Florin Stan](https://github.com/namtzigla)
+ * [Neal Cooper](https://github.com/iamneal)
 
 
 ## License
