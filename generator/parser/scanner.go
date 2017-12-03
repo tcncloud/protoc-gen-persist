@@ -30,7 +30,7 @@ const (
 	INSERT
 	UPDATE
 	DELETE
-	SELECT // (SELECT ...) is the only allowed format.  we dont parse anything else.
+	SELECT
 	FROM
 	INTO
 	VALUES
@@ -42,17 +42,21 @@ type Token struct {
 }
 
 type Scanner struct {
-	r    bufio.Reader
-	err  error
-	mode Mode
-	pos  int
+	r   *bufio.Reader
+	err error
+	pos int
 }
 
+func NewScanner(r *bufio.Reader) *Scanner {
+	return &Scanner{r: r}
+}
 func (s *Scanner) Read() (rune, bool) {
 	ch, _, err := s.r.ReadRune()
 	if err == io.EOF {
 		return '0', true
-	} else if err != nil {
+	}
+	s.pos++
+	if err != nil {
 		s.err = err
 		return '0', true
 	}
@@ -62,14 +66,33 @@ func (s *Scanner) Unread() {
 	if err := s.r.UnreadRune(); err != nil {
 		s.err = err
 	}
+	s.pos--
 }
 
 func (s *Scanner) Scan() *Token {
 	if s.err != nil {
 		return &Token{tk: ILLEGAL, raw: s.err.Error()}
 	}
-	return s.mode.Scan(s)
+	ch, stop := s.Read()
+	if stop {
+		return &Token{tk: EOF, raw: io.EOF.Error()}
+	}
+	// add more cases later
+	switch ch {
+	case ',':
+		return &Token{tk: COMMA, raw: string(ch)}
+	case '(':
+		return &Token{tk: OPEN_PARAN, raw: string(ch)}
+	case ')':
+		return &Token{tk: CLOSE_PARAN, raw: string(ch)}
+	}
 
+	s.Unread()
+	if unicode.IsSpace(ch) {
+		return s.ScanWhitespace()
+	} else {
+		return s.ScanIdentifier()
+	}
 }
 
 func (s *Scanner) ScanWhitespace() *Token {
@@ -223,36 +246,5 @@ func (s *Scanner) ScanString() *Token {
 			return &Token{tk: IDENT_STRING, raw: str}
 		}
 		str += string(ch)
-	}
-}
-
-// a mode is used to direct whether we should be skipping whitespace
-type Mode interface {
-	Scan(*Scanner) *Token
-}
-
-type NormalMode struct{}
-
-// scan all whitespace out and return one whitespace token
-func (m *NormalMode) Scan(scanner *Scanner) *Token {
-	ch, stop := scanner.Read()
-	if stop {
-		return &Token{tk: EOF, raw: io.EOF.Error()}
-	}
-	// add more cases later
-	switch ch {
-	case ',':
-		return &Token{tk: COMMA, raw: string(ch)}
-	case '(':
-		return &Token{tk: OPEN_PARAN, raw: string(ch)}
-	case ')':
-		return &Token{tk: CLOSE_PARAN, raw: string(ch)}
-	}
-
-	scanner.Unread()
-	if unicode.IsSpace(ch) {
-		return scanner.ScanWhitespace()
-	} else {
-		return scanner.ScanIdentifier()
 	}
 }
