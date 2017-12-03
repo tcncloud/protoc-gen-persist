@@ -11,89 +11,94 @@ type Query interface {
 
 type InsertQuery struct {
 	tokens    []*Token
-	Fields    map[string]int
-	TableName string
+	fields    map[string]int
+	tableName string
 }
 
-func (i *InsertQuery) String() string {
+func (q *InsertQuery) String() string {
 	return ""
 }
-func (i *InsertQuery) Token() []*Token {
+func (q *InsertQuery) Tokens() []*Token {
 	return nil
 }
-func (i *InsertQuery) Type() QueryType {
+func (q *InsertQuery) Type() QueryType {
 	return INSERT_QUERY
 }
-func (i *InsertQuery) Table() string {
+func (q *InsertQuery) Table() string {
 	return ""
 }
-func (i *InsertQuery) Fields() []string {
+func (q *InsertQuery) Fields() []string {
 	return nil
 }
-func (i *InsertQuery) Args() []*Token {
+func (q *InsertQuery) Args() []*Token {
 	return nil
 }
 
-type SelectQuery struct{}
-
-func (i *SelectQuery) String() string {
-	return ""
+type SelectQuery struct {
+	query string
 }
-func (i *SelectQuery) Token() []*Token {
+
+func NewSelectQuery(q string) *SelectQuery {
+	return &SelectQuery{query: q}
+}
+func (q *SelectQuery) String() string {
+	return q.query
+}
+func (q *SelectQuery) Tokens() []*Token {
 	return nil
 }
-func (i *SelectQuery) Type() QueryType {
+func (q *SelectQuery) Type() QueryType {
 	return SELECT_QUERY
 }
-func (i *SelectQuery) Table() string {
+func (q *SelectQuery) Table() string {
 	return ""
 }
-func (i *SelectQuery) Fields() []string {
+func (q *SelectQuery) Fields() []string {
 	return nil
 }
-func (i *SelectQuery) Args() []*Token {
+func (q *SelectQuery) Args() []*Token {
 	return nil
 }
 
 type DeleteQuery struct{}
 
-func (i *DeleteQuery) String() string {
+func (q *DeleteQuery) String() string {
 	return ""
 }
-func (i *DeleteQuery) Token() []*Token {
+func (q *DeleteQuery) Tokens() []*Token {
 	return nil
 }
-func (i *DeleteQuery) Type() QueryType {
+func (q *DeleteQuery) Type() QueryType {
 	return DELETE_QUERY
 }
-func (i *DeleteQuery) Table() string {
+func (q *DeleteQuery) Table() string {
 	return ""
 }
-func (i *DeleteQuery) Fields() []string {
+func (q *DeleteQuery) Fields() []string {
 	return nil
 }
-func (i *DeleteQuery) Args() []*Token {
+func (q *DeleteQuery) Args() []*Token {
 	return nil
 }
 
 type UpdateQuery struct{}
 
-func (i *UpdateQuery) String() string {
+func (q *UpdateQuery) String() string {
 	return ""
 }
-func (i *UpdateQuery) Token() []*Token {
+func (q *UpdateQuery) Tokens() []*Token {
 	return nil
 }
-func (i *UpdateQuery) Type() QueryType {
+func (q *UpdateQuery) Type() QueryType {
 	return UPDATE_QUERY
 }
-func (i *UpdateQuery) Table() string {
+func (q *UpdateQuery) Table() string {
 	return ""
 }
-func (i *UpdateQuery) Fields() []string {
+func (q *UpdateQuery) Fields() []string {
 	return nil
 }
-func (i *UpdateQuery) Args() []*Token {
+func (q *UpdateQuery) Args() []*Token {
 	return nil
 }
 

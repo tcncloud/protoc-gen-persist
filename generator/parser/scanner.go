@@ -89,10 +89,9 @@ func (s *Scanner) Scan() *Token {
 
 	s.Unread()
 	if unicode.IsSpace(ch) {
-		return s.ScanWhitespace()
-	} else {
-		return s.ScanIdentifier()
+		s.ScanWhitespace() // ignore the whitespace token
 	}
+	return s.ScanIdentifier()
 }
 
 func (s *Scanner) ScanWhitespace() *Token {
@@ -156,7 +155,7 @@ func (s *Scanner) ScanNumber() *Token {
 			rawNum += string(ch)
 		}
 	}
-	if len(rawNum) == 0 || rawNum == "." { // we do not have a number, and we were asked to parse one
+	if len(rawNum) == 0 || rawNum == "." { // we dont have a number, and we were asked to parse one
 		return &Token{
 			tk: ILLEGAL,
 			raw: fmt.Sprintf(
