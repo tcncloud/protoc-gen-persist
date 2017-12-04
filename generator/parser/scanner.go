@@ -51,6 +51,7 @@ const (
 	CLOSED_CLOSED_KIND
 	OPEN_OPEN_KIND
 	OPEN_CLOSED_KIND
+	PRIMARY_KEY
 )
 
 type Token struct {
@@ -286,6 +287,8 @@ func (s *Scanner) ScanSpecial() *Token {
 		return &Token{tk: OPEN_CLOSED_KIND, raw: raw}
 	case "OO", "oo", "OPEN_OPEN", "open_open", "openOpen", "OpenOpen":
 		return &Token{tk: OPEN_OPEN_KIND, raw: raw}
+	case "PK", "pk", "PRIMARY_KEY", "primary_key", "primaryKey", "PrimaryKey":
+		return &Token{tk: PRIMARY_KEY, raw: raw}
 	}
 	if len(raw) > 1 && raw[0] == '@' {
 		return &Token{tk: IDENT_FIELD, raw: raw}

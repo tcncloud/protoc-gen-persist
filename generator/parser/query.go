@@ -83,7 +83,14 @@ func (q *DeleteQuery) Args() []*Token {
 	return nil
 }
 
-type UpdateQuery struct{}
+type UpdateQuery struct {
+	tokens    []*Token
+	fields    []int
+	cols      []*Token
+	values    []*Token
+	tableName *Token
+	pk        []*Token
+}
 
 func (q *UpdateQuery) String() string {
 	return ""
