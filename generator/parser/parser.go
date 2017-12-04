@@ -108,7 +108,10 @@ func (m *InsertMode) Parse(scanner *Scanner) (Query, error) {
 	if !eater.Eat(EOF) {
 		return nil, eater.TakeErr()
 	}
+
 	m.tkns = append(m.tkns, eater.TakeTokens()...)
+
+	// validate columns
 	if len(cols) != len(values) {
 		return nil, fmt.Errorf(
 			"columns len: %d, does not match values len: %d",
@@ -139,6 +142,9 @@ type UpdateMode struct {
 func NewUpdateMode(tkns []*Token) *UpdateMode {
 	return &UpdateMode{tkns: tkns}
 }
+
+// Normal Update sql query syntax does not really make a ton of sense here
+// for now, just support
 func (m *UpdateMode) Parse(scanner *Scanner) (Query, error) {
 	return nil, fmt.Errorf("unimplemented")
 }

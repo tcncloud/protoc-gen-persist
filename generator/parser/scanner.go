@@ -19,6 +19,13 @@ const (
 	OPEN_PARAN
 	CLOSE_PARAN
 
+	//Operators
+	EQUAL_OP
+	GREATER_OP
+	LESS_OP
+	GREATER_EQUAL_OP
+	LESS_EQUAL_OP
+
 	IDENT_STRING
 	IDENT_FLOAT
 	IDENT_INT
@@ -34,6 +41,16 @@ const (
 	FROM
 	INTO
 	VALUES
+	SET
+	AND
+	OR
+	START
+	END
+	KIND
+	CLOSED_OPEN_KIND
+	CLOSED_CLOSED_KIND
+	OPEN_OPEN_KIND
+	OPEN_CLOSED_KIND
 )
 
 type Token struct {
@@ -107,8 +124,23 @@ func (s *Scanner) Scan() *Token {
 		return &Token{tk: OPEN_PARAN, raw: string(ch)}
 	case ')':
 		return &Token{tk: CLOSE_PARAN, raw: string(ch)}
+	case '=':
+		return &Token{tk: EQUAL_OP, raw: string(ch)}
+	case '<':
+		next, _ := s.Read()
+		if next == '=' {
+			return &Token{tk: LESS_EQUAL_OP, raw: string(ch) + string(next)}
+		}
+		s.Unread()
+		return &Token{tk: LESS_OP, raw: string(ch)}
+	case '>':
+		next, _ := s.Read()
+		if next == '=' {
+			return &Token{tk: GREATER_EQUAL_OP, raw: string(ch) + string(next)}
+		}
+		s.Unread()
+		return &Token{tk: GREATER_OP, raw: string(ch)}
 	}
-
 	s.Unread()
 	if unicode.IsSpace(ch) {
 		s.ScanWhitespace() // ignore the whitespace token
@@ -234,6 +266,26 @@ func (s *Scanner) ScanSpecial() *Token {
 		return &Token{tk: VALUES, raw: raw}
 	case "true", "false":
 		return &Token{tk: IDENT_BOOL, raw: raw}
+	case "SET", "set":
+		return &Token{tk: SET, raw: raw}
+	case "KIND", "kind":
+		return &Token{tk: KIND, raw: raw}
+	case "AND", "and":
+		return &Token{tk: AND, raw: raw}
+	case "OR", "or":
+		return &Token{tk: OR, raw: raw}
+	case "START", "start":
+		return &Token{tk: START, raw: raw}
+	case "END", "end":
+		return &Token{tk: END, raw: raw}
+	case "CO", "co", "CLOSED_OPEN", "closed_open", "closedOpen", "ClosedOpen":
+		return &Token{tk: CLOSED_OPEN_KIND, raw: raw}
+	case "CC", "cc", "CLOSED_CLOSED", "closed_closed", "closedClosed", "ClosedClosed":
+		return &Token{tk: CLOSED_CLOSED_KIND, raw: raw}
+	case "OC", "oc", "OPEN_CLOSED", "opend_closed", "openClosed", "OpenClosed":
+		return &Token{tk: OPEN_CLOSED_KIND, raw: raw}
+	case "OO", "oo", "OPEN_OPEN", "open_open", "openOpen", "OpenOpen":
+		return &Token{tk: OPEN_OPEN_KIND, raw: raw}
 	}
 	if len(raw) > 1 && raw[0] == '@' {
 		return &Token{tk: IDENT_FIELD, raw: raw}
