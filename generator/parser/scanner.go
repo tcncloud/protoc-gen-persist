@@ -22,7 +22,7 @@ const (
 	IDENT_STRING
 	IDENT_FLOAT
 	IDENT_INT
-	IDENT_TABLE
+	IDENT_TABLE_OR_COL
 	IDENT_FIELD
 	IDENT_BOOL
 
@@ -42,9 +42,10 @@ type Token struct {
 }
 
 type Scanner struct {
-	r   *bufio.Reader
-	err error
-	pos int
+	r      *bufio.Reader
+	err    error
+	pos    int
+	peeked []*Token
 }
 
 func NewScanner(r *bufio.Reader) *Scanner {
@@ -69,7 +70,28 @@ func (s *Scanner) Unread() {
 	s.pos--
 }
 
+// peek the number ahead of tokens
+// since we cant unscan tokens, set these peeked tokens
+// as next to be scanned
+func (s *Scanner) Peek(num int) []*Token {
+	var peeked []*Token
+	for i := 0; i < num; i++ {
+		peeked = append(peeked, s.Scan())
+	}
+	s.peeked = append(s.peeked, peeked...)
+	return peeked
+}
+
+// if there is peeked tokens, return those first.
+// otherwise if there is an error, return that as an illegal token,
+// otherwise perform scan
 func (s *Scanner) Scan() *Token {
+	if len(s.peeked) != 0 {
+		peeked := s.peeked[0]
+
+		s.peeked = s.peeked[1:]
+		return peeked
+	}
 	if s.err != nil {
 		return &Token{tk: ILLEGAL, raw: s.err.Error()}
 	}
@@ -216,7 +238,7 @@ func (s *Scanner) ScanSpecial() *Token {
 	if len(raw) > 1 && raw[0] == '@' {
 		return &Token{tk: IDENT_FIELD, raw: raw}
 	} else if len(raw) > 0 {
-		return &Token{tk: IDENT_TABLE, raw: raw}
+		return &Token{tk: IDENT_TABLE_OR_COL, raw: raw}
 	}
 	return &Token{
 		tk:  ILLEGAL,

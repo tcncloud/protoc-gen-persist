@@ -11,8 +11,10 @@ type Query interface {
 
 type InsertQuery struct {
 	tokens    []*Token
-	fields    map[string]int
-	tableName string
+	fields    []int
+	cols      []*Token
+	values    []*Token
+	tableName *Token
 }
 
 func (q *InsertQuery) String() string {
