@@ -89,7 +89,6 @@ func (m *InsertMode) Parse(scanner *Scanner) (Query, error) {
 	var table *Token
 	var cols []*Token
 	var values []*Token
-	var fields []int
 
 	eater := NewEater(scanner)
 	eater.Eat(INSERT)
@@ -122,15 +121,8 @@ func (m *InsertMode) Parse(scanner *Scanner) (Query, error) {
 			len(values),
 		)
 	}
-	// compute the field positions
-	for i, v := range values {
-		if v.tk == IDENT_FIELD {
-			fields = append(fields, i)
-		}
-	}
 	return &InsertQuery{
 		tokens:    eater.TakeTokens(),
-		fields:    fields,
 		cols:      cols,
 		values:    values,
 		tableName: table,
@@ -149,7 +141,6 @@ func NewUpdateMode() *UpdateMode {
 func (m *UpdateMode) Parse(scanner *Scanner) (Query, error) {
 	var cols []*Token
 	var values []*Token
-	var fields []int
 	var table *Token
 	var primaryKey []*Token
 
@@ -202,15 +193,8 @@ func (m *UpdateMode) Parse(scanner *Scanner) (Query, error) {
 	if !eater.Eat(EOF) {
 		return nil, eater.TakeErr()
 	}
-
-	for i, tkn := range values {
-		if tkn.tk == IDENT_FIELD {
-			fields = append(fields, i)
-		}
-	}
 	return &UpdateQuery{
 		tokens:    eater.TakeTokens(),
-		fields:    fields,
 		cols:      cols,
 		values:    values,
 		tableName: table,
