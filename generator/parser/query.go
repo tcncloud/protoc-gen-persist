@@ -62,7 +62,17 @@ func (q *SelectQuery) Args() []*Token {
 	return nil
 }
 
-type DeleteQuery struct{}
+type DeleteQuery struct {
+	tokens       []*Token
+	start        []*Token
+	end          []*Token
+	kind         *Token
+	cols         []*Token
+	values       []*Token
+	pk           []*Token
+	table        *Token
+	usesKeyRange bool
+}
 
 func (q *DeleteQuery) String() string {
 	return ""

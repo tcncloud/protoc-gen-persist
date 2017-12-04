@@ -29,9 +29,10 @@ const (
 	IDENT_STRING
 	IDENT_FLOAT
 	IDENT_INT
-	IDENT_TABLE_OR_COL
 	IDENT_FIELD
 	IDENT_BOOL
+	// kind of its own thing, it represents the literal column or table name
+	IDENT_TABLE_OR_COL
 
 	// Keywords
 	INSERT

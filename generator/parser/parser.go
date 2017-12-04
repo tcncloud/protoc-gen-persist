@@ -224,113 +224,90 @@ type DeleteMode struct {
 func NewDeleteMode() *DeleteMode {
 	return &DeleteMode{}
 }
+
+// supports two formats:
+// delete key range: DELETE FROM table_name START(...) END(...) KIND(...)
+// delete record pk: DELETE FROM table_name (...) VALUES (...) PRIMARY_KEY(...)
 func (m *DeleteMode) Parse(scanner *Scanner) (Query, error) {
-	return nil, fmt.Errorf("unimplemented")
-}
-
-type eater struct {
-	scanner    *Scanner
-	lastTokens []*Token
-	lastErr    error
-}
-
-func NewEater(scanner *Scanner) *eater {
-	return &eater{scanner: scanner}
-}
-
-func (e *eater) Eat(expected ...TokenKind) bool {
-	if e.lastErr != nil {
-		return false
-	}
-	tkn := e.scanner.Scan()
-	for _, kind := range expected {
-		if tkn.tk == kind {
-			e.lastTokens = append(e.lastTokens, tkn)
-			return true
-		}
-	}
-	e.lastErr = fmt.Errorf(
-		"unexpected token: %+v, expected one in kinds: %+v",
-		*tkn,
-		expected,
-	)
-	return false
-}
-
-// eats each token in group, in order till the FIRST token in the group does not match
-// a comma resets.  It only fails if a noncomplete group is eaten, or nothing is eaten
-func (e *eater) EatCommaSeperatedGroupOf(group ...TokenKind) ([][]*Token, bool) {
-	if e.lastErr != nil {
-		return nil, false
-	}
-	tokenGroups := make([][]*Token, 0)
-	scanOneGroup := func() (g []*Token) {
-		for _, kind := range group {
-			if e.Eat(kind) {
-				g = append(g, e.Top())
-			}
-		}
-		return
-	}
-	if e.scanner.Peek(1)[0].tk == group[0] {
-		e.lastErr = fmt.Errorf("asked to eat a group of %+v, but none was found", group)
-		return nil, false
-	}
-	for {
-		group := scanOneGroup()
-		if e.lastErr != nil {
-			return nil, false
-		}
-		tokenGroups = append(tokenGroups, group)
-		if e.scanner.Peek(1)[0].tk != COMMA {
-			break
-		}
-		e.Eat(COMMA)
-	}
-
-	return tokenGroups, true
-}
-
-// eats the pattern: <(expected, expected, ...)> and returns the expected
-func (e *eater) EatArrayOf(expected ...TokenKind) ([]*Token, bool) {
-	// for returning the value tokens in the array
+	var table *Token
+	var kind *Token
+	var start []*Token
+	var end []*Token
+	var cols []*Token
 	var values []*Token
+	var primaryKey []*Token
+	var usesKeyRange bool
 
-	e.Eat(OPEN_PARAN)
-	e.Eat(expected...)
-	for {
-		if e.scanner.Peek(1)[0].tk == CLOSE_PARAN {
-			break
-		}
-		if !e.Eat(COMMA) {
-			return nil, false
-		}
-		if !e.Eat(expected...) {
-			return nil, false
-		}
-		// populate values with the top of the array
-		values = append(values, e.Top())
+	eater := NewEater(scanner)
+	eater.Eat(DELETE)
+	eater.Eat(FROM)
+	if eater.Eat(IDENT_TABLE_OR_COL) {
+		table = eater.Top()
 	}
-	e.Eat(CLOSE_PARAN)
+	switch scanner.Peek(1)[0].tk {
+	case START: // is a key range query
+		usesKeyRange = true
+		eater.Eat(START)
+		s, _ := eater.EatArrayOf(
+			IDENT_STRING,
+			IDENT_FLOAT,
+			IDENT_INT,
+			IDENT_FIELD,
+			IDENT_BOOL,
+		)
+		start = append(start, s...)
 
-	return values, e.lastErr == nil
-}
+		eater.Eat(END)
+		e, _ := eater.EatArrayOf(
+			IDENT_STRING,
+			IDENT_FLOAT,
+			IDENT_INT,
+			IDENT_FIELD,
+			IDENT_BOOL,
+		)
+		end = append(end, e...)
 
-func (e *eater) Top() *Token {
-	if len(e.lastTokens) == 0 {
-		return &Token{tk: ILLEGAL, raw: "cannot get top of empty token slice"}
+		eater.Eat(KIND)
+		eater.Eat(OPEN_PARAN)
+		if eater.Eat(
+			CLOSED_OPEN_KIND,
+			CLOSED_CLOSED_KIND,
+			OPEN_OPEN_KIND,
+			OPEN_CLOSED_KIND,
+		) {
+			kind = eater.Top()
+		}
+		eater.Eat(CLOSE_PARAN)
+	case OPEN_PARAN: // is a delete single record query
+		cs, _ := eater.EatArrayOf(IDENT_TABLE_OR_COL)
+		cols = append(cols, cs...)
+
+		eater.Eat(VALUES)
+		vs, _ := eater.EatArrayOf(
+			IDENT_STRING,
+			IDENT_FLOAT,
+			IDENT_INT,
+			IDENT_FIELD,
+			IDENT_BOOL,
+		)
+		values = append(values, vs...)
+
+		eater.Eat(PRIMARY_KEY)
+		pk, _ := eater.EatArrayOf(IDENT_TABLE_OR_COL)
+		primaryKey = append(primaryKey, pk...)
 	}
-	return e.lastTokens[len(e.lastTokens)-1]
-}
+	if !eater.Eat(EOF) {
+		return nil, eater.TakeErr()
+	}
 
-func (e *eater) TakeTokens() []*Token {
-	tkns := e.lastTokens
-	e.lastTokens = nil
-	return tkns
-}
-
-func (e *eater) TakeErr() error {
-	err := e.lastErr
-	e.lastErr = nil
-	return err
+	return &DeleteQuery{
+		tokens:       eater.TakeTokens(),
+		start:        start,
+		end:          end,
+		kind:         kind,
+		cols:         cols,
+		pk:           primaryKey,
+		table:        table,
+		usesKeyRange: usesKeyRange,
+	}, nil
 }
