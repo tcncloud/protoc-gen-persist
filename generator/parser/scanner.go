@@ -7,59 +7,6 @@ import (
 	"unicode"
 )
 
-type TokenKind int
-
-const (
-	// special
-	ILLEGAL TokenKind = iota
-	EOF
-	WS
-
-	COMMA
-	OPEN_PARAN
-	CLOSE_PARAN
-
-	//Operators
-	EQUAL_OP
-	GREATER_OP
-	LESS_OP
-	GREATER_EQUAL_OP
-	LESS_EQUAL_OP
-
-	IDENT_STRING
-	IDENT_FLOAT
-	IDENT_INT
-	IDENT_FIELD
-	IDENT_BOOL
-	// kind of its own thing, it represents the literal column or table name
-	IDENT_TABLE_OR_COL
-
-	// Keywords
-	INSERT
-	UPDATE
-	DELETE
-	SELECT
-	FROM
-	INTO
-	VALUES
-	SET
-	AND
-	OR
-	START
-	END
-	KIND
-	CLOSED_OPEN_KIND
-	CLOSED_CLOSED_KIND
-	OPEN_OPEN_KIND
-	OPEN_CLOSED_KIND
-	PRIMARY_KEY
-)
-
-type Token struct {
-	tk  TokenKind
-	raw string
-}
-
 type Scanner struct {
 	r      *bufio.Reader
 	err    error
@@ -107,16 +54,23 @@ func (s *Scanner) Peek(num int) []*Token {
 func (s *Scanner) Scan() *Token {
 	if len(s.peeked) != 0 {
 		peeked := s.peeked[0]
-
 		s.peeked = s.peeked[1:]
 		return peeked
 	}
 	if s.err != nil {
-		return &Token{tk: ILLEGAL, raw: s.err.Error()}
+		return &Token{
+			tk:  ILLEGAL,
+			raw: fmt.Sprintf("error around pos: %d, err: %v", s.pos, s.err.Error()),
+		}
 	}
 	ch, stop := s.Read()
 	if stop {
 		return &Token{tk: EOF, raw: io.EOF.Error()}
+	}
+	if unicode.IsSpace(ch) {
+		s.Unread()
+		s.ScanWhitespace() // ignore the whitespace token
+		return s.Scan()
 	}
 	// add more cases later
 	switch ch {
@@ -143,10 +97,8 @@ func (s *Scanner) Scan() *Token {
 		s.Unread()
 		return &Token{tk: GREATER_OP, raw: string(ch)}
 	}
+
 	s.Unread()
-	if unicode.IsSpace(ch) {
-		s.ScanWhitespace() // ignore the whitespace token
-	}
 	return s.ScanIdentifier()
 }
 
@@ -155,7 +107,9 @@ func (s *Scanner) ScanWhitespace() *Token {
 	for {
 		ch, stop := s.Read()
 		if stop || !unicode.IsSpace(ch) {
-			s.Unread()
+			if !stop {
+				s.Unread()
+			}
 			return &Token{tk: WS, raw: whitespace}
 		}
 		whitespace += string(ch)
@@ -163,27 +117,25 @@ func (s *Scanner) ScanWhitespace() *Token {
 }
 
 func (s *Scanner) ScanIdentifier() *Token {
-	for {
-		ch, stop := s.Read()
-		if stop {
-			return &Token{
-				tk:  ILLEGAL,
-				raw: fmt.Sprintf("asked to scan identifier, but stop signal found at: %d", s.pos),
-			}
-		}
-		s.Unread()
-		if ch == '\'' { // string literals
-			return s.ScanString()
-		} else if unicode.IsLetter(ch) { // SELECT, UPDATE, INTO, table_name, etc.
-			return s.ScanSpecial()
-		} else if unicode.IsNumber(ch) { // floats and ints
-			return s.ScanNumber()
-		}
-
+	ch, stop := s.Read()
+	if stop {
 		return &Token{
 			tk:  ILLEGAL,
-			raw: fmt.Sprintf("invalid character \"%s\" at position: %d", string(ch), s.pos),
+			raw: fmt.Sprintf("asked to scan identifier, but stop signal found at: %d", s.pos),
 		}
+	}
+	s.Unread()
+	if ch == '\'' || ch == '"' { // string literals
+		return s.ScanString()
+	} else if unicode.IsLetter(ch) || ch == '@' { // SELECT, UPDATE, INTO, table_name, etc.
+		return s.ScanSpecial()
+	} else if unicode.IsNumber(ch) || ch == '-' { // floats and ints
+		return s.ScanNumber()
+	}
+
+	return &Token{
+		tk:  ILLEGAL,
+		raw: fmt.Sprintf("invalid character \"%s\" at position: %d", string(ch), s.pos),
 	}
 }
 
@@ -243,10 +195,8 @@ func (s *Scanner) ScanSpecial() *Token {
 		ch, stop := s.Read()
 		if stop {
 			break
-		} else if unicode.IsSpace(ch) {
+		} else if unicode.IsSpace(ch) || !acceptedSpecialChar(ch) {
 			s.Unread()
-			break
-		} else if !acceptedSpecialChar(ch) {
 			break
 		}
 		raw += string(ch)
@@ -306,7 +256,7 @@ func (s *Scanner) ScanString() *Token {
 	var str string
 
 	ch, stop := s.Read()
-	if stop || ch != '\'' {
+	if stop || (ch != '\'' && ch != '"') {
 		return &Token{
 			tk:  ILLEGAL,
 			raw: fmt.Sprintf("expected \"'\"  at position: %d", s.pos),
@@ -319,7 +269,7 @@ func (s *Scanner) ScanString() *Token {
 				tk:  ILLEGAL,
 				raw: fmt.Sprintf("asked to scan string but stop signal found at: %d", s.pos),
 			}
-		} else if ch == '\'' {
+		} else if ch == '\'' || ch == '"' {
 			return &Token{tk: IDENT_STRING, raw: str}
 		}
 		str += string(ch)

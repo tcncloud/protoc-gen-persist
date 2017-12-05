@@ -25,10 +25,22 @@ func (e *eater) Eat(expected ...TokenKind) bool {
 			return true
 		}
 	}
+	kindName := TokenNames[tkn.tk]
+	var expectedNames []string
+	var exampleVals []string
+	for _, e := range expected {
+		expectedNames = append(expectedNames, TokenNames[e])
+		exampleVals = append(exampleVals, TokenKeyWords[e]...)
+	}
 	e.lastErr = fmt.Errorf(
-		"unexpected token: %+v, expected one in kinds: %+v",
+		"Unexpected token: %#v, kind: %s.\n"+
+			"Near Position: %d.\n Expected one in kinds: %+v\n"+
+			"Examples: %+v",
 		*tkn,
-		expected,
+		kindName,
+		e.scanner.pos,
+		expectedNames,
+		exampleVals,
 	)
 	return false
 }
@@ -49,7 +61,11 @@ func (e *eater) EatCommaSeperatedGroupOf(group ...TokenKind) ([][]*Token, bool) 
 		return
 	}
 	if e.scanner.Peek(1)[0].tk == group[0] {
-		e.lastErr = fmt.Errorf("asked to eat a group of %+v, but none was found", group)
+		groupNames := make([]string, len(group))
+		for i, kind := range group {
+			groupNames[i] = TokenNames[kind]
+		}
+		e.lastErr = fmt.Errorf("asked to eat a group of %+v, but none was found", groupNames)
 		return nil, false
 	}
 	for {
@@ -73,19 +89,24 @@ func (e *eater) EatArrayOf(expected ...TokenKind) ([]*Token, bool) {
 	var values []*Token
 
 	e.Eat(OPEN_PARAN)
-	e.Eat(expected...)
+	if e.scanner.Peek(1)[0].tk == CLOSE_PARAN {
+		e.Eat(CLOSE_PARAN)
+		return []*Token{}, e.lastErr == nil
+	}
 	for {
-		if e.scanner.Peek(1)[0].tk == CLOSE_PARAN {
-			break
-		}
-		if !e.Eat(COMMA) {
-			return nil, false
-		}
 		if !e.Eat(expected...) {
 			return nil, false
 		}
 		// populate values with the top of the array
 		values = append(values, e.Top())
+		peeked := e.scanner.Peek(1)[0].tk
+		if peeked != COMMA {
+			break
+		}
+		if !e.Eat(COMMA) {
+			return nil, false
+		}
+
 	}
 	e.Eat(CLOSE_PARAN)
 

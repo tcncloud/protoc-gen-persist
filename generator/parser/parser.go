@@ -97,7 +97,10 @@ func (m *InsertMode) Parse(scanner *Scanner) (Query, error) {
 		table = eater.Top()
 	}
 	// we have an optional array here
+	peeked := scanner.Peek(1)[0]
+	fmt.Printf("peeked ahead and got: %+v\n", peeked)
 	if scanner.Peek(1)[0].tk == OPEN_PARAN {
+		fmt.Printf("we have an open paran\n")
 		// declaring column ordering here
 		cols, _ = eater.EatArrayOf(IDENT_TABLE_OR_COL)
 	}
