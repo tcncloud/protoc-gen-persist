@@ -20,6 +20,6 @@ func TestInsert(t *testing.T) {
 		fmt.Printf("error in parser: %s", err.Error())
 		t.FailNow()
 	}
-	fmt.Println(query.String())
+	fmt.Printf("%v", query.String())
 
 }
