@@ -1,5 +1,9 @@
 package parser
 
+import (
+	"fmt"
+)
+
 type Query interface {
 	String() string // golang syntax of the query
 	Tokens() []*Token
@@ -7,6 +11,8 @@ type Query interface {
 	Table() string
 	Fields() []string
 	Args() []*Token
+	// map of field, to go syntax string
+	SetParams(map[string]string)
 }
 
 type InsertQuery struct {
@@ -14,10 +20,25 @@ type InsertQuery struct {
 	cols      []*Token
 	values    []*Token
 	tableName *Token
+	params    map[string]string
 }
 
 func (q *InsertQuery) String() string {
-	return ""
+	valMap := make(map[string]string)
+	for i, tkn := range q.cols {
+		val := q.values[i]
+		if val.tk == IDENT_FIELD {
+			valMap[tkn.raw] = q.params[val.raw]
+		} else {
+			valMap[tkn.raw] = SyntaxStringFromIdent(val)
+		}
+	}
+	valMapString := "map[string]interface{}{"
+	for k, v := range valMap {
+		valMapString += fmt.Sprintf("\n\t\"%s\": %s", k, v)
+	}
+	valMapString += "\n}"
+	return fmt.Sprintf(`spanner.InsertMap("%s", %#v)`, q.tableName.raw, valMapString)
 }
 func (q *InsertQuery) Tokens() []*Token {
 	return q.tokens
@@ -44,16 +65,28 @@ func (q *InsertQuery) Args() []*Token {
 	}
 	return args
 }
+func (q *InsertQuery) SetParams(p map[string]string) {
+	q.params = p
+}
 
 type SelectQuery struct {
-	query string
+	query  string
+	params map[string]string
 }
 
 func NewSelectQuery(q string) *SelectQuery {
 	return &SelectQuery{query: q}
 }
 func (q *SelectQuery) String() string {
-	return q.query
+	params := "map[string]interface{}{"
+	for k, v := range q.params {
+		params += fmt.Sprintf("\n\t\"%s\": %s", k, v)
+	}
+	params += "\n}"
+	return fmt.Sprintf(`spanner.Statement{
+	SQL: "%s",
+	Params: %s,
+}`, q.query, params)
 }
 func (q *SelectQuery) Tokens() []*Token {
 	return nil
@@ -70,6 +103,9 @@ func (q *SelectQuery) Fields() []string {
 func (q *SelectQuery) Args() []*Token {
 	return nil
 }
+func (q *SelectQuery) SetParams(p map[string]string) {
+	q.params = p
+}
 
 type DeleteQuery struct {
 	tokens       []*Token
@@ -81,10 +117,57 @@ type DeleteQuery struct {
 	pk           []*Token
 	table        *Token
 	usesKeyRange bool
+	params       map[string]string
 }
 
 func (q *DeleteQuery) String() string {
-	return ""
+	var key string
+	if q.usesKeyRange {
+		key = q.StringKR()
+	} else {
+		key = q.StringSingle()
+	}
+	return fmt.Sprintf("spanner.Delete(\"%s\", %s)", q.Table(), key)
+}
+func (q *DeleteQuery) addToSyntaxStr(str *string, arr []*Token) {
+	for _, v := range arr {
+		var val string
+		if v.tk == IDENT_FIELD {
+			val = q.params[v.raw]
+		} else {
+			val = SyntaxStringFromIdent(v)
+		}
+		*str += fmt.Sprintf("\n\t%s,", val)
+	}
+}
+
+func (q *DeleteQuery) StringKR() string {
+	keyRange := "spanner.KeyRange{\n\tStart: spanner.Key{"
+	q.addToSyntaxStr(&keyRange, q.start)
+	keyRange += "\n},\nEnd: spanner.Key{"
+	q.addToSyntaxStr(&keyRange, q.end)
+	keyRange += fmt.Sprintf("\n},\nKind: %s\n}", q.KindSyntaxString())
+	return keyRange
+}
+func (q *DeleteQuery) StringSingle() string {
+	key := "spanner.Key{\n"
+	q.addToSyntaxStr(&key, q.values)
+	key += "\n}"
+	return key
+}
+func (q *DeleteQuery) KindSyntaxString() string {
+	switch q.kind.tk {
+	case CLOSED_CLOSED_KIND:
+		return "spanner.ClosedClosed"
+	case CLOSED_OPEN_KIND:
+		return "spanner.ClosedOpen"
+	case OPEN_CLOSED_KIND:
+		return "spanner.OpenClosed"
+	case OPEN_OPEN_KIND:
+		return "spanner.OpenOpen"
+	default: // default is open closed
+		return "spanner.OpenClosed"
+	}
 }
 func (q *DeleteQuery) Tokens() []*Token {
 	return q.tokens
@@ -122,6 +205,9 @@ func (q *DeleteQuery) Args() []*Token {
 	}
 	return args
 }
+func (q *DeleteQuery) SetParams(p map[string]string) {
+	q.params = p
+}
 
 type UpdateQuery struct {
 	tokens    []*Token
@@ -129,10 +215,16 @@ type UpdateQuery struct {
 	values    []*Token
 	tableName *Token
 	pk        []*Token
+	params    map[string]string
 }
 
 func (q *UpdateQuery) String() string {
-	return ""
+	update := fmt.Sprintf("spanner.UpdateMap(\"%s\", map[string]interface{}{", q.Table())
+	for k, v := range q.params {
+		update += fmt.Sprintf("\n\t\"%s\": %s,", k, v)
+	}
+	update += "\n})"
+	return update
 }
 func (q *UpdateQuery) Tokens() []*Token {
 	return q.tokens
@@ -158,6 +250,20 @@ func (q *UpdateQuery) Args() []*Token {
 		}
 	}
 	return fields
+}
+func (q *UpdateQuery) SetParams(p map[string]string) {
+	q.params = p
+}
+
+func SyntaxStringFromIdent(tkn *Token) string {
+	switch tkn.tk {
+	case IDENT_STRING:
+		return fmt.Sprintf(`"%s"`, tkn.raw)
+	case IDENT_INT, IDENT_FLOAT, IDENT_BOOL:
+		return fmt.Sprintf(`%s`, tkn.raw)
+	default:
+		return fmt.Sprintf(`%s`, tkn.raw)
+	}
 }
 
 type QueryType int
