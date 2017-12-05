@@ -114,7 +114,7 @@ type DeleteQuery struct {
 	kind         *Token
 	cols         []*Token
 	values       []*Token
-	pk           []*Token
+	pk           map[Token]*Token
 	table        *Token
 	usesKeyRange bool
 	params       map[string]string
@@ -214,14 +214,30 @@ type UpdateQuery struct {
 	cols      []*Token
 	values    []*Token
 	tableName *Token
-	pk        []*Token
+	pk        map[Token]*Token
 	params    map[string]string
 }
 
 func (q *UpdateQuery) String() string {
 	update := fmt.Sprintf("spanner.UpdateMap(\"%s\", map[string]interface{}{", q.Table())
-	for k, v := range q.params {
-		update += fmt.Sprintf("\n\t\"%s\": %s,", k, v)
+	for i, name := range q.cols {
+		v := q.values[i]
+		var val string
+		if v.tk == IDENT_FIELD {
+			val = q.params[v.raw]
+		} else {
+			val = SyntaxStringFromIdent(v)
+		}
+		update += fmt.Sprintf("\n\t\"%s\": %s,", name.raw, val)
+	}
+	for k, v := range q.pk {
+		var val string
+		if v.tk == IDENT_FIELD {
+			val = q.params[v.raw]
+		} else {
+			val = SyntaxStringFromIdent(v)
+		}
+		update += fmt.Sprintf("\n\t\"%s\": %s,", k.raw, val)
 	}
 	update += "\n})"
 	return update

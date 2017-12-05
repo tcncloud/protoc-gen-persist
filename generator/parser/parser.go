@@ -137,16 +137,18 @@ func NewUpdateMode() *UpdateMode {
 
 // Normal Update sql query syntax does not really make a ton of sense here
 // for now, just support:
-// Update table <set loop> | <(col), VALUES (values)> PK(cols)
+// Update table <set loop> | <(col), VALUES (values)> PK(IDENT)
 func (m *UpdateMode) Parse(scanner *Scanner) (Query, error) {
 	var cols []*Token
 	var values []*Token
 	var table *Token
-	var primaryKey []*Token
+	var primaryKey = make(map[Token]*Token)
 
 	eater := NewEater(scanner)
 	eater.Eat(UPDATE)
-	eater.Eat(IDENT_TABLE_OR_COL)
+	if eater.Eat(IDENT_TABLE_OR_COL) {
+		table = eater.Top()
+	}
 
 	//either array of col names, or set loop
 	switch scanner.Peek(1)[0].tk {
@@ -163,35 +165,49 @@ func (m *UpdateMode) Parse(scanner *Scanner) (Query, error) {
 		)
 		values = append(values, vs...)
 	case SET:
-		for {
-			eater.Eat(SET)
-			if eater.Eat(IDENT_TABLE_OR_COL) {
-				cols = append(cols, eater.Top())
-			}
-			eater.Eat(EQUAL_OP)
-			if eater.Eat(
+		groups, _ := eater.EatCommaSeperatedGroupOf(
+			SET,
+			IDENT_TABLE_OR_COL,
+			EQUAL_OP,
+			Group(
 				IDENT_STRING,
 				IDENT_FLOAT,
 				IDENT_INT,
 				IDENT_FIELD,
 				IDENT_BOOL,
-			) {
-				values = append(values, eater.Top())
-			}
-			if scanner.Peek(1)[0].tk != COMMA {
-				break
-			}
-			if !eater.Eat(COMMA) {
-				break
+			),
+		)
+		for _, g := range groups {
+			if len(g) > 3 {
+				cols = append(cols, g[1])
+				values = append(values, g[3])
 			}
 		}
 	}
 	eater.Eat(PRIMARY_KEY)
-	pk, _ := eater.EatArrayOf(IDENT_TABLE_OR_COL)
-	primaryKey = append(primaryKey, pk...)
+	eater.Eat(OPEN_PARAN)
+	// each index in groups will contain []{table/col, =, ident}
+	groups, _ := eater.EatCommaSeperatedGroupOf(
+		IDENT_TABLE_OR_COL,
+		EQUAL_OP,
+		Group(
+			IDENT_STRING,
+			IDENT_FLOAT,
+			IDENT_INT,
+			IDENT_FIELD,
+			IDENT_BOOL,
+		),
+	)
+	eater.Eat(CLOSE_PARAN)
+	for _, g := range groups {
+		if len(g) > 2 {
+			primaryKey[*g[0]] = g[2]
+		}
+	}
 
-	if !eater.Eat(EOF) {
-		return nil, eater.TakeErr()
+	eater.Eat(EOF)
+	if err := eater.TakeErr(); err != nil {
+		return nil, err
 	}
 	return &UpdateQuery{
 		tokens:    eater.TakeTokens(),
@@ -219,7 +235,7 @@ func (m *DeleteMode) Parse(scanner *Scanner) (Query, error) {
 	var end []*Token
 	var cols []*Token
 	var values []*Token
-	var primaryKey []*Token
+	var primaryKey = make(map[Token]*Token)
 	var usesKeyRange bool
 
 	eater := NewEater(scanner)
@@ -277,11 +293,27 @@ func (m *DeleteMode) Parse(scanner *Scanner) (Query, error) {
 		values = append(values, vs...)
 
 		eater.Eat(PRIMARY_KEY)
-		pk, _ := eater.EatArrayOf(IDENT_TABLE_OR_COL)
-		primaryKey = append(primaryKey, pk...)
+		groups, _ := eater.EatCommaSeperatedGroupOf(
+			IDENT_TABLE_OR_COL,
+			EQUAL_OP,
+			Group(
+				IDENT_STRING,
+				IDENT_FLOAT,
+				IDENT_INT,
+				IDENT_FIELD,
+				IDENT_BOOL,
+			),
+		)
+		for _, g := range groups {
+			if len(g) > 2 {
+				primaryKey[*g[0]] = g[2]
+			}
+		}
 	}
-	if !eater.Eat(EOF) {
-		return nil, eater.TakeErr()
+	eater.Eat(EOF)
+
+	if err := eater.TakeErr(); err != nil {
+		return nil, err
 	}
 
 	return &DeleteQuery{

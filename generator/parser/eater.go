@@ -47,22 +47,22 @@ func (e *eater) Eat(expected ...TokenKind) bool {
 
 // eats each token in group, in order till the FIRST token in the group does not match
 // a comma resets.  It only fails if a noncomplete group is eaten, or nothing is eaten
-func (e *eater) EatCommaSeperatedGroupOf(group ...TokenKind) ([][]*Token, bool) {
+func (e *eater) EatCommaSeperatedGroupOf(group ...hasable) ([][]*Token, bool) {
 	if e.lastErr != nil {
 		return nil, false
 	}
 	tokenGroups := make([][]*Token, 0)
 	scanOneGroup := func() (g []*Token) {
-		for _, kind := range group {
-			if e.Eat(kind) {
+		for _, kinds := range group {
+			if e.Eat(kinds.Values()...) {
 				g = append(g, e.Top())
 			}
 		}
 		return
 	}
-	if e.scanner.Peek(1)[0].tk == group[0] {
+	if !group[0].Has(e.scanner.Peek(1)[0].tk) {
 		groupNames := make([]string, len(group))
-		for i, kind := range group {
+		for i, kind := range group[0].Values() {
 			groupNames[i] = TokenNames[kind]
 		}
 		e.lastErr = fmt.Errorf("asked to eat a group of %+v, but none was found", groupNames)

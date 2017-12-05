@@ -2,6 +2,53 @@ package parser
 
 type TokenKind int
 
+func (t TokenKind) Has(in TokenKind) bool {
+	return t == in
+}
+func (t TokenKind) Values() []TokenKind {
+	return []TokenKind{t}
+}
+
+type Token struct {
+	tk  TokenKind
+	raw string
+}
+
+func (t Token) Name() string {
+	return TokenNames[t.tk]
+}
+
+func (t Token) Raw() string {
+	return t.raw
+}
+
+// lets us compose tokens and token groups and use them interchangeably
+type hasable interface {
+	Has(TokenKind) bool
+	Values() []TokenKind
+}
+type TokenGroup []hasable
+
+func (tkns TokenGroup) Has(in TokenKind) bool {
+	for _, t := range tkns {
+		if t.Has(in) {
+			return true
+		}
+	}
+	return false
+}
+
+func (tkns TokenGroup) Values() (ret []TokenKind) {
+	for _, has := range tkns {
+		ret = append(ret, has.Values()...)
+	}
+	return
+}
+
+func Group(tkns ...hasable) TokenGroup {
+	return TokenGroup(tkns)
+}
+
 const (
 	// special
 	ILLEGAL TokenKind = iota
@@ -47,11 +94,6 @@ const (
 	OPEN_CLOSED_KIND
 	PRIMARY_KEY
 )
-
-type Token struct {
-	tk  TokenKind
-	raw string
-}
 
 var TokenNames map[TokenKind]string = map[TokenKind]string{
 	ILLEGAL:            "ILLEGAL",
