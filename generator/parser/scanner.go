@@ -202,33 +202,33 @@ func (s *Scanner) ScanSpecial() *Token {
 		raw += string(ch)
 	}
 	switch raw {
-	case "SELECT", "select":
+	case "SELECT", "Select", "select":
 		return &Token{tk: SELECT, raw: raw}
-	case "INSERT", "insert":
+	case "INSERT", "Insert", "insert":
 		return &Token{tk: INSERT, raw: raw}
-	case "DELETE", "delete":
+	case "DELETE", "Delete", "delete":
 		return &Token{tk: DELETE, raw: raw}
-	case "UPDATE", "update":
+	case "UPDATE", "Update", "update":
 		return &Token{tk: UPDATE, raw: raw}
-	case "INTO", "into":
+	case "INTO", "Into", "into":
 		return &Token{tk: INTO, raw: raw}
-	case "FROM", "from":
+	case "FROM", "From", "from":
 		return &Token{tk: FROM, raw: raw}
-	case "VALUES", "values":
+	case "VALUES", "Values", "values":
 		return &Token{tk: VALUES, raw: raw}
 	case "true", "false":
 		return &Token{tk: IDENT_BOOL, raw: raw}
-	case "SET", "set":
+	case "SET", "Set", "set":
 		return &Token{tk: SET, raw: raw}
-	case "KIND", "kind":
+	case "KIND", "Kind", "kind":
 		return &Token{tk: KIND, raw: raw}
-	case "AND", "and":
+	case "AND", "And", "and":
 		return &Token{tk: AND, raw: raw}
-	case "OR", "or":
+	case "OR", "Or", "or":
 		return &Token{tk: OR, raw: raw}
-	case "START", "start":
+	case "START", "Start", "start":
 		return &Token{tk: START, raw: raw}
-	case "END", "end":
+	case "END", "End", "end":
 		return &Token{tk: END, raw: raw}
 	case "CO", "co", "CLOSED_OPEN", "closed_open", "closedOpen", "ClosedOpen":
 		return &Token{tk: CLOSED_OPEN_KIND, raw: raw}

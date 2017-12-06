@@ -34,44 +34,50 @@ import (
 	"strconv"
 	"text/template"
 
+	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/tcncloud/protoc-gen-persist/generator/spanner_templates"
 	"github.com/tcncloud/protoc-gen-persist/generator/templates"
 )
 
 var (
 	fileTemplate *template.Template
 	TemplateList = map[string]string{
-		"import_template":                 templates.ImportTemplate,
-		"implement_structs":               templates.StructsTemplate,
-		"implement_services":              templates.ServicesTemplate,
-		"implement_method":                templates.MethodTemplate,
-		"return_convert_helpers":          templates.ReturnConvertHelpers,
-		"before_hook":                     templates.BeforeHook,
-		"after_hook":                      templates.AfterHook,
-		"type_desc_to_mapped":             templates.SpannerHelperTemplates,
-		"unary_method":                    templates.UnaryMethodTemplate,
-		"client_streaming_method":         templates.ClientStreamingMethodTemplate,
-		"server_streaming_method":         templates.ServerStreamingMethodTemplate,
-		"bidi_method":                     templates.BidiStreamingMethodTemplate,
-		"sql_unary_method":                templates.SqlUnaryMethodTemplate,
-		"sql_client_streaming_method":     templates.SqlClientStreamingMethodTemplate,
-		"sql_server_streaming_method":     templates.SqlServerStreamingMethodTemplate,
-		"sql_bidi_streaming_method":       templates.SqlBidiStreamingMethodTemplate,
-		"mongo_unary_method":              templates.MongoUnaryMethodTemplate,
-		"mongo_client_streaming_method":   templates.MongoClientStreamingMethodTemplate,
-		"mongo_server_streaming_method":   templates.MongoServerStreamingMethodTemplate,
-		"mongo_bidi_streaming_method":     templates.MongoBidiStreamingMethodTemplate,
-		"spanner_unary_method":            templates.SpannerUnaryMethodTemplate,
-		"spanner_unary_delete":            templates.SpannerUnaryDeleteTemplate,
-		"spanner_unary_update":            templates.SpannerUnaryUpdateTemplate,
-		"spanner_unary_select":            templates.SpannerUnarySelectTemplate,
-		"spanner_unary_insert":            templates.SpannerUnaryInsertTemplate,
-		"spanner_client_streaming_method": templates.SpannerClientStreamingMethodTemplate,
-		"spanner_client_streaming_update": templates.SpannerClientStreamingUpdateTemplate,
-		"spanner_client_streaming_insert": templates.SpannerClientStreamingInsertTemplate,
-		"spanner_client_streaming_delete": templates.SpannerClientStreamingDeleteTemplate,
-		"spanner_server_streaming_method": templates.SpannerServerStreamingMethodTemplate,
-		"spanner_bidi_streaming_method":   templates.SpannerBidiStreamingMethodTemplate,
+		"import_template":               templates.ImportTemplate,
+		"implement_structs":             templates.StructsTemplate,
+		"implement_services":            templates.ServicesTemplate,
+		"implement_method":              templates.MethodTemplate,
+		"return_convert_helpers":        templates.ReturnConvertHelpers,
+		"before_hook":                   templates.BeforeHook,
+		"after_hook":                    templates.AfterHook,
+		"type_desc_to_mapped":           templates.SpannerHelperTemplates,
+		"unary_method":                  templates.UnaryMethodTemplate,
+		"client_streaming_method":       templates.ClientStreamingMethodTemplate,
+		"server_streaming_method":       templates.ServerStreamingMethodTemplate,
+		"bidi_method":                   templates.BidiStreamingMethodTemplate,
+		"sql_unary_method":              templates.SqlUnaryMethodTemplate,
+		"sql_client_streaming_method":   templates.SqlClientStreamingMethodTemplate,
+		"sql_server_streaming_method":   templates.SqlServerStreamingMethodTemplate,
+		"sql_bidi_streaming_method":     templates.SqlBidiStreamingMethodTemplate,
+		"mongo_unary_method":            templates.MongoUnaryMethodTemplate,
+		"mongo_client_streaming_method": templates.MongoClientStreamingMethodTemplate,
+		"mongo_server_streaming_method": templates.MongoServerStreamingMethodTemplate,
+		"mongo_bidi_streaming_method":   templates.MongoBidiStreamingMethodTemplate,
+		//"spanner_unary_method":            templates.SpannerUnaryMethodTemplate,
+		//"spanner_unary_delete":            templates.SpannerUnaryDeleteTemplate,
+		//"spanner_unary_update":            templates.SpannerUnaryUpdateTemplate,
+		//"spanner_unary_select":            templates.SpannerUnarySelectTemplate,
+		//"spanner_unary_insert":            templates.SpannerUnaryInsertTemplate,
+		//"spanner_client_streaming_method": templates.SpannerClientStreamingMethodTemplate,
+		//"spanner_client_streaming_update": templates.SpannerClientStreamingUpdateTemplate,
+		//"spanner_client_streaming_insert": templates.SpannerClientStreamingInsertTemplate,
+		//"spanner_client_streaming_delete": templates.SpannerClientStreamingDeleteTemplate,
+		//"spanner_server_streaming_method": templates.SpannerServerStreamingMethodTemplate,
+		"spanner_bidi_streaming_method": templates.SpannerBidiStreamingMethodTemplate,
+		// new templates
+		"spanner_unary_method":            spanner_templates.SpannerUnaryTemplate,
+		"spanner_client_streaming_method": spanner_templates.SpannerClientStreamingTemplate,
+		"spanner_server_streaming_method": spanner_templates.SpannerServerStreamingTemplate,
 	}
 )
 
@@ -101,4 +107,16 @@ func ExecuteFileTemplate(fileStruct *FileStruct) []byte {
 		logrus.WithError(err).Fatal("Fatal error executing file template")
 	}
 	return buffer.Bytes()
+}
+
+func ExecutePersistLibTemplate(fileStruct *FileStruct) ([]byte, error) {
+	var buffer bytes.Buffer
+	t, err := template.New("t").Parse(templates.PersistLibTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse the persistLibTemplate: %s", err)
+	}
+	if err := t.Execute(&buffer, fileStruct); err != nil {
+		return nil, fmt.Errorf("could not execute persist lib template: %s", err)
+	}
+	return buffer.Bytes(), nil
 }

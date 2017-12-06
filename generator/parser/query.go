@@ -13,6 +13,7 @@ type Query interface {
 	Args() []*Token
 	// map of field, to go syntax string
 	SetParams(map[string]string)
+	AddParam(key, val string)
 }
 
 type InsertQuery struct {
@@ -35,10 +36,10 @@ func (q *InsertQuery) String() string {
 	}
 	valMapString := "map[string]interface{}{"
 	for k, v := range valMap {
-		valMapString += fmt.Sprintf("\n\t\"%s\": %s", k, v)
+		valMapString += fmt.Sprintf("\n\t\"%s\": %s,", k, v)
 	}
 	valMapString += "\n}"
-	return fmt.Sprintf(`spanner.InsertMap("%s", %#v)`, q.tableName.raw, valMapString)
+	return fmt.Sprintf(`spanner.InsertMap("%s", %s)`, q.tableName.raw, valMapString)
 }
 func (q *InsertQuery) Tokens() []*Token {
 	return q.tokens
@@ -68,6 +69,12 @@ func (q *InsertQuery) Args() []*Token {
 func (q *InsertQuery) SetParams(p map[string]string) {
 	q.params = p
 }
+func (q *InsertQuery) AddParam(key, val string) {
+	if q.params == nil {
+		q.params = make(map[string]string)
+	}
+	q.params[key] = val
+}
 
 type SelectQuery struct {
 	query  string
@@ -80,7 +87,7 @@ func NewSelectQuery(q string) *SelectQuery {
 func (q *SelectQuery) String() string {
 	params := "map[string]interface{}{"
 	for k, v := range q.params {
-		params += fmt.Sprintf("\n\t\"%s\": %s", k, v)
+		params += fmt.Sprintf("\n\t\"%s\": %s,", k, v)
 	}
 	params += "\n}"
 	return fmt.Sprintf(`spanner.Statement{
@@ -105,6 +112,12 @@ func (q *SelectQuery) Args() []*Token {
 }
 func (q *SelectQuery) SetParams(p map[string]string) {
 	q.params = p
+}
+func (q *SelectQuery) AddParam(key, val string) {
+	if q.params == nil {
+		q.params = make(map[string]string)
+	}
+	q.params[key] = val
 }
 
 type DeleteQuery struct {
@@ -208,6 +221,12 @@ func (q *DeleteQuery) Args() []*Token {
 func (q *DeleteQuery) SetParams(p map[string]string) {
 	q.params = p
 }
+func (q *DeleteQuery) AddParam(key, val string) {
+	if q.params == nil {
+		q.params = make(map[string]string)
+	}
+	q.params[key] = val
+}
 
 type UpdateQuery struct {
 	tokens    []*Token
@@ -270,7 +289,12 @@ func (q *UpdateQuery) Args() []*Token {
 func (q *UpdateQuery) SetParams(p map[string]string) {
 	q.params = p
 }
-
+func (q *UpdateQuery) AddParam(key, val string) {
+	if q.params == nil {
+		q.params = make(map[string]string)
+	}
+	q.params[key] = val
+}
 func SyntaxStringFromIdent(tkn *Token) string {
 	switch tkn.tk {
 	case IDENT_STRING:

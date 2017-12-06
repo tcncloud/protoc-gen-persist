@@ -35,6 +35,7 @@ import (
 
 	"os"
 
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -248,6 +249,22 @@ func (f *FileStruct) ProcessImports() {
 	}
 }
 
+type persistFile struct {
+	full     string
+	filename string
+	path     string
+}
+
+func (f *FileStruct) GetPersistLibFullFilepath() persistFile {
+	path := fmt.Sprintf("%s/persist_lib", f.GetImplDir())
+	filename := "persist_lib.persist.go"
+	full := path + "/" + filename
+	return persistFile{
+		full:     full,
+		filename: filename,
+		path:     path,
+	}
+}
 func (f *FileStruct) Process() error {
 	logrus.WithFields(logrus.Fields{
 		"GetFileName()": f.GetFileName(),
@@ -266,8 +283,36 @@ func (f *FileStruct) Process() error {
 	for _, s := range f.Desc.GetService() {
 		f.ServiceList.AddService(f.GetPackageName(), s, f.AllStructures, f)
 	}
+	if f.NeedsPersistLibDir() {
+		f.ImportList.GetOrAddImport("persist_lib", f.GetPersistLibFullFilepath().path)
+	}
 	//return f.ServiceList.Process()
 	return nil
+
+}
+
+// the generator may need to make an extra file in the directory beneath ours
+// this library will not be imported by our persist code, so it is safe to use
+// anywhere the client wants
+
+func (f *FileStruct) NeedsPersistLibDir() bool {
+	if !f.Dependency && f.ServiceList.HasPersistService() {
+		return true
+	}
+	return false
+}
+
+type PersistLib struct {
+	Content string // the contents that belong in the code generator response
+	Name    string // the filename for the response
+}
+
+func (f *FileStruct) GeneratePersistLib() (PersistLib, error) {
+	bytes, err := ExecutePersistLibTemplate(f)
+	if err != nil {
+		return PersistLib{}, fmt.Errorf("error generating persist lib: %v", err)
+	}
+	return PersistLib{Content: string(bytes), Name: f.GetPersistLibFullFilepath().full}, nil
 
 }
 

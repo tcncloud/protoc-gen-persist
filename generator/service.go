@@ -165,6 +165,17 @@ func (s *Service) ProcessImports() {
 
 type Services []*Service
 
+// we are a persist service if we have persist options. meaning we are either spanner
+// or sql
+func (s Services) HasPersistService() bool {
+	for _, serv := range s {
+		if serv.IsSQL() || serv.IsSpanner() {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Services) AddService(pkg string, desc *descriptor.ServiceDescriptorProto, allStructs *StructList, file *FileStruct) *Service {
 	ret := &Service{
 		Package:    pkg,

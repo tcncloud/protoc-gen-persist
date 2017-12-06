@@ -51,12 +51,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/xwb1989/sqlparser"
-  packages = [".","dependency/bson","dependency/bytes2","dependency/hack","dependency/sqltypes"]
-  revision = "a9cdf22bd561e715bba34ee228cb1c06bfa2719c"
-
-[[projects]]
-  branch = "master"
   name = "golang.org/x/net"
   packages = ["context","context/ctxhttp","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
   revision = "59a0b19b5533c7977ddeb86b017bf507ed407b12"
@@ -118,6 +112,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "418f73889dbe9008e9f976f4406cd903564c89978b5b93d0e8e5f2fc98dad801"
+  inputs-digest = "81de8c234ae80134cb8597dfb4a864bfe754ec69ea39e3e0bd53af9a696ab462"
   solver-name = "gps-cdcl"
   solver-version = 1
