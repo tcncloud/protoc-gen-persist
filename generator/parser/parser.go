@@ -165,8 +165,8 @@ func (m *UpdateMode) Parse(scanner *Scanner) (Query, error) {
 		)
 		values = append(values, vs...)
 	case SET:
+		eater.Eat(SET)
 		groups, _ := eater.EatCommaSeperatedGroupOf(
-			SET,
 			IDENT_TABLE_OR_COL,
 			EQUAL_OP,
 			Group(
@@ -178,9 +178,9 @@ func (m *UpdateMode) Parse(scanner *Scanner) (Query, error) {
 			),
 		)
 		for _, g := range groups {
-			if len(g) > 3 {
-				cols = append(cols, g[1])
-				values = append(values, g[3])
+			if len(g) > 2 {
+				cols = append(cols, g[0])
+				values = append(values, g[2])
 			}
 		}
 	}
@@ -233,9 +233,7 @@ func (m *DeleteMode) Parse(scanner *Scanner) (Query, error) {
 	var kind *Token
 	var start []*Token
 	var end []*Token
-	var cols []*Token
 	var values []*Token
-	var primaryKey = make(map[Token]*Token)
 	var usesKeyRange bool
 
 	eater := NewEater(scanner)
@@ -278,10 +276,7 @@ func (m *DeleteMode) Parse(scanner *Scanner) (Query, error) {
 			kind = eater.Top()
 		}
 		eater.Eat(CLOSE_PARAN)
-	case OPEN_PARAN: // is a delete single record query
-		cs, _ := eater.EatArrayOf(IDENT_TABLE_OR_COL)
-		cols = append(cols, cs...)
-
+	case VALUES: // is a delete single record query
 		eater.Eat(VALUES)
 		vs, _ := eater.EatArrayOf(
 			IDENT_STRING,
@@ -291,24 +286,6 @@ func (m *DeleteMode) Parse(scanner *Scanner) (Query, error) {
 			IDENT_BOOL,
 		)
 		values = append(values, vs...)
-
-		eater.Eat(PRIMARY_KEY)
-		groups, _ := eater.EatCommaSeperatedGroupOf(
-			IDENT_TABLE_OR_COL,
-			EQUAL_OP,
-			Group(
-				IDENT_STRING,
-				IDENT_FLOAT,
-				IDENT_INT,
-				IDENT_FIELD,
-				IDENT_BOOL,
-			),
-		)
-		for _, g := range groups {
-			if len(g) > 2 {
-				primaryKey[*g[0]] = g[2]
-			}
-		}
 	}
 	eater.Eat(EOF)
 
@@ -321,9 +298,8 @@ func (m *DeleteMode) Parse(scanner *Scanner) (Query, error) {
 		start:        start,
 		end:          end,
 		kind:         kind,
-		cols:         cols,
-		pk:           primaryKey,
 		table:        table,
 		usesKeyRange: usesKeyRange,
+		values:       values,
 	}, nil
 }

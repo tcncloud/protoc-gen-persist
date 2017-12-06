@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/generator/delete_parser"
+	"github.com/tcncloud/protoc-gen-persist/generator/parser"
 	"github.com/xwb1989/sqlparser"
 	"strings"
 )

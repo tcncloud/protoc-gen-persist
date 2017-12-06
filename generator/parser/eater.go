@@ -60,12 +60,19 @@ func (e *eater) EatCommaSeperatedGroupOf(group ...hasable) ([][]*Token, bool) {
 		}
 		return
 	}
-	if !group[0].Has(e.scanner.Peek(1)[0].tk) {
+	peeked := e.scanner.Peek(1)[0]
+	if !group[0].Has(peeked.tk) {
 		groupNames := make([]string, len(group))
 		for i, kind := range group[0].Values() {
 			groupNames[i] = TokenNames[kind]
 		}
-		e.lastErr = fmt.Errorf("asked to eat a group of %+v, but none was found", groupNames)
+		e.lastErr = fmt.Errorf(
+			"asked to eat a group of %+v\n but instead found{ \nkind: %s, \nvalue: '%s' \npos: %d\n}",
+			groupNames,
+			TokenNames[peeked.tk],
+			peeked.raw,
+			e.scanner.pos,
+		)
 		return nil, false
 	}
 	for {

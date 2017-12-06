@@ -39,17 +39,76 @@ func TestUpdate(t *testing.T) {
 		fmt.Printf("error in parser: %s", err.Error())
 		t.FailNow()
 	}
-	fmt.Printf("%v\n\n", query.String())
 
-	for _, t := range query.Tokens() {
-		fmt.Printf("%s,  %s\n", t.Name(), t.Raw())
+	fmt.Printf("%v\n\n", query.String())
+}
+
+func TestUpdateWithSet(t *testing.T) {
+	reader := bytes.NewBufferString(`
+UPDATE test_table set col1234='single quoted string',
+affa
+=
+@some_field
+,
+      mamama = 300
+PK(abba = 1, ringo_ =   false, MESSY = @gg )`)
+	p := parser.NewParser(reader)
+	query, err := p.Parse()
+	if err != nil {
+		fmt.Printf("error in parser: %s", err.Error())
+		t.FailNow()
 	}
-	fmt.Printf("\nFields:\n")
-	for _, t := range query.Fields() {
-		fmt.Printf("%s\n", t)
+	fmt.Printf("%v\n\n", query.String())
+}
+
+func TestDeleteKeyRange(t *testing.T) {
+	reader := bytes.NewBufferString(`
+DELETE FROM test_table START("a", 3.3, 3, @someting)
+END(false, true, "sometih thing aawa", @another  ) kind(CC)
+`)
+	p := parser.NewParser(reader)
+	query, err := p.Parse()
+	if err != nil {
+		fmt.Printf("error in parser: %s", err.Error())
+		t.FailNow()
 	}
-	fmt.Printf("\nARGS:\n")
-	for _, t := range query.Args() {
-		fmt.Printf("%s,  %s\n", t.Name(), t.Raw())
+	query.SetParams(map[string]string{
+		"@someting": "\"what the\"",
+		"@another":  "req.Field",
+	})
+	fmt.Printf("%v\n\n", query.String())
+}
+
+func TestDeleteSingle(t *testing.T) {
+	reader := bytes.NewBufferString(`
+delete from test_table values( @someting, @another, "a", 3, 4.0005, false, true) `)
+	p := parser.NewParser(reader)
+	query, err := p.Parse()
+	if err != nil {
+		fmt.Printf("error in parser: %s", err.Error())
+		t.FailNow()
 	}
+	query.SetParams(map[string]string{
+		"@someting": "\"what the\"",
+		"@another":  "req.Field",
+	})
+	fmt.Printf("%v\n\n", query.String())
+}
+
+func TestSelect(t *testing.T) {
+	reader := bytes.NewBufferString(`
+SELECT * from table_name
+WHERE a = @field_one AND b = @field_2
+`)
+	p := parser.NewParser(reader)
+	query, err := p.Parse()
+	if err != nil {
+		fmt.Printf("error in parser: %s", err.Error())
+		t.FailNow()
+	}
+	query.SetParams(map[string]string{
+		"@someting": "\"what the\"",
+		"@another":  "req.Field",
+	})
+	fmt.Printf("%v\n\n", query.String())
 }

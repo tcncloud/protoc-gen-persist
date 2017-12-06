@@ -371,17 +371,18 @@ func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeM
 }
 
 type TypeDesc struct {
-	Name       string // ex. StartTime
-	ProtoName  string // start_time
-	GoName     string // mytime.MyTime (if it is mapped)
-	OrigGoName string // Timestamp
-	Struct     *Struct
-	Mapping    *persist.TypeMapping_TypeDescriptor
-	EnumName   string // Timestamp
-	IsMapped   bool
-	IsEnum     bool
-	IsMessage  bool
-	ResultHook bool
+	Name            string // ex. StartTime
+	ProtoName       string // start_time
+	GoName          string // mytime.MyTime (if it is mapped)
+	OrigGoName      string // Timestamp
+	Struct          *Struct
+	Mapping         *persist.TypeMapping_TypeDescriptor
+	EnumName        string // Timestamp
+	IsMapped        bool
+	IsEnum          bool
+	IsMessage       bool
+	ResultHook      bool
+	FieldDescriptor *descriptor.FieldDescriptorProto
 }
 
 type ResultHook interface {
@@ -395,16 +396,17 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 			logrus.Debugf("mp name: %s\n", mp.GetName())
 			if mp.OneofIndex == nil {
 				typeDesc := TypeDesc{
-					Name:       _gen.CamelCase(mp.GetName()),
-					Struct:     m.Service.AllStructs.GetStructByFieldDesc(mp),
-					ProtoName:  mp.GetName(),
-					GoName:     m.GetMappedType(mp),
-					OrigGoName: m.DefaultMapping(mp),
-					Mapping:    m.GetMapping(mp),
-					EnumName:   m.GetTypeNameMinusPackage(mp),
-					IsMapped:   (m.GetMapping(mp) != nil),
-					IsEnum:     (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
-					IsMessage:  (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
+					Name:            _gen.CamelCase(mp.GetName()),
+					Struct:          m.Service.AllStructs.GetStructByFieldDesc(mp),
+					ProtoName:       mp.GetName(),
+					GoName:          m.GetMappedType(mp),
+					OrigGoName:      m.DefaultMapping(mp),
+					Mapping:         m.GetMapping(mp),
+					EnumName:        m.GetTypeNameMinusPackage(mp),
+					IsMapped:        (m.GetMapping(mp) != nil),
+					FieldDescriptor: mp,
+					IsEnum:          (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
+					IsMessage:       (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
 				}
 				ret = append(ret, typeDesc)
 			}
