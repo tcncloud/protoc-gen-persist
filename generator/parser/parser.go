@@ -61,6 +61,7 @@ func NewSelectMode() *SelectMode {
 }
 func (m *SelectMode) Parse(scanner *Scanner) (Query, error) {
 	// we have scanned out the select word, so add it back
+	fields := make([]*Token, 0)
 	query := ""
 	eater := NewEater(scanner)
 	if eater.Eat(SELECT) {
@@ -73,9 +74,23 @@ func (m *SelectMode) Parse(scanner *Scanner) (Query, error) {
 		if stop {
 			break
 		}
-		query += string(ch)
+		// ignore everything except fields, which will start with @
+		if ch == '@' {
+			scanner.Unread()
+			if eater.Eat(IDENT_FIELD) {
+				fields = append(fields, eater.TakeTokens()[0])
+				// add our field to the query
+				query += fields[len(fields)-1].raw
+			}
+			if err := eater.TakeErr(); err != nil {
+				return nil, fmt.Errorf("could not parse field name for select query")
+			}
+		} else {
+			// just a regular character part of the query
+			query += string(ch)
+		}
 	}
-	return NewSelectQuery(query), nil
+	return NewSelectQuery(query, fields), nil
 }
 
 type InsertMode struct{}

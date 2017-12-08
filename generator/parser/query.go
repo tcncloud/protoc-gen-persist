@@ -79,15 +79,16 @@ func (q *InsertQuery) AddParam(key, val string) {
 type SelectQuery struct {
 	query  string
 	params map[string]string
+	fields []*Token
 }
 
-func NewSelectQuery(q string) *SelectQuery {
-	return &SelectQuery{query: q}
+func NewSelectQuery(q string, fields []*Token) *SelectQuery {
+	return &SelectQuery{query: q, fields: fields}
 }
 func (q *SelectQuery) String() string {
 	params := "map[string]interface{}{"
-	for k, v := range q.params {
-		params += fmt.Sprintf("\n\t\"%s\": %s,", k, v)
+	for _, v := range q.fields {
+		params += fmt.Sprintf("\n\t\"%s\": %s,", v.raw, q.params[v.raw])
 	}
 	params += "\n}"
 	return fmt.Sprintf(`spanner.Statement{
@@ -104,11 +105,14 @@ func (q *SelectQuery) Type() QueryType {
 func (q *SelectQuery) Table() string {
 	return ""
 }
-func (q *SelectQuery) Fields() []string {
-	return nil
+func (q *SelectQuery) Fields() (out []string) {
+	for _, t := range q.fields {
+		out = append(out, t.raw)
+	}
+	return
 }
 func (q *SelectQuery) Args() []*Token {
-	return nil
+	return q.fields
 }
 func (q *SelectQuery) SetParams(p map[string]string) {
 	q.params = p
@@ -159,7 +163,7 @@ func (q *DeleteQuery) StringKR() string {
 	q.addToSyntaxStr(&keyRange, q.start)
 	keyRange += "\n},\nEnd: spanner.Key{"
 	q.addToSyntaxStr(&keyRange, q.end)
-	keyRange += fmt.Sprintf("\n},\nKind: %s\n}", q.KindSyntaxString())
+	keyRange += fmt.Sprintf("\n},\nKind: %s,\n}", q.KindSyntaxString())
 	return keyRange
 }
 func (q *DeleteQuery) StringSingle() string {
@@ -191,15 +195,24 @@ func (q *DeleteQuery) Type() QueryType {
 func (q *DeleteQuery) Table() string {
 	return q.table.raw
 }
-func (q *DeleteQuery) Fields() []string {
+func (q *DeleteQuery) Fields() (out []string) {
 	if q.usesKeyRange {
-		return nil
+		m := make(map[string]struct{})
+		for _, tkn := range q.start {
+			m[tkn.raw] = struct{}{}
+		}
+		for _, tkn := range q.end {
+			m[tkn.raw] = struct{}{}
+		}
+		for k := range m {
+			out = append(out, k)
+		}
+		return
 	}
-	fields := make([]string, len(q.cols))
-	for i, tkn := range q.cols {
-		fields[i] = tkn.raw
+	for _, tkn := range q.cols {
+		out = append(out, tkn.raw)
 	}
-	return fields
+	return
 }
 func (q *DeleteQuery) Args() []*Token {
 	var args []*Token

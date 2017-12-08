@@ -78,6 +78,7 @@ var (
 		"spanner_unary_method":            spanner_templates.SpannerUnaryTemplate,
 		"spanner_client_streaming_method": spanner_templates.SpannerClientStreamingTemplate,
 		"spanner_server_streaming_method": spanner_templates.SpannerServerStreamingTemplate,
+		"persist_lib_input":               spanner_templates.PersistLibInput,
 	}
 )
 
@@ -115,6 +116,15 @@ func ExecutePersistLibTemplate(fileStruct *FileStruct) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse the persistLibTemplate: %s", err)
 	}
+	t = t.Funcs(template.FuncMap{
+		"Quotes": strconv.Quote,
+	})
+	for n, tmpl := range TemplateList {
+		if _, err := t.Parse(tmpl); err != nil {
+			logrus.WithError(err).Fatalf("Fatal error parsing template for persist lib: %s", n)
+		}
+	}
+
 	if err := t.Execute(&buffer, fileStruct); err != nil {
 		return nil, fmt.Errorf("could not execute persist lib template: %s", err)
 	}

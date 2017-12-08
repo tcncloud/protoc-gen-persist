@@ -51,8 +51,7 @@ const ServicesTemplate = `{{define "implement_services"}}
 // in this package with the following content:
 //
 // type {{$srv.GetName}}Impl struct {
-// 	SpannerDB *spanner.Client
-//	PERSIST *persist_lib.PersistHelper
+//	PERSIST *persist_lib.{{$srv.GetName}}PersistHelper
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

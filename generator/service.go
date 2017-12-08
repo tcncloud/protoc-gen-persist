@@ -146,6 +146,7 @@ func (s *Service) ProcessImports() {
 	s.File.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
 	s.File.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
 	s.File.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
+	s.File.ImportList.GetOrAddImport("gstatus", "google.golang.org/grpc/status")
 	if s.File.DifferentImpl() {
 		s.File.ImportList.GetOrAddImport("pb", s.File.GetFullGoPackage())
 	}

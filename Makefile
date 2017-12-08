@@ -85,7 +85,7 @@ test-compile:
 	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	# 	--plugin=./protoc-gen-persist \
 	# 	--persist_out=$$GOPATH/src  examples/sql/basic/*.proto
-	 DEBUG=true $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	 DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--plugin=./protoc-gen-persist \
 	 	--persist_out=$$GOPATH/src  examples/spanner/basic/*.proto
 	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \

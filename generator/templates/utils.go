@@ -41,39 +41,39 @@ const BeforeHook = `
 	{{/* give it a Method as dot, assumes a "req" exists to give to the hook as parameter*/}}
 	{{/* works for all method types, but assumes we are in a loop to continue on for */}}
 	{{/* client streaming and bidi streaming methods */}}
-	{{$before := .GetMethodOption.GetBefore}}
-		{{if $before}}
-		{{$pkg := .GetGoPackage $before.GetPackage}}
-		{{if eq $pkg ""}}
+	{{$before := .GetMethodOption.GetBefore -}}
+		{{if $before -}}
+		{{$pkg := .GetGoPackage $before.GetPackage -}}
+		{{if eq $pkg "" -}}
 			beforeRes, err := {{$before.GetName}}(req)
-		{{else}}
+		{{else -}}
 			beforeRes, err := {{$pkg}}.{{$before.GetName}}(req)
-		{{end}}
+		{{end -}}
 			if err != nil {
-				{{if .IsUnary}}
+				{{if .IsUnary -}}
 					return nil, grpc.Errorf(codes.Unknown, err.Error())
 				{{else if (and (.IsClientStreaming) (not .IsSpanner))}}
 					tx.Rollback()
 					return grpc.Errorf(codes.Unknown, err.Error())
-				{{else}}
+				{{else -}}
 					return grpc.Errorf(codes.Unknown, err.Error())
-				{{end}}
+				{{end -}}
 			}
 			if beforeRes != nil {
-				{{if .IsClientStreaming}}
+				{{if .IsClientStreaming -}}
 					continue
 				{{end}}
-				{{if and .IsBidiStreaming (not .IsSpanner)}}
+				{{if and .IsBidiStreaming (not .IsSpanner) -}}
 					err = stream.Send(beforeRes)
 					if err != nil {
 						return grpc.Errorf(codes.Unknown, err.Error())
 					}
 					continue
-				{{end}}
-				{{if or .IsUnary}}
+				{{end -}}
+				{{if or .IsUnary -}}
 					return beforeRes, nil
-				{{end}}
-				{{if .IsServerStreaming}}
+				{{end -}}
+				{{if .IsServerStreaming -}}
 					for _, res := range beforeRes {
 						err = stream.Send(res)
 						if err != nil {
@@ -81,32 +81,32 @@ const BeforeHook = `
 						}
 					}
 					return nil
-				{{end}}
+				{{end -}}
 			}
-		{{end}}
+		{{end -}}
 	{{end}}
 `
 const AfterHook = `
 	{{define "after_hook"}}
 	{{/* give it a Method as dot, assumes a "res" exists to give the hook as parameter */}}
-	{{$after := .GetMethodOption.GetAfter}}
-		{{if $after}}
-			{{$pkg := .GetGoPackage $after.GetPackage}}
-			{{if eq $pkg ""}}
+	{{$after := .GetMethodOption.GetAfter -}}
+		{{if $after -}}
+			{{$pkg := .GetGoPackage $after.GetPackage -}}
+			{{if eq $pkg "" -}}
 				err = {{$after.GetName}}(req, &res)
-			{{else}}
+			{{else -}}
 				err = {{.GetGoPackage $after.GetPackage}}.{{$after.GetName}}(req, &res)
-			{{end}}
+			{{end -}}
 			if err != nil {
-				{{if .IsUnary}}
+				{{if .IsUnary -}}
 					return nil, grpc.Errorf(codes.Unknown, err.Error())
 				{{else if (and (.IsClientStreaming) (not .IsSpanner))}}
 					tx.Rollback()
 					return grpc.Errorf(codes.Unknown, err.Error())
-				{{else}}
+				{{else -}}
 					return grpc.Errorf(codes.Unknown, err.Error())
-				{{end}}
+				{{end -}}
 			}
-		{{end}}
+		{{end -}}
 	{{end}}
 `

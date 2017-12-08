@@ -447,6 +447,28 @@ func (m *Method) GetTypeDescForFieldsInStructSnakeCase(str *Struct) map[string]T
 	}
 	return ret
 }
+func (m *Method) GetTypeDescForQueryFields() map[string]TypeDesc {
+	inputTypeDesc := m.GetTypeDescForFieldsInStructSnakeCase(m.GetInputTypeStruct())
+	findTypeDesc := func(queryField string) TypeDesc {
+		if queryField[0] == '@' {
+			queryField = queryField[1:]
+		}
+		return inputTypeDesc[queryField]
+	}
+	fields := make(map[string]TypeDesc)
+	logrus.Warnf("QUERY FOR METHOD: %s", m.GetName())
+	if m.Query.Type() == parser.DELETE_QUERY {
+		for _, f := range m.Query.Fields() {
+			logrus.Warnf("Delete field: %+v\n", f)
+		}
+	} else {
+		logrus.Warnf("Not a delete: %d\n", m.Query.Type())
+	}
+	for _, f := range m.Query.Fields() {
+		fields[f] = findTypeDesc(f)
+	}
+	return fields
+}
 
 func (m *Method) GetServiceName() string {
 	return m.Service.GetName()
@@ -501,19 +523,19 @@ func (m *Method) Process() error {
 		logrus.Debug("We are a spanner method")
 		//s, err := NewSpannerHelper(m)
 		query := m.GetQuery()
-		logrus.Debugf("query: %#v", query)
 		reader := bytes.NewBufferString(query)
 		p := parser.NewParser(reader)
 		parsedQuery, err := p.Parse()
 		if err != nil {
+			logrus.Warnf("RETURNING AN ERROR: %s", err)
 			return fmt.Errorf("%s\n  method: %s", err, m.GetName())
 		}
 		m.Query = parsedQuery
-
+		logrus.Warnf("query: %#v, type: %d", query, m.Query.Type())
 		// WE REALLY SHOULD PUT THIS PART IN THE TEMPLATES, BUT IM TOO TIRED
 		types := m.GetTypeDescArrayForStruct(m.GetInputTypeStruct())
 		for _, t := range types {
-			m.Query.AddParam("@"+t.ProtoName, fmt.Sprintf("req[\"%s\"]", t.Name))
+			m.Query.AddParam("@"+t.ProtoName, fmt.Sprintf("req.%s", t.Name))
 		}
 		//m.Spanner = s
 	} else if m.IsSQL() {
