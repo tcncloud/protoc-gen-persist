@@ -30,7 +30,23 @@
 package templates
 
 const ImportTemplate = `{{define "import_template"}}
-import({{range $import := .}}
-{{$import.GoPackageName}} "{{$import.GoImportPath}}"{{end}}
+{{$file := .}}
+
+import({{range $import := .ImportList}}
+{{if $file.NotSameAsMyPackage .GoImportPath}}{{$import.GoPackageName}} "{{$import.GoImportPath}}"{{end}}{{end}}
 )
+{{/*
+var _ = "{{$file.GetPackageName}}" // file.GetPackageName()
+var _ = "{{$file.GetOrigName}}" // file.GetOrigName()
+var _ = "{{$file.GetImplFileName}}" // file.GetImplFileName()
+var _ = "{{$file.GetImplDir}}" // file.GetImplDir()
+var _ = "{{$file.GetImplPackage}}" // file.GetImplPackage()
+var _ = "{{$file.GetFileName}}" //file.GetFileName()
+var _ = "{{$file.GetGoPackage}}" // file.GetGoPackage()
+var _ = "{{$file.GetFullGoPackage}}" // file.GetFullGoPackage()
+var _ = "{{$file.GetGoPath}}" // file.GetGoPath()
+var _ = "{{$file.NeedsPersistLibDir}}" // file.NeedsPersistLibDir()
+var _ = "{{$file.DifferentImpl}}" // file.DifferentImpl()
+*/}}
+
 {{end}}`

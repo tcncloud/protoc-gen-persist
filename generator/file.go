@@ -35,10 +35,12 @@ import (
 
 	"os"
 
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/tcncloud/protoc-gen-persist/persist"
+	"path"
 )
 
 type FileStruct struct {
@@ -69,6 +71,12 @@ func (f *FileStruct) GetOrigName() string {
 func (f *FileStruct) GetPackageName() string {
 	return f.GetImplPackage()
 	// return f.Desc.GetPackage()
+}
+func (f *FileStruct) IsSameAsMyPackage(pkg string) bool {
+	return f.GetImplDir() == pkg
+}
+func (f *FileStruct) NotSameAsMyPackage(pkg string) bool {
+	return !f.IsSameAsMyPackage(pkg)
 }
 
 // extract the persist.package file option
@@ -183,7 +191,7 @@ func (f *FileStruct) GetFullGoPackage() string {
 }
 
 func (f *FileStruct) DifferentImpl() bool {
-	return f.GetFullGoPackage() != f.GetImplPackage()
+	return (f.GetFullGoPackage() != f.GetImplDir())
 }
 
 func (f *FileStruct) GetGoPackage() string {
@@ -248,6 +256,29 @@ func (f *FileStruct) ProcessImports() {
 	}
 }
 
+type persistFile struct {
+	full     string
+	filename string
+	path     string
+}
+
+func (f *FileStruct) GetPersistLibFullFilepath() persistFile {
+	// the full path that generated me
+	origFile := path.Base(f.GetOrigName())
+	// sloppily grab the first part of the filename
+	beforeDot := strings.Split(origFile, ".")[0]
+	if beforeDot == "" {
+		beforeDot = "_"
+	}
+	path := fmt.Sprintf("%s/persist_lib", f.GetImplDir())
+	filename := fmt.Sprintf("%s_persist_lib.persist.go", beforeDot)
+	full := path + "/" + filename
+	return persistFile{
+		full:     full,
+		filename: filename,
+		path:     path,
+	}
+}
 func (f *FileStruct) Process() error {
 	logrus.WithFields(logrus.Fields{
 		"GetFileName()": f.GetFileName(),
@@ -266,8 +297,39 @@ func (f *FileStruct) Process() error {
 	for _, s := range f.Desc.GetService() {
 		f.ServiceList.AddService(f.GetPackageName(), s, f.AllStructures, f)
 	}
+	if f.NeedsPersistLibDir() {
+		f.ImportList.GetOrAddImport("persist_lib", f.GetPersistLibFullFilepath().path)
+		for _, i := range *f.ImportList {
+			logrus.Debugf("IMPORT LIST: %+v, %#v\n", i.GoPackageName, i.GoImportPath)
+		}
+	}
 	//return f.ServiceList.Process()
 	return nil
+
+}
+
+// the generator may need to make an extra file in the directory beneath ours
+// this library will not be imported by our persist code, so it is safe to use
+// anywhere the client wants
+
+func (f *FileStruct) NeedsPersistLibDir() bool {
+	if !f.Dependency && f.ServiceList.HasPersistService() {
+		return true
+	}
+	return false
+}
+
+type PersistLib struct {
+	Content string // the contents that belong in the code generator response
+	Name    string // the filename for the response
+}
+
+func (f *FileStruct) GeneratePersistLib() (PersistLib, error) {
+	bytes, err := ExecutePersistLibTemplate(f)
+	if err != nil {
+		return PersistLib{}, fmt.Errorf("error generating persist lib: %v", err)
+	}
+	return PersistLib{Content: string(bytes), Name: f.GetPersistLibFullFilepath().full}, nil
 
 }
 

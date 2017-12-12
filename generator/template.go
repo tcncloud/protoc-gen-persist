@@ -34,6 +34,7 @@ import (
 	"strconv"
 	"text/template"
 
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/generator/templates"
 )
@@ -48,7 +49,6 @@ var (
 		"return_convert_helpers":          templates.ReturnConvertHelpers,
 		"before_hook":                     templates.BeforeHook,
 		"after_hook":                      templates.AfterHook,
-		"type_desc_to_mapped":             templates.SpannerHelperTemplates,
 		"unary_method":                    templates.UnaryMethodTemplate,
 		"client_streaming_method":         templates.ClientStreamingMethodTemplate,
 		"server_streaming_method":         templates.ServerStreamingMethodTemplate,
@@ -61,17 +61,10 @@ var (
 		"mongo_client_streaming_method":   templates.MongoClientStreamingMethodTemplate,
 		"mongo_server_streaming_method":   templates.MongoServerStreamingMethodTemplate,
 		"mongo_bidi_streaming_method":     templates.MongoBidiStreamingMethodTemplate,
-		"spanner_unary_method":            templates.SpannerUnaryMethodTemplate,
-		"spanner_unary_delete":            templates.SpannerUnaryDeleteTemplate,
-		"spanner_unary_update":            templates.SpannerUnaryUpdateTemplate,
-		"spanner_unary_select":            templates.SpannerUnarySelectTemplate,
-		"spanner_unary_insert":            templates.SpannerUnaryInsertTemplate,
-		"spanner_client_streaming_method": templates.SpannerClientStreamingMethodTemplate,
-		"spanner_client_streaming_update": templates.SpannerClientStreamingUpdateTemplate,
-		"spanner_client_streaming_insert": templates.SpannerClientStreamingInsertTemplate,
-		"spanner_client_streaming_delete": templates.SpannerClientStreamingDeleteTemplate,
-		"spanner_server_streaming_method": templates.SpannerServerStreamingMethodTemplate,
-		"spanner_bidi_streaming_method":   templates.SpannerBidiStreamingMethodTemplate,
+		"spanner_unary_method":            templates.SpannerUnaryTemplate,
+		"spanner_client_streaming_method": templates.SpannerClientStreamingTemplate,
+		"spanner_server_streaming_method": templates.SpannerServerStreamingTemplate,
+		"persist_lib_input":               templates.PersistLibInput,
 	}
 )
 
@@ -101,4 +94,25 @@ func ExecuteFileTemplate(fileStruct *FileStruct) []byte {
 		logrus.WithError(err).Fatal("Fatal error executing file template")
 	}
 	return buffer.Bytes()
+}
+
+func ExecutePersistLibTemplate(fileStruct *FileStruct) ([]byte, error) {
+	var buffer bytes.Buffer
+	t, err := template.New("t").Parse(templates.PersistLibTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse the persistLibTemplate: %s", err)
+	}
+	t = t.Funcs(template.FuncMap{
+		"Quotes": strconv.Quote,
+	})
+	for n, tmpl := range TemplateList {
+		if _, err := t.Parse(tmpl); err != nil {
+			logrus.WithError(err).Fatalf("Fatal error parsing template for persist lib: %s", n)
+		}
+	}
+
+	if err := t.Execute(&buffer, fileStruct); err != nil {
+		return nil, fmt.Errorf("could not execute persist lib template: %s", err)
+	}
+	return buffer.Bytes(), nil
 }

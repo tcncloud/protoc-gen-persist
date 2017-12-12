@@ -35,9 +35,9 @@ const ServicesTemplate = `{{define "implement_services"}}
 {{if $srv.IsSQL}}
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-// In order for your code to work you have to create a file 
+// In order for your code to work you have to create a file
 // in this package with the following content:
-// 
+//
 // type {{$srv.GetName}}Impl struct {
 // 	SqlDB *sql.DB
 // }
@@ -47,11 +47,11 @@ const ServicesTemplate = `{{define "implement_services"}}
 {{if $srv.IsSpanner}}
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-// In order for your code to work you have to create a file 
+// In order for your code to work you have to create a file
 // in this package with the following content:
-// 
+//
 // type {{$srv.GetName}}Impl struct {
-// 	SpannerDB *spanner.Client
+//	PERSIST *persist_lib.{{$srv.GetName}}PersistHelper
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

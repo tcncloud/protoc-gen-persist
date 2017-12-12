@@ -146,6 +146,7 @@ func (s *Service) ProcessImports() {
 	s.File.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
 	s.File.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
 	s.File.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
+	s.File.ImportList.GetOrAddImport("gstatus", "google.golang.org/grpc/status")
 	if s.File.DifferentImpl() {
 		s.File.ImportList.GetOrAddImport("pb", s.File.GetFullGoPackage())
 	}
@@ -164,6 +165,17 @@ func (s *Service) ProcessImports() {
 }
 
 type Services []*Service
+
+// we are a persist service if we have persist options. meaning we are either spanner
+// or sql
+func (s Services) HasPersistService() bool {
+	for _, serv := range s {
+		if serv.IsSQL() || serv.IsSpanner() {
+			return true
+		}
+	}
+	return false
+}
 
 func (s *Services) AddService(pkg string, desc *descriptor.ServiceDescriptorProto, allStructs *StructList, file *FileStruct) *Service {
 	ret := &Service{

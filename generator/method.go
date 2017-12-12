@@ -33,18 +33,21 @@ import (
 	"fmt"
 	"strings"
 
+	"bytes"
 	"github.com/Shrugs/fauxgaux"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
+	"github.com/tcncloud/protoc-gen-persist/generator/parser"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
 type Method struct {
 	Desc    *descriptor.MethodDescriptorProto
 	Service *Service
-	Spanner *SpannerHelper
+	//Spanner *SpannerHelper
+	Query parser.Query
 }
 
 func NewMethod(desc *descriptor.MethodDescriptorProto, srv *Service) (*Method, error) {
@@ -62,9 +65,15 @@ func (m *Method) String() string {
 	input := m.Desc.GetInputType()
 	output := m.Desc.GetOutputType()
 	return fmt.Sprintf("Method:\n\tName: %s\n\tisSql: %s\n\tisSpanner: %s\n\tinput: %s\n\toutput: %s\n\tSpanner: %s\n\n",
-		name, isSql, isSpanner, input, output, m.Spanner)
+		name, isSql, isSpanner, input, output /*m.Spanner*/)
 }
 
+func (m *Method) IsSelect() bool {
+	if m.Query != nil && m.Query.Type() == parser.SELECT_QUERY {
+		return true
+	}
+	return false
+}
 func (m *Method) GetMethodOption() *persist.QLImpl {
 	if m.Desc.Options != nil && proto.HasExtension(m.Desc.Options, persist.E_Ql) {
 		ext, err := proto.GetExtension(m.Desc.Options, persist.E_Ql)
@@ -164,8 +173,8 @@ func (m *Method) GetGoTypeName(typ string) string {
 	if imp := m.Service.File.ImportList.GetGoNameByStruct(str); imp != nil {
 		return imp.GoPackageName + "." + str.GetGoName()
 	} else {
-		logrus.WithField("struct", str).Fatal("Can't find struct in import list")
-		return "__unknown__import__path__"
+		// logrus.WithField("struct", str).Warnf("Can't find struct in import list: type: %s", typ)
+		return str.GetGoName()
 	}
 	// } else {
 	// 	return str.GetGoName()
@@ -174,6 +183,13 @@ func (m *Method) GetGoTypeName(typ string) string {
 
 func (m *Method) GetInputType() string {
 	return m.GetGoTypeName(m.Desc.GetInputType())
+}
+
+// returns the last element of the type.  So instead of test.ExampleTable,
+// it returns ExampleTable
+func (m *Method) GetInputTypeName() string {
+	strs := strings.Split(m.GetInputType(), ".")
+	return strs[len(strs)-1]
 }
 
 func (m *Method) GetOutputType() string {
@@ -239,7 +255,8 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
 		return "int32"
 	case descriptor.FieldDescriptorProto_TYPE_GROUP:
-		logrus.Fatalf("we currently don't support groups/oneof structures %s", typ.GetName())
+		return "__unsupported__type__"
+		//logrus.Fatalf("we currently don't support groups/oneof structures %s", typ.GetName())
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
 		if ret := m.GetTypeNameMinusPackage(typ); ret != "" {
 			return ret
@@ -371,17 +388,18 @@ func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeM
 }
 
 type TypeDesc struct {
-	Name       string // ex. StartTime
-	ProtoName  string // start_time
-	GoName     string // mytime.MyTime (if it is mapped)
-	OrigGoName string // Timestamp
-	Struct     *Struct
-	Mapping    *persist.TypeMapping_TypeDescriptor
-	EnumName   string // Timestamp
-	IsMapped   bool
-	IsEnum     bool
-	IsMessage  bool
-	ResultHook bool
+	Name            string // ex. StartTime
+	ProtoName       string // start_time
+	GoName          string // mytime.MyTime (if it is mapped)
+	OrigGoName      string // Timestamp
+	Struct          *Struct
+	Mapping         *persist.TypeMapping_TypeDescriptor
+	EnumName        string // Timestamp
+	IsMapped        bool
+	IsEnum          bool
+	IsMessage       bool
+	ResultHook      bool
+	FieldDescriptor *descriptor.FieldDescriptorProto
 }
 
 type ResultHook interface {
@@ -395,16 +413,17 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 			logrus.Debugf("mp name: %s\n", mp.GetName())
 			if mp.OneofIndex == nil {
 				typeDesc := TypeDesc{
-					Name:       _gen.CamelCase(mp.GetName()),
-					Struct:     m.Service.AllStructs.GetStructByFieldDesc(mp),
-					ProtoName:  mp.GetName(),
-					GoName:     m.GetMappedType(mp),
-					OrigGoName: m.DefaultMapping(mp),
-					Mapping:    m.GetMapping(mp),
-					EnumName:   m.GetTypeNameMinusPackage(mp),
-					IsMapped:   (m.GetMapping(mp) != nil),
-					IsEnum:     (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
-					IsMessage:  (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
+					Name:            _gen.CamelCase(mp.GetName()),
+					Struct:          m.Service.AllStructs.GetStructByFieldDesc(mp),
+					ProtoName:       mp.GetName(),
+					GoName:          m.GetMappedType(mp),
+					OrigGoName:      m.DefaultMapping(mp),
+					Mapping:         m.GetMapping(mp),
+					EnumName:        m.GetTypeNameMinusPackage(mp),
+					IsMapped:        (m.GetMapping(mp) != nil),
+					FieldDescriptor: mp,
+					IsEnum:          (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
+					IsMessage:       (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
 				}
 				ret = append(ret, typeDesc)
 			}
@@ -427,6 +446,20 @@ func (m *Method) GetTypeDescForFieldsInStructSnakeCase(str *Struct) map[string]T
 		ret[typeDesc.ProtoName] = typeDesc
 	}
 	return ret
+}
+func (m *Method) GetTypeDescForQueryFields() map[string]TypeDesc {
+	inputTypeDesc := m.GetTypeDescForFieldsInStructSnakeCase(m.GetInputTypeStruct())
+	findTypeDesc := func(queryField string) TypeDesc {
+		if queryField[0] == '@' {
+			queryField = queryField[1:]
+		}
+		return inputTypeDesc[queryField]
+	}
+	fields := make(map[string]TypeDesc)
+	for _, f := range m.Query.Fields() {
+		fields[f] = findTypeDesc(f)
+	}
+	return fields
 }
 
 func (m *Method) GetServiceName() string {
@@ -480,11 +513,21 @@ func (m *Method) Process() error {
 	logrus.Debug("Process method %s", m.GetName())
 	if m.IsSpanner() {
 		logrus.Debug("We are a spanner method")
-		s, err := NewSpannerHelper(m)
+		//s, err := NewSpannerHelper(m)
+		query := m.GetQuery()
+		reader := bytes.NewBufferString(query)
+		p := parser.NewParser(reader)
+		parsedQuery, err := p.Parse()
 		if err != nil {
 			return fmt.Errorf("%s\n  method: %s", err, m.GetName())
 		}
-		m.Spanner = s
+		m.Query = parsedQuery
+		// WE REALLY SHOULD PUT THIS PART IN THE TEMPLATES, BUT IM TOO TIRED
+		types := m.GetTypeDescArrayForStruct(m.GetInputTypeStruct())
+		for _, t := range types {
+			m.Query.AddParam("@"+t.ProtoName, fmt.Sprintf("req.%s", t.Name))
+		}
+		//m.Spanner = s
 	} else if m.IsSQL() {
 		logrus.Debug("we are a sql method")
 	} else {

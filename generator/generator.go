@@ -74,6 +74,17 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 				Content: proto.String(string(FormatCode(fileStruct.GetFileName(), fileContents))),
 				Name:    proto.String(fileStruct.GetImplFileName()),
 			})
+			if fileStruct.NeedsPersistLibDir() {
+				lib, err := fileStruct.GeneratePersistLib()
+				if err != nil {
+					return nil, err
+				}
+				ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
+					Content: proto.String(string(FormatCode(lib.Name, []byte(lib.Content)))),
+					Name:    proto.String(lib.Name),
+				})
+			}
+
 		}
 	}
 	//logrus.WithField("response", ret).Debug("result")

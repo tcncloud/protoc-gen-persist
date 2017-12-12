@@ -61,26 +61,34 @@ service MySpanner {
   };
   rpc UniaryInsert(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: ["Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"]
+      query: ["Insert into example_table (id, start_time, name)",
+              "Values (@id, @start_time, \"bananas\")"]
       arguments: ["id", "start_time"]
     };
   };
   rpc UniarySelect(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: ["SELECT * from example_table Where id=? AND name=?"]
+      query: ["SELECT * from example_table Where id=@id AND name=@name"]
       arguments: ["id", "name"]
     };
   };
   rpc UniaryUpdate(test.ExampleTable) returns (test.PartialTable) {
     option (persist.ql) = {
-      query: ["Update example_table set start_time=?, name=\"oranges\" where id=?"]
+      query: ["Update example_table ",
+              "set start_time=@start_time, name=\"oranges\"",
+              "PrimaryKey(id=@id)"]
       arguments: ["start_time", "id"],
     };
   };
-  rpc UniaryDelete(test.ExampleTableRange) returns (test.ExampleTable) {
+  rpc UniaryDeleteRange(test.ExampleTableRange) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: ["DELETE FROM example_table START(?) END(?) KIND(CO)"]
+      query: ["DELETE FROM example_table START(@start_id) END(@end_id) KIND(CO)"]
       arguments: ["start_id", "end_id"]
+    };
+  };
+  rpc UniaryDeleteSingle(test.ExampleTable) returns (test.ExampleTable) {
+    option (persist.ql) = {
+      query: ["DELETE FROM example_table VALUES('abc', 123, @id)"]
     };
   };
   rpc NoArgs(test.ExampleTable) returns (test.ExampleTable) {
@@ -97,26 +105,26 @@ service MySpanner {
   };
   rpc ClientStreamInsert(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
-      query: ["INSERT INTO example_table (id, start_time, name) VALUES (?, ?, ?)"]
+      query: ["INSERT INTO example_table (id, start_time, name) VALUES (@id, @start_time, 3)"]
       arguments: ["id", "start_time", "name"]
     };
   };
   rpc ClientStreamDelete(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
-      query: ["DELETE FROM example_table START(?) END(?) KIND(CC)"]
+      query: ["DELETE FROM example_table VALUES(@id)"]
       arguments: ["id", "id"],
     };
   };
   rpc ClientStreamUpdate(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
-      query: ["update example_table set start_time=?, name=? where id=?"]
+      query: ["update example_table set start_time=@start_time, name=@name PK(id=@id)"]
       arguments: ["start_time", "name", "id"]
     };
   }
   // hook examples
   rpc UniaryInsertWithHooks(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: ["Insert into example_table (id, start_time, name)  Values (?, ?, \"bananas\")"]
+      query: ["insert into example_table (id, start_time, name)  Values (@id, @start_time, \"bananas\")"]
       arguments: ["id", "start_time"]
       before: {
         name: "UniaryInsertBeforeHook"
@@ -130,7 +138,7 @@ service MySpanner {
   };
   rpc UniarySelectWithHooks(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
-      query: ["SELECT * from example_table Where id=?"]
+      query: ["SELECT * from example_table Where id=@id"]
       arguments: ["id"]
       before: {
         name: "UniaryInsertBeforeHook"
@@ -144,7 +152,7 @@ service MySpanner {
   };
   rpc UniaryUpdateWithHooks(test.ExampleTable) returns (test.PartialTable) {
     option (persist.ql) = {
-      query: ["Update example_table set start_time=?, name=\"oranges\" where id=?"]
+      query: ["Update example_table set start_time=@start_time, name=\"oranges\" PRIMARY_KEY(id=@id)"]
       arguments: ["start_time", "id"]
       before: {
         name: "UniaryUpdateBeforeHook"
@@ -162,8 +170,8 @@ service MySpanner {
       query: ["DELETE",
       "FROM",
       "example_table",
-      "START(? ",
-      ") END(?) ",
+      "START(@start_id ",
+      ") END(@end_id) ",
       "KIND(CO)"]
       arguments: ["start_id", "end_id"]
       before: {
@@ -192,7 +200,7 @@ service MySpanner {
   };
   rpc ClientStreamUpdateWithHooks(stream test.ExampleTable) returns (test.NumRows) {
     option (persist.ql) = {
-      query: ["update example_table set name=? where id=?"]
+      query: ["update example_table set name='asdf' pk(id=@id)"]
       arguments: ["start_time", "name", "id"]
       before: {
         name: "ClientStreamUpdateBeforeHook"
@@ -204,10 +212,10 @@ service MySpanner {
       }
     };
   };
-  rpc TestMultiMappedFields(test.TwoMappedAndEnum) returns (test.TwoMappedAndEnum) {
-    option (persist.ql) = {
-      query: ["SELECT * FROM example_table WHERE start_time = ? AND end_time = ? AND gen_enum = ?"]
-      arguments: ["start_time", "end_time", "gen_enum"]
-    };
-  };
+  // rpc TestMultiMappedFields(test.TwoMappedAndEnum) returns (test.TwoMappedAndEnum) {
+  //   option (persist.ql) = {
+  //     query: ["SELECT * FROM example_table WHERE start_time = ? AND end_time = ? AND gen_enum = ?"]
+  //     arguments: ["start_time", "end_time", "gen_enum"]
+  //   };
+  // };
 }

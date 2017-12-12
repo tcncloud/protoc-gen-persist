@@ -5,15 +5,13 @@ package bob_example
 
 import (
 	io "io"
-	strings "strings"
 
 	"cloud.google.com/go/spanner"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
-	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/bob_example"
+	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/spanner/bob_example/persist_lib"
 	context "golang.org/x/net/context"
-	iterator "google.golang.org/api/iterator"
-	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
+	gstatus "google.golang.org/grpc/status"
 )
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,217 +20,185 @@ import (
 // in this package with the following content:
 //
 // type BobsImpl struct {
-// 	SpannerDB *spanner.Client
+//	PERSIST *persist_lib.BobsPersistHelper
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// spanner unary select DeleteBobs
-func (s *BobsImpl) DeleteBobs(ctx context.Context, req *pb.Bob) (*pb.Empty, error) {
+func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 	var err error
+	_ = err
 
-	start := make([]interface{}, 0)
-	end := make([]interface{}, 0)
-	var conv interface{}
-	start = append(start, "Bob")
-	end = append(end, "Bob")
-	conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	params := &persist_lib.BobsDeleteBobsInput{}
+	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "could not convert type: %v", err)
 	}
-	end = append(end, conv)
-	key := spanner.KeyRange{
-		Start: start,
-		End:   end,
-		Kind:  spanner.ClosedOpen,
-	}
-	muts := make([]*spanner.Mutation, 1)
-	muts[0] = spanner.Delete("bob_table", key)
-	_, err = s.SpannerDB.Apply(ctx, muts)
-	if err != nil {
-		if strings.Contains(err.Error(), "does not exist") {
-			return nil, grpc.Errorf(codes.NotFound, err.Error())
+
+	var res = Empty{}
+	var iterErr error
+	_ = iterErr
+	err = s.PERSIST.DeleteBobs(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
 		}
+	})
+	if err != nil {
+		return nil, err
 	}
-	res := pb.Empty{}
 
 	return &res, nil
 }
 
-// spanner client streaming PutBobs
-func (s *BobsImpl) PutBobs(stream pb.Bobs_PutBobsServer) error {
+func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 	var err error
-	res := pb.NumRows{}
-
-	muts := make([]*spanner.Mutation, 0)
+	_ = err
+	feed, stop := s.PERSIST.PutBobs(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+			return gstatus.Errorf(codes.Unknown, err.Error())
 		}
 
-		//spanner client streaming insert
-		params := make([]interface{}, 0)
-		var conv interface{}
-
-		conv = req.Id
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+		params := &persist_lib.BobsPutBobsInput{}
+		params.Id = req.Id
+		params.Name = req.Name
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return gstatus.Errorf(codes.Unknown, "could not convert type: %v", err)
 		}
-		params = append(params, conv)
 
-		conv = req.Name
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		params = append(params, conv)
-
-		conv, err = mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue()
-
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		params = append(params, conv)
-		muts = append(muts, spanner.Insert("bob_table", []string{"id", "name", "start_time"}, params))
-
-		////////////////////////////// NOTE //////////////////////////////////////
-		// In the future, we might do apply if muts gets really big,  but for now,
-		// we only do one apply on the database with all the records stored in muts
-		//////////////////////////////////////////////////////////////////////////
+		feed(params)
 	}
-	_, err = s.SpannerDB.Apply(context.Background(), muts)
+	row, err := stop()
 	if err != nil {
-		if strings.Contains(err.Error(), "already exists") {
-			return grpc.Errorf(codes.AlreadyExists, err.Error())
-		} else {
-			return grpc.Errorf(codes.Unknown, err.Error())
+		return err
+	}
+	res := NumRows{}
+	if row != nil {
+
+		var Count int64
+		if err := row.ColumnByName("count", &Count); err != nil {
+			return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
 		}
+
+		res.Count = Count
+
 	}
 
-	stream.SendAndClose(&res)
+	if err := stream.SendAndClose(&res); err != nil {
+		return err
+	}
 	return nil
 }
 
 // spanner server streaming GetBobs
-func (s *BobsImpl) GetBobs(req *pb.Empty, stream pb.Bobs_GetBobsServer) error {
-	var (
-		Id        int64
-		Name      string
-		StartTime mytime.MyTime
-	)
+func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
+	var err error
+	_ = err
 
-	params := make(map[string]interface{})
-	stmt := spanner.Statement{SQL: "SELECT * from bob_table", Params: params}
-	tx := s.SpannerDB.Single()
-	defer tx.Close()
-	iter := tx.Query(context.Background(), stmt)
-	defer iter.Stop()
-	for {
-		row, err := iter.Next()
-		if err == iterator.Done {
-			break
-		} else if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+	params := &persist_lib.BobsGetBobsInput{}
+
+	var iterErr error
+	_ = iterErr
+	err = s.PERSIST.GetBobs(stream.Context(), params, func(row *spanner.Row) {
+		if iterErr != nil || row == nil {
+			return
 		}
-		// scan our values out of the row
+		var res Bob
 
-		err = row.ColumnByName("id", &Id)
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+		var Id int64
+		if err := row.ColumnByName("id", &Id); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
 		}
 
-		gcv1 := new(spanner.GenericColumnValue)
-		err = row.ColumnByName("start_time", gcv1)
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		err = StartTime.SpannerScan(gcv1)
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+		res.Id = Id
+		var StartTime *spanner.GenericColumnValue
+		if err := row.ColumnByName("start_time", StartTime); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
 		}
 
-		err = row.ColumnByName("name", &Name)
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+		{
+			local := &mytime.MyTime{}
+			if err := local.SpannerScan(StartTime); err != nil {
+				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				return
+			}
+			res.StartTime = local.ToProto()
 		}
 
-		res := pb.Bob{
-
-			Id:        Id,
-			Name:      Name,
-			StartTime: StartTime.ToProto(),
+		var Name string
+		if err := row.ColumnByName("name", &Name); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
 		}
 
-		stream.Send(&res)
+		res.Name = Name
+
+		if err := stream.Send(&res); err != nil {
+			iterErr = err
+			return
+		}
+	})
+	if err != nil {
+		return err
+	} else if iterErr != nil {
+		return iterErr
 	}
 	return nil
 }
 
 // spanner server streaming GetPeopleFromNames
-func (s *BobsImpl) GetPeopleFromNames(req *pb.Names, stream pb.Bobs_GetPeopleFromNamesServer) error {
-	var (
-		Id        int64
-		Name      string
-		StartTime mytime.MyTime
-	)
-
+func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNamesServer) error {
 	var err error
+	_ = err
 
-	params := make(map[string]interface{})
-	var conv interface{}
+	params := &persist_lib.BobsGetPeopleFromNamesInput{}
+	params.Names = req.Names
 
-	conv = req.Names
+	var iterErr error
+	_ = iterErr
+	err = s.PERSIST.GetPeopleFromNames(stream.Context(), params, func(row *spanner.Row) {
+		if iterErr != nil || row == nil {
+			return
+		}
+		var res Bob
 
+		var Id int64
+		if err := row.ColumnByName("id", &Id); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		}
+
+		res.Id = Id
+		var StartTime *spanner.GenericColumnValue
+		if err := row.ColumnByName("start_time", StartTime); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		}
+
+		{
+			local := &mytime.MyTime{}
+			if err := local.SpannerScan(StartTime); err != nil {
+				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				return
+			}
+			res.StartTime = local.ToProto()
+		}
+
+		var Name string
+		if err := row.ColumnByName("name", &Name); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		}
+
+		res.Name = Name
+
+		if err := stream.Send(&res); err != nil {
+			iterErr = err
+			return
+		}
+	})
 	if err != nil {
-		return grpc.Errorf(codes.Unknown, err.Error())
-	}
-	params["string0"] = conv
-	stmt := spanner.Statement{SQL: "SELECT * FROM bob_table WHERE name IN UNNEST( @string0)", Params: params}
-	tx := s.SpannerDB.Single()
-	defer tx.Close()
-	iter := tx.Query(context.Background(), stmt)
-	defer iter.Stop()
-	for {
-		row, err := iter.Next()
-		if err == iterator.Done {
-			break
-		} else if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		// scan our values out of the row
-
-		err = row.ColumnByName("id", &Id)
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-
-		gcv1 := new(spanner.GenericColumnValue)
-		err = row.ColumnByName("start_time", gcv1)
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		err = StartTime.SpannerScan(gcv1)
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-
-		err = row.ColumnByName("name", &Name)
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-
-		res := pb.Bob{
-
-			Id:        Id,
-			Name:      Name,
-			StartTime: StartTime.ToProto(),
-		}
-
-		stream.Send(&res)
+		return err
+	} else if iterErr != nil {
+		return iterErr
 	}
 	return nil
 }
