@@ -15,73 +15,52 @@ type MySpannerPersistHelper struct {
 }
 
 type MySpannerHandlers interface {
-	GetUniaryUpdateHandler() func(context.Context, *MySpannerUniaryUpdateInput, func(*spanner.Row)) error
-	GetUniaryDeleteRangeHandler() func(context.Context, *MySpannerUniaryDeleteRangeInput, func(*spanner.Row)) error
-	GetUniaryDeleteSingleHandler() func(context.Context, *MySpannerUniaryDeleteSingleInput, func(*spanner.Row)) error
+	GetUniaryInsertWithHooksHandler() func(context.Context, *MySpannerUniaryInsertWithHooksInput, func(*spanner.Row)) error
+	GetUniarySelectWithHooksHandler() func(context.Context, *MySpannerUniarySelectWithHooksInput, func(*spanner.Row)) error
 }
 
-func (p *MySpannerPersistHelper) UniaryUpdate(ctx context.Context, params *MySpannerUniaryUpdateInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryUpdateHandler()(ctx, params, fn)
+func (p *MySpannerPersistHelper) UniaryInsertWithHooks(ctx context.Context, params *MySpannerUniaryInsertWithHooksInput, fn func(row *spanner.Row)) error {
+	return p.Handlers.GetUniaryInsertWithHooksHandler()(ctx, params, fn)
 }
 
-func (p *MySpannerPersistHelper) UniaryDeleteRange(ctx context.Context, params *MySpannerUniaryDeleteRangeInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryDeleteRangeHandler()(ctx, params, fn)
-}
-
-func (p *MySpannerPersistHelper) UniaryDeleteSingle(ctx context.Context, params *MySpannerUniaryDeleteSingleInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryDeleteSingleHandler()(ctx, params, fn)
+func (p *MySpannerPersistHelper) UniarySelectWithHooks(ctx context.Context, params *MySpannerUniarySelectWithHooksInput, fn func(row *spanner.Row)) error {
+	return p.Handlers.GetUniarySelectWithHooksHandler()(ctx, params, fn)
 }
 
 // input type definitions
 
-type MySpannerUniaryUpdateInput struct {
+type MySpannerUniaryInsertWithHooksInput struct {
 	Id        int64
 	Name      string
 	StartTime interface{}
 }
 
-type MySpannerUniaryDeleteRangeInput struct {
-	EndId   int64
-	StartId int64
-}
-
-type MySpannerUniaryDeleteSingleInput struct {
+type MySpannerUniarySelectWithHooksInput struct {
 	Id int64
 }
 
-func ExampleTableForUniaryUpdate(req *MySpannerUniaryUpdateInput) *spanner.Mutation {
-	return spanner.UpdateMap("example_table", map[string]interface{}{
-		"start_time": req.StartTime,
-		"name":       "oranges",
+func ExampleTableForUniaryInsertWithHooks(req *MySpannerUniaryInsertWithHooksInput) *spanner.Mutation {
+	return spanner.InsertMap("example_table", map[string]interface{}{
 		"id":         req.Id,
+		"start_time": req.StartTime,
+		"name":       "bananas",
 	})
 }
 
-func ExampleTableRangeForUniaryDeleteRange(req *MySpannerUniaryDeleteRangeInput) *spanner.Mutation {
-	return spanner.Delete("example_table", spanner.KeyRange{
-		Start: spanner.Key{
-			req.StartId,
+func ExampleTableForUniarySelectWithHooks(req *MySpannerUniarySelectWithHooksInput) spanner.Statement {
+	return spanner.Statement{
+		SQL: "SELECT * from example_table Where id=@id",
+		Params: map[string]interface{}{
+			"@id": req.Id,
 		},
-		End: spanner.Key{
-			req.EndId,
-		},
-		Kind: spanner.ClosedOpen,
-	})
-}
-
-func ExampleTableForUniaryDeleteSingle(req *MySpannerUniaryDeleteSingleInput) *spanner.Mutation {
-	return spanner.Delete("example_table", spanner.Key{
-		"abc",
-		123,
-		req.Id,
-	})
+	}
 }
 
 // Default method implementations
 
-func DefaultUniaryUpdateHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryUpdateInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryUpdateInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryUpdate(req)}); err != nil {
+func DefaultUniaryInsertWithHooksHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryInsertWithHooksInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *MySpannerUniaryInsertWithHooksInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryInsertWithHooks(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
@@ -90,23 +69,15 @@ func DefaultUniaryUpdateHandler(cli *spanner.Client) func(context.Context, *MySp
 	}
 }
 
-func DefaultUniaryDeleteRangeHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryDeleteRangeInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryDeleteRangeInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableRangeForUniaryDeleteRange(req)}); err != nil {
+func DefaultUniarySelectWithHooksHandler(cli *spanner.Client) func(context.Context, *MySpannerUniarySelectWithHooksInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *MySpannerUniarySelectWithHooksInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, ExampleTableForUniarySelectWithHooks(req))
+		if err := iter.Do(func(r *spanner.Row) error {
+			next(r)
+			return nil
+		}); err != nil {
 			return err
 		}
-		next(nil) // this is an apply, it has no result
-
-		return nil
-	}
-}
-
-func DefaultUniaryDeleteSingleHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryDeleteSingleInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryDeleteSingleInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryDeleteSingle(req)}); err != nil {
-			return err
-		}
-		next(nil) // this is an apply, it has no result
 
 		return nil
 	}

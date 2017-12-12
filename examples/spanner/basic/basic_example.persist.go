@@ -7,8 +7,10 @@ import (
 	"cloud.google.com/go/spanner"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic/persist_lib"
+	hooks "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
 	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	gstatus "google.golang.org/grpc/status"
 )
@@ -24,61 +26,29 @@ import (
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
+func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	_ = err
 
-	params := &persist_lib.MySpannerUniaryUpdateInput{}
+	beforeRes, err := hooks.UniaryInsertBeforeHook(req)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	if beforeRes != nil {
+
+		return beforeRes, nil
+	}
+
+	params := &persist_lib.MySpannerUniaryInsertWithHooksInput{}
 	params.Id = req.Id
 	params.Name = req.Name
 	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "could not convert type: %v", err)
 	}
 
-	var res = new(test.PartialTable)
+	var res = test.ExampleTable{}
 	var iterErr error
-	err = s.PERSIST.UniaryUpdate(ctx, params, func(row *spanner.Row) {
-		if row == nil { // there was no return data
-			return
-		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
-			}
-			res.StartTime = local.ToProto()
-		}
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
-	var err error
-	_ = err
-
-	params := &persist_lib.MySpannerUniaryDeleteRangeInput{}
-	params.EndId = req.EndId
-	params.StartId = req.StartId
-
-	var res = new(test.ExampleTable)
-	var iterErr error
-	err = s.PERSIST.UniaryDeleteRange(ctx, params, func(row *spanner.Row) {
+	err = s.PERSIST.UniaryInsertWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
@@ -112,19 +82,33 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 		return nil, err
 	}
 
-	return res, nil
+	err = hooks.UniaryInsertAfterHook(req, &res)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+
+	return &res, nil
 }
 
-func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	_ = err
 
-	params := &persist_lib.MySpannerUniaryDeleteSingleInput{}
+	beforeRes, err := hooks.UniaryInsertBeforeHook(req)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+	if beforeRes != nil {
+
+		return beforeRes, nil
+	}
+
+	params := &persist_lib.MySpannerUniarySelectWithHooksInput{}
 	params.Id = req.Id
 
-	var res = new(test.ExampleTable)
+	var res = test.ExampleTable{}
 	var iterErr error
-	err = s.PERSIST.UniaryDeleteSingle(ctx, params, func(row *spanner.Row) {
+	err = s.PERSIST.UniarySelectWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
@@ -158,5 +142,10 @@ func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.Exampl
 		return nil, err
 	}
 
-	return res, nil
+	err = hooks.UniaryInsertAfterHook(req, &res)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unknown, err.Error())
+	}
+
+	return &res, nil
 }

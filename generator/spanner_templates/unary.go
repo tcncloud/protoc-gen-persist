@@ -107,7 +107,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		{{end -}}
 	{{end}}
 
-	var res = new({{.GetOutputType}})
+	var res = {{.GetOutputType}}{}
 	var iterErr error
 	err = s.PERSIST.{{.GetName}}(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
@@ -144,7 +144,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 	}
 	{{template "after_hook" . }}
 
-	return res, nil
+	return &res, nil
 }
 {{end}}`
 
@@ -180,7 +180,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetFilePackage}}{{.GetS
 	if err != nil {
 		return err
 	}
-	res := &{{.GetOutputType}}{}
+	res := {{.GetOutputType}}{}
 	if row != nil {
 		{{range $index, $field := .GetTypeDescArrayForStruct .GetOutputTypeStruct -}}
 			{{if $field.IsMapped -}}
@@ -210,7 +210,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetFilePackage}}{{.GetS
 
 	{{template "after_hook" .}}
 
-	if err := stream.SendAndClose(res); err != nil {
+	if err := stream.SendAndClose(&res); err != nil {
 		return err
 	}
 	return nil
@@ -241,7 +241,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 		if iterErr != nil || row == nil{
 			return
 		}
-		var res *{{.GetOutputType}}
+		var res {{.GetOutputType}}
 		{{range $index, $field := .GetTypeDescArrayForStruct .GetOutputTypeStruct -}}
 			{{if $field.IsMapped -}}
 				var {{$field.Name}} *spanner.GenericColumnValue
@@ -270,7 +270,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 
 		{{template "after_hook" .}}
 
-		if err := stream.Send(res); err != nil {
+		if err := stream.Send(&res); err != nil {
 			iterErr = err
 			return
 		}
