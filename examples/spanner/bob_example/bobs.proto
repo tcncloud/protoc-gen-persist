@@ -69,14 +69,14 @@ service Bobs {
   // Delete all bob events before the time in the end key
   rpc DeleteBobs(Bob) returns (Empty) {
     option (persist.ql) = {
-      query: ["DELETE FROM bob_table START('Bob') END('Bob', ?) KIND(CO)"]
-      arguments: ["start_time"]
+      query: ["DELETE FROM bob_table START('Bob') END('Bob', @start_time) KIND(CO)"]
+      arguments: []
     };
   };
   rpc PutBobs(stream Bob) returns (NumRows) {
     option (persist.ql) = {
-      query: ["INSERT INTO bob_table (id, name, start_time) VALUES (?, ?, ?)"]
-      arguments: ["id", "name", "start_time"]
+      query: ["INSERT INTO bob_table (id, name, start_time) VALUES (@id, @name, @start_time)"]
+      arguments: []
     };
   };
   rpc GetBobs(Empty) returns (stream Bob) {
@@ -86,9 +86,8 @@ service Bobs {
   };
   rpc GetPeopleFromNames(Names) returns(stream Bob) {
     option (persist.ql) = {
-      query: ["SELECT * FROM bob_table WHERE name IN UNNEST(?)"]
-      arguments: ["names"]
+      query: ["SELECT * FROM bob_table WHERE name IN UNNEST(@names)"]
+      arguments: []
     };
   };
 }
-

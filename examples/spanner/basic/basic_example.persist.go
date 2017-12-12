@@ -41,6 +41,7 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 
 	var res = test.ExampleTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.UniaryInsert(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -88,6 +89,7 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 
 	var res = test.ExampleTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.UniarySelect(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -138,6 +140,7 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 
 	var res = test.PartialTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.UniaryUpdate(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -179,6 +182,7 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 
 	var res = test.ExampleTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.UniaryDeleteRange(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -225,6 +229,7 @@ func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.Exampl
 
 	var res = test.ExampleTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.UniaryDeleteSingle(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -270,6 +275,7 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 
 	var res = test.ExampleTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.NoArgs(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -315,6 +321,7 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 	params := &persist_lib.MySpannerServerStreamInput{}
 
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.ServerStream(stream.Context(), params, func(row *spanner.Row) {
 		if iterErr != nil || row == nil {
 			return
@@ -508,6 +515,7 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 
 	var res = test.ExampleTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.UniaryInsertWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -568,6 +576,7 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 
 	var res = test.ExampleTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.UniarySelectWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -632,6 +641,7 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 
 	var res = test.PartialTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.UniaryUpdateWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -687,6 +697,7 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 
 	var res = test.ExampleTable{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.UniaryDeleteWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -752,6 +763,7 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 	params := &persist_lib.MySpannerServerStreamWithHooksInput{}
 
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.ServerStreamWithHooks(stream.Context(), params, func(row *spanner.Row) {
 		if iterErr != nil || row == nil {
 			return

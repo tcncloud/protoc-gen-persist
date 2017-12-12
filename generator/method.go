@@ -173,8 +173,8 @@ func (m *Method) GetGoTypeName(typ string) string {
 	if imp := m.Service.File.ImportList.GetGoNameByStruct(str); imp != nil {
 		return imp.GoPackageName + "." + str.GetGoName()
 	} else {
-		logrus.WithField("struct", str).Fatal("Can't find struct in import list")
-		return "__unknown__import__path__"
+		// logrus.WithField("struct", str).Warnf("Can't find struct in import list: type: %s", typ)
+		return str.GetGoName()
 	}
 	// } else {
 	// 	return str.GetGoName()

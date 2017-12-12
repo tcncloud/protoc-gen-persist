@@ -109,6 +109,7 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 
 	var res = {{.GetOutputType}}{}
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.{{.GetName}}(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
@@ -237,6 +238,7 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	{{end}}
 
 	var iterErr error
+	_ = iterErr
 	err = s.PERSIST.{{.GetName}}(stream.Context(), params, func(row *spanner.Row) {
 		if iterErr != nil || row == nil{
 			return
