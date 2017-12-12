@@ -53,37 +53,35 @@ import (
 	"golang.org/x/net/context"
 )
 
+
 {{range $i, $s := .ServiceList -}}
 type {{$s.GetName}}PersistHelper struct {
+	Handlers {{$s.GetName}}Handlers
+}
+
+type {{$s.GetName}}Handlers interface {
 {{range $method := $s.Methods}}{{if $method.IsSpanner -}}
-	{{if $method.IsUnary -}}
-	{{$method.GetName}}Handler func(context.Context, *{{template "persist_lib_input_name" $method}}, func(*spanner.Row)){{end}}
 	{{- if $method.IsClientStreaming -}}
-	{{$method.GetName}}Handler func(context.Context)(func(*{{template "persist_lib_input_name" $method}})error, func() *spanner.Row){{end}}
-	{{- if $method.IsServerStreaming -}}
-	{{$method.GetName}}Handler func(context.Context, *{{template "persist_lib_input_name" $method}}, func(*spanner.Row)){{end}}
+	Get{{$method.GetName}}Handler() func(context.Context)(func(*{{template "persist_lib_input_name" $method}}), func() (*spanner.Row, error))
+	{{- else -}}
+	Get{{$method.GetName}}Handler() func(context.Context, *{{template "persist_lib_input_name" $method}}, func(*spanner.Row)) error{{end}}
 {{end}}{{end -}}
 }
 {{end}}
 
 {{range $srv := .ServiceList}}{{range $method := $srv.Methods}}{{if $method.IsSpanner}}
-{{if $method.IsUnary -}}
-func(p *{{$srv.GetName}}PersistHelper) {{$method.GetName}}(ctx context.Context, params *{{template "persist_lib_input_name" $method}}, fn func(row *spanner.Row)) {
-	p.{{$method.GetName}}Handler(ctx, params, fn)
-}
-{{end -}}
-{{if $method.IsServerStreaming -}}
-func(p *{{$srv.GetName}}PersistHelper) {{$method.GetName}}(ctx context.Context, params *{{template "persist_lib_input_name" $method}}, fn func(row *spanner.Row)) {
-	p.{{$method.GetName}}Handler(ctx, params, fn)
-}
-{{end -}}
+
 {{if $method.IsClientStreaming -}}
 // given a context, returns two functions.  (feed, stop)
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming it expects some sort of results to be returned
 // that can be marshalled into a response
-func(p *{{$srv.GetName}}PersistHelper) {{$method.GetName}}(ctx context.Context)(func(*{{template "persist_lib_input_name" $method}}) error, func() *spanner.Row) {
-	return p.{{$method.GetName}}Handler(ctx)
+func(p *{{$srv.GetName}}PersistHelper) {{$method.GetName}}(ctx context.Context)(func(*{{template "persist_lib_input_name" $method}}), func() (*spanner.Row, error)) {
+	return p.Handlers.Get{{$method.GetName}}Handler()(ctx)
+}
+{{else -}}
+func(p *{{$srv.GetName}}PersistHelper) {{$method.GetName}}(ctx context.Context, params *{{template "persist_lib_input_name" $method}}, fn func(row *spanner.Row)) error {
+	return p.Handlers.Get{{$method.GetName}}Handler()(ctx, params, fn)
 }
 {{end -}}
 {{end}}{{end}}{{end}}
@@ -96,13 +94,21 @@ func(p *{{$srv.GetName}}PersistHelper) {{$method.GetName}}(ctx context.Context)(
 
 {{range $srv := .ServiceList}}{{range $method := $srv.Methods}}{{if $method.IsSpanner}}
 {{if $method.IsSelect -}}
-func {{$method.GetInputTypeName}}For{{$method.Desc.GetName}}(req *{{template "persist_lib_input_name" $method}}) *spanner.Statement {
-	return &{{$method.Query.String}}
+func {{template "persist_lib_method_input_name" $method}}(req *{{template "persist_lib_input_name" $method}}) spanner.Statement {
+	return {{$method.Query.String}}
 }
 {{else -}}
-func {{$method.GetInputTypeName}}For{{$method.Desc.GetName}}(req *{{template "persist_lib_input_name" $method}}) *spanner.Mutation{
+func {{template "persist_lib_method_input_name" $method}}(req *{{template "persist_lib_input_name" $method}}) *spanner.Mutation{
 	return {{$method.Query.String}}
 }
 {{end -}}
 {{end}}{{end}}{{end}}
+
+// Default method implementations
+
+{{range $srv := .ServiceList}}{{range $method := $srv.Methods}}{{if $method.IsSpanner -}}
+{{template "persist_lib_default_handler" $method}}
+{{end}}{{end}}{{end}}
 `
+
+// NO end to this template

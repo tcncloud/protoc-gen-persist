@@ -129,9 +129,7 @@ type DeleteQuery struct {
 	start        []*Token
 	end          []*Token
 	kind         *Token
-	cols         []*Token
 	values       []*Token
-	pk           map[Token]*Token
 	table        *Token
 	usesKeyRange bool
 	params       map[string]string
@@ -167,7 +165,7 @@ func (q *DeleteQuery) StringKR() string {
 	return keyRange
 }
 func (q *DeleteQuery) StringSingle() string {
-	key := "spanner.Key{\n"
+	key := "spanner.Key{"
 	q.addToSyntaxStr(&key, q.values)
 	key += "\n}"
 	return key
@@ -199,18 +197,24 @@ func (q *DeleteQuery) Fields() (out []string) {
 	if q.usesKeyRange {
 		m := make(map[string]struct{})
 		for _, tkn := range q.start {
-			m[tkn.raw] = struct{}{}
+			if tkn.tk == IDENT_FIELD {
+				m[tkn.raw] = struct{}{}
+			}
 		}
 		for _, tkn := range q.end {
-			m[tkn.raw] = struct{}{}
+			if tkn.tk == IDENT_FIELD {
+				m[tkn.raw] = struct{}{}
+			}
 		}
 		for k := range m {
 			out = append(out, k)
 		}
 		return
 	}
-	for _, tkn := range q.cols {
-		out = append(out, tkn.raw)
+	for _, tkn := range q.values {
+		if tkn.tk == IDENT_FIELD {
+			out = append(out, tkn.raw)
+		}
 	}
 	return
 }
@@ -283,12 +287,18 @@ func (q *UpdateQuery) Type() QueryType {
 func (q *UpdateQuery) Table() string {
 	return q.tableName.raw
 }
-func (q *UpdateQuery) Fields() []string {
-	cs := make([]string, len(q.cols))
-	for i, tkn := range q.cols {
-		cs[i] = tkn.raw
+func (q *UpdateQuery) Fields() (out []string) {
+	names := make(map[string]struct{})
+	for _, tkn := range q.cols {
+		names[tkn.raw] = struct{}{}
 	}
-	return cs
+	for _, tkn := range q.pk {
+		names[tkn.raw] = struct{}{}
+	}
+	for name := range names {
+		out = append(out, name)
+	}
+	return
 }
 func (q *UpdateQuery) Args() []*Token {
 	var fields []*Token

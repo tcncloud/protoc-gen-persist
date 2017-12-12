@@ -36,9 +36,56 @@ type {{template "persist_lib_input_name" $method}} struct{
 {{end}}
 }
 {{end}}
+
 {{define "persist_lib_input_name"}}{{$method := . -}}
 {{$method.Service.GetName}}{{$method.GetName}}Input
 {{- end}}
+
+{{define "persist_lib_method_input_name"}}{{$method := . -}}
+{{$method.GetInputTypeName}}For{{$method.Desc.GetName}}
+{{- end}}
+
+{{define "persist_lib_default_handler"}}{{$method := . -}}
+	{{if $method.IsClientStreaming -}}
+		func Default{{$method.GetName}}Handler(cli *spanner.Client) func(context.Context) (func(*{{template "persist_lib_input_name" $method}}), func() (*spanner.Row, error)) {
+			return func(ctx context.Context) (feed func(*{{template "persist_lib_input_name" $method}}), done func() (*spanner.Row, error)) {
+				var muts []*spanner.Mutation
+				feed = func(req *{{template "persist_lib_input_name" $method}}) {
+					muts = append(muts, {{template "persist_lib_method_input_name" $method}}(req))
+				}
+				done = func() (*spanner.Row, error) {
+					if _, err := cli.Apply(ctx, muts); err != nil {
+						return nil, err
+					}
+					return nil, nil // we dont have a row, because we are an apply
+				}
+				return feed, done
+			}
+		}
+	{{else}}
+		func Default{{$method.GetName}}Handler(cli *spanner.Client) func(context.Context, *{{template "persist_lib_input_name" $method}}, func(*spanner.Row)) error {
+			return func(ctx context.Context, req *{{template "persist_lib_input_name" $method}}, next func(*spanner.Row)) error {
+				{{- if $method.IsSelect}}
+				iter := cli.Single().Query(ctx, {{template "persist_lib_method_input_name" $method}}(req))
+				if err := iter.Do(func(r *spanner.Row) error {
+					next(r)
+					return nil
+				}); err != nil {
+					return err
+				}
+				{{- else}}
+				if _, err := cli.Apply(ctx, []*spanner.Mutation{ {{template "persist_lib_method_input_name" $method}}(req)}); err != nil {
+					return err
+				}
+				next(nil) // this is an apply, it has no result
+
+				{{- end}}
+
+				return nil
+			}
+		}
+	{{end}}
+{{end}}
 `
 
 const SpannerUnaryTemplate = `{{define "spanner_unary_method" -}}
@@ -60,10 +107,12 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 		{{end -}}
 	{{end}}
 
-	var res *{{.GetOutputType}}
+	var res = new({{.GetOutputType}})
 	var iterErr error
-	s.PERSIST.{{.GetName}}(ctx, params, func(row *spanner.Row) {
-		var ok bool
+	err = s.PERSIST.{{.GetName}}(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
+		}
 		{{range $index, $field := .GetTypeDescArrayForStruct .GetOutputTypeStruct -}}
 			{{if $field.IsMapped -}}
 				var {{$field.Name}} *spanner.GenericColumnValue
@@ -90,6 +139,9 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 			{{end -}}
 		{{end -}}
 	})
+	if err != nil {
+		return nil, err
+	}
 	{{template "after_hook" . }}
 
 	return res, nil
@@ -121,39 +173,40 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetFilePackage}}{{.GetS
 			{{end -}}
 		{{end}}
 
-		if err := feed(params); err != nil {
-			return err
-		}
+		feed(params)
 	}
 
-	row := stop()
-	res := {{.GetOutputType}}{}
-
-	var ok bool
-	{{range $index, $field := .GetTypeDescArrayForStruct .GetOutputTypeStruct -}}
-		{{if $field.IsMapped -}}
-			var {{$field.Name}} *spanner.GenericColumnValue
-			if err := row.ColumnByName("{{$field.ProtoName}}", {{$field.Name}}); err != nil {
-				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-			}
-		{{else}}
-			var {{$field.Name}} {{$method.DefaultMapping $field.FieldDescriptor}}
-			if err := row.ColumnByName("{{$field.ProtoName}}", &{{$field.Name}}); err != nil {
-				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-			}
-		{{end}}
-		{{if $field.IsMapped -}}
-			{
-				local := &{{$field.GoName}}{}
-				if err := local.SpannerScan({{$field.Name}}); err != nil {
-					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+	row, err := stop()
+	if err != nil {
+		return err
+	}
+	res := &{{.GetOutputType}}{}
+	if row != nil {
+		{{range $index, $field := .GetTypeDescArrayForStruct .GetOutputTypeStruct -}}
+			{{if $field.IsMapped -}}
+				var {{$field.Name}} *spanner.GenericColumnValue
+				if err := row.ColumnByName("{{$field.ProtoName}}", {{$field.Name}}); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
 				}
-				res.{{$field.Name}} = local.ToProto()
-			}
-		{{else}}
-			res.{{$field.Name}} = {{$field.Name}}
+			{{else}}
+				var {{$field.Name}} {{$method.DefaultMapping $field.FieldDescriptor}}
+				if err := row.ColumnByName("{{$field.ProtoName}}", &{{$field.Name}}); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+				}
+			{{end}}
+			{{if $field.IsMapped -}}
+				{
+					local := &{{$field.GoName}}{}
+					if err := local.SpannerScan({{$field.Name}}); err != nil {
+						return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+					}
+					res.{{$field.Name}} = local.ToProto()
+				}
+			{{else}}
+				res.{{$field.Name}} = {{$field.Name}}
+			{{end}}
 		{{end}}
-	{{end}}
+	}
 
 	{{template "after_hook" .}}
 
@@ -184,12 +237,11 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	{{end}}
 
 	var iterErr error
-	s.PERSIST.{{.GetName}}(stream.Context(), params, func(row *spanner.Row) {
-		if iterErr != nil {
+	err = s.PERSIST.{{.GetName}}(stream.Context(), params, func(row *spanner.Row) {
+		if iterErr != nil || row == nil{
 			return
 		}
 		var res *{{.GetOutputType}}
-		var ok bool
 		{{range $index, $field := .GetTypeDescArrayForStruct .GetOutputTypeStruct -}}
 			{{if $field.IsMapped -}}
 				var {{$field.Name}} *spanner.GenericColumnValue
@@ -223,157 +275,13 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 			return
 		}
 	})
+	if err != nil {
+		return err
+	} else if iterErr != nil {
+		return iterErr
+	}
+
 	return nil
 }
 {{end}}
 `
-
-// an example of a unary template
-// import (
-// 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
-// 	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic"
-// 	hooks "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
-// 	test "github.com/tcncloud/protoc-gen-persist/examples/test"
-// 	context "golang.org/x/net/context"
-// 	iterator "google.golang.org/api/iterator"
-// 	grpc "google.golang.org/grpc"
-// 	codes "google.golang.org/grpc/codes"
-// 	gstatus "google.golang.org/grpc/gstatus"
-// )
-
-// func (s *MySpannerImpl) ClientStream(stream pb.MySpanner_ClientStreamInsertServer) error {
-// 	var err error
-
-// 	feed, stop := mtime.ClientStream(stream.context())
-
-// 	for {
-// 		req, err := stream.Recv()
-// 		if err == io.EOF {
-// 			break
-// 		} else if err != nil {
-// 			return grpc.Errorf(codes.Unknown, err.Error())
-// 		}
-// 		res, err := mytime.BeforeHook(req)
-// 		if err != nil {
-// 			return err
-// 		} else if res != nil {
-// 			// skip
-// 			continue
-// 		}
-// 		params := map[string]interface{}{
-// 			"@col1": req.Field1,
-// 			"@col2": mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue(),
-// 		}
-// 		if err := feed(params); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	row := stop()
-// 	var field1 string
-// 	var start_time *spanner.GenericColumnValue
-// 	var ok bool
-// 	field1, ok = row["field1"].(string)
-// 	if !ok {
-// 		return nil, gstatus.Errorf("could not convert %+v, to type %T", row["field1"], field1)
-// 	}
-// 	start_time, ok = row["start_time"].(*spanner.GenericColumnValue)
-// 	if !ok {
-// 		return nil, gstatus.Errorf("could not convert %+v, to type %T needed for response field: %s",
-// 			row["start_time"], start_time, "StartTime")
-// 	}
-
-// 	StartTime = (mytime.MyTime{}).SpannerScan(start_time)
-
-// 	if err := mytime.AfterHook(req, res); err != nil {
-// 		return gstatus.Errorf(codes.Unknown, err.Error())
-// 	}
-
-// 	return &test.ExampleTable{
-// 		Field1:    field1,
-// 		StartTime: StartTime.ToProto(),
-// 	}, nil
-// }
-// func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
-// 	params := map[string]interface{}{
-// 		"@col1": req.Field1,
-// 		"@col2": mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue(),
-// 	}
-// 	var res *test.ExampleTable
-
-// 	row, err := mytime.UniaryInsert(ctx, params, func(r *spanner.Row) {
-// 		var field1 string
-// 		var start_time *spanner.GenericColumnValue
-// 		var ok bool
-// 		field1, ok = row["field1"].(string)
-// 		if !ok {
-// 			return nil, gstatus.Errorf("could not convert %+v, to type %T", row["field1"], field1)
-// 		}
-// 		start_time, ok = row["start_time"].(*spanner.GenericColumnValue)
-// 		if !ok {
-// 			return nil, gstatus.Errorf("could not convert %+v, to type %T needed for response field: %s",
-// 				row["start_time"], start_time, "StartTime")
-// 		}
-
-// 		StartTime = (mytime.MyTime{}).SpannerScan(start_time)
-
-// 	})
-// 	if err != nil {
-// 		return gstatus.Errorf(codes.Unknown, err.Error())
-// 	}
-
-// 	return &test.ExampleTable{
-// 		Field1:    field1,
-// 		StartTime: StartTime.ToProto(),
-// 	}, nil
-// }
-
-// // package pb/persist_lib
-// func UniaryInsertMut(reqs map[string]interface{}) *spanner.Mutation {
-// 	// from the query
-// 	return spanner.InsertMap("table", map[string]interface{}{
-// 		"field1":     req["@col1"],
-// 		"start_time": req["@col2"],
-// 		"field3":     3.3,
-// 	})
-// }
-
-// // func(s *{{.ServiceName}}Impl) {{.MethodName}}(ctx context.Context, req *{{.RequestPackage}}.{{.RequestName}})
-// // (*{{.ResponsePackage}}.{{ResponseName}}, error) {
-// func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
-// 	//params := map[string]interface{}{
-// 	params := map[string]interface{}{
-// 		//"{{.ArgKey}}": req.{{.FieldName}}
-// 		"@col1": req.Field1,
-// 		//"{{.ArgKey}}
-// 		"@col2": mytime.MyTime{}.ToSpanner(req.StartTime).SpannerValue(),
-// 	}
-// 	// var res *{{.ResponsePackage}}.{{.ResponseName}}
-// 	var res *test.ExampleTable
-
-// 	//row, err := persist_lib.{{MethodName}}(ctx, parms, func(r *spanner.Row) {
-// 	row, err := mytime.UniaryInsert(ctx, params, func(r *spanner.Row) {
-// 		var field1 string
-// 		var start_time *spanner.GenericColumnValue
-// 		var ok bool
-// 		field1, ok = row["field1"].(string)
-// 		if !ok {
-// 			return nil, gstatus.Errorf("could not convert %+v, to type %T", row["field1"], field1)
-// 		}
-// 		start_time, ok = row["start_time"].(*spanner.GenericColumnValue)
-// 		if !ok {
-// 			return nil, gstatus.Errorf("could not convert %+v, to type %T needed for response field: %s",
-// 				row["start_time"], start_time, "StartTime")
-// 		}
-
-// 		StartTime = (mytime.MyTime{}).SpannerScan(start_time)
-
-// 	})
-// 	if err != nil {
-// 		return gstatus.Errorf(codes.Unknown, err.Error())
-// 	}
-
-// 	return &test.ExampleTable{
-// 		Field1:    field1,
-// 		StartTime: StartTime.ToProto(),
-// 	}, nil
-// }

@@ -11,135 +11,103 @@ import (
 )
 
 type MySpannerPersistHelper struct {
-UniaryInsertHandler func(context.Context, *MySpannerUniaryInsertInput, func(*spanner.Row))
-UniarySelectHandler func(context.Context, *MySpannerUniarySelectInput, func(*spanner.Row))
-UniaryDeleteHandler func(context.Context, *MySpannerUniaryDeleteInput, func(*spanner.Row))
-NoArgsHandler func(context.Context, *MySpannerNoArgsInput, func(*spanner.Row))
-ServerStreamHandler func(context.Context, *MySpannerServerStreamInput, func(*spanner.Row))
-ClientStreamInsertHandler func(context.Context)(func(*MySpannerClientStreamInsertInput)error, func() *spanner.Row)
+	Handlers MySpannerHandlers
 }
 
-
-
-func(p *MySpannerPersistHelper) UniaryInsert(ctx context.Context, params *MySpannerUniaryInsertInput, fn func(row *spanner.Row)) {
-	p.UniaryInsertHandler(ctx, params, fn)
+type MySpannerHandlers interface {
+	GetUniaryUpdateHandler() func(context.Context, *MySpannerUniaryUpdateInput, func(*spanner.Row)) error
+	GetUniaryDeleteRangeHandler() func(context.Context, *MySpannerUniaryDeleteRangeInput, func(*spanner.Row)) error
+	GetUniaryDeleteSingleHandler() func(context.Context, *MySpannerUniaryDeleteSingleInput, func(*spanner.Row)) error
 }
 
-func(p *MySpannerPersistHelper) UniarySelect(ctx context.Context, params *MySpannerUniarySelectInput, fn func(row *spanner.Row)) {
-	p.UniarySelectHandler(ctx, params, fn)
+func (p *MySpannerPersistHelper) UniaryUpdate(ctx context.Context, params *MySpannerUniaryUpdateInput, fn func(row *spanner.Row)) error {
+	return p.Handlers.GetUniaryUpdateHandler()(ctx, params, fn)
 }
 
-func(p *MySpannerPersistHelper) UniaryDelete(ctx context.Context, params *MySpannerUniaryDeleteInput, fn func(row *spanner.Row)) {
-	p.UniaryDeleteHandler(ctx, params, fn)
+func (p *MySpannerPersistHelper) UniaryDeleteRange(ctx context.Context, params *MySpannerUniaryDeleteRangeInput, fn func(row *spanner.Row)) error {
+	return p.Handlers.GetUniaryDeleteRangeHandler()(ctx, params, fn)
 }
 
-func(p *MySpannerPersistHelper) NoArgs(ctx context.Context, params *MySpannerNoArgsInput, fn func(row *spanner.Row)) {
-	p.NoArgsHandler(ctx, params, fn)
+func (p *MySpannerPersistHelper) UniaryDeleteSingle(ctx context.Context, params *MySpannerUniaryDeleteSingleInput, fn func(row *spanner.Row)) error {
+	return p.Handlers.GetUniaryDeleteSingleHandler()(ctx, params, fn)
 }
-
-func(p *MySpannerPersistHelper) ServerStream(ctx context.Context, params *MySpannerServerStreamInput, fn func(row *spanner.Row)) {
-	p.ServerStreamHandler(ctx, params, fn)
-}
-
-// given a context, returns two functions.  (feed, stop)
-// feed will be called once for every row recieved by the handler
-// stop will be called when the client is done streaming it expects some sort of results to be returned
-// that can be marshalled into a response
-func(p *MySpannerPersistHelper) ClientStreamInsert(ctx context.Context)(func(*MySpannerClientStreamInsertInput) error, func() *spanner.Row) {
-	return p.ClientStreamInsertHandler(ctx)
-}
-
 
 // input type definitions
 
-type MySpannerUniaryInsertInput struct{
-Id  int64
-Name  string
-StartTime interface{} 
-
+type MySpannerUniaryUpdateInput struct {
+	Id        int64
+	Name      string
+	StartTime interface{}
 }
 
-type MySpannerUniarySelectInput struct{
-Id  int64
-Name  string
-
+type MySpannerUniaryDeleteRangeInput struct {
+	EndId   int64
+	StartId int64
 }
 
-type MySpannerUniaryDeleteInput struct{
-EndId  int64
-StartId  int64
-
+type MySpannerUniaryDeleteSingleInput struct {
+	Id int64
 }
 
-type MySpannerNoArgsInput struct{
-
+func ExampleTableForUniaryUpdate(req *MySpannerUniaryUpdateInput) *spanner.Mutation {
+	return spanner.UpdateMap("example_table", map[string]interface{}{
+		"start_time": req.StartTime,
+		"name":       "oranges",
+		"id":         req.Id,
+	})
 }
 
-type MySpannerServerStreamInput struct{
-
-}
-
-type MySpannerClientStreamInsertInput struct{
-Id  int64
-Name  string
-StartTime interface{} 
-
-}
-
-
-
-
-func ExampleTableForUniaryInsert(req *MySpannerUniaryInsertInput) *spanner.Mutation{
-	return spanner.InsertMap("example_table", map[string]interface{}{
-	"id": req.Id,
-	"start_time": req.StartTime,
-	"name": "bananas",
-})
-}
-
-func ExampleTableForUniarySelect(req *MySpannerUniarySelectInput) *spanner.Statement {
-	return &spanner.Statement{
-	SQL: "SELECT * from example_table Where id=@id AND name=@name",
-	Params: map[string]interface{}{
-	"@id": req.Id,
-	"@name": req.Name,
-},
-}
-}
-
-func ExampleTableRangeForUniaryDelete(req *MySpannerUniaryDeleteInput) *spanner.Mutation{
+func ExampleTableRangeForUniaryDeleteRange(req *MySpannerUniaryDeleteRangeInput) *spanner.Mutation {
 	return spanner.Delete("example_table", spanner.KeyRange{
-	Start: spanner.Key{
-	req.StartId,
-},
-End: spanner.Key{
-	req.EndId,
-},
-Kind: spanner.ClosedOpen,
-})
+		Start: spanner.Key{
+			req.StartId,
+		},
+		End: spanner.Key{
+			req.EndId,
+		},
+		Kind: spanner.ClosedOpen,
+	})
 }
 
-func ExampleTableForNoArgs(req *MySpannerNoArgsInput) *spanner.Statement {
-	return &spanner.Statement{
-	SQL: "select * from example_table limit 1",
-	Params: map[string]interface{}{
-},
-}
-}
-
-func NameForServerStream(req *MySpannerServerStreamInput) *spanner.Statement {
-	return &spanner.Statement{
-	SQL: "SELECT * FROM example_table",
-	Params: map[string]interface{}{
-},
-}
+func ExampleTableForUniaryDeleteSingle(req *MySpannerUniaryDeleteSingleInput) *spanner.Mutation {
+	return spanner.Delete("example_table", spanner.Key{
+		"abc",
+		123,
+		req.Id,
+	})
 }
 
-func ExampleTableForClientStreamInsert(req *MySpannerClientStreamInsertInput) *spanner.Mutation{
-	return spanner.InsertMap("example_table", map[string]interface{}{
-	"id": req.Id,
-	"start_time": req.StartTime,
-	"name": 3,
-})
+// Default method implementations
+
+func DefaultUniaryUpdateHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryUpdateInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *MySpannerUniaryUpdateInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryUpdate(req)}); err != nil {
+			return err
+		}
+		next(nil) // this is an apply, it has no result
+
+		return nil
+	}
 }
 
+func DefaultUniaryDeleteRangeHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryDeleteRangeInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *MySpannerUniaryDeleteRangeInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableRangeForUniaryDeleteRange(req)}); err != nil {
+			return err
+		}
+		next(nil) // this is an apply, it has no result
+
+		return nil
+	}
+}
+
+func DefaultUniaryDeleteSingleHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryDeleteSingleInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *MySpannerUniaryDeleteSingleInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryDeleteSingle(req)}); err != nil {
+			return err
+		}
+		next(nil) // this is an apply, it has no result
+
+		return nil
+	}
+}

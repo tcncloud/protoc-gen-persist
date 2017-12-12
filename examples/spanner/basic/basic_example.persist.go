@@ -4,8 +4,6 @@
 package basic
 
 import (
-	io "io"
-
 	"cloud.google.com/go/spanner"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic/persist_lib"
@@ -26,21 +24,23 @@ import (
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	var err error
 	_ = err
 
-	params := &persist_lib.MySpannerUniaryInsertInput{}
+	params := &persist_lib.MySpannerUniaryUpdateInput{}
 	params.Id = req.Id
 	params.Name = req.Name
 	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "could not convert type: %v", err)
 	}
 
-	var res *test.ExampleTable
+	var res = new(test.PartialTable)
 	var iterErr error
-	s.PERSIST.UniaryInsert(ctx, params, func(row *spanner.Row) {
-		var ok bool
+	err = s.PERSIST.UniaryUpdate(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
+		}
 		var Id int64
 		if err := row.ColumnByName("id", &Id); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
@@ -60,71 +60,28 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 			}
 			res.StartTime = local.ToProto()
 		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		res.Name = Name
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return res, nil
 }
 
-func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
 	var err error
 	_ = err
 
-	params := &persist_lib.MySpannerUniarySelectInput{}
-	params.Id = req.Id
-	params.Name = req.Name
-
-	var res *test.ExampleTable
-	var iterErr error
-	s.PERSIST.UniarySelect(ctx, params, func(row *spanner.Row) {
-		var ok bool
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
-			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		res.Name = Name
-	})
-
-	return res, nil
-}
-
-func (s *MySpannerImpl) UniaryDelete(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
-	var err error
-	_ = err
-
-	params := &persist_lib.MySpannerUniaryDeleteInput{}
+	params := &persist_lib.MySpannerUniaryDeleteRangeInput{}
 	params.EndId = req.EndId
 	params.StartId = req.StartId
 
-	var res *test.ExampleTable
+	var res = new(test.ExampleTable)
 	var iterErr error
-	s.PERSIST.UniaryDelete(ctx, params, func(row *spanner.Row) {
-		var ok bool
+	err = s.PERSIST.UniaryDeleteRange(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
+		}
 		var Id int64
 		if err := row.ColumnByName("id", &Id); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
@@ -151,20 +108,26 @@ func (s *MySpannerImpl) UniaryDelete(ctx context.Context, req *test.ExampleTable
 
 		res.Name = Name
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return res, nil
 }
 
-func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	_ = err
 
-	params := &persist_lib.MySpannerNoArgsInput{}
+	params := &persist_lib.MySpannerUniaryDeleteSingleInput{}
+	params.Id = req.Id
 
-	var res *test.ExampleTable
+	var res = new(test.ExampleTable)
 	var iterErr error
-	s.PERSIST.NoArgs(ctx, params, func(row *spanner.Row) {
-		var ok bool
+	err = s.PERSIST.UniaryDeleteSingle(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
+		}
 		var Id int64
 		if err := row.ColumnByName("id", &Id); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
@@ -191,96 +154,9 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 
 		res.Name = Name
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return res, nil
-}
-
-// spanner server streaming ServerStream
-func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStreamServer) error {
-	var err error
-	_ = err
-
-	params := &persist_lib.MySpannerServerStreamInput{}
-
-	var iterErr error
-	s.PERSIST.ServerStream(stream.Context(), params, func(row *spanner.Row) {
-		if iterErr != nil {
-			return
-		}
-		var res *test.ExampleTable
-		var ok bool
-
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
-			}
-			res.StartTime = local.ToProto()
-		}
-
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		res.Name = Name
-
-		if err := stream.Send(res); err != nil {
-			iterErr = err
-			return
-		}
-	})
-	return nil
-}
-
-func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertServer) error {
-	var err error
-	_ = err
-	feed, stop := s.PERSIST.ClientStreamInsert(stream.Context())
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return gstatus.Errorf(codes.Unknown, err.Error())
-		}
-
-		params := &persist_lib.MySpannerClientStreamInsertInput{}
-		params.Id = req.Id
-		params.Name = req.Name
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return gstatus.Errorf(codes.Unknown, "could not convert type: %v", err)
-		}
-
-		if err := feed(params); err != nil {
-			return err
-		}
-	}
-	row := stop()
-	res := test.NumRows{}
-	var ok bool
-
-	var Count int64
-	if err := row.ColumnByName("count", &Count); err != nil {
-		return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-	}
-
-	res.Count = Count
-
-	if err := stream.SendAndClose(res); err != nil {
-		return err
-	}
-	return nil
 }

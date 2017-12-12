@@ -59,49 +59,56 @@ service MySpanner {
       }
     ]
   };
-  rpc UniaryInsert(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["Insert into example_table (id, start_time, name)",
-							"Values (@id, @start_time, \"bananas\")"]
-      arguments: ["id", "start_time"]
-    };
-  };
-  rpc UniarySelect(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table Where id=@id AND name=@name"]
-      arguments: ["id", "name"]
-    };
-  };
-  // rpc UniaryUpdate(test.ExampleTable) returns (test.PartialTable) {
+  // rpc UniaryInsert(test.ExampleTable) returns (test.ExampleTable) {
   //   option (persist.ql) = {
-  //     query: ["Update example_table set start_time=?, name=\"oranges\" where id=?"]
-  //     arguments: ["start_time", "id"],
+  //     query: ["Insert into example_table (id, start_time, name)",
+	// 						"Values (@id, @start_time, \"bananas\")"]
+  //     arguments: ["id", "start_time"]
   //   };
   // };
-  rpc UniaryDelete(test.ExampleTableRange) returns (test.ExampleTable) {
+  // rpc UniarySelect(test.ExampleTable) returns (test.ExampleTable) {
+  //   option (persist.ql) = {
+  //     query: ["SELECT * from example_table Where id=@id AND name=@name"]
+  //     arguments: ["id", "name"]
+  //   };
+  // };
+  rpc UniaryUpdate(test.ExampleTable) returns (test.PartialTable) {
+    option (persist.ql) = {
+      query: ["Update example_table ",
+							"set start_time=@start_time, name=\"oranges\"",
+							"PrimaryKey(id=@id)"]
+      arguments: ["start_time", "id"],
+    };
+  };
+  rpc UniaryDeleteRange(test.ExampleTableRange) returns (test.ExampleTable) {
     option (persist.ql) = {
       query: ["DELETE FROM example_table START(@start_id) END(@end_id) KIND(CO)"]
       arguments: ["start_id", "end_id"]
     };
   };
-  rpc NoArgs(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["select * from example_table limit 1"]
-      arguments: []
-    };
-  };
-  rpc ServerStream(test.Name) returns (stream test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * FROM example_table"]
-      arguments: []
-    };
-  };
-  rpc ClientStreamInsert(stream test.ExampleTable) returns (test.NumRows) {
-    option (persist.ql) = {
-      query: ["INSERT INTO example_table (id, start_time, name) VALUES (@id, @start_time, 3)"]
-      arguments: ["id", "start_time", "name"]
-    };
-  };
+	rpc UniaryDeleteSingle(test.ExampleTable) returns (test.ExampleTable) {
+		option (persist.ql) = {
+			query: ["DELETE FROM example_table VALUES('abc', 123, @id)"]
+		};
+	};
+  // rpc NoArgs(test.ExampleTable) returns (test.ExampleTable) {
+  //   option (persist.ql) = {
+  //     query: ["select * from example_table limit 1"]
+  //     arguments: []
+  //   };
+  // };
+  // rpc ServerStream(test.Name) returns (stream test.ExampleTable) {
+  //   option (persist.ql) = {
+  //     query: ["SELECT * FROM example_table"]
+  //     arguments: []
+  //   };
+  // };
+  // rpc ClientStreamInsert(stream test.ExampleTable) returns (test.NumRows) {
+  //   option (persist.ql) = {
+  //     query: ["INSERT INTO example_table (id, start_time, name) VALUES (@id, @start_time, 3)"]
+  //     arguments: ["id", "start_time", "name"]
+  //   };
+  // };
   // rpc ClientStreamDelete(stream test.ExampleTable) returns (test.NumRows) {
   //   option (persist.ql) = {
   //     query: ["DELETE FROM example_table START(?) END(?) KIND(CC)"]
