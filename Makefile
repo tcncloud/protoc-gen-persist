@@ -56,9 +56,6 @@ proto-examples:
 	# 	examples/spanner/basic/*.proto
 	# $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	# 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	# 	examples/spanner/delete/*.proto
-	# $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	# 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 	# 	examples/spanner/bob_example/*.proto
 	# $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	# 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
@@ -90,10 +87,6 @@ test-compile:
 	 	--persist_out=$$GOPATH/src  examples/spanner/basic/*.proto
 	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	# 	--plugin=./protoc-gen-persist \
-	# 	--persist_out=$$GOPATH/src  examples/spanner/delete/*.proto
-	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	# 	--plugin=./protoc-gen-persist \
-	# 	--persist_out=$$GOPATH/src  examples/spanner/bob_example/*.proto
 	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	# 	--plugin=./protoc-gen-persist \
 	# 	--persist_out=$$GOPATH/src  examples/test_issue_32/*.proto

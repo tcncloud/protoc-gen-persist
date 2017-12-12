@@ -164,9 +164,9 @@ type MySpannerClientStreamUpdateWithHooksInput struct {
 
 func ExampleTableForUniaryInsert(req *MySpannerUniaryInsertInput) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
+		"name":       "bananas",
 		"id":         req.Id,
 		"start_time": req.StartTime,
-		"name":       "bananas",
 	})
 }
 func ExampleTableForUniarySelect(req *MySpannerUniarySelectInput) spanner.Statement {
@@ -217,9 +217,9 @@ func NameForServerStream(req *MySpannerServerStreamInput) spanner.Statement {
 }
 func ExampleTableForClientStreamInsert(req *MySpannerClientStreamInsertInput) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
+		"id":         req.Id,
 		"start_time": req.StartTime,
 		"name":       3,
-		"id":         req.Id,
 	})
 }
 func ExampleTableForClientStreamDelete(req *MySpannerClientStreamDeleteInput) *spanner.Mutation {
