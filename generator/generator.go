@@ -80,7 +80,7 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 					return nil, err
 				}
 				ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
-					Content: proto.String(lib.Content),
+					Content: proto.String(string(FormatCode(lib.Name, []byte(lib.Content)))),
 					Name:    proto.String(lib.Name),
 				})
 			}

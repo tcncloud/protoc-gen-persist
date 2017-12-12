@@ -93,9 +93,9 @@ const AfterHook = `
 		{{if $after -}}
 			{{$pkg := .GetGoPackage $after.GetPackage -}}
 			{{if eq $pkg "" -}}
-				err = {{$after.GetName}}(req, &res)
+				err = {{$after.GetName}}({{if (and (.IsClientStreaming) .IsSpanner)}}nil{{else}}req{{end}}, &res)
 			{{else -}}
-				err = {{.GetGoPackage $after.GetPackage}}.{{$after.GetName}}(req, &res)
+				err = {{.GetGoPackage $after.GetPackage}}.{{$after.GetName}}({{if (and (.IsClientStreaming) .IsSpanner)}}nil{{else}}req{{end}}, &res)
 			{{end -}}
 			if err != nil {
 				{{if .IsUnary -}}
@@ -103,6 +103,8 @@ const AfterHook = `
 				{{else if (and (.IsClientStreaming) (not .IsSpanner))}}
 					tx.Rollback()
 					return grpc.Errorf(codes.Unknown, err.Error())
+				{{else if (and (.IsServerStreaming) .IsSpanner) -}}
+					iterErr = grpc.Errorf(codes.Unknown, err.Error())
 				{{else -}}
 					return grpc.Errorf(codes.Unknown, err.Error())
 				{{end -}}
