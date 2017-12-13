@@ -72,6 +72,12 @@ service MySpanner {
       arguments: ["id", "name"]
     };
   };
+  rpc UniarySelectWithDirectives(test.ExampleTable) returns (test.ExampleTable) {
+    option (persist.ql) = {
+      query: ["SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name"]
+      arguments: ["id", "name"]
+    };
+  };
   rpc UniaryUpdate(test.ExampleTable) returns (test.PartialTable) {
     option (persist.ql) = {
       query: ["Update example_table ",

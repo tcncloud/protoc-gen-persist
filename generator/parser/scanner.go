@@ -127,7 +127,9 @@ func (s *Scanner) ScanIdentifier() *Token {
 	s.Unread()
 	if ch == '\'' || ch == '"' { // string literals
 		return s.ScanString()
-	} else if unicode.IsLetter(ch) || ch == '@' { // SELECT, UPDATE, INTO, table_name, etc.
+	} else if ch == '@' {
+		return s.ScanDirective()
+	} else if unicode.IsLetter(ch) { // SELECT, UPDATE, INTO, table_name, etc.
 		return s.ScanSpecial()
 	} else if unicode.IsNumber(ch) || ch == '-' { // floats and ints
 		return s.ScanNumber()
@@ -177,6 +179,77 @@ func (s *Scanner) ScanNumber() *Token {
 	}
 	return &Token{tk: IDENT_INT, raw: rawNum}
 }
+func (s *Scanner) ScanDirective() *Token {
+	var raw string
+	ch, stop := s.Read()
+	if ch != '@' || stop {
+		return &Token{
+			tk:  ILLEGAL,
+			raw: fmt.Sprintf("expected a field name or directive begining '@' near pos: %d", s.pos),
+		}
+	}
+	raw += string(ch)
+
+	ch, stop = s.Read()
+	if stop {
+		return &Token{
+			tk: ILLEGAL,
+			raw: fmt.Sprintf(
+				"expected a letter, or '{', near pos: %d, instead found: %s",
+				s.pos,
+				string(ch),
+			),
+		}
+	}
+	startPos := s.pos
+	raw += string(ch)
+	if raw[1] == '{' {
+		for {
+			ch, stop := s.Read()
+			if stop {
+				return &Token{
+					tk: ILLEGAL,
+					raw: fmt.Sprintf(
+						"asked to scan a directive '@{...}' starting at %d but stop signal found",
+						startPos,
+					),
+				}
+			}
+			raw += string(ch)
+			if ch == '}' {
+				break
+			}
+		}
+		return &Token{
+			tk:  IDENT_DIRECTIVE,
+			raw: raw,
+		}
+	}
+	acceptedChar := func(r rune) bool {
+		if unicode.IsNumber(r) || unicode.IsLetter(r) {
+			return true
+		}
+		switch r {
+		case '_', '-':
+			return true
+		}
+		return false
+	}
+	for {
+		ch, stop := s.Read()
+		if stop {
+			break
+		} else if unicode.IsSpace(ch) || !acceptedChar(ch) {
+			s.Unread()
+			break
+		}
+		raw += string(ch)
+	}
+	return &Token{
+		tk:  IDENT_FIELD,
+		raw: raw,
+	}
+}
 func (s *Scanner) ScanSpecial() *Token {
 	var raw string
 
@@ -185,7 +258,7 @@ func (s *Scanner) ScanSpecial() *Token {
 			return true
 		}
 		switch r {
-		case '@', '_', '-':
+		case '_', '-':
 			return true
 		}
 		return false
@@ -241,9 +314,7 @@ func (s *Scanner) ScanSpecial() *Token {
 	case "PK", "pk", "PRIMARY_KEY", "primary_key", "primaryKey", "PrimaryKey":
 		return &Token{tk: PRIMARY_KEY, raw: raw}
 	}
-	if len(raw) > 1 && raw[0] == '@' {
-		return &Token{tk: IDENT_FIELD, raw: raw}
-	} else if len(raw) > 0 {
+	if len(raw) > 0 {
 		return &Token{tk: IDENT_TABLE_OR_COL, raw: raw}
 	}
 	return &Token{
