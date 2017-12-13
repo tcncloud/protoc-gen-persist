@@ -5,6 +5,7 @@ package persist_lib
 
 import (
 	"cloud.google.com/go/spanner"
+	"github.com/tcncloud/protoc-gen-persist/examples/mytime"
 	"golang.org/x/net/context"
 )
 
@@ -14,6 +15,7 @@ type MySpannerPersistHelper struct {
 type MySpannerHandlers interface {
 	GetUniaryInsertHandler() func(context.Context, *MySpannerUniaryInsertInput, func(*spanner.Row)) error
 	GetUniarySelectHandler() func(context.Context, *MySpannerUniarySelectInput, func(*spanner.Row)) error
+	GetTestNestHandler() func(context.Context, *MySpannerTestNestInput, func(*spanner.Row)) error
 	GetUniarySelectWithDirectivesHandler() func(context.Context, *MySpannerUniarySelectWithDirectivesInput, func(*spanner.Row)) error
 	GetUniaryUpdateHandler() func(context.Context, *MySpannerUniaryUpdateInput, func(*spanner.Row)) error
 	GetUniaryDeleteRangeHandler() func(context.Context, *MySpannerUniaryDeleteRangeInput, func(*spanner.Row)) error
@@ -36,6 +38,9 @@ func (p *MySpannerPersistHelper) UniaryInsert(ctx context.Context, params *MySpa
 }
 func (p *MySpannerPersistHelper) UniarySelect(ctx context.Context, params *MySpannerUniarySelectInput, fn func(row *spanner.Row)) error {
 	return p.Handlers.GetUniarySelectHandler()(ctx, params, fn)
+}
+func (p *MySpannerPersistHelper) TestNest(ctx context.Context, params *MySpannerTestNestInput, fn func(row *spanner.Row)) error {
+	return p.Handlers.GetTestNestHandler()(ctx, params, fn)
 }
 func (p *MySpannerPersistHelper) UniarySelectWithDirectives(ctx context.Context, params *MySpannerUniarySelectWithDirectivesInput, fn func(row *spanner.Row)) error {
 	return p.Handlers.GetUniarySelectWithDirectivesHandler()(ctx, params, fn)
@@ -107,11 +112,14 @@ func (p *MySpannerPersistHelper) ClientStreamUpdateWithHooks(ctx context.Context
 type MySpannerUniaryInsertInput struct {
 	Id        int64
 	Name      string
-	StartTime interface{}
+	StartTime mytime.MyTime
 }
 type MySpannerUniarySelectInput struct {
 	Id   int64
 	Name string
+}
+type MySpannerTestNestInput struct {
+	Thing interface{}
 }
 type MySpannerUniarySelectWithDirectivesInput struct {
 	Id   int64
@@ -120,7 +128,7 @@ type MySpannerUniarySelectWithDirectivesInput struct {
 type MySpannerUniaryUpdateInput struct {
 	Id        int64
 	Name      string
-	StartTime interface{}
+	StartTime mytime.MyTime
 }
 type MySpannerUniaryDeleteRangeInput struct {
 	EndId   int64
@@ -136,7 +144,7 @@ type MySpannerServerStreamInput struct {
 type MySpannerClientStreamInsertInput struct {
 	Id        int64
 	Name      string
-	StartTime interface{}
+	StartTime mytime.MyTime
 }
 type MySpannerClientStreamDeleteInput struct {
 	Id int64
@@ -144,12 +152,12 @@ type MySpannerClientStreamDeleteInput struct {
 type MySpannerClientStreamUpdateInput struct {
 	Id        int64
 	Name      string
-	StartTime interface{}
+	StartTime mytime.MyTime
 }
 type MySpannerUniaryInsertWithHooksInput struct {
 	Id        int64
 	Name      string
-	StartTime interface{}
+	StartTime mytime.MyTime
 }
 type MySpannerUniarySelectWithHooksInput struct {
 	Id int64
@@ -157,7 +165,7 @@ type MySpannerUniarySelectWithHooksInput struct {
 type MySpannerUniaryUpdateWithHooksInput struct {
 	Id        int64
 	Name      string
-	StartTime interface{}
+	StartTime mytime.MyTime
 }
 type MySpannerUniaryDeleteWithHooksInput struct {
 	EndId   int64
@@ -183,6 +191,14 @@ func ExampleTableForUniarySelect(req *MySpannerUniarySelectInput) spanner.Statem
 		Params: map[string]interface{}{
 			"@id":   req.Id,
 			"@name": req.Name,
+		},
+	}
+}
+func SomethingForTestNest(req *MySpannerTestNestInput) spanner.Statement {
+	return spanner.Statement{
+		SQL: "SELECT * from example_table Where id=@thing",
+		Params: map[string]interface{}{
+			"@thing": req.Thing,
 		},
 	}
 }
@@ -253,9 +269,9 @@ func ExampleTableForClientStreamUpdate(req *MySpannerClientStreamUpdateInput) *s
 }
 func ExampleTableForUniaryInsertWithHooks(req *MySpannerUniaryInsertWithHooksInput) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
+		"name":       "bananas",
 		"id":         req.Id,
 		"start_time": req.StartTime,
-		"name":       "bananas",
 	})
 }
 func ExampleTableForUniarySelectWithHooks(req *MySpannerUniarySelectWithHooksInput) spanner.Statement {
@@ -311,6 +327,19 @@ func DefaultUniaryInsertHandler(cli *spanner.Client) func(context.Context, *MySp
 func DefaultUniarySelectHandler(cli *spanner.Client) func(context.Context, *MySpannerUniarySelectInput, func(*spanner.Row)) error {
 	return func(ctx context.Context, req *MySpannerUniarySelectInput, next func(*spanner.Row)) error {
 		iter := cli.Single().Query(ctx, ExampleTableForUniarySelect(req))
+		if err := iter.Do(func(r *spanner.Row) error {
+			next(r)
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+func DefaultTestNestHandler(cli *spanner.Client) func(context.Context, *MySpannerTestNestInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *MySpannerTestNestInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, SomethingForTestNest(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
