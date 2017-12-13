@@ -40,6 +40,12 @@ import "google/protobuf/descriptor.proto";
 
 import "examples/test/test.proto";
 
+message Something {
+	message SomethingElse {
+		string thing = 1;
+	}
+	SomethingElse thing = 2;
+}
 service MySpanner {
   option (persist.service_type) = SPANNER;
 
@@ -72,6 +78,12 @@ service MySpanner {
       arguments: ["id", "name"]
     };
   };
+  rpc TestNest(Something) returns (Something) {
+    option (persist.ql) = {
+      query: ["SELECT * from example_table Where id=@thing"]
+    };
+  };
+
   rpc UniarySelectWithDirectives(test.ExampleTable) returns (test.ExampleTable) {
     option (persist.ql) = {
       query: ["SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name"]

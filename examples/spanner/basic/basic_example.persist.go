@@ -127,6 +127,34 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 	return &res, nil
 }
 
+func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Something, error) {
+	var err error
+	_ = err
+
+	params := &persist_lib.MySpannerTestNestInput{}
+	params.Thing = req.Thing
+
+	var res = Something{}
+	var iterErr error
+	_ = iterErr
+	err = s.PERSIST.TestNest(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
+		}
+		var Thing Something_SomethingElse
+		if err := row.ColumnByName("thing", &Thing); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		}
+
+		res.Thing = Thing
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
 func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	_ = err

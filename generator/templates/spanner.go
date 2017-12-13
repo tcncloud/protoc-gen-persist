@@ -32,7 +32,7 @@ package templates
 const PersistLibInput = `{{define "persist_lib_input"}}{{$method := . -}}
 type {{template "persist_lib_input_name" $method}} struct{
 {{range $key, $val := $method.GetTypeDescForQueryFields -}}
-	{{$val.Name}} {{if $val.IsMapped -}} interface{} {{else}} {{$val.GoName}}{{end}}
+	{{$val.Name}} {{if $val.IsMessage -}} interface{} {{else}} {{$val.GoName}}{{end}}
 {{end}}
 }
 {{end}}
