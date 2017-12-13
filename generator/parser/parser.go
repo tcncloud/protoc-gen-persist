@@ -77,13 +77,15 @@ func (m *SelectMode) Parse(scanner *Scanner) (Query, error) {
 		// ignore everything except fields, which will start with @
 		if ch == '@' {
 			scanner.Unread()
-			if eater.Eat(IDENT_FIELD) {
-				fields = append(fields, eater.TakeTokens()[0])
-				// add our field to the query
-				query += fields[len(fields)-1].raw
+			if eater.Eat(IDENT_FIELD, IDENT_DIRECTIVE) {
+				token := eater.TakeTokens()[0]
+				query += token.raw
+				if token.tk == IDENT_FIELD {
+					fields = append(fields, token)
+				}
 			}
 			if err := eater.TakeErr(); err != nil {
-				return nil, fmt.Errorf("could not parse field name for select query")
+				return nil, fmt.Errorf("could not parse field name for select query: %s", err)
 			}
 		} else {
 			// just a regular character part of the query

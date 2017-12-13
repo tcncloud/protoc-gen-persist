@@ -47,7 +47,7 @@ proto-persist:
 proto-examples:
 	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	 	examples/sql/basic/*.proto
+	 	examples/spanner/basic/*.proto
 	# $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	# 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 	# 	examples/sql/little_of_everything/*.proto

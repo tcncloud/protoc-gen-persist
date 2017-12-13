@@ -14,6 +14,7 @@ type MySpannerPersistHelper struct {
 type MySpannerHandlers interface {
 	GetUniaryInsertHandler() func(context.Context, *MySpannerUniaryInsertInput, func(*spanner.Row)) error
 	GetUniarySelectHandler() func(context.Context, *MySpannerUniarySelectInput, func(*spanner.Row)) error
+	GetUniarySelectWithDirectivesHandler() func(context.Context, *MySpannerUniarySelectWithDirectivesInput, func(*spanner.Row)) error
 	GetUniaryUpdateHandler() func(context.Context, *MySpannerUniaryUpdateInput, func(*spanner.Row)) error
 	GetUniaryDeleteRangeHandler() func(context.Context, *MySpannerUniaryDeleteRangeInput, func(*spanner.Row)) error
 	GetUniaryDeleteSingleHandler() func(context.Context, *MySpannerUniaryDeleteSingleInput, func(*spanner.Row)) error
@@ -35,6 +36,9 @@ func (p *MySpannerPersistHelper) UniaryInsert(ctx context.Context, params *MySpa
 }
 func (p *MySpannerPersistHelper) UniarySelect(ctx context.Context, params *MySpannerUniarySelectInput, fn func(row *spanner.Row)) error {
 	return p.Handlers.GetUniarySelectHandler()(ctx, params, fn)
+}
+func (p *MySpannerPersistHelper) UniarySelectWithDirectives(ctx context.Context, params *MySpannerUniarySelectWithDirectivesInput, fn func(row *spanner.Row)) error {
+	return p.Handlers.GetUniarySelectWithDirectivesHandler()(ctx, params, fn)
 }
 func (p *MySpannerPersistHelper) UniaryUpdate(ctx context.Context, params *MySpannerUniaryUpdateInput, fn func(row *spanner.Row)) error {
 	return p.Handlers.GetUniaryUpdateHandler()(ctx, params, fn)
@@ -109,6 +113,10 @@ type MySpannerUniarySelectInput struct {
 	Id   int64
 	Name string
 }
+type MySpannerUniarySelectWithDirectivesInput struct {
+	Id   int64
+	Name string
+}
 type MySpannerUniaryUpdateInput struct {
 	Id        int64
 	Name      string
@@ -178,6 +186,15 @@ func ExampleTableForUniarySelect(req *MySpannerUniarySelectInput) spanner.Statem
 		},
 	}
 }
+func ExampleTableForUniarySelectWithDirectives(req *MySpannerUniarySelectWithDirectivesInput) spanner.Statement {
+	return spanner.Statement{
+		SQL: "SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name",
+		Params: map[string]interface{}{
+			"@id":   req.Id,
+			"@name": req.Name,
+		},
+	}
+}
 func ExampleTableForUniaryUpdate(req *MySpannerUniaryUpdateInput) *spanner.Mutation {
 	return spanner.UpdateMap("example_table", map[string]interface{}{
 		"start_time": req.StartTime,
@@ -236,9 +253,9 @@ func ExampleTableForClientStreamUpdate(req *MySpannerClientStreamUpdateInput) *s
 }
 func ExampleTableForUniaryInsertWithHooks(req *MySpannerUniaryInsertWithHooksInput) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"name":       "bananas",
 		"id":         req.Id,
 		"start_time": req.StartTime,
+		"name":       "bananas",
 	})
 }
 func ExampleTableForUniarySelectWithHooks(req *MySpannerUniarySelectWithHooksInput) spanner.Statement {
@@ -294,6 +311,19 @@ func DefaultUniaryInsertHandler(cli *spanner.Client) func(context.Context, *MySp
 func DefaultUniarySelectHandler(cli *spanner.Client) func(context.Context, *MySpannerUniarySelectInput, func(*spanner.Row)) error {
 	return func(ctx context.Context, req *MySpannerUniarySelectInput, next func(*spanner.Row)) error {
 		iter := cli.Single().Query(ctx, ExampleTableForUniarySelect(req))
+		if err := iter.Do(func(r *spanner.Row) error {
+			next(r)
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+func DefaultUniarySelectWithDirectivesHandler(cli *spanner.Client) func(context.Context, *MySpannerUniarySelectWithDirectivesInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *MySpannerUniarySelectWithDirectivesInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, ExampleTableForUniarySelectWithDirectives(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil

@@ -73,6 +73,8 @@ const (
 	IDENT_BOOL
 	// kind of its own thing, it represents the literal column or table name
 	IDENT_TABLE_OR_COL
+	// not used yet, but exists and looks like @{...}
+	IDENT_DIRECTIVE
 
 	// Keywords
 	INSERT
@@ -113,6 +115,7 @@ var TokenNames map[TokenKind]string = map[TokenKind]string{
 	IDENT_FIELD:        "IDENT_FIELD",
 	IDENT_BOOL:         "IDENT_BOOL",
 	IDENT_TABLE_OR_COL: "IDENT_TABLE_OR_COL",
+	IDENT_DIRECTIVE:    "IDENT_DIRECTIVE",
 	INSERT:             "INSERT",
 	UPDATE:             "UPDATE",
 	DELETE:             "DELETE",
@@ -150,6 +153,7 @@ var TokenKeyWords map[TokenKind][]string = map[TokenKind][]string{
 	IDENT_FIELD:        []string{"@fieldName", "@field_name"},
 	IDENT_BOOL:         []string{"true", "false"},
 	IDENT_TABLE_OR_COL: []string{"table_name", "columnName", "(notice lack of quotes)"},
+	IDENT_DIRECTIVE:    []string{"@{FORCE_INDEX=some_index}", "@{...}"},
 	INSERT:             []string{"INSERT", "insert"},
 	UPDATE:             []string{"UPDATE", "update"},
 	DELETE:             []string{"DELETE", "delete"},

@@ -127,6 +127,54 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 	return &res, nil
 }
 
+func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+	var err error
+	_ = err
+
+	params := &persist_lib.MySpannerUniarySelectWithDirectivesInput{}
+	params.Id = req.Id
+	params.Name = req.Name
+
+	var res = test.ExampleTable{}
+	var iterErr error
+	_ = iterErr
+	err = s.PERSIST.UniarySelectWithDirectives(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
+		}
+		var Id int64
+		if err := row.ColumnByName("id", &Id); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		}
+
+		res.Id = Id
+		var StartTime *spanner.GenericColumnValue
+		if err := row.ColumnByName("start_time", StartTime); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		}
+
+		{
+			local := &mytime.MyTime{}
+			if err := local.SpannerScan(StartTime); err != nil {
+				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				return
+			}
+			res.StartTime = local.ToProto()
+		}
+		var Name string
+		if err := row.ColumnByName("name", &Name); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		}
+
+		res.Name = Name
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
 func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	var err error
 	_ = err
