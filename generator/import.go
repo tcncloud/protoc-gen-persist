@@ -72,7 +72,6 @@ func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
 
 func (il *Imports) GetGoNameByStruct(str *Struct) *Import {
 	for _, i := range *il {
-		logrus.WithField("import", *i).WithField("str", str.GetGoPath()).Debug("import path")
 		if i.GoImportPath == str.GetGoPath() {
 			return i
 		}

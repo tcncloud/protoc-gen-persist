@@ -46,6 +46,17 @@ message Something {
 	}
 	SomethingElse thing = 2;
 }
+message HasTimestamp {
+	google.protobuf.Timestamp time = 1;
+	Something some = 2;
+	string str = 3;
+	test.ExampleTable table = 4;
+	repeated string strs = 5;
+	repeated test.ExampleTable tables = 6;
+	repeated Something somes = 7;
+	repeated google.protobuf.Timestamp times = 8;
+}
+
 service MySpanner {
   option (persist.service_type) = SPANNER;
 
@@ -81,6 +92,13 @@ service MySpanner {
   rpc TestNest(Something) returns (Something) {
     option (persist.ql) = {
       query: ["SELECT * from example_table Where id=@thing"]
+    };
+  };
+  rpc TestEverything(HasTimestamp) returns (HasTimestamp) {
+    option (persist.ql) = {
+      query: ["SELECT * from example_table",
+							"Where id=@time AND some=@some AND str=@str AND table=@table",
+							"AND times = @times AND somes = @somes AND strs = @strs AND tables = @tables"]
     };
   };
 

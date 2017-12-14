@@ -32,7 +32,7 @@ package templates
 const PersistLibInput = `{{define "persist_lib_input"}}{{$method := . -}}
 type {{template "persist_lib_input_name" $method}} struct{
 {{range $key, $val := $method.GetTypeDescForQueryFields -}}
-	{{$val.Name}} {{if $val.IsMessage -}} interface{} {{else}} {{$val.GoName}}{{end}}
+	{{$val.Name}} {{if or $val.IsMessage $val.IsMapped -}} interface{} {{else}} {{$val.GoName}}{{end}}
 {{end}}
 }
 {{end}}
@@ -86,6 +86,59 @@ type {{template "persist_lib_input_name" $method}} struct{
 		}
 	{{end}}
 {{end}}
+
+{{/* returns an "err", so put in a function that returns an error */}}
+{{/* also needs a *spanner.Row var named "row" and a "res" of type $method.GetOutputType */}}
+{{define "spanner_decode_result_row"}}{{$field := . -}}
+	{{if $field.IsMapped -}}
+		var {{$field.Name}} *spanner.GenericColumnValue
+		if err := row.ColumnByName("{{$field.ProtoName}}", {{$field.Name}}); err != nil {
+			return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		}
+		{
+			local := &{{$field.GoName}}{}
+			if err := local.SpannerScan({{$field.Name}}); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+			}
+			res.{{$field.Name}} = local.ToProto()
+		}
+		{{else if $field.NeedsSpannerConversion -}}
+			{{if $field.IsRepeated -}}
+				var {{$field.Name}} {{$field.GoName}}
+				{
+					local := make({{$field.SpannerType}}, 0)
+					if err := row.ColumnByName("{{$field.ProtoName}}", &local); err != nil {
+						return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+					}
+					for _, l := range local {
+						if l.Valid {
+							{{$field.Name}} = append({{$field.Name}}, l.{{$field.SpannerTypeFieldName}})
+						}
+					}
+					res.{{$field.Name}} = {{$field.Name}}
+				}
+			{{else -}}
+				var {{$field.Name}} {{$field.GoName}}
+				{
+					local := &{{$field.SpannerType}}{}
+					if err := row.ColumnByName("{{$field.ProtoName}}", local); err != nil {
+						return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+					}
+					if local.Valid {
+						{{$field.Name}} = local.{{$field.SpannerTypeFieldName}}
+					}
+				res.{{$field.Name}} = {{$field.Name}}
+				}
+			{{end}}
+	{{else -}}
+			var {{$field.Name}} {{$field.GoName}}
+			if err := row.ColumnByName("{{$field.ProtoName}}", {{if $field.IsRepeated}}&{{end -}}
+				{{$field.Name}}); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+			}
+			res.{{$field.Name}} = {{$field.Name}}
+	{{end}}
+{{- end}}
 `
 
 const SpannerUnaryTemplate = `{{define "spanner_unary_method" -}}
@@ -115,29 +168,13 @@ func (s* {{.GetServiceName}}Impl) {{.GetName}} (ctx context.Context, req *{{.Get
 			return
 		}
 		{{range $index, $field := .GetTypeDescArrayForStruct .GetOutputTypeStruct -}}
-			{{if $field.IsMapped -}}
-				var {{$field.Name}} *spanner.GenericColumnValue
-				if err := row.ColumnByName("{{$field.ProtoName}}", {{$field.Name}}); err != nil {
-					iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-				}
-			{{else -}}
-				var {{$field.Name}} {{$method.DefaultMapping $field.FieldDescriptor}}
-				if err := row.ColumnByName("{{$field.ProtoName}}", &{{$field.Name}}); err != nil {
-					iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-				}
-			{{end}}
-			{{if $field.IsMapped -}}
-				{
-					local := &{{$field.GoName}}{}
-					if err := local.SpannerScan({{$field.Name}}); err != nil {
-						iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-						return
-					}
-					res.{{$field.Name}} = local.ToProto()
-				}
-			{{else -}}
-				res.{{$field.Name}} = {{$field.Name}}
-			{{end -}}
+			if iterErr != nil {
+				return
+			}
+			iterErr = func() error {
+				{{template "spanner_decode_result_row" $field}}
+				return nil
+			}()
 		{{end -}}
 	})
 	if err != nil {
@@ -184,28 +221,13 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(stream {{.GetFilePackage}}{{.GetS
 	res := {{.GetOutputType}}{}
 	if row != nil {
 		{{range $index, $field := .GetTypeDescArrayForStruct .GetOutputTypeStruct -}}
-			{{if $field.IsMapped -}}
-				var {{$field.Name}} *spanner.GenericColumnValue
-				if err := row.ColumnByName("{{$field.ProtoName}}", {{$field.Name}}); err != nil {
-					return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-				}
-			{{else}}
-				var {{$field.Name}} {{$method.DefaultMapping $field.FieldDescriptor}}
-				if err := row.ColumnByName("{{$field.ProtoName}}", &{{$field.Name}}); err != nil {
-					return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-				}
-			{{end}}
-			{{if $field.IsMapped -}}
-				{
-					local := &{{$field.GoName}}{}
-					if err := local.SpannerScan({{$field.Name}}); err != nil {
-						return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-					}
-					res.{{$field.Name}} = local.ToProto()
-				}
-			{{else}}
-				res.{{$field.Name}} = {{$field.Name}}
-			{{end}}
+			err := func() error {
+				{{template "spanner_decode_result_row" $field}}
+				return nil
+			}()
+			if err != nil {
+				return err
+			}
 		{{end}}
 	}
 
@@ -240,36 +262,19 @@ func (s *{{.GetServiceName}}Impl) {{.GetName}}(req *{{.GetInputType}}, stream {{
 	var iterErr error
 	_ = iterErr
 	err = s.PERSIST.{{.GetName}}(stream.Context(), params, func(row *spanner.Row) {
-		if iterErr != nil || row == nil{
+		if row == nil { // there was no return data
 			return
 		}
-		var res {{.GetOutputType}}
+		res := {{$method.GetOutputType}}{}
 		{{range $index, $field := .GetTypeDescArrayForStruct .GetOutputTypeStruct -}}
-			{{if $field.IsMapped -}}
-				var {{$field.Name}} *spanner.GenericColumnValue
-				if err := row.ColumnByName("{{$field.ProtoName}}", {{$field.Name}}); err != nil {
-					iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-				}
-			{{else}}
-				var {{$field.Name}} {{$method.DefaultMapping $field.FieldDescriptor}}
-				if err := row.ColumnByName("{{$field.ProtoName}}", &{{$field.Name}}); err != nil {
-					iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-				}
-			{{end}}
-			{{if $field.IsMapped -}}
-				{
-					local := &{{$field.GoName}}{}
-					if err := local.SpannerScan({{$field.Name}}); err != nil {
-						iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-						return
-					}
-					res.{{$field.Name}} = local.ToProto()
-				}
-			{{else}}
-				res.{{$field.Name}} = {{$field.Name}}
-			{{end -}}
-		{{end -}}
-
+			if iterErr != nil {
+				return
+			}
+			iterErr = func() error {
+				{{template "spanner_decode_result_row" $field}}
+				return nil
+			}()
+		{{end}}
 		{{template "after_hook" .}}
 
 		if err := stream.Send(&res); err != nil {

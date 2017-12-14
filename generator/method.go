@@ -259,7 +259,11 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 		//logrus.Fatalf("we currently don't support groups/oneof structures %s", typ.GetName())
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
 		if ret := m.GetTypeNameMinusPackage(typ); ret != "" {
-			return ret
+			if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+				return "[]*" + ret
+			} else {
+				return "*" + ret
+			}
 		}
 	case descriptor.FieldDescriptorProto_TYPE_BOOL:
 		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
@@ -361,15 +365,19 @@ func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 	if mapping := m.GetTypeMapping(); mapping != nil {
 		// if we have a mapping we are going to process it first
 		for _, mapp := range mapping.Types {
-			logrus.WithField("mapping", mapp).WithField("type", typ).Debug("checking mapping")
+			logrus.WithField("mapping", mapp).Debug("checking mapping")
 			if mapp.GetProtoType() == typ.GetType() &&
 				mapp.GetProtoLabel() == typ.GetLabel() &&
 				mapp.GetProtoTypeName() == typ.GetTypeName() {
-				return m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
+				p := m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage()))
+				if p != "" {
+					return p + "." + mapp.GetGoType()
+				} else {
+					return mapp.GetGoType()
+				}
 			}
 		}
 	}
-	logrus.Debug("returning default mapping")
 	return m.DefaultMapping(typ)
 }
 
@@ -388,18 +396,67 @@ func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeM
 }
 
 type TypeDesc struct {
-	Name            string // ex. StartTime
-	ProtoName       string // start_time
-	GoName          string // mytime.MyTime (if it is mapped)
+	Name      string // ex. StartTime
+	ProtoName string // start_time
+	// mytime.MyTime (if it is mapped) otherwise is defaultMapping  ex: string, []float64
+	// if is a message type, then *pb.TestMessage  []*TestMessage
+	GoName          string
 	OrigGoName      string // Timestamp
 	Struct          *Struct
 	Mapping         *persist.TypeMapping_TypeDescriptor
 	EnumName        string // Timestamp
 	IsMapped        bool
+	IsRepeated      bool
 	IsEnum          bool
 	IsMessage       bool
 	ResultHook      bool
 	FieldDescriptor *descriptor.FieldDescriptorProto
+	// spanner.GenericColumnValue, spanner.NullString, spanner.NullInt64
+	// or if just the GoName
+	SpannerType string
+	// name used as field in the spanner.Null* types. ex: StringVal, NullInt64
+	SpannerTypeFieldName string
+	// if our spannerType != GoName, we need to convert our message
+	NeedsSpannerConversion bool
+}
+
+func SpannerType(t TypeDesc) string {
+	if t.IsMapped {
+		return "spanner.GenericColumnValue"
+	}
+	switch t.GoName {
+	case "string":
+		return "spanner.NullString"
+	case "[]string":
+		return "[]spanner.NullString"
+	case "int64":
+		return "spanner.NullInt64"
+	case "[]int64":
+		return "[]spanner.NullInt64"
+	case "bool":
+		return "spanner.NullBool"
+	case "[]bool":
+		return "[]spanner.NullBool"
+	case "float64":
+		return "spanner.NullFloat"
+	case "[]float64":
+		return "[]spanner.NullFloat"
+	}
+
+	return t.GoName
+}
+func SpannerTypeFieldName(t TypeDesc) string {
+	switch t.GoName {
+	case "string", "[]string":
+		return "StringVal"
+	case "int64", "[]int64":
+		return "Int64"
+	case "float64", "[]float64":
+		return "Float64"
+	case "bool", "[]bool":
+		return "Bool"
+	}
+	return ""
 }
 
 type ResultHook interface {
@@ -410,6 +467,12 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 	ret := make([]TypeDesc, 0)
 	if str != nil && str.IsMessage {
 		for _, mp := range str.MsgDesc.GetField() {
+			// make sure we have the imports before we attempt to use the type
+			if mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE &&
+				m.GetMapping(mp) == nil {
+				m.Service.File.ProcessImportsForType(mp.GetTypeName())
+			}
+
 			logrus.Debugf("mp name: %s\n", mp.GetName())
 			if mp.OneofIndex == nil {
 				typeDesc := TypeDesc{
@@ -422,9 +485,15 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 					EnumName:        m.GetTypeNameMinusPackage(mp),
 					IsMapped:        (m.GetMapping(mp) != nil),
 					FieldDescriptor: mp,
+					IsRepeated:      (mp.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED),
 					IsEnum:          (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
 					IsMessage:       (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
 				}
+				//TODO refactor typeDesc into using a NewTypeDesc method
+				typeDesc.SpannerType = SpannerType(typeDesc)
+				typeDesc.SpannerTypeFieldName = SpannerTypeFieldName(typeDesc)
+				typeDesc.NeedsSpannerConversion = (typeDesc.SpannerType != typeDesc.GoName)
+
 				ret = append(ret, typeDesc)
 			}
 		}
