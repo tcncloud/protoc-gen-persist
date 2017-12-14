@@ -55,6 +55,8 @@ const ServicesTemplate = `{{define "implement_services"}}
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// don't eat our spanner import, or complain
+var _ = spanner.NewClient
 {{end}}
 {{range $method := $srv.Methods}}
 {{template "implement_method" $method}}

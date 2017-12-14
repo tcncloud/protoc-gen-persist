@@ -6,7 +6,7 @@ package basic
 import (
 	io "io"
 
-	"cloud.google.com/go/spanner"
+	spanner "cloud.google.com/go/spanner"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic/persist_lib"
@@ -28,6 +28,8 @@ import (
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// don't eat our spanner import, or complain
+var _ = spanner.NewClient
 
 func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
