@@ -147,6 +147,7 @@ func (s *Service) ProcessImports() {
 	s.File.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
 	s.File.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
 	s.File.ImportList.GetOrAddImport("gstatus", "google.golang.org/grpc/status")
+	s.File.ImportList.GetOrAddImport("spanner", "cloud.google.com/go/spanner")
 	if s.File.DifferentImpl() {
 		s.File.ImportList.GetOrAddImport("pb", s.File.GetFullGoPackage())
 	}

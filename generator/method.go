@@ -438,9 +438,9 @@ func SpannerType(t TypeDesc) string {
 	case "[]bool":
 		return "[]spanner.NullBool"
 	case "float64":
-		return "spanner.NullFloat"
+		return "spanner.NullFloat64"
 	case "[]float64":
-		return "[]spanner.NullFloat"
+		return "[]spanner.NullFloat64"
 	}
 
 	return t.GoName

@@ -6,7 +6,7 @@ package bob_example
 import (
 	io "io"
 
-	"cloud.google.com/go/spanner"
+	spanner "cloud.google.com/go/spanner"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/spanner/bob_example/persist_lib"
 	context "golang.org/x/net/context"
@@ -24,6 +24,8 @@ import (
 // }
 // WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// don't eat our spanner import, or complain
+var _ = spanner.NewClient
 
 func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 	var err error

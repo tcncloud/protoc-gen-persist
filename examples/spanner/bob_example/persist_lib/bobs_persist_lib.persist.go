@@ -65,9 +65,9 @@ func BobForDeleteBobs(req *BobsDeleteBobsInput) *spanner.Mutation {
 }
 func BobForPutBobs(req *BobsPutBobsInput) *spanner.Mutation {
 	return spanner.InsertMap("bob_table", map[string]interface{}{
-		"start_time": req.StartTime,
 		"id":         req.Id,
 		"name":       req.Name,
+		"start_time": req.StartTime,
 	})
 }
 func EmptyForGetBobs(req *BobsGetBobsInput) spanner.Statement {
