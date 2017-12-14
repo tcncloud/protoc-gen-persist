@@ -7,6 +7,7 @@ import (
 	io "io"
 
 	"cloud.google.com/go/spanner"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic/persist_lib"
 	hooks "github.com/tcncloud/protoc-gen-persist/examples/spanner/hooks"
@@ -46,31 +47,60 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -94,31 +124,60 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -141,12 +200,165 @@ func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Somethin
 		if row == nil { // there was no return data
 			return
 		}
-		var Thing Something_SomethingElse
-		if err := row.ColumnByName("thing", &Thing); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
+		iterErr = func() error {
+			var Thing *Something_SomethingElse
+			if err := row.ColumnByName("thing", Thing); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+			}
+			res.Thing = Thing
 
-		res.Thing = Thing
+			return nil
+		}()
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (*HasTimestamp, error) {
+	var err error
+	_ = err
+
+	params := &persist_lib.MySpannerTestEverythingInput{}
+	params.Some = req.Some
+	params.Somes = req.Somes
+	params.Str = req.Str
+	params.Strs = req.Strs
+	params.Table = req.Table
+	params.Tables = req.Tables
+	if params.Time, err = (mytime.MyTime{}).ToSpanner(req.Time).SpannerValue(); err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "could not convert type: %v", err)
+	}
+	params.Times = req.Times
+
+	var res = HasTimestamp{}
+	var iterErr error
+	_ = iterErr
+	err = s.PERSIST.TestEverything(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
+		}
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Time *spanner.GenericColumnValue
+			if err := row.ColumnByName("time", Time); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(Time); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.Time = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Some *Something
+			if err := row.ColumnByName("some", Some); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+			}
+			res.Some = Some
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Str string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("str", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Str = local.StringVal
+				}
+				res.Str = Str
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Table *test.ExampleTable
+			if err := row.ColumnByName("table", Table); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+			}
+			res.Table = Table
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Strs []string
+			{
+				local := make([]spanner.NullString, 0)
+				if err := row.ColumnByName("strs", &local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				for _, l := range local {
+					if l.Valid {
+						Strs = append(Strs, l.StringVal)
+					}
+				}
+				res.Strs = Strs
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Tables []*test.ExampleTable
+			if err := row.ColumnByName("tables", &Tables); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+			}
+			res.Tables = Tables
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Somes []*Something
+			if err := row.ColumnByName("somes", &Somes); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+			}
+			res.Somes = Somes
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Times []*timestamp.Timestamp
+			if err := row.ColumnByName("times", &Times); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+			}
+			res.Times = Times
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -170,31 +382,60 @@ func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *tes
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -221,25 +462,42 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
 		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -263,31 +521,60 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -310,31 +597,60 @@ func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.Exampl
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -356,31 +672,60 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -399,37 +744,64 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 	var iterErr error
 	_ = iterErr
 	err = s.PERSIST.ServerStream(stream.Context(), params, func(row *spanner.Row) {
-		if iterErr != nil || row == nil {
+		if row == nil { // there was no return data
 			return
 		}
-		var res test.ExampleTable
-
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		res := test.ExampleTable{}
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
 
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			return nil
+		}()
+		if iterErr != nil {
+			return
 		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 
 		if err := stream.Send(&res); err != nil {
 			iterErr = err
@@ -471,13 +843,24 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 	}
 	res := test.NumRows{}
 	if row != nil {
+		err := func() error {
+			var Count int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("count", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Count = local.Int64
+				}
+				res.Count = Count
+			}
 
-		var Count int64
-		if err := row.ColumnByName("count", &Count); err != nil {
-			return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
-
-		res.Count = Count
 
 	}
 
@@ -510,13 +893,24 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 	}
 	res := test.NumRows{}
 	if row != nil {
+		err := func() error {
+			var Count int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("count", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Count = local.Int64
+				}
+				res.Count = Count
+			}
 
-		var Count int64
-		if err := row.ColumnByName("count", &Count); err != nil {
-			return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
-
-		res.Count = Count
 
 	}
 
@@ -553,13 +947,24 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 	}
 	res := test.NumRows{}
 	if row != nil {
+		err := func() error {
+			var Count int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("count", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Count = local.Int64
+				}
+				res.Count = Count
+			}
 
-		var Count int64
-		if err := row.ColumnByName("count", &Count); err != nil {
-			return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
-
-		res.Count = Count
 
 	}
 
@@ -596,31 +1001,60 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -657,31 +1091,60 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -722,25 +1185,42 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
 		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -778,31 +1258,60 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
+
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 	})
 	if err != nil {
 		return nil, err
@@ -841,37 +1350,64 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 	var iterErr error
 	_ = iterErr
 	err = s.PERSIST.ServerStreamWithHooks(stream.Context(), params, func(row *spanner.Row) {
-		if iterErr != nil || row == nil {
+		if row == nil { // there was no return data
 			return
 		}
-		var res test.ExampleTable
-
-		var Id int64
-		if err := row.ColumnByName("id", &Id); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+		res := test.ExampleTable{}
+		if iterErr != nil {
+			return
 		}
-
-		res.Id = Id
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
-		}
-
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
-				return
+		iterErr = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			res.StartTime = local.ToProto()
-		}
 
-		var Name string
-		if err := row.ColumnByName("name", &Name); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			return nil
+		}()
+		if iterErr != nil {
+			return
 		}
+		iterErr = func() error {
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			}
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out custom type: %s", err)
+				}
+				res.StartTime = local.ToProto()
+			}
 
-		res.Name = Name
+			return nil
+		}()
+		if iterErr != nil {
+			return
+		}
+		iterErr = func() error {
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
+			}
+
+			return nil
+		}()
 
 		err = hooks.ServerStreamAfterHook(req, &res)
 		if err != nil {
@@ -924,13 +1460,24 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 	}
 	res := test.NumRows{}
 	if row != nil {
+		err := func() error {
+			var Count int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("count", local); err != nil {
+					return gstatus.Errorf(codes.Unknown, "could not scan out message type: %s", err)
+				}
+				if local.Valid {
+					Count = local.Int64
+				}
+				res.Count = Count
+			}
 
-		var Count int64
-		if err := row.ColumnByName("count", &Count); err != nil {
-			return gstatus.Errorf(codes.Unknown, "could not convert type %v", err)
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
-
-		res.Count = Count
 
 	}
 

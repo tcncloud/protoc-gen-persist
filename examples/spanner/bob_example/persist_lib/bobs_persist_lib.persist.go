@@ -5,7 +5,6 @@ package persist_lib
 
 import (
 	"cloud.google.com/go/spanner"
-	"github.com/tcncloud/protoc-gen-persist/examples/mytime"
 	"golang.org/x/net/context"
 )
 
@@ -39,12 +38,12 @@ func (p *BobsPersistHelper) GetPeopleFromNames(ctx context.Context, params *Bobs
 
 // input type definitions
 type BobsDeleteBobsInput struct {
-	StartTime mytime.MyTime
+	StartTime interface{}
 }
 type BobsPutBobsInput struct {
 	Id        int64
 	Name      string
-	StartTime mytime.MyTime
+	StartTime interface{}
 }
 type BobsGetBobsInput struct {
 }
@@ -66,9 +65,9 @@ func BobForDeleteBobs(req *BobsDeleteBobsInput) *spanner.Mutation {
 }
 func BobForPutBobs(req *BobsPutBobsInput) *spanner.Mutation {
 	return spanner.InsertMap("bob_table", map[string]interface{}{
-		"name":       req.Name,
 		"start_time": req.StartTime,
 		"id":         req.Id,
+		"name":       req.Name,
 	})
 }
 func EmptyForGetBobs(req *BobsGetBobsInput) spanner.Statement {
