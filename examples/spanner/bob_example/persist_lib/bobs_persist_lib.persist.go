@@ -11,47 +11,51 @@ import (
 type BobsPersistHelper struct {
 	Handlers BobsHandlers
 }
-type BobsHandlers interface {
-	GetDeleteBobsHandler() func(context.Context, *BobsDeleteBobsInput, func(*spanner.Row)) error
-	GetPutBobsHandler() func(context.Context) (func(*BobsPutBobsInput), func() (*spanner.Row, error))
-	GetGetBobsHandler() func(context.Context, *BobsGetBobsInput, func(*spanner.Row)) error
-	GetGetPeopleFromNamesHandler() func(context.Context, *BobsGetPeopleFromNamesInput, func(*spanner.Row)) error
+type BobsHandlers struct {
+	DeleteBobsHandler         func(context.Context, *BobInput, func(*spanner.Row)) error
+	PutBobsHandler            func(context.Context) (func(*BobInput), func() (*spanner.Row, error))
+	GetBobsHandler            func(context.Context, *EmptyInput, func(*spanner.Row)) error
+	GetPeopleFromNamesHandler func(context.Context, *NamesInput, func(*spanner.Row)) error
 }
 
-func (p *BobsPersistHelper) DeleteBobs(ctx context.Context, params *BobsDeleteBobsInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetDeleteBobsHandler()(ctx, params, fn)
+// handler implementation
+// next must be called on each result row
+func (p *BobsPersistHelper) DeleteBobs(ctx context.Context, params *BobInput, next func(*spanner.Row)) error {
+	return p.Handlers.DeleteBobsHandler(ctx, params, next)
 }
 
 // given a context, returns two functions.  (feed, stop)
 // feed will be called once for every row recieved by the handler
-// stop will be called when the client is done streaming it expects some sort of results to be returned
-// that can be marshalled into a response
-func (p *BobsPersistHelper) PutBobs(ctx context.Context) (func(*BobsPutBobsInput), func() (*spanner.Row, error)) {
-	return p.Handlers.GetPutBobsHandler()(ctx)
+// stop will be called when the client is done streaming. it expects
+//a  *spanner.Row to be returned, or nil.
+func (p *BobsPersistHelper) PutBobs(ctx context.Context) (func(*BobInput), func() (*spanner.Row, error)) {
+	return p.Handlers.PutBobsHandler(ctx)
 }
-func (p *BobsPersistHelper) GetBobs(ctx context.Context, params *BobsGetBobsInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetGetBobsHandler()(ctx, params, fn)
+
+// next must be called on each result row
+func (p *BobsPersistHelper) GetBobs(ctx context.Context, params *EmptyInput, next func(*spanner.Row)) error {
+	return p.Handlers.GetBobsHandler(ctx, params, next)
 }
-func (p *BobsPersistHelper) GetPeopleFromNames(ctx context.Context, params *BobsGetPeopleFromNamesInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetGetPeopleFromNamesHandler()(ctx, params, fn)
+
+// next must be called on each result row
+func (p *BobsPersistHelper) GetPeopleFromNames(ctx context.Context, params *NamesInput, next func(*spanner.Row)) error {
+	return p.Handlers.GetPeopleFromNamesHandler(ctx, params, next)
 }
 
 // input type definitions
-type BobsDeleteBobsInput struct {
-	StartTime interface{}
-}
-type BobsPutBobsInput struct {
+type BobInput struct {
 	Id        int64
-	Name      string
 	StartTime interface{}
+	Name      string
 }
-type BobsGetBobsInput struct {
+type EmptyInput struct {
 }
-type BobsGetPeopleFromNamesInput struct {
+type NamesInput struct {
 	Names []string
 }
 
-func BobForDeleteBobs(req *BobsDeleteBobsInput) *spanner.Mutation {
+// all our queries represented as spanner functions or mutations
+func BobFromDeleteBobsQuery(req *BobInput) *spanner.Mutation {
 	return spanner.Delete("bob_table", spanner.KeyRange{
 		Start: spanner.Key{
 			"Bob",
@@ -63,20 +67,20 @@ func BobForDeleteBobs(req *BobsDeleteBobsInput) *spanner.Mutation {
 		Kind: spanner.ClosedOpen,
 	})
 }
-func BobForPutBobs(req *BobsPutBobsInput) *spanner.Mutation {
+func BobFromPutBobsQuery(req *BobInput) *spanner.Mutation {
 	return spanner.InsertMap("bob_table", map[string]interface{}{
 		"id":         req.Id,
 		"name":       req.Name,
 		"start_time": req.StartTime,
 	})
 }
-func EmptyForGetBobs(req *BobsGetBobsInput) spanner.Statement {
+func EmptyFromGetBobsQuery(req *EmptyInput) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "SELECT * from bob_table",
 		Params: map[string]interface{}{},
 	}
 }
-func NamesForGetPeopleFromNames(req *BobsGetPeopleFromNamesInput) spanner.Statement {
+func NamesFromGetPeopleFromNamesQuery(req *NamesInput) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * FROM bob_table WHERE name IN UNNEST(@names)",
 		Params: map[string]interface{}{
@@ -86,23 +90,22 @@ func NamesForGetPeopleFromNames(req *BobsGetPeopleFromNamesInput) spanner.Statem
 }
 
 // Default method implementations
-func DefaultDeleteBobsHandler(cli *spanner.Client) func(context.Context, *BobsDeleteBobsInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *BobsDeleteBobsInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{BobForDeleteBobs(req)}); err != nil {
+func DefaultDeleteBobsHandler(cli *spanner.Client) func(context.Context, *BobInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *BobInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{BobFromDeleteBobsQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
 		return nil
 	}
 }
-
-func DefaultPutBobsHandler(cli *spanner.Client) func(context.Context) (func(*BobsPutBobsInput), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (feed func(*BobsPutBobsInput), done func() (*spanner.Row, error)) {
+func DefaultPutBobsHandler(cli *spanner.Client) func(context.Context) (func(*BobInput), func() (*spanner.Row, error)) {
+	return func(ctx context.Context) (func(*BobInput), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
-		feed = func(req *BobsPutBobsInput) {
-			muts = append(muts, BobForPutBobs(req))
+		feed := func(req *BobInput) {
+			muts = append(muts, BobFromPutBobsQuery(req))
 		}
-		done = func() (*spanner.Row, error) {
+		done := func() (*spanner.Row, error) {
 			if _, err := cli.Apply(ctx, muts); err != nil {
 				return nil, err
 			}
@@ -111,10 +114,9 @@ func DefaultPutBobsHandler(cli *spanner.Client) func(context.Context) (func(*Bob
 		return feed, done
 	}
 }
-
-func DefaultGetBobsHandler(cli *spanner.Client) func(context.Context, *BobsGetBobsInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *BobsGetBobsInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, EmptyForGetBobs(req))
+func DefaultGetBobsHandler(cli *spanner.Client) func(context.Context, *EmptyInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *EmptyInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, EmptyFromGetBobsQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -124,10 +126,9 @@ func DefaultGetBobsHandler(cli *spanner.Client) func(context.Context, *BobsGetBo
 		return nil
 	}
 }
-
-func DefaultGetPeopleFromNamesHandler(cli *spanner.Client) func(context.Context, *BobsGetPeopleFromNamesInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *BobsGetPeopleFromNamesInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, NamesForGetPeopleFromNames(req))
+func DefaultGetPeopleFromNamesHandler(cli *spanner.Client) func(context.Context, *NamesInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *NamesInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, NamesFromGetPeopleFromNamesQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil

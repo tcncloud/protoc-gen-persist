@@ -44,12 +44,13 @@ import (
 )
 
 type FileStruct struct {
-	Desc          *descriptor.FileDescriptorProto
-	ImportList    *Imports
-	Dependency    bool        // if is dependency
-	Structures    *StructList // all structures in the file
-	AllStructures *StructList // all structures in all the files
-	ServiceList   *Services
+	Desc            *descriptor.FileDescriptorProto
+	ImportList      *Imports
+	Dependency      bool        // if is dependency
+	Structures      *StructList // all structures in the file
+	AllStructures   *StructList // all structures in all the files
+	ServiceList     *Services
+	PersistStringer *PersistStringer // print our persist file
 }
 
 func NewFileStruct(desc *descriptor.FileDescriptorProto, allStructs *StructList, dependency bool) *FileStruct {
@@ -61,6 +62,8 @@ func NewFileStruct(desc *descriptor.FileDescriptorProto, allStructs *StructList,
 		AllStructures: allStructs,
 		Dependency:    dependency,
 	}
+	ret.PersistStringer = &PersistStringer{file: ret}
+
 	return ret
 }
 

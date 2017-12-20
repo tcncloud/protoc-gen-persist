@@ -47,27 +47,16 @@ type Method struct {
 	Desc    *descriptor.MethodDescriptorProto
 	Service *Service
 	//Spanner *SpannerHelper
-	Query parser.Query
+	Query    parser.Query
+	Stringer *MethodStringer
 }
 
 func NewMethod(desc *descriptor.MethodDescriptorProto, srv *Service) (*Method, error) {
 	meth := &Method{Desc: desc, Service: srv}
+	meth.Stringer = &MethodStringer{method: meth}
+
 	return meth, nil
 }
-
-func (m *Method) String() string {
-	if m == nil {
-		return "METHOD: <nil>"
-	}
-	isSql := fmt.Sprintf("%t", m.IsSQL())
-	isSpanner := fmt.Sprintf("%t", m.IsSpanner())
-	name := m.Desc.GetName()
-	input := m.Desc.GetInputType()
-	output := m.Desc.GetOutputType()
-	return fmt.Sprintf("Method:\n\tName: %s\n\tisSql: %s\n\tisSpanner: %s\n\tinput: %s\n\toutput: %s\n\tSpanner: %s\n\n",
-		name, isSql, isSpanner, input, output /*m.Spanner*/)
-}
-
 func (m *Method) IsSelect() bool {
 	if m.Query != nil && m.Query.Type() == parser.SELECT_QUERY {
 		return true
@@ -401,6 +390,7 @@ type TypeDesc struct {
 	// mytime.MyTime (if it is mapped) otherwise is defaultMapping  ex: string, []float64
 	// if is a message type, then *pb.TestMessage  []*TestMessage
 	GoName          string
+	GoTypeName      string
 	OrigGoName      string // Timestamp
 	Struct          *Struct
 	Mapping         *persist.TypeMapping_TypeDescriptor
@@ -445,6 +435,7 @@ func SpannerType(t TypeDesc) string {
 
 	return t.GoName
 }
+
 func SpannerTypeFieldName(t TypeDesc) string {
 	switch t.GoName {
 	case "string", "[]string":
@@ -480,6 +471,7 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 					Struct:          m.Service.AllStructs.GetStructByFieldDesc(mp),
 					ProtoName:       mp.GetName(),
 					GoName:          m.GetMappedType(mp),
+					GoTypeName:      m.GetTypeNameMinusPackage(mp),
 					OrigGoName:      m.DefaultMapping(mp),
 					Mapping:         m.GetMapping(mp),
 					EnumName:        m.GetTypeNameMinusPackage(mp),
