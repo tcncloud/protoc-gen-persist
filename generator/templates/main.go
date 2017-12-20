@@ -53,62 +53,23 @@ import (
 	"golang.org/x/net/context"
 )
 
+{{.PersistStringer.HandlersDeclarations}}
 
-{{range $i, $s := .ServiceList -}}
-type {{$s.GetName}}PersistHelper struct {
-	Handlers {{$s.GetName}}Handlers
-}
+// handler implementation
 
-type {{$s.GetName}}Handlers interface {
-{{range $method := $s.Methods}}{{if $method.IsSpanner -}}
-	{{- if $method.IsClientStreaming -}}
-	Get{{$method.GetName}}Handler() func(context.Context)(func(*{{template "persist_lib_input_name" $method}}), func() (*spanner.Row, error))
-	{{- else -}}
-	Get{{$method.GetName}}Handler() func(context.Context, *{{template "persist_lib_input_name" $method}}, func(*spanner.Row)) error{{end}}
-{{end}}{{end -}}
-}
-{{end}}
-
-{{range $srv := .ServiceList}}{{range $method := $srv.Methods}}{{if $method.IsSpanner}}
-
-{{if $method.IsClientStreaming -}}
-// given a context, returns two functions.  (feed, stop)
-// feed will be called once for every row recieved by the handler
-// stop will be called when the client is done streaming it expects some sort of results to be returned
-// that can be marshalled into a response
-func(p *{{$srv.GetName}}PersistHelper) {{$method.GetName}}(ctx context.Context)(func(*{{template "persist_lib_input_name" $method}}), func() (*spanner.Row, error)) {
-	return p.Handlers.Get{{$method.GetName}}Handler()(ctx)
-}
-{{else -}}
-func(p *{{$srv.GetName}}PersistHelper) {{$method.GetName}}(ctx context.Context, params *{{template "persist_lib_input_name" $method}}, fn func(row *spanner.Row)) error {
-	return p.Handlers.Get{{$method.GetName}}Handler()(ctx, params, fn)
-}
-{{end -}}
-{{end}}{{end}}{{end}}
+{{.PersistStringer.HelperHandlers}}
 
 // input type definitions
 
-{{range $srv := .ServiceList}}{{range $method := $srv.Methods}}{{if $method.IsSpanner -}}
-	{{template "persist_lib_input" $method}}
-{{end}}{{end}}{{end}}
+{{.PersistStringer.MessageInputDeclarations}}
 
-{{range $srv := .ServiceList}}{{range $method := $srv.Methods}}{{if $method.IsSpanner}}
-{{if $method.IsSelect -}}
-func {{template "persist_lib_method_input_name" $method}}(req *{{template "persist_lib_input_name" $method}}) spanner.Statement {
-	return {{$method.Query.String}}
-}
-{{else -}}
-func {{template "persist_lib_method_input_name" $method}}(req *{{template "persist_lib_input_name" $method}}) *spanner.Mutation{
-	return {{$method.Query.String}}
-}
-{{end -}}
-{{end}}{{end}}{{end}}
+// all our queries represented as spanner functions or mutations
+
+{{.PersistStringer.QueryFunctions}}
 
 // Default method implementations
 
-{{range $srv := .ServiceList}}{{range $method := $srv.Methods}}{{if $method.IsSpanner -}}
-{{template "persist_lib_default_handler" $method}}
-{{end}}{{end}}{{end}}
+{{.PersistStringer.DefaultFunctions}}
 `
 
 // NO end to this template

@@ -64,7 +64,6 @@ var (
 		"spanner_unary_method":            templates.SpannerUnaryTemplate,
 		"spanner_client_streaming_method": templates.SpannerClientStreamingTemplate,
 		"spanner_server_streaming_method": templates.SpannerServerStreamingTemplate,
-		"persist_lib_input":               templates.PersistLibInput,
 	}
 )
 

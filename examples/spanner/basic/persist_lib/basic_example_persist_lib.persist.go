@@ -11,194 +11,172 @@ import (
 type MySpannerPersistHelper struct {
 	Handlers MySpannerHandlers
 }
-type MySpannerHandlers interface {
-	GetUniaryInsertHandler() func(context.Context, *MySpannerUniaryInsertInput, func(*spanner.Row)) error
-	GetUniarySelectHandler() func(context.Context, *MySpannerUniarySelectInput, func(*spanner.Row)) error
-	GetTestNestHandler() func(context.Context, *MySpannerTestNestInput, func(*spanner.Row)) error
-	GetTestEverythingHandler() func(context.Context, *MySpannerTestEverythingInput, func(*spanner.Row)) error
-	GetUniarySelectWithDirectivesHandler() func(context.Context, *MySpannerUniarySelectWithDirectivesInput, func(*spanner.Row)) error
-	GetUniaryUpdateHandler() func(context.Context, *MySpannerUniaryUpdateInput, func(*spanner.Row)) error
-	GetUniaryDeleteRangeHandler() func(context.Context, *MySpannerUniaryDeleteRangeInput, func(*spanner.Row)) error
-	GetUniaryDeleteSingleHandler() func(context.Context, *MySpannerUniaryDeleteSingleInput, func(*spanner.Row)) error
-	GetNoArgsHandler() func(context.Context, *MySpannerNoArgsInput, func(*spanner.Row)) error
-	GetServerStreamHandler() func(context.Context, *MySpannerServerStreamInput, func(*spanner.Row)) error
-	GetClientStreamInsertHandler() func(context.Context) (func(*MySpannerClientStreamInsertInput), func() (*spanner.Row, error))
-	GetClientStreamDeleteHandler() func(context.Context) (func(*MySpannerClientStreamDeleteInput), func() (*spanner.Row, error))
-	GetClientStreamUpdateHandler() func(context.Context) (func(*MySpannerClientStreamUpdateInput), func() (*spanner.Row, error))
-	GetUniaryInsertWithHooksHandler() func(context.Context, *MySpannerUniaryInsertWithHooksInput, func(*spanner.Row)) error
-	GetUniarySelectWithHooksHandler() func(context.Context, *MySpannerUniarySelectWithHooksInput, func(*spanner.Row)) error
-	GetUniaryUpdateWithHooksHandler() func(context.Context, *MySpannerUniaryUpdateWithHooksInput, func(*spanner.Row)) error
-	GetUniaryDeleteWithHooksHandler() func(context.Context, *MySpannerUniaryDeleteWithHooksInput, func(*spanner.Row)) error
-	GetServerStreamWithHooksHandler() func(context.Context, *MySpannerServerStreamWithHooksInput, func(*spanner.Row)) error
-	GetClientStreamUpdateWithHooksHandler() func(context.Context) (func(*MySpannerClientStreamUpdateWithHooksInput), func() (*spanner.Row, error))
+type MySpannerHandlers struct {
+	UniaryInsertHandler                func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error
+	UniarySelectHandler                func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error
+	TestNestHandler                    func(context.Context, *SomethingInput, func(*spanner.Row)) error
+	TestEverythingHandler              func(context.Context, *HasTimestampInput, func(*spanner.Row)) error
+	UniarySelectWithDirectivesHandler  func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error
+	UniaryUpdateHandler                func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error
+	UniaryDeleteRangeHandler           func(context.Context, *Test_ExampleTableRangeInput, func(*spanner.Row)) error
+	UniaryDeleteSingleHandler          func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error
+	NoArgsHandler                      func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error
+	ServerStreamHandler                func(context.Context, *Test_NameInput, func(*spanner.Row)) error
+	ClientStreamInsertHandler          func(context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error))
+	ClientStreamDeleteHandler          func(context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error))
+	ClientStreamUpdateHandler          func(context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error))
+	UniaryInsertWithHooksHandler       func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error
+	UniarySelectWithHooksHandler       func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error
+	UniaryUpdateWithHooksHandler       func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error
+	UniaryDeleteWithHooksHandler       func(context.Context, *Test_ExampleTableRangeInput, func(*spanner.Row)) error
+	ServerStreamWithHooksHandler       func(context.Context, *Test_NameInput, func(*spanner.Row)) error
+	ClientStreamUpdateWithHooksHandler func(context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error))
 }
 
-func (p *MySpannerPersistHelper) UniaryInsert(ctx context.Context, params *MySpannerUniaryInsertInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryInsertHandler()(ctx, params, fn)
-}
-func (p *MySpannerPersistHelper) UniarySelect(ctx context.Context, params *MySpannerUniarySelectInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniarySelectHandler()(ctx, params, fn)
-}
-func (p *MySpannerPersistHelper) TestNest(ctx context.Context, params *MySpannerTestNestInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetTestNestHandler()(ctx, params, fn)
-}
-func (p *MySpannerPersistHelper) TestEverything(ctx context.Context, params *MySpannerTestEverythingInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetTestEverythingHandler()(ctx, params, fn)
-}
-func (p *MySpannerPersistHelper) UniarySelectWithDirectives(ctx context.Context, params *MySpannerUniarySelectWithDirectivesInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniarySelectWithDirectivesHandler()(ctx, params, fn)
-}
-func (p *MySpannerPersistHelper) UniaryUpdate(ctx context.Context, params *MySpannerUniaryUpdateInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryUpdateHandler()(ctx, params, fn)
-}
-func (p *MySpannerPersistHelper) UniaryDeleteRange(ctx context.Context, params *MySpannerUniaryDeleteRangeInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryDeleteRangeHandler()(ctx, params, fn)
-}
-func (p *MySpannerPersistHelper) UniaryDeleteSingle(ctx context.Context, params *MySpannerUniaryDeleteSingleInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryDeleteSingleHandler()(ctx, params, fn)
-}
-func (p *MySpannerPersistHelper) NoArgs(ctx context.Context, params *MySpannerNoArgsInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetNoArgsHandler()(ctx, params, fn)
-}
-func (p *MySpannerPersistHelper) ServerStream(ctx context.Context, params *MySpannerServerStreamInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetServerStreamHandler()(ctx, params, fn)
+// handler implementation
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniaryInsert(ctx context.Context, params *Test_ExampleTableInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniaryInsertHandler(ctx, params, next)
 }
 
-// given a context, returns two functions.  (feed, stop)
-// feed will be called once for every row recieved by the handler
-// stop will be called when the client is done streaming it expects some sort of results to be returned
-// that can be marshalled into a response
-func (p *MySpannerPersistHelper) ClientStreamInsert(ctx context.Context) (func(*MySpannerClientStreamInsertInput), func() (*spanner.Row, error)) {
-	return p.Handlers.GetClientStreamInsertHandler()(ctx)
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniarySelect(ctx context.Context, params *Test_ExampleTableInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniarySelectHandler(ctx, params, next)
 }
 
-// given a context, returns two functions.  (feed, stop)
-// feed will be called once for every row recieved by the handler
-// stop will be called when the client is done streaming it expects some sort of results to be returned
-// that can be marshalled into a response
-func (p *MySpannerPersistHelper) ClientStreamDelete(ctx context.Context) (func(*MySpannerClientStreamDeleteInput), func() (*spanner.Row, error)) {
-	return p.Handlers.GetClientStreamDeleteHandler()(ctx)
+// next must be called on each result row
+func (p *MySpannerPersistHelper) TestNest(ctx context.Context, params *SomethingInput, next func(*spanner.Row)) error {
+	return p.Handlers.TestNestHandler(ctx, params, next)
 }
 
-// given a context, returns two functions.  (feed, stop)
-// feed will be called once for every row recieved by the handler
-// stop will be called when the client is done streaming it expects some sort of results to be returned
-// that can be marshalled into a response
-func (p *MySpannerPersistHelper) ClientStreamUpdate(ctx context.Context) (func(*MySpannerClientStreamUpdateInput), func() (*spanner.Row, error)) {
-	return p.Handlers.GetClientStreamUpdateHandler()(ctx)
+// next must be called on each result row
+func (p *MySpannerPersistHelper) TestEverything(ctx context.Context, params *HasTimestampInput, next func(*spanner.Row)) error {
+	return p.Handlers.TestEverythingHandler(ctx, params, next)
 }
-func (p *MySpannerPersistHelper) UniaryInsertWithHooks(ctx context.Context, params *MySpannerUniaryInsertWithHooksInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryInsertWithHooksHandler()(ctx, params, fn)
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniarySelectWithDirectives(ctx context.Context, params *Test_ExampleTableInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniarySelectWithDirectivesHandler(ctx, params, next)
 }
-func (p *MySpannerPersistHelper) UniarySelectWithHooks(ctx context.Context, params *MySpannerUniarySelectWithHooksInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniarySelectWithHooksHandler()(ctx, params, fn)
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniaryUpdate(ctx context.Context, params *Test_ExampleTableInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniaryUpdateHandler(ctx, params, next)
 }
-func (p *MySpannerPersistHelper) UniaryUpdateWithHooks(ctx context.Context, params *MySpannerUniaryUpdateWithHooksInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryUpdateWithHooksHandler()(ctx, params, fn)
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniaryDeleteRange(ctx context.Context, params *Test_ExampleTableRangeInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniaryDeleteRangeHandler(ctx, params, next)
 }
-func (p *MySpannerPersistHelper) UniaryDeleteWithHooks(ctx context.Context, params *MySpannerUniaryDeleteWithHooksInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetUniaryDeleteWithHooksHandler()(ctx, params, fn)
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniaryDeleteSingle(ctx context.Context, params *Test_ExampleTableInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniaryDeleteSingleHandler(ctx, params, next)
 }
-func (p *MySpannerPersistHelper) ServerStreamWithHooks(ctx context.Context, params *MySpannerServerStreamWithHooksInput, fn func(row *spanner.Row)) error {
-	return p.Handlers.GetServerStreamWithHooksHandler()(ctx, params, fn)
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) NoArgs(ctx context.Context, params *Test_ExampleTableInput, next func(*spanner.Row)) error {
+	return p.Handlers.NoArgsHandler(ctx, params, next)
+}
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) ServerStream(ctx context.Context, params *Test_NameInput, next func(*spanner.Row)) error {
+	return p.Handlers.ServerStreamHandler(ctx, params, next)
 }
 
 // given a context, returns two functions.  (feed, stop)
 // feed will be called once for every row recieved by the handler
-// stop will be called when the client is done streaming it expects some sort of results to be returned
-// that can be marshalled into a response
-func (p *MySpannerPersistHelper) ClientStreamUpdateWithHooks(ctx context.Context) (func(*MySpannerClientStreamUpdateWithHooksInput), func() (*spanner.Row, error)) {
-	return p.Handlers.GetClientStreamUpdateWithHooksHandler()(ctx)
+// stop will be called when the client is done streaming. it expects
+//a  *spanner.Row to be returned, or nil.
+func (p *MySpannerPersistHelper) ClientStreamInsert(ctx context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
+	return p.Handlers.ClientStreamInsertHandler(ctx)
+}
+
+// given a context, returns two functions.  (feed, stop)
+// feed will be called once for every row recieved by the handler
+// stop will be called when the client is done streaming. it expects
+//a  *spanner.Row to be returned, or nil.
+func (p *MySpannerPersistHelper) ClientStreamDelete(ctx context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
+	return p.Handlers.ClientStreamDeleteHandler(ctx)
+}
+
+// given a context, returns two functions.  (feed, stop)
+// feed will be called once for every row recieved by the handler
+// stop will be called when the client is done streaming. it expects
+//a  *spanner.Row to be returned, or nil.
+func (p *MySpannerPersistHelper) ClientStreamUpdate(ctx context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
+	return p.Handlers.ClientStreamUpdateHandler(ctx)
+}
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniaryInsertWithHooks(ctx context.Context, params *Test_ExampleTableInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniaryInsertWithHooksHandler(ctx, params, next)
+}
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniarySelectWithHooks(ctx context.Context, params *Test_ExampleTableInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniarySelectWithHooksHandler(ctx, params, next)
+}
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniaryUpdateWithHooks(ctx context.Context, params *Test_ExampleTableInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniaryUpdateWithHooksHandler(ctx, params, next)
+}
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) UniaryDeleteWithHooks(ctx context.Context, params *Test_ExampleTableRangeInput, next func(*spanner.Row)) error {
+	return p.Handlers.UniaryDeleteWithHooksHandler(ctx, params, next)
+}
+
+// next must be called on each result row
+func (p *MySpannerPersistHelper) ServerStreamWithHooks(ctx context.Context, params *Test_NameInput, next func(*spanner.Row)) error {
+	return p.Handlers.ServerStreamWithHooksHandler(ctx, params, next)
+}
+
+// given a context, returns two functions.  (feed, stop)
+// feed will be called once for every row recieved by the handler
+// stop will be called when the client is done streaming. it expects
+//a  *spanner.Row to be returned, or nil.
+func (p *MySpannerPersistHelper) ClientStreamUpdateWithHooks(ctx context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
+	return p.Handlers.ClientStreamUpdateWithHooksHandler(ctx)
 }
 
 // input type definitions
-type MySpannerUniaryInsertInput struct {
+type Test_ExampleTableInput struct {
 	Id        int64
-	Name      string
 	StartTime interface{}
+	Name      string
 }
-type MySpannerUniarySelectInput struct {
-	Id   int64
-	Name string
+type SomethingInput struct {
+	Thing []byte
 }
-type MySpannerTestNestInput struct {
-	Thing interface{}
-}
-type MySpannerTestEverythingInput struct {
-	Some   interface{}
-	Somes  interface{}
-	Str    string
-	Strs   []string
-	Table  interface{}
-	Tables interface{}
+type HasTimestampInput struct {
 	Time   interface{}
-	Times  interface{}
+	Some   []byte
+	Str    string
+	Table  []byte
+	Strs   []string
+	Tables [][]byte
+	Somes  [][]byte
+	Times  [][]byte
 }
-type MySpannerUniarySelectWithDirectivesInput struct {
-	Id   int64
-	Name string
-}
-type MySpannerUniaryUpdateInput struct {
-	Id        int64
-	Name      string
-	StartTime interface{}
-}
-type MySpannerUniaryDeleteRangeInput struct {
-	EndId   int64
+type Test_ExampleTableRangeInput struct {
 	StartId int64
-}
-type MySpannerUniaryDeleteSingleInput struct {
-	Id int64
-}
-type MySpannerNoArgsInput struct {
-}
-type MySpannerServerStreamInput struct {
-}
-type MySpannerClientStreamInsertInput struct {
-	Id        int64
-	Name      string
-	StartTime interface{}
-}
-type MySpannerClientStreamDeleteInput struct {
-	Id int64
-}
-type MySpannerClientStreamUpdateInput struct {
-	Id        int64
-	Name      string
-	StartTime interface{}
-}
-type MySpannerUniaryInsertWithHooksInput struct {
-	Id        int64
-	Name      string
-	StartTime interface{}
-}
-type MySpannerUniarySelectWithHooksInput struct {
-	Id int64
-}
-type MySpannerUniaryUpdateWithHooksInput struct {
-	Id        int64
-	Name      string
-	StartTime interface{}
-}
-type MySpannerUniaryDeleteWithHooksInput struct {
 	EndId   int64
-	StartId int64
 }
-type MySpannerServerStreamWithHooksInput struct {
-}
-type MySpannerClientStreamUpdateWithHooksInput struct {
-	Id   int64
+type Test_NameInput struct {
 	Name string
 }
 
-func ExampleTableForUniaryInsert(req *MySpannerUniaryInsertInput) *spanner.Mutation {
+// all our queries represented as spanner functions or mutations
+func ExampleTableFromUniaryInsertQuery(req *Test_ExampleTableInput) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
 		"id":         req.Id,
 		"start_time": req.StartTime,
 		"name":       "bananas",
 	})
 }
-func ExampleTableForUniarySelect(req *MySpannerUniarySelectInput) spanner.Statement {
+func ExampleTableFromUniarySelectQuery(req *Test_ExampleTableInput) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@id AND name=@name",
 		Params: map[string]interface{}{
@@ -207,7 +185,7 @@ func ExampleTableForUniarySelect(req *MySpannerUniarySelectInput) spanner.Statem
 		},
 	}
 }
-func SomethingForTestNest(req *MySpannerTestNestInput) spanner.Statement {
+func SomethingFromTestNestQuery(req *SomethingInput) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@thing",
 		Params: map[string]interface{}{
@@ -215,7 +193,7 @@ func SomethingForTestNest(req *MySpannerTestNestInput) spanner.Statement {
 		},
 	}
 }
-func HasTimestampForTestEverything(req *MySpannerTestEverythingInput) spanner.Statement {
+func HasTimestampFromTestEverythingQuery(req *HasTimestampInput) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@time AND some=@some AND str=@str AND table=@table AND times = @times AND somes = @somes AND strs = @strs AND tables = @tables",
 		Params: map[string]interface{}{
@@ -230,7 +208,7 @@ func HasTimestampForTestEverything(req *MySpannerTestEverythingInput) spanner.St
 		},
 	}
 }
-func ExampleTableForUniarySelectWithDirectives(req *MySpannerUniarySelectWithDirectivesInput) spanner.Statement {
+func ExampleTableFromUniarySelectWithDirectivesQuery(req *Test_ExampleTableInput) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name",
 		Params: map[string]interface{}{
@@ -239,14 +217,14 @@ func ExampleTableForUniarySelectWithDirectives(req *MySpannerUniarySelectWithDir
 		},
 	}
 }
-func ExampleTableForUniaryUpdate(req *MySpannerUniaryUpdateInput) *spanner.Mutation {
+func ExampleTableFromUniaryUpdateQuery(req *Test_ExampleTableInput) *spanner.Mutation {
 	return spanner.UpdateMap("example_table", map[string]interface{}{
 		"start_time": req.StartTime,
 		"name":       "oranges",
 		"id":         req.Id,
 	})
 }
-func ExampleTableRangeForUniaryDeleteRange(req *MySpannerUniaryDeleteRangeInput) *spanner.Mutation {
+func ExampleTableRangeFromUniaryDeleteRangeQuery(req *Test_ExampleTableRangeInput) *spanner.Mutation {
 	return spanner.Delete("example_table", spanner.KeyRange{
 		Start: spanner.Key{
 			req.StartId,
@@ -257,52 +235,52 @@ func ExampleTableRangeForUniaryDeleteRange(req *MySpannerUniaryDeleteRangeInput)
 		Kind: spanner.ClosedOpen,
 	})
 }
-func ExampleTableForUniaryDeleteSingle(req *MySpannerUniaryDeleteSingleInput) *spanner.Mutation {
+func ExampleTableFromUniaryDeleteSingleQuery(req *Test_ExampleTableInput) *spanner.Mutation {
 	return spanner.Delete("example_table", spanner.Key{
 		"abc",
 		123,
 		req.Id,
 	})
 }
-func ExampleTableForNoArgs(req *MySpannerNoArgsInput) spanner.Statement {
+func ExampleTableFromNoArgsQuery(req *Test_ExampleTableInput) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "select * from example_table limit 1",
 		Params: map[string]interface{}{},
 	}
 }
-func NameForServerStream(req *MySpannerServerStreamInput) spanner.Statement {
+func NameFromServerStreamQuery(req *Test_NameInput) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "SELECT * FROM example_table",
 		Params: map[string]interface{}{},
 	}
 }
-func ExampleTableForClientStreamInsert(req *MySpannerClientStreamInsertInput) *spanner.Mutation {
+func ExampleTableFromClientStreamInsertQuery(req *Test_ExampleTableInput) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"start_time": req.StartTime,
 		"name":       3,
 		"id":         req.Id,
+		"start_time": req.StartTime,
 	})
 }
-func ExampleTableForClientStreamDelete(req *MySpannerClientStreamDeleteInput) *spanner.Mutation {
+func ExampleTableFromClientStreamDeleteQuery(req *Test_ExampleTableInput) *spanner.Mutation {
 	return spanner.Delete("example_table", spanner.Key{
 		req.Id,
 	})
 }
-func ExampleTableForClientStreamUpdate(req *MySpannerClientStreamUpdateInput) *spanner.Mutation {
+func ExampleTableFromClientStreamUpdateQuery(req *Test_ExampleTableInput) *spanner.Mutation {
 	return spanner.UpdateMap("example_table", map[string]interface{}{
 		"start_time": req.StartTime,
 		"name":       req.Name,
 		"id":         req.Id,
 	})
 }
-func ExampleTableForUniaryInsertWithHooks(req *MySpannerUniaryInsertWithHooksInput) *spanner.Mutation {
+func ExampleTableFromUniaryInsertWithHooksQuery(req *Test_ExampleTableInput) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"name":       "bananas",
 		"id":         req.Id,
 		"start_time": req.StartTime,
+		"name":       "bananas",
 	})
 }
-func ExampleTableForUniarySelectWithHooks(req *MySpannerUniarySelectWithHooksInput) spanner.Statement {
+func ExampleTableFromUniarySelectWithHooksQuery(req *Test_ExampleTableInput) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@id",
 		Params: map[string]interface{}{
@@ -310,14 +288,14 @@ func ExampleTableForUniarySelectWithHooks(req *MySpannerUniarySelectWithHooksInp
 		},
 	}
 }
-func ExampleTableForUniaryUpdateWithHooks(req *MySpannerUniaryUpdateWithHooksInput) *spanner.Mutation {
+func ExampleTableFromUniaryUpdateWithHooksQuery(req *Test_ExampleTableInput) *spanner.Mutation {
 	return spanner.UpdateMap("example_table", map[string]interface{}{
 		"start_time": req.StartTime,
 		"name":       "oranges",
 		"id":         req.Id,
 	})
 }
-func ExampleTableRangeForUniaryDeleteWithHooks(req *MySpannerUniaryDeleteWithHooksInput) *spanner.Mutation {
+func ExampleTableRangeFromUniaryDeleteWithHooksQuery(req *Test_ExampleTableRangeInput) *spanner.Mutation {
 	return spanner.Delete("example_table", spanner.KeyRange{
 		Start: spanner.Key{
 			req.StartId,
@@ -328,13 +306,13 @@ func ExampleTableRangeForUniaryDeleteWithHooks(req *MySpannerUniaryDeleteWithHoo
 		Kind: spanner.ClosedOpen,
 	})
 }
-func NameForServerStreamWithHooks(req *MySpannerServerStreamWithHooksInput) spanner.Statement {
+func NameFromServerStreamWithHooksQuery(req *Test_NameInput) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "SELECT * FROM example_table",
 		Params: map[string]interface{}{},
 	}
 }
-func ExampleTableForClientStreamUpdateWithHooks(req *MySpannerClientStreamUpdateWithHooksInput) *spanner.Mutation {
+func ExampleTableFromClientStreamUpdateWithHooksQuery(req *Test_ExampleTableInput) *spanner.Mutation {
 	return spanner.UpdateMap("example_table", map[string]interface{}{
 		"name": "asdf",
 		"id":   req.Id,
@@ -342,19 +320,18 @@ func ExampleTableForClientStreamUpdateWithHooks(req *MySpannerClientStreamUpdate
 }
 
 // Default method implementations
-func DefaultUniaryInsertHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryInsertInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryInsertInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryInsert(req)}); err != nil {
+func DefaultUniaryInsertHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryInsertQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
 		return nil
 	}
 }
-
-func DefaultUniarySelectHandler(cli *spanner.Client) func(context.Context, *MySpannerUniarySelectInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniarySelectInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, ExampleTableForUniarySelect(req))
+func DefaultUniarySelectHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, ExampleTableFromUniarySelectQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -364,10 +341,9 @@ func DefaultUniarySelectHandler(cli *spanner.Client) func(context.Context, *MySp
 		return nil
 	}
 }
-
-func DefaultTestNestHandler(cli *spanner.Client) func(context.Context, *MySpannerTestNestInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerTestNestInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, SomethingForTestNest(req))
+func DefaultTestNestHandler(cli *spanner.Client) func(context.Context, *SomethingInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *SomethingInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, SomethingFromTestNestQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -377,10 +353,9 @@ func DefaultTestNestHandler(cli *spanner.Client) func(context.Context, *MySpanne
 		return nil
 	}
 }
-
-func DefaultTestEverythingHandler(cli *spanner.Client) func(context.Context, *MySpannerTestEverythingInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerTestEverythingInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, HasTimestampForTestEverything(req))
+func DefaultTestEverythingHandler(cli *spanner.Client) func(context.Context, *HasTimestampInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *HasTimestampInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, HasTimestampFromTestEverythingQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -390,10 +365,9 @@ func DefaultTestEverythingHandler(cli *spanner.Client) func(context.Context, *My
 		return nil
 	}
 }
-
-func DefaultUniarySelectWithDirectivesHandler(cli *spanner.Client) func(context.Context, *MySpannerUniarySelectWithDirectivesInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniarySelectWithDirectivesInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, ExampleTableForUniarySelectWithDirectives(req))
+func DefaultUniarySelectWithDirectivesHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, ExampleTableFromUniarySelectWithDirectivesQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -403,40 +377,36 @@ func DefaultUniarySelectWithDirectivesHandler(cli *spanner.Client) func(context.
 		return nil
 	}
 }
-
-func DefaultUniaryUpdateHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryUpdateInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryUpdateInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryUpdate(req)}); err != nil {
+func DefaultUniaryUpdateHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryUpdateQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
 		return nil
 	}
 }
-
-func DefaultUniaryDeleteRangeHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryDeleteRangeInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryDeleteRangeInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableRangeForUniaryDeleteRange(req)}); err != nil {
+func DefaultUniaryDeleteRangeHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableRangeInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableRangeInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableRangeFromUniaryDeleteRangeQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
 		return nil
 	}
 }
-
-func DefaultUniaryDeleteSingleHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryDeleteSingleInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryDeleteSingleInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryDeleteSingle(req)}); err != nil {
+func DefaultUniaryDeleteSingleHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryDeleteSingleQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
 		return nil
 	}
 }
-
-func DefaultNoArgsHandler(cli *spanner.Client) func(context.Context, *MySpannerNoArgsInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerNoArgsInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, ExampleTableForNoArgs(req))
+func DefaultNoArgsHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, ExampleTableFromNoArgsQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -446,10 +416,9 @@ func DefaultNoArgsHandler(cli *spanner.Client) func(context.Context, *MySpannerN
 		return nil
 	}
 }
-
-func DefaultServerStreamHandler(cli *spanner.Client) func(context.Context, *MySpannerServerStreamInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerServerStreamInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, NameForServerStream(req))
+func DefaultServerStreamHandler(cli *spanner.Client) func(context.Context, *Test_NameInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_NameInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, NameFromServerStreamQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -459,14 +428,13 @@ func DefaultServerStreamHandler(cli *spanner.Client) func(context.Context, *MySp
 		return nil
 	}
 }
-
-func DefaultClientStreamInsertHandler(cli *spanner.Client) func(context.Context) (func(*MySpannerClientStreamInsertInput), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (feed func(*MySpannerClientStreamInsertInput), done func() (*spanner.Row, error)) {
+func DefaultClientStreamInsertHandler(cli *spanner.Client) func(context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
+	return func(ctx context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
-		feed = func(req *MySpannerClientStreamInsertInput) {
-			muts = append(muts, ExampleTableForClientStreamInsert(req))
+		feed := func(req *Test_ExampleTableInput) {
+			muts = append(muts, ExampleTableFromClientStreamInsertQuery(req))
 		}
-		done = func() (*spanner.Row, error) {
+		done := func() (*spanner.Row, error) {
 			if _, err := cli.Apply(ctx, muts); err != nil {
 				return nil, err
 			}
@@ -475,14 +443,13 @@ func DefaultClientStreamInsertHandler(cli *spanner.Client) func(context.Context)
 		return feed, done
 	}
 }
-
-func DefaultClientStreamDeleteHandler(cli *spanner.Client) func(context.Context) (func(*MySpannerClientStreamDeleteInput), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (feed func(*MySpannerClientStreamDeleteInput), done func() (*spanner.Row, error)) {
+func DefaultClientStreamDeleteHandler(cli *spanner.Client) func(context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
+	return func(ctx context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
-		feed = func(req *MySpannerClientStreamDeleteInput) {
-			muts = append(muts, ExampleTableForClientStreamDelete(req))
+		feed := func(req *Test_ExampleTableInput) {
+			muts = append(muts, ExampleTableFromClientStreamDeleteQuery(req))
 		}
-		done = func() (*spanner.Row, error) {
+		done := func() (*spanner.Row, error) {
 			if _, err := cli.Apply(ctx, muts); err != nil {
 				return nil, err
 			}
@@ -491,14 +458,13 @@ func DefaultClientStreamDeleteHandler(cli *spanner.Client) func(context.Context)
 		return feed, done
 	}
 }
-
-func DefaultClientStreamUpdateHandler(cli *spanner.Client) func(context.Context) (func(*MySpannerClientStreamUpdateInput), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (feed func(*MySpannerClientStreamUpdateInput), done func() (*spanner.Row, error)) {
+func DefaultClientStreamUpdateHandler(cli *spanner.Client) func(context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
+	return func(ctx context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
-		feed = func(req *MySpannerClientStreamUpdateInput) {
-			muts = append(muts, ExampleTableForClientStreamUpdate(req))
+		feed := func(req *Test_ExampleTableInput) {
+			muts = append(muts, ExampleTableFromClientStreamUpdateQuery(req))
 		}
-		done = func() (*spanner.Row, error) {
+		done := func() (*spanner.Row, error) {
 			if _, err := cli.Apply(ctx, muts); err != nil {
 				return nil, err
 			}
@@ -507,20 +473,18 @@ func DefaultClientStreamUpdateHandler(cli *spanner.Client) func(context.Context)
 		return feed, done
 	}
 }
-
-func DefaultUniaryInsertWithHooksHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryInsertWithHooksInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryInsertWithHooksInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryInsertWithHooks(req)}); err != nil {
+func DefaultUniaryInsertWithHooksHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryInsertWithHooksQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
 		return nil
 	}
 }
-
-func DefaultUniarySelectWithHooksHandler(cli *spanner.Client) func(context.Context, *MySpannerUniarySelectWithHooksInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniarySelectWithHooksInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, ExampleTableForUniarySelectWithHooks(req))
+func DefaultUniarySelectWithHooksHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, ExampleTableFromUniarySelectWithHooksQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -530,30 +494,27 @@ func DefaultUniarySelectWithHooksHandler(cli *spanner.Client) func(context.Conte
 		return nil
 	}
 }
-
-func DefaultUniaryUpdateWithHooksHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryUpdateWithHooksInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryUpdateWithHooksInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableForUniaryUpdateWithHooks(req)}); err != nil {
+func DefaultUniaryUpdateWithHooksHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryUpdateWithHooksQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
 		return nil
 	}
 }
-
-func DefaultUniaryDeleteWithHooksHandler(cli *spanner.Client) func(context.Context, *MySpannerUniaryDeleteWithHooksInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerUniaryDeleteWithHooksInput, next func(*spanner.Row)) error {
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableRangeForUniaryDeleteWithHooks(req)}); err != nil {
+func DefaultUniaryDeleteWithHooksHandler(cli *spanner.Client) func(context.Context, *Test_ExampleTableRangeInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_ExampleTableRangeInput, next func(*spanner.Row)) error {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableRangeFromUniaryDeleteWithHooksQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
 		return nil
 	}
 }
-
-func DefaultServerStreamWithHooksHandler(cli *spanner.Client) func(context.Context, *MySpannerServerStreamWithHooksInput, func(*spanner.Row)) error {
-	return func(ctx context.Context, req *MySpannerServerStreamWithHooksInput, next func(*spanner.Row)) error {
-		iter := cli.Single().Query(ctx, NameForServerStreamWithHooks(req))
+func DefaultServerStreamWithHooksHandler(cli *spanner.Client) func(context.Context, *Test_NameInput, func(*spanner.Row)) error {
+	return func(ctx context.Context, req *Test_NameInput, next func(*spanner.Row)) error {
+		iter := cli.Single().Query(ctx, NameFromServerStreamWithHooksQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -563,14 +524,13 @@ func DefaultServerStreamWithHooksHandler(cli *spanner.Client) func(context.Conte
 		return nil
 	}
 }
-
-func DefaultClientStreamUpdateWithHooksHandler(cli *spanner.Client) func(context.Context) (func(*MySpannerClientStreamUpdateWithHooksInput), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (feed func(*MySpannerClientStreamUpdateWithHooksInput), done func() (*spanner.Row, error)) {
+func DefaultClientStreamUpdateWithHooksHandler(cli *spanner.Client) func(context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
+	return func(ctx context.Context) (func(*Test_ExampleTableInput), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
-		feed = func(req *MySpannerClientStreamUpdateWithHooksInput) {
-			muts = append(muts, ExampleTableForClientStreamUpdateWithHooks(req))
+		feed := func(req *Test_ExampleTableInput) {
+			muts = append(muts, ExampleTableFromClientStreamUpdateWithHooksQuery(req))
 		}
-		done = func() (*spanner.Row, error) {
+		done := func() (*spanner.Row, error) {
 			if _, err := cli.Apply(ctx, muts); err != nil {
 				return nil, err
 			}
