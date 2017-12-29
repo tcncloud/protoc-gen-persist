@@ -31,39 +31,34 @@ package generator
 
 import (
 	"bytes"
-	"strconv"
-	"text/template"
-
-	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/generator/templates"
+	"strconv"
+	"text/template"
 )
 
 var (
 	fileTemplate *template.Template
 	TemplateList = map[string]string{
-		"import_template":                 templates.ImportTemplate,
-		"implement_structs":               templates.StructsTemplate,
-		"implement_services":              templates.ServicesTemplate,
-		"implement_method":                templates.MethodTemplate,
-		"return_convert_helpers":          templates.ReturnConvertHelpers,
-		"before_hook":                     templates.BeforeHook,
-		"after_hook":                      templates.AfterHook,
-		"unary_method":                    templates.UnaryMethodTemplate,
-		"client_streaming_method":         templates.ClientStreamingMethodTemplate,
-		"server_streaming_method":         templates.ServerStreamingMethodTemplate,
-		"bidi_method":                     templates.BidiStreamingMethodTemplate,
-		"sql_unary_method":                templates.SqlUnaryMethodTemplate,
-		"sql_client_streaming_method":     templates.SqlClientStreamingMethodTemplate,
-		"sql_server_streaming_method":     templates.SqlServerStreamingMethodTemplate,
-		"sql_bidi_streaming_method":       templates.SqlBidiStreamingMethodTemplate,
-		"mongo_unary_method":              templates.MongoUnaryMethodTemplate,
-		"mongo_client_streaming_method":   templates.MongoClientStreamingMethodTemplate,
-		"mongo_server_streaming_method":   templates.MongoServerStreamingMethodTemplate,
-		"mongo_bidi_streaming_method":     templates.MongoBidiStreamingMethodTemplate,
-		"spanner_unary_method":            templates.SpannerUnaryTemplate,
-		"spanner_client_streaming_method": templates.SpannerClientStreamingTemplate,
-		"spanner_server_streaming_method": templates.SpannerServerStreamingTemplate,
+		"import_template":               templates.ImportTemplate,
+		"implement_structs":             templates.StructsTemplate,
+		"implement_services":            templates.ServicesTemplate,
+		"implement_method":              templates.MethodTemplate,
+		"return_convert_helpers":        templates.ReturnConvertHelpers,
+		"before_hook":                   templates.BeforeHook,
+		"after_hook":                    templates.AfterHook,
+		"unary_method":                  templates.UnaryMethodTemplate,
+		"client_streaming_method":       templates.ClientStreamingMethodTemplate,
+		"server_streaming_method":       templates.ServerStreamingMethodTemplate,
+		"bidi_method":                   templates.BidiStreamingMethodTemplate,
+		"sql_unary_method":              templates.SqlUnaryMethodTemplate,
+		"sql_client_streaming_method":   templates.SqlClientStreamingMethodTemplate,
+		"sql_server_streaming_method":   templates.SqlServerStreamingMethodTemplate,
+		"sql_bidi_streaming_method":     templates.SqlBidiStreamingMethodTemplate,
+		"mongo_unary_method":            templates.MongoUnaryMethodTemplate,
+		"mongo_client_streaming_method": templates.MongoClientStreamingMethodTemplate,
+		"mongo_server_streaming_method": templates.MongoServerStreamingMethodTemplate,
+		"mongo_bidi_streaming_method":   templates.MongoBidiStreamingMethodTemplate,
 	}
 )
 
@@ -93,25 +88,4 @@ func ExecuteFileTemplate(fileStruct *FileStruct) []byte {
 		logrus.WithError(err).Fatal("Fatal error executing file template")
 	}
 	return buffer.Bytes()
-}
-
-func ExecutePersistLibTemplate(fileStruct *FileStruct) ([]byte, error) {
-	var buffer bytes.Buffer
-	t, err := template.New("t").Parse(templates.PersistLibTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse the persistLibTemplate: %s", err)
-	}
-	t = t.Funcs(template.FuncMap{
-		"Quotes": strconv.Quote,
-	})
-	for n, tmpl := range TemplateList {
-		if _, err := t.Parse(tmpl); err != nil {
-			logrus.WithError(err).Fatalf("Fatal error parsing template for persist lib: %s", n)
-		}
-	}
-
-	if err := t.Execute(&buffer, fileStruct); err != nil {
-		return nil, fmt.Errorf("could not execute persist lib template: %s", err)
-	}
-	return buffer.Bytes(), nil
 }

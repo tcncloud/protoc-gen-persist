@@ -18,31 +18,203 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-// In order for your code to work you have to create a file
-// in this package with the following content:
-//
-// type MySpannerImpl struct {
-//	PERSIST *persist_lib.MySpannerPersistHelper
-// }
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // don't eat our spanner import, or complain
 var _ = spanner.NewClient
+
+type ExtraSrvImpl struct {
+	PERSIST   *persist_lib.ExtraSrvMethodReceiver
+	FORWARDED RestOfExtraSrvHandlers
+}
+type RestOfExtraSrvHandlers interface {
+	ExtraMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error)
+}
+type ExtraSrvImplBuilder struct {
+	err           error
+	rest          RestOfExtraSrvHandlers
+	queryHandlers *persist_lib.ExtraSrvQueryHandlers
+	i             *ExtraSrvImpl
+	db            *spanner.Client
+}
+
+func NewExtraSrvBuilder() *ExtraSrvImplBuilder {
+	return &ExtraSrvImplBuilder{i: &ExtraSrvImpl{}}
+}
+func (b *ExtraSrvImplBuilder) WithRestOfGrpcHandlers(r RestOfExtraSrvHandlers) *ExtraSrvImplBuilder {
+	b.rest = r
+	return b
+}
+func (b *ExtraSrvImplBuilder) WithPersistQueryHandlers(p *persist_lib.ExtraSrvQueryHandlers) *ExtraSrvImplBuilder {
+	b.queryHandlers = p
+	return b
+}
+func (b *ExtraSrvImplBuilder) WithDefaultQueryHandlers() *ExtraSrvImplBuilder {
+	accessor := persist_lib.NewSpannerClientGetter(b.db)
+	queryHandlers := &persist_lib.ExtraSrvQueryHandlers{
+		ExtraUnaryHandler: persist_lib.DefaultExtraUnaryHandler(accessor),
+	}
+	b.queryHandlers = queryHandlers
+	return b
+}
+func (b *ExtraSrvImplBuilder) WithSpannerClient(c *spanner.Client) *ExtraSrvImplBuilder {
+	b.db = c
+	return b
+}
+func (b *ExtraSrvImplBuilder) WithSpannerURI(ctx context.Context, uri string) *ExtraSrvImplBuilder {
+	cli, err := spanner.NewClient(ctx, uri)
+	b.err = err
+	b.db = cli
+	return b
+}
+func (b *ExtraSrvImplBuilder) Build() (*ExtraSrvImpl, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
+	b.i.PERSIST = &persist_lib.ExtraSrvMethodReceiver{Handlers: *b.queryHandlers}
+	b.i.FORWARDED = b.rest
+	return b.i, nil
+}
+
+func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test.ExampleTable, error) {
+	var err error
+	_ = err
+	params := &persist_lib.Test_NumRowsForExtraSrv{}
+	var res = test.ExampleTable{}
+	var iterErr error
+	_ = iterErr
+	_ = res
+	err = s.PERSIST.ExtraUnary(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
+		}
+		var Id int64
+		{
+			local := &spanner.NullInt64{}
+			if err := row.ColumnByName("id", local); err != nil {
+				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			}
+			if local.Valid {
+				Id = local.Int64
+			}
+			res.Id = Id
+		}
+		var StartTime []byte
+		if err := row.ColumnByName("start_time", &StartTime); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		}
+		{
+			local := new(timestamp.Timestamp)
+			if err := proto.Unmarshal(StartTime, local); err != nil {
+				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			}
+			res.StartTime = local
+		}
+		var Name string
+		{
+			local := &spanner.NullString{}
+			if err := row.ColumnByName("name", local); err != nil {
+				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			}
+			if local.Valid {
+				Name = local.StringVal
+			}
+			res.Name = Name
+		}
+	})
+	if err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+	}
+	return &res, nil
+}
+
+func (s *ExtraSrvImpl) ExtraMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+	return s.FORWARDED.ExtraMethod(ctx, req)
+}
+
+// don't eat our spanner import, or complain
+var _ = spanner.NewClient
+
+type MySpannerImpl struct {
+	PERSIST   *persist_lib.MySpannerMethodReceiver
+	FORWARDED RestOfMySpannerHandlers
+}
+type RestOfMySpannerHandlers interface {
+}
+type MySpannerImplBuilder struct {
+	err           error
+	rest          RestOfMySpannerHandlers
+	queryHandlers *persist_lib.MySpannerQueryHandlers
+	i             *MySpannerImpl
+	db            *spanner.Client
+}
+
+func NewMySpannerBuilder() *MySpannerImplBuilder {
+	return &MySpannerImplBuilder{i: &MySpannerImpl{}}
+}
+func (b *MySpannerImplBuilder) WithRestOfGrpcHandlers(r RestOfMySpannerHandlers) *MySpannerImplBuilder {
+	b.rest = r
+	return b
+}
+func (b *MySpannerImplBuilder) WithPersistQueryHandlers(p *persist_lib.MySpannerQueryHandlers) *MySpannerImplBuilder {
+	b.queryHandlers = p
+	return b
+}
+func (b *MySpannerImplBuilder) WithDefaultQueryHandlers() *MySpannerImplBuilder {
+	accessor := persist_lib.NewSpannerClientGetter(b.db)
+	queryHandlers := &persist_lib.MySpannerQueryHandlers{
+		UniaryInsertHandler:                persist_lib.DefaultUniaryInsertHandler(accessor),
+		UniarySelectHandler:                persist_lib.DefaultUniarySelectHandler(accessor),
+		TestNestHandler:                    persist_lib.DefaultTestNestHandler(accessor),
+		TestEverythingHandler:              persist_lib.DefaultTestEverythingHandler(accessor),
+		UniarySelectWithDirectivesHandler:  persist_lib.DefaultUniarySelectWithDirectivesHandler(accessor),
+		UniaryUpdateHandler:                persist_lib.DefaultUniaryUpdateHandler(accessor),
+		UniaryDeleteRangeHandler:           persist_lib.DefaultUniaryDeleteRangeHandler(accessor),
+		UniaryDeleteSingleHandler:          persist_lib.DefaultUniaryDeleteSingleHandler(accessor),
+		NoArgsHandler:                      persist_lib.DefaultNoArgsHandler(accessor),
+		ServerStreamHandler:                persist_lib.DefaultServerStreamHandler(accessor),
+		ClientStreamInsertHandler:          persist_lib.DefaultClientStreamInsertHandler(accessor),
+		ClientStreamDeleteHandler:          persist_lib.DefaultClientStreamDeleteHandler(accessor),
+		ClientStreamUpdateHandler:          persist_lib.DefaultClientStreamUpdateHandler(accessor),
+		UniaryInsertWithHooksHandler:       persist_lib.DefaultUniaryInsertWithHooksHandler(accessor),
+		UniarySelectWithHooksHandler:       persist_lib.DefaultUniarySelectWithHooksHandler(accessor),
+		UniaryUpdateWithHooksHandler:       persist_lib.DefaultUniaryUpdateWithHooksHandler(accessor),
+		UniaryDeleteWithHooksHandler:       persist_lib.DefaultUniaryDeleteWithHooksHandler(accessor),
+		ServerStreamWithHooksHandler:       persist_lib.DefaultServerStreamWithHooksHandler(accessor),
+		ClientStreamUpdateWithHooksHandler: persist_lib.DefaultClientStreamUpdateWithHooksHandler(accessor),
+	}
+	b.queryHandlers = queryHandlers
+	return b
+}
+func (b *MySpannerImplBuilder) WithSpannerClient(c *spanner.Client) *MySpannerImplBuilder {
+	b.db = c
+	return b
+}
+func (b *MySpannerImplBuilder) WithSpannerURI(ctx context.Context, uri string) *MySpannerImplBuilder {
+	cli, err := spanner.NewClient(ctx, uri)
+	b.err = err
+	b.db = cli
+	return b
+}
+func (b *MySpannerImplBuilder) Build() (*MySpannerImpl, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
+	b.i.PERSIST = &persist_lib.MySpannerMethodReceiver{Handlers: *b.queryHandlers}
+	b.i.FORWARDED = b.rest
+	return b.i, nil
+}
 
 func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	_ = err
-	params := &persist_lib.Test_ExampleTableInput{}
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
+	// set 'ExampleTable.id' in params
+	params.Id = req.Id
 	// set 'ExampleTable.start_time' in params
 	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
 	}
 	// set 'ExampleTable.name' in params
 	params.Name = req.Name
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
 	var res = test.ExampleTable{}
 	var iterErr error
 	_ = iterErr
@@ -94,7 +266,7 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	_ = err
-	params := &persist_lib.Test_ExampleTableInput{}
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
 	// set 'ExampleTable.id' in params
 	params.Id = req.Id
 	// set 'ExampleTable.name' in params
@@ -150,7 +322,7 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Something, error) {
 	var err error
 	_ = err
-	params := &persist_lib.SomethingInput{}
+	params := &persist_lib.SomethingForMySpanner{}
 	// set 'Something.thing' in params
 	{
 		raw, err := proto.Marshal(req.Thing)
@@ -188,7 +360,21 @@ func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Somethin
 func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (*HasTimestamp, error) {
 	var err error
 	_ = err
-	params := &persist_lib.HasTimestampInput{}
+	params := &persist_lib.HasTimestampForMySpanner{}
+	// set 'HasTimestamp.time' in params
+	if params.Time, err = (mytime.MyTime{}).ToSpanner(req.Time).SpannerValue(); err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
+	}
+	// set 'HasTimestamp.some' in params
+	{
+		raw, err := proto.Marshal(req.Some)
+		if err != nil {
+			return nil, gstatus.Errorf(codes.Unknown, "could not convert type to []byte, err: %s", err)
+		}
+		params.Some = raw
+	}
+	// set 'HasTimestamp.str' in params
+	params.Str = req.Str
 	// set 'HasTimestamp.table' in params
 	{
 		raw, err := proto.Marshal(req.Table)
@@ -235,20 +421,6 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 		}
 		params.Tables = bytesOfBytes
 	}
-	// set 'HasTimestamp.time' in params
-	if params.Time, err = (mytime.MyTime{}).ToSpanner(req.Time).SpannerValue(); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
-	}
-	// set 'HasTimestamp.some' in params
-	{
-		raw, err := proto.Marshal(req.Some)
-		if err != nil {
-			return nil, gstatus.Errorf(codes.Unknown, "could not convert type to []byte, err: %s", err)
-		}
-		params.Some = raw
-	}
-	// set 'HasTimestamp.str' in params
-	params.Str = req.Str
 	var res = HasTimestamp{}
 	var iterErr error
 	_ = iterErr
@@ -366,11 +538,11 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	_ = err
-	params := &persist_lib.Test_ExampleTableInput{}
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
 	// set 'ExampleTable.name' in params
 	params.Name = req.Name
+	// set 'ExampleTable.id' in params
+	params.Id = req.Id
 	var res = test.ExampleTable{}
 	var iterErr error
 	_ = iterErr
@@ -422,15 +594,15 @@ func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *tes
 func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	var err error
 	_ = err
-	params := &persist_lib.Test_ExampleTableInput{}
-	// set 'ExampleTable.start_time' in params
-	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
-	}
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
 	// set 'ExampleTable.name' in params
 	params.Name = req.Name
 	// set 'ExampleTable.id' in params
 	params.Id = req.Id
+	// set 'ExampleTable.start_time' in params
+	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
+	}
 	var res = test.PartialTable{}
 	var iterErr error
 	_ = iterErr
@@ -471,11 +643,11 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
 	var err error
 	_ = err
-	params := &persist_lib.Test_ExampleTableRangeInput{}
-	// set 'ExampleTableRange.start_id' in params
-	params.StartId = req.StartId
+	params := &persist_lib.Test_ExampleTableRangeForMySpanner{}
 	// set 'ExampleTableRange.end_id' in params
 	params.EndId = req.EndId
+	// set 'ExampleTableRange.start_id' in params
+	params.StartId = req.StartId
 	var res = test.ExampleTable{}
 	var iterErr error
 	_ = iterErr
@@ -527,7 +699,7 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	_ = err
-	params := &persist_lib.Test_ExampleTableInput{}
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
 	// set 'ExampleTable.id' in params
 	params.Id = req.Id
 	var res = test.ExampleTable{}
@@ -581,7 +753,7 @@ func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.Exampl
 func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	_ = err
-	params := &persist_lib.Test_ExampleTableInput{}
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
 	var res = test.ExampleTable{}
 	var iterErr error
 	_ = iterErr
@@ -633,7 +805,7 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStreamServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.Test_NameInput{}
+	params := &persist_lib.Test_NameForMySpanner{}
 	var iterErr error
 	err = s.PERSIST.ServerStream(stream.Context(), params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
@@ -696,7 +868,7 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
 		}
-		params := &persist_lib.Test_ExampleTableInput{}
+		params := &persist_lib.Test_ExampleTableForMySpanner{}
 		// set 'ExampleTable.id' in params
 		params.Id = req.Id
 		// set 'ExampleTable.start_time' in params
@@ -742,7 +914,7 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
 		}
-		params := &persist_lib.Test_ExampleTableInput{}
+		params := &persist_lib.Test_ExampleTableForMySpanner{}
 		// set 'ExampleTable.id' in params
 		params.Id = req.Id
 		feed(params)
@@ -782,15 +954,15 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
 		}
-		params := &persist_lib.Test_ExampleTableInput{}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
+		params := &persist_lib.Test_ExampleTableForMySpanner{}
 		// set 'ExampleTable.id' in params
 		params.Id = req.Id
 		// set 'ExampleTable.start_time' in params
 		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
 			return gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
 		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
 		feed(params)
 	}
 	row, err := stop()
@@ -826,7 +998,7 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params := &persist_lib.Test_ExampleTableInput{}
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
 	// set 'ExampleTable.id' in params
 	params.Id = req.Id
 	// set 'ExampleTable.start_time' in params
@@ -895,7 +1067,7 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params := &persist_lib.Test_ExampleTableInput{}
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
 	// set 'ExampleTable.id' in params
 	params.Id = req.Id
 	var res = test.ExampleTable{}
@@ -958,15 +1130,15 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params := &persist_lib.Test_ExampleTableInput{}
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
+	// set 'ExampleTable.id' in params
+	params.Id = req.Id
 	// set 'ExampleTable.start_time' in params
 	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
 	}
 	// set 'ExampleTable.name' in params
 	params.Name = req.Name
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
 	var res = test.PartialTable{}
 	var iterErr error
 	_ = iterErr
@@ -1016,7 +1188,7 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params := &persist_lib.Test_ExampleTableRangeInput{}
+	params := &persist_lib.Test_ExampleTableRangeForMySpanner{}
 	// set 'ExampleTableRange.start_id' in params
 	params.StartId = req.StartId
 	// set 'ExampleTableRange.end_id' in params
@@ -1085,7 +1257,7 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 			}
 		}
 	}
-	params := &persist_lib.Test_NameInput{}
+	params := &persist_lib.Test_NameForMySpanner{}
 	var iterErr error
 	err = s.PERSIST.ServerStreamWithHooks(stream.Context(), params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
@@ -1158,11 +1330,11 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 		} else if beforeRes != nil {
 			continue
 		}
-		params := &persist_lib.Test_ExampleTableInput{}
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
+		params := &persist_lib.Test_ExampleTableForMySpanner{}
 		// set 'ExampleTable.name' in params
 		params.Name = req.Name
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
 		feed(params)
 	}
 	row, err := stop()

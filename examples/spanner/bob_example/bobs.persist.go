@@ -14,23 +14,68 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-// In order for your code to work you have to create a file
-// in this package with the following content:
-//
-// type BobsImpl struct {
-//	PERSIST *persist_lib.BobsPersistHelper
-// }
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // don't eat our spanner import, or complain
 var _ = spanner.NewClient
+
+type BobsImpl struct {
+	PERSIST   *persist_lib.BobsMethodReceiver
+	FORWARDED RestOfBobsHandlers
+}
+type RestOfBobsHandlers interface {
+}
+type BobsImplBuilder struct {
+	err           error
+	rest          RestOfBobsHandlers
+	queryHandlers *persist_lib.BobsQueryHandlers
+	i             *BobsImpl
+	db            *spanner.Client
+}
+
+func NewBobsBuilder() *BobsImplBuilder {
+	return &BobsImplBuilder{i: &BobsImpl{}}
+}
+func (b *BobsImplBuilder) WithRestOfGrpcHandlers(r RestOfBobsHandlers) *BobsImplBuilder {
+	b.rest = r
+	return b
+}
+func (b *BobsImplBuilder) WithPersistQueryHandlers(p *persist_lib.BobsQueryHandlers) *BobsImplBuilder {
+	b.queryHandlers = p
+	return b
+}
+func (b *BobsImplBuilder) WithDefaultQueryHandlers() *BobsImplBuilder {
+	accessor := persist_lib.NewSpannerClientGetter(b.db)
+	queryHandlers := &persist_lib.BobsQueryHandlers{
+		DeleteBobsHandler:         persist_lib.DefaultDeleteBobsHandler(accessor),
+		PutBobsHandler:            persist_lib.DefaultPutBobsHandler(accessor),
+		GetBobsHandler:            persist_lib.DefaultGetBobsHandler(accessor),
+		GetPeopleFromNamesHandler: persist_lib.DefaultGetPeopleFromNamesHandler(accessor),
+	}
+	b.queryHandlers = queryHandlers
+	return b
+}
+func (b *BobsImplBuilder) WithSpannerClient(c *spanner.Client) *BobsImplBuilder {
+	b.db = c
+	return b
+}
+func (b *BobsImplBuilder) WithSpannerURI(ctx context.Context, uri string) *BobsImplBuilder {
+	cli, err := spanner.NewClient(ctx, uri)
+	b.err = err
+	b.db = cli
+	return b
+}
+func (b *BobsImplBuilder) Build() (*BobsImpl, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
+	b.i.PERSIST = &persist_lib.BobsMethodReceiver{Handlers: *b.queryHandlers}
+	b.i.FORWARDED = b.rest
+	return b.i, nil
+}
 
 func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 	var err error
 	_ = err
-	params := &persist_lib.BobInput{}
+	params := &persist_lib.BobForBobs{}
 	// set 'Bob.start_time' in params
 	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
@@ -61,7 +106,7 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
 		}
-		params := &persist_lib.BobInput{}
+		params := &persist_lib.BobForBobs{}
 		// set 'Bob.id' in params
 		params.Id = req.Id
 		// set 'Bob.name' in params
@@ -99,7 +144,7 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.EmptyInput{}
+	params := &persist_lib.EmptyForBobs{}
 	var iterErr error
 	err = s.PERSIST.GetBobs(stream.Context(), params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
@@ -154,7 +199,7 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNamesServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.NamesInput{}
+	params := &persist_lib.NamesForBobs{}
 	// set 'Names.names' in params
 	params.Names = req.Names
 	var iterErr error
