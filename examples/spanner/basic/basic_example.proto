@@ -57,6 +57,17 @@ message HasTimestamp {
 	repeated google.protobuf.Timestamp times = 8;
 }
 
+service ExtraSrv {
+	option (persist.service_type) = SPANNER;
+
+	rpc ExtraUnary(test.NumRows) returns (test.ExampleTable) {
+		option (persist.ql) = {
+			query: ["SELECT * FROM extra_unary"]
+		};
+	};
+	rpc ExtraMethod(test.ExampleTable) returns (test.ExampleTable);
+}
+
 service MySpanner {
   option (persist.service_type) = SPANNER;
 

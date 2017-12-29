@@ -72,7 +72,7 @@ type MethodStringer struct {
 func (m *MethodStringer) HandlerString() string {
 	printer := &Printer{}
 	m.PrintHeader(printer)
-	if m.method.IsSpanner() {
+	if m.method.IsSpanner() && m.method.GetMethodOption() != nil {
 		m.PrintSpannerInput(printer)
 		m.PrintSpannerBeforeHook(printer)
 		m.PrintSpannerParams(printer)
@@ -81,8 +81,35 @@ func (m *MethodStringer) HandlerString() string {
 		m.PrintSpannerRowToOutputHandling(printer)
 		m.PrintAfterHook(printer)
 		m.PrintReturnOutput(printer)
+	} else {
+		// we are not a persist method, just forward it to the other receiver
+		m.PrintForwardedMethod(printer)
 	}
 	return printer.String()
+}
+
+func (m *MethodStringer) PrintInterfaceDefinition(p *Printer) {
+	if m.method.IsUnary() {
+		p.P(
+			"%s(ctx context.Context, req *%s) (*%s, error)\n",
+			m.method.GetName(),
+			m.method.GetInputType(),
+			m.method.GetOutputType(),
+		)
+	} else if m.method.IsServerStreaming() {
+		p.P(
+			"%s(req *%s, stream %s) error\n",
+			m.method.GetName(),
+			m.method.GetInputType(),
+			NewStreamType(m.method),
+		)
+	} else {
+		p.P(
+			"%s(stream %s) error\n",
+			m.method.GetName(),
+			NewStreamType(m.method),
+		)
+	}
 }
 
 func (m *MethodStringer) PrintHeader(p *Printer) {
@@ -412,6 +439,18 @@ func (m *MethodStringer) PrintReturnOutput(p *Printer) {
 	}
 }
 
+func (m *MethodStringer) PrintForwardedMethod(p *Printer) {
+	p.P("return s.FORWARDED.%s", m.method.GetName())
+	if m.method.IsUnary() {
+		p.P("(ctx, req)")
+	} else if m.method.IsServerStreaming() {
+		p.P("(req, stream)")
+	} else {
+		p.P("(stream)")
+	}
+	p.P("\n}\n")
+}
+
 type ErrPrinter struct {
 	m   *Method
 	msg string
@@ -471,7 +510,10 @@ type PLInputName struct {
 }
 
 // name of the structs that are inputs to a method
-// as in, they are used in the queries
+// these need to be specific to the package and service.
+// Each service can have their own type mapping of the same message.
+// if the mappings of a message don't match then they will override
+// eachother unless they are specific to the service.
 func NewPLInputName(m *Method) PLInputName {
 	return PLInputName{m: m}
 }
@@ -484,7 +526,7 @@ func (p PLInputName) String() string {
 	for _, s := range spl {
 		name += "_" + strings.Title(s)
 	}
-	pr.P("%sInput", name)
+	pr.P("%sFor%s", name, p.m.Service.GetName())
 	return pr.String()
 }
 
@@ -514,7 +556,7 @@ func NewPersistHelperName(s *Service) PersistHelperName {
 }
 
 func (p PersistHelperName) String() string {
-	return p.s.GetName() + "PersistHelper"
+	return p.s.GetName() + "MethodReceiver"
 }
 
 // name of the handler on the persist helper struct

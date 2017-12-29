@@ -540,7 +540,7 @@ func (m *Method) IsEnabled() bool {
 }
 
 func (m *Method) IsSQL() bool {
-	return m.Service.IsSQL()
+	return m.Service.IsSQL() && m.GetMethodOption() != nil
 }
 
 // func (m *Method) IsMongo() bool {
@@ -551,7 +551,7 @@ func (m *Method) IsSQL() bool {
 // }
 
 func (m *Method) IsSpanner() bool {
-	return m.Service.IsSpanner()
+	return m.Service.IsSpanner() && m.GetMethodOption() != nil
 }
 
 func (m *Method) IsUnary() bool {
@@ -621,7 +621,7 @@ func (m *Method) GetGoPackage(path string) string {
 	return GetGoPackage(path)
 }
 
-func (m *Method) GeGoPath(path string) string {
+func (m *Method) GetGoPath(path string) string {
 	return GetGoPath(path)
 }
 
@@ -634,9 +634,9 @@ func (m *Methods) AddMethod(desc *descriptor.MethodDescriptorProto, service *Ser
 	if err != nil {
 		return err
 	}
-	if meth.GetMethodOption() != nil {
-		*m = append(*m, meth)
-	}
+	//if meth.GetMethodOption() != nil {
+	*m = append(*m, meth)
+	//}
 	return nil
 }
 

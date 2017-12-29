@@ -74,19 +74,19 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 				Content: proto.String(string(FormatCode(fileStruct.GetFileName(), fileContents))),
 				Name:    proto.String(fileStruct.GetImplFileName()),
 			})
-			if fileStruct.NeedsPersistLibDir() {
-				lib, err := fileStruct.GeneratePersistLib()
-				if err != nil {
-					return nil, err
-				}
-				ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
-					Content: proto.String(string(FormatCode(lib.Name, []byte(lib.Content)))),
-					Name:    proto.String(lib.Name),
-				})
-			}
-
 		}
 	}
+	// generate our persist_lib package
+	persistPkg := NewPersistPackage(g.Files)
+	resps := persistPkg.Generate()
+
+	for _, resp := range resps {
+		ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
+			Content: proto.String(string(FormatCode(resp.Name, []byte(resp.Content)))),
+			Name:    proto.String(resp.Name),
+		})
+	}
+
 	//logrus.WithField("response", ret).Debug("result")
 	return ret, nil
 }

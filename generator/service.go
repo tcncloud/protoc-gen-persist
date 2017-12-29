@@ -139,6 +139,11 @@ func (s *Service) IsServiceEnabled() bool {
 	return false
 }
 
+func (s *Service) PrintBuilder() string {
+	p := PersistStringer{}
+	return p.PersistImplBuilder(s)
+}
+
 func (s *Service) ProcessImports() {
 	logrus.Debug("PROCESS IMPORTS FOR SERVICE CALLED")
 	s.File.ImportList.GetOrAddImport("io", "io")
