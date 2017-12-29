@@ -99,18 +99,6 @@ test-compile:
 	# 	--persist_out=$$GOPATH/src  examples/spanner/import_tests/persist_and_go.proto
 
 
-test-sql-impl: build
-	env GOOS=linux go build -o ./test-impl/server.main ./test-impl/server/sql
-	env GOOS=linux go build -o ./test-impl/client.main ./test-impl/client/sql
-
-test-spanner-impl: build
-	go build -o ./test-impl/server.main ./test-impl/server/spanner/basic
-	go build -o ./test-impl/client.main ./test-impl/client/spanner/basic
-
-test-bobs: build
-	go build -o ./test-impl/server.main ./test-impl/server/spanner/bobs
-	go build -o ./test-impl/client.main ./test-impl/client/spanner/bobs
-
 deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/dep
 
 
