@@ -45,7 +45,6 @@ func init() {
 	if os.Getenv("DEBUG") == "true" {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-	logrus.Warn("main init()")
 }
 
 func main() {

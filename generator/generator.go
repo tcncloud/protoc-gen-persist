@@ -55,8 +55,6 @@ func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret.AllStructures = NewStructList()
 	ret.Files = NewFileList()
 	ret.Response = new(plugin_go.CodeGeneratorResponse)
-	param := request.GetParameter()
-	logrus.Warnf("the parameter string? %s\n", param)
 
 	return ret
 }
