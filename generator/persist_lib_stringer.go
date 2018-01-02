@@ -5,19 +5,25 @@ type PersistStringer struct{}
 func (per *PersistStringer) MessageInputDeclaration(method *Method) string {
 	printer := &Printer{}
 	printer.P("type %s struct{\n", NewPLInputName(method))
-	for _, qf := range method.GetTypeDescArrayForStruct(method.GetInputTypeStruct()) {
-		printer.P("%s ", qf.Name)
-		if qf.IsMapped {
-			printer.P("interface{}\n")
-		} else if qf.IsMessage && qf.IsRepeated {
-			printer.P("[][]byte\n")
-		} else if qf.IsMessage {
-			printer.P("[]byte\n")
-		} else {
-			printer.P("%s\n", qf.GoName) // go name has package + repeated + type
-		}
+	inputTypeDescs := method.GetTypeDescArrayForStruct(method.GetInputTypeStruct())
+	for _, qf := range inputTypeDescs {
+		typeName := GetPersistLibTypeName(qf)
+		printer.P("%s %s\n", qf.Name, typeName)
 	}
 	printer.P("}\n")
+	printer.P("// this could be used in a query, so generate the getters/setters\n")
+	for _, qf := range inputTypeDescs {
+		typeName := GetPersistLibTypeName(qf)
+		plInputName := NewPLInputName(method)
+		printer.P(
+			"func(p *%s) Get%s() %s{ return p.%s }\n",
+			plInputName, qf.Name, typeName, qf.Name,
+		)
+		printer.P(
+			"func(p *%s) Set%s(param %s) { p.%s = param }\n",
+			plInputName, qf.Name, typeName, qf.Name,
+		)
+	}
 
 	return printer.String()
 }
@@ -184,7 +190,20 @@ func (per *PersistStringer) HelperFunctionImpl(service *Service) string {
 }
 
 func (per *PersistStringer) QueryInterfaceDefinition(method *Method) string {
-	return ""
+	if method.GetMethodOption() == nil {
+		return ""
+	}
+	printer := &Printer{}
+	printer.P(
+		"type %sParams interface{\n",
+		NewPLQueryMethodName(method),
+	)
+	for _, t := range method.GetTypeDescForQueryFields() {
+		interfaceType := GetPersistLibTypeName(t)
+		printer.P("Get%s() %s\n", t.Name, interfaceType)
+	}
+	printer.P("}\n")
+	return printer.String()
 }
 
 func (per *PersistStringer) QueryFunction(method *Method) string {
@@ -195,16 +214,16 @@ func (per *PersistStringer) QueryFunction(method *Method) string {
 	printer := &Printer{}
 	if method.IsSelect() {
 		printer.P(
-			"func %s(req *%s) spanner.Statement {\nreturn %s\n}\n",
+			"func %s(req %sParams) spanner.Statement {\nreturn %s\n}\n",
 			NewPLQueryMethodName(method),
-			NewPLInputName(method),
+			NewPLQueryMethodName(method),
 			method.Query,
 		)
 	} else {
 		printer.P(
-			"func %s(req *%s) *spanner.Mutation {\nreturn %s\n}\n",
+			"func %s(req %sParams) *spanner.Mutation {\nreturn %s\n}\n",
 			NewPLQueryMethodName(method),
-			NewPLInputName(method),
+			NewPLQueryMethodName(method),
 			method.Query,
 		)
 	}
@@ -279,4 +298,16 @@ func (per *PersistStringer) DeclareSpannerGetter() string {
 	})
 
 	return printer.String()
+}
+
+func GetPersistLibTypeName(t TypeDesc) string {
+	if t.IsMapped {
+		return "interface{}"
+	} else if t.IsMessage && t.IsRepeated {
+		return "[][]byte"
+	} else if t.IsMessage {
+		return "[]byte"
+	} else {
+		return t.GoName
+	}
 }

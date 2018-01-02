@@ -586,7 +586,7 @@ func (m *Method) Process() error {
 		// WE REALLY SHOULD PUT THIS PART IN THE TEMPLATES, BUT IM TOO TIRED
 		types := m.GetTypeDescArrayForStruct(m.GetInputTypeStruct())
 		for _, t := range types {
-			m.Query.AddParam("@"+t.ProtoName, fmt.Sprintf("req.%s", t.Name))
+			m.Query.AddParam("@"+t.ProtoName, fmt.Sprintf("req.Get%s()", t.Name))
 		}
 		//m.Spanner = s
 	} else if m.IsSQL() {

@@ -72,6 +72,14 @@ func GenerateFileQueryContent(pkg PackagePath, file *FileStruct) PersistContent 
 			content.Content += stringer.QueryFunction(m)
 		}
 	}
+	for _, s := range *file.ServiceList {
+		if !s.IsSpanner() {
+			continue
+		}
+		for _, m := range *s.Methods {
+			content.Content += stringer.QueryInterfaceDefinition(m)
+		}
+	}
 	return content
 }
 func GenerateFilePersistHandlerContent(pkg PackagePath, file *FileStruct) PersistContent {
