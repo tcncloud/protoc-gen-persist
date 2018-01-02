@@ -207,14 +207,14 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 	var err error
 	_ = err
 	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
 	// set 'ExampleTable.start_time' in params
 	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
 	}
 	// set 'ExampleTable.name' in params
 	params.Name = req.Name
+	// set 'ExampleTable.id' in params
+	params.Id = req.Id
 	var res = test.ExampleTable{}
 	var iterErr error
 	_ = iterErr
@@ -361,6 +361,18 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 	var err error
 	_ = err
 	params := &persist_lib.HasTimestampForMySpanner{}
+	// set 'HasTimestamp.tables' in params
+	{
+		var bytesOfBytes [][]byte
+		for _, msg := range req.Tables {
+			raw, err := proto.Marshal(msg)
+			if err != nil {
+				return nil, gstatus.Errorf(codes.Unknown, "could not convert type to [][]byte, err: %s", err)
+			}
+			bytesOfBytes = append(bytesOfBytes, raw)
+		}
+		params.Tables = bytesOfBytes
+	}
 	// set 'HasTimestamp.time' in params
 	if params.Time, err = (mytime.MyTime{}).ToSpanner(req.Time).SpannerValue(); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
@@ -409,18 +421,6 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 	}
 	// set 'HasTimestamp.strs' in params
 	params.Strs = req.Strs
-	// set 'HasTimestamp.tables' in params
-	{
-		var bytesOfBytes [][]byte
-		for _, msg := range req.Tables {
-			raw, err := proto.Marshal(msg)
-			if err != nil {
-				return nil, gstatus.Errorf(codes.Unknown, "could not convert type to [][]byte, err: %s", err)
-			}
-			bytesOfBytes = append(bytesOfBytes, raw)
-		}
-		params.Tables = bytesOfBytes
-	}
 	var res = HasTimestamp{}
 	var iterErr error
 	_ = iterErr
@@ -539,10 +539,10 @@ func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *tes
 	var err error
 	_ = err
 	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.name' in params
-	params.Name = req.Name
 	// set 'ExampleTable.id' in params
 	params.Id = req.Id
+	// set 'ExampleTable.name' in params
+	params.Name = req.Name
 	var res = test.ExampleTable{}
 	var iterErr error
 	_ = iterErr
@@ -595,14 +595,14 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 	var err error
 	_ = err
 	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.name' in params
-	params.Name = req.Name
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
 	// set 'ExampleTable.start_time' in params
 	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
 	}
+	// set 'ExampleTable.name' in params
+	params.Name = req.Name
+	// set 'ExampleTable.id' in params
+	params.Id = req.Id
 	var res = test.PartialTable{}
 	var iterErr error
 	_ = iterErr
@@ -644,10 +644,10 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 	var err error
 	_ = err
 	params := &persist_lib.Test_ExampleTableRangeForMySpanner{}
-	// set 'ExampleTableRange.end_id' in params
-	params.EndId = req.EndId
 	// set 'ExampleTableRange.start_id' in params
 	params.StartId = req.StartId
+	// set 'ExampleTableRange.end_id' in params
+	params.EndId = req.EndId
 	var res = test.ExampleTable{}
 	var iterErr error
 	_ = iterErr
@@ -955,14 +955,14 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
 		}
 		params := &persist_lib.Test_ExampleTableForMySpanner{}
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
 		// set 'ExampleTable.start_time' in params
 		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
 			return gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
 		}
 		// set 'ExampleTable.name' in params
 		params.Name = req.Name
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
 		feed(params)
 	}
 	row, err := stop()

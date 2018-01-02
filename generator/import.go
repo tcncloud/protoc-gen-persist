@@ -89,3 +89,6 @@ func (il *Imports) GetImportPkgForPath(path string) string {
 	}
 	return "__invalid__import__"
 }
+
+func WhoAmI(file *FileStruct) {
+}

@@ -45,7 +45,6 @@ func init() {
 	if os.Getenv("DEBUG") == "true" {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-	logrus.Debug("main init()")
 }
 
 func main() {
@@ -53,7 +52,6 @@ func main() {
 		fmt.Println("This executable is meant to be used by protoc!\nGo to http://github.com/tcncloud/protoc-gen-persist for more info")
 		os.Exit(-1)
 	}
-
 	var req plugin_go.CodeGeneratorRequest
 
 	data, err := ioutil.ReadAll(os.Stdin)

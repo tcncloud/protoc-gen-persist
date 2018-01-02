@@ -55,6 +55,7 @@ func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret.AllStructures = NewStructList()
 	ret.Files = NewFileList()
 	ret.Response = new(plugin_go.CodeGeneratorResponse)
+
 	return ret
 }
 
