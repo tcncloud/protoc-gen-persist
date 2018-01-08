@@ -55,6 +55,15 @@ func (il *Imports) Exist(pkg string) bool {
 	return false
 }
 
+func (il Imports) String() string {
+	printer := &Printer{}
+	printer.PTemplate(
+		"import({{range $imp := .}}\n\t{{$imp.GoPackageName}} \"{{$imp.GoImportPath}}\"{{end}}\n)\n",
+		il,
+	)
+	return printer.String()
+}
+
 func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
 	for _, i := range *il {
 		if i.GoImportPath == goPath {
@@ -88,7 +97,4 @@ func (il *Imports) GetImportPkgForPath(path string) string {
 		}
 	}
 	return "__invalid__import__"
-}
-
-func WhoAmI(file *FileStruct) {
 }

@@ -60,22 +60,39 @@ func (p *PersistPackage) Generate() []PersistContent {
 func GenerateFileQueryContent(pkg PackagePath, file *FileStruct) PersistContent {
 	stringer := PersistStringer{}
 	p := file.GetPersistLibFullFilepath()
+
+	var needsSpannerImport, needsSqlImport bool
+
+	for _, s := range *file.ServiceList {
+		for _, m := range *s.Methods {
+			if m.IsSpanner() {
+				needsSpannerImport = true
+			}
+			if m.IsSQL() {
+				needsSqlImport = true
+			}
+		}
+	}
 	content := PersistContent{
 		Name:    fmt.Sprintf("%s/%s_queries.persist.go", pkg, p.filename),
-		Content: "package persist_lib\n import \"cloud.google.com/go/spanner\"\n",
+		Content: "package persist_lib\n",
+	}
+	if needsSpannerImport {
+		content.Content += "import \"cloud.google.com/go/spanner\"\n"
+	}
+	if needsSqlImport {
+		content.Content += "import \"database/sql\"\n"
 	}
 	for _, s := range *file.ServiceList {
-		if !s.IsSpanner() {
-			continue
-		}
 		for _, m := range *s.Methods {
-			content.Content += stringer.QueryFunction(m)
+			if m.IsSpanner() {
+				content.Content += stringer.SpannerQueryFunction(m)
+			} else if m.IsSQL() {
+				content.Content += stringer.SqlQueryFunction(m)
+			}
 		}
 	}
 	for _, s := range *file.ServiceList {
-		if !s.IsSpanner() {
-			continue
-		}
 		for _, m := range *s.Methods {
 			content.Content += stringer.QueryInterfaceDefinition(m)
 		}
@@ -85,18 +102,30 @@ func GenerateFileQueryContent(pkg PackagePath, file *FileStruct) PersistContent 
 func GenerateFilePersistHandlerContent(pkg PackagePath, file *FileStruct) PersistContent {
 	stringer := PersistStringer{}
 	p := file.GetPersistLibFullFilepath()
-	content := PersistContent{
-		Name: fmt.Sprintf("%s/%s_query_handlers.persist.go", pkg, p.filename),
-		Content: fmt.Sprintf(
-			"package persist_lib\nimport(\n\"%s\"\n\"%s\"\n)\n",
-			"cloud.google.com/go/spanner",
-			"golang.org/x/net/context",
-		),
-	}
+
+	var needsSpannerImport, needsSqlImport bool
 	for _, s := range *file.ServiceList {
-		if !s.IsSpanner() {
-			continue
+		for _, m := range *s.Methods {
+			if m.IsSpanner() {
+				needsSpannerImport = true
+			}
+			if m.IsSQL() {
+				needsSqlImport = true
+			}
 		}
+	}
+	content := PersistContent{
+		Name:    fmt.Sprintf("%s/%s_query_handlers.persist.go", pkg, p.filename),
+		Content: "package persist_lib\n import \"golang.org/x/net/context\"\n",
+	}
+	if needsSpannerImport {
+		content.Content += "import \"cloud.google.com/go/spanner\"\n"
+	}
+	if needsSqlImport {
+		content.Content += "import \"database/sql\"\n"
+	}
+
+	for _, s := range *file.ServiceList {
 		content.Content += stringer.HandlersStructDeclaration(s)
 		content.Content += stringer.HelperFunctionImpl(s)
 		content.Content += stringer.DefaultFunctionsImpl(s)
@@ -108,32 +137,42 @@ func GeneratePkgLevelContent(pkg PackagePath, files []*FileStruct) PersistConten
 	content := PersistContent{
 		Name: string(pkg) + "/pkg_level_definitions.persist.go",
 	}
-	// imports := Imports(make([]*Import, 0))
+	imports := Imports(make([]*Import, 0))
 	haveProcessed := make(map[string]bool)
-	// addToImports := func(m *Method) {
-	// 	if opt := m.GetMethodOption(); opt != nil {
-	// 		if mapping := opt.GetMapping(); mapping != nil {
-	// 			for _, t := range mapping.GetTypes() {
-	// 				imports.GetOrAddImport(GetGoPackage(t.GetGoPackage()), GetGoPath(t.GetGoPackage()))
-	// 			}
-	// 		}
-	// 	}
-	// }
+	var isSpan, isSql bool
+	addToImports := func(m *Method) {
+		if opt := m.GetMethodOption(); opt != nil {
+			if m.IsSpanner() {
+				imports.GetOrAddImport("", "cloud.google.com/go/spanner")
+				isSpan = true
+			}
+			if m.IsSQL() {
+				imports.GetOrAddImport("", "database/sql")
+				isSql = true
+			}
+		}
+	}
 	for _, f := range files {
 		for _, s := range *f.ServiceList {
 			for _, m := range *s.Methods {
 				if !haveProcessed[NewPLInputName(m).String()] {
 					haveProcessed[NewPLInputName(m).String()] = true
 					content.Content += stringer.MessageInputDeclaration(m)
-					// addToImports(m)
+					addToImports(m)
 				}
 			}
 		}
 	}
 	p := &Printer{}
 	p.P("package persist_lib\n")
-	p.P("import \"cloud.google.com/go/spanner\"\n")
-	p.P("%s", stringer.DeclareSpannerGetter())
+	p.P("%s", &imports)
+	if isSpan {
+		p.P("%s", stringer.DeclareSpannerGetter())
+	}
+	if isSql {
+		p.P("%s", stringer.DeclareSqlPackageDefs())
+	}
+
 	content.Content = p.String() + content.Content
 
 	return content

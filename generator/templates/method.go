@@ -37,21 +37,17 @@ const MethodTemplate = `{{define "implement_method"}}
 {{end}}`
 
 const UnaryMethodTemplate = `{{define "unary_method"}}
-{{if .IsSQL}}{{template "sql_unary_method" .}}
-{{- else}}{{.Stringer.HandlerString}}
-{{- end}}{{end}}`
+{{.String}}
+{{- end}}`
 
 const ClientStreamingMethodTemplate = `{{define "client_streaming_method"}}
-{{if .IsSQL}}{{template "sql_client_streaming_method" .}}
-{{- else}}{{.Stringer.HandlerString}}
-{{- end}}{{end}}`
+{{.String}}
+{{end}}`
 
 const ServerStreamingMethodTemplate = `{{define "server_streaming_method"}}
-{{if .IsSQL}}{{template "sql_server_streaming_method" .}}
-{{- else}}{{.Stringer.HandlerString}}
-{{- end}}{{end}}`
+{{.String}}
+{{- end}}`
 
 const BidiStreamingMethodTemplate = `{{define "bidi_method"}}
-{{if .IsSQL}}{{template "sql_bidi_streaming_method" .}}
-{{- else}}{{.Stringer.HandlerString}}
-{{- end}}{{end}}`
+{{.String}}
+{{- end}}`

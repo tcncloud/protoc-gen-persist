@@ -46,16 +46,32 @@ import (
 type Method struct {
 	Desc    *descriptor.MethodDescriptorProto
 	Service *Service
-	//Spanner *SpannerHelper
-	Query    parser.Query
-	Stringer *MethodStringer
+	Query   parser.Query
 }
 
 func NewMethod(desc *descriptor.MethodDescriptorProto, srv *Service) (*Method, error) {
 	meth := &Method{Desc: desc, Service: srv}
-	meth.Stringer = &MethodStringer{method: meth}
 
 	return meth, nil
+}
+
+func (m *Method) String() string {
+	back := func() BackendStringer {
+		if m.IsSpanner() {
+			return &SpannerStringer{method: m}
+		} else {
+			return &SqlStringer{method: m}
+		}
+	}()
+	if m.IsUnary() {
+		return NewUnaryStringer(m, back).String()
+	} else if m.IsClientStreaming() {
+		return NewClientStreamStringer(m, back).String()
+	} else if m.IsServerStreaming() {
+		return NewServerStreamStringer(m, back).String()
+	} else {
+		return NewBidiStreamStringer(m, back).String()
+	}
 }
 func (m *Method) IsSelect() bool {
 	if m.Query != nil && m.Query.Type() == parser.SELECT_QUERY {
@@ -517,9 +533,18 @@ func (m *Method) GetTypeDescForQueryFields() map[string]TypeDesc {
 		return inputTypeDesc[queryField]
 	}
 	fields := make(map[string]TypeDesc)
-	for _, f := range m.Query.Fields() {
-		fields[f] = findTypeDesc(f)
+	if m.Query != nil {
+		for _, f := range m.Query.Fields() {
+			fields[f] = findTypeDesc(f)
+		}
+	} else if opts := m.GetMethodOption(); opts != nil {
+		if args := opts.GetArguments(); args != nil {
+			for _, arg := range args {
+				fields[arg] = findTypeDesc(arg)
+			}
+		}
 	}
+
 	return fields
 }
 
