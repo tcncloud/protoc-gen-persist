@@ -14,9 +14,6 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-// don't eat our spanner import, or complain
-var _ = spanner.NewClient
-
 type BobsImpl struct {
 	PERSIST   *persist_lib.BobsMethodReceiver
 	FORWARDED RestOfBobsHandlers
@@ -74,46 +71,72 @@ func (b *BobsImplBuilder) Build() (*BobsImpl, error) {
 
 func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 	var err error
-	_ = err
-	params := &persist_lib.BobForBobs{}
-	// set 'Bob.start_time' in params
-	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
-	}
 	var res = Empty{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.BobForBobs{}
+	err = func() error {
+		// set 'Bob.id' in params
+		params.Id = req.Id
+		// set 'Bob.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'Bob.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.DeleteBobs(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
+		res = Empty{}
+		err = func() error {
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
+		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
 
-func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
+func (s *BobsImpl) PutBobs(req *Bob, stream Bobs_PutBobsServer) error {
 	var err error
 	_ = err
+	res := NumRows{}
 	feed, stop := s.PERSIST.PutBobs(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
 		params := &persist_lib.BobForBobs{}
-		// set 'Bob.id' in params
-		params.Id = req.Id
-		// set 'Bob.name' in params
-		params.Name = req.Name
-		// set 'Bob.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
+		err = func() error {
+			// set 'Bob.id' in params
+			params.Id = req.Id
+			// set 'Bob.start_time' in params
+			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+				return err
+			}
+			// set 'Bob.name' in params
+			params.Name = req.Name
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
 		feed(params)
 	}
@@ -121,22 +144,24 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
-	res := NumRows{}
 	if row != nil {
-		var Count int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("count", local); err != nil {
-				return gstatus.Errorf(codes.Unknown, "couldnt scan out message, err: %v", err)
+		err = func() error {
+			var Count int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("count", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Count = local.Int64
+				}
+				res.Count = Count
 			}
-			if local.Valid {
-				Count = local.Int64
-			}
-			res.Count = Count
-		}
+			return nil
+		}()
 	}
 	if err := stream.SendAndClose(&res); err != nil {
-		return gstatus.Errorf(codes.Unknown, "error sending response: %v", err)
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
 }
@@ -145,47 +170,60 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 	var err error
 	_ = err
 	params := &persist_lib.EmptyForBobs{}
+	err = func() error {
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
 	var iterErr error
 	err = s.PERSIST.GetBobs(stream.Context(), params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
 		res := Bob{}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 		if err := stream.Send(&res); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
 	if err != nil {
@@ -200,49 +238,62 @@ func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNames
 	var err error
 	_ = err
 	params := &persist_lib.NamesForBobs{}
-	// set 'Names.names' in params
-	params.Names = req.Names
+	err = func() error {
+		// set 'Names.names' in params
+		params.Names = req.Names
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
 	var iterErr error
 	err = s.PERSIST.GetPeopleFromNames(stream.Context(), params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
 		res := Bob{}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 		if err := stream.Send(&res); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
 	if err != nil {

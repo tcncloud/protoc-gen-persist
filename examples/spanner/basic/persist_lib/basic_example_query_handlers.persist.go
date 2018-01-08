@@ -1,9 +1,7 @@
 package persist_lib
 
-import (
-	"cloud.google.com/go/spanner"
-	"golang.org/x/net/context"
-)
+import "golang.org/x/net/context"
+import "cloud.google.com/go/spanner"
 
 type ExtraSrvMethodReceiver struct {
 	Handlers ExtraSrvQueryHandlers
@@ -111,7 +109,7 @@ func (p *MySpannerMethodReceiver) ServerStream(ctx context.Context, params *Test
 // given a context, returns two functions.  (feed, stop)
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
-//a  *spanner.Row to be returned, or nil.
+//a  row to be returned, or nil.
 func (p *MySpannerMethodReceiver) ClientStreamInsert(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
 	return p.Handlers.ClientStreamInsertHandler(ctx)
 }
@@ -119,7 +117,7 @@ func (p *MySpannerMethodReceiver) ClientStreamInsert(ctx context.Context) (func(
 // given a context, returns two functions.  (feed, stop)
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
-//a  *spanner.Row to be returned, or nil.
+//a  row to be returned, or nil.
 func (p *MySpannerMethodReceiver) ClientStreamDelete(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
 	return p.Handlers.ClientStreamDeleteHandler(ctx)
 }
@@ -127,7 +125,7 @@ func (p *MySpannerMethodReceiver) ClientStreamDelete(ctx context.Context) (func(
 // given a context, returns two functions.  (feed, stop)
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
-//a  *spanner.Row to be returned, or nil.
+//a  row to be returned, or nil.
 func (p *MySpannerMethodReceiver) ClientStreamUpdate(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
 	return p.Handlers.ClientStreamUpdateHandler(ctx)
 }
@@ -160,7 +158,7 @@ func (p *MySpannerMethodReceiver) ServerStreamWithHooks(ctx context.Context, par
 // given a context, returns two functions.  (feed, stop)
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
-//a  *spanner.Row to be returned, or nil.
+//a  row to be returned, or nil.
 func (p *MySpannerMethodReceiver) ClientStreamUpdateWithHooks(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
 	return p.Handlers.ClientStreamUpdateWithHooksHandler(ctx)
 }

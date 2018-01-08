@@ -5,446 +5,516 @@ package basic
 
 import (
 	sql "database/sql"
-	fmt "fmt"
 	io "io"
-	strings "strings"
 
 	hooks "github.com/tcncloud/protoc-gen-persist/examples/hooks"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
-	pb "github.com/tcncloud/protoc-gen-persist/examples/sql/basic"
+	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/sql/basic/persist_lib"
 	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"
-	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
+	gstatus "google.golang.org/grpc/status"
 )
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-// In order for your code to work you have to create a file
-// in this package with the following content:
-//
-// type AmazingImpl struct {
-// 	SqlDB *sql.DB
-// }
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+type AmazingImpl struct {
+	PERSIST   *persist_lib.AmazingMethodReceiver
+	FORWARDED RestOfAmazingHandlers
+}
+type RestOfAmazingHandlers interface {
+	UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error)
+}
+type AmazingImplBuilder struct {
+	err           error
+	rest          RestOfAmazingHandlers
+	queryHandlers *persist_lib.AmazingQueryHandlers
+	i             *AmazingImpl
+	db            *sql.DB
+}
 
-// sql unary UniarySelect
+func NewAmazingBuilder() *AmazingImplBuilder {
+	return &AmazingImplBuilder{i: &AmazingImpl{}}
+}
+func (b *AmazingImplBuilder) WithRestOfGrpcHandlers(r RestOfAmazingHandlers) *AmazingImplBuilder {
+	b.rest = r
+	return b
+}
+func (b *AmazingImplBuilder) WithPersistQueryHandlers(p *persist_lib.AmazingQueryHandlers) *AmazingImplBuilder {
+	b.queryHandlers = p
+	return b
+}
+func (b *AmazingImplBuilder) WithDefaultQueryHandlers() *AmazingImplBuilder {
+	accessor := persist_lib.NewSqlClientGetter(b.db)
+	queryHandlers := &persist_lib.AmazingQueryHandlers{
+		UniarySelectHandler:           persist_lib.DefaultUniarySelectHandler(accessor),
+		UniarySelectWithHooksHandler:  persist_lib.DefaultUniarySelectWithHooksHandler(accessor),
+		ServerStreamHandler:           persist_lib.DefaultServerStreamHandler(accessor),
+		ServerStreamWithHooksHandler:  persist_lib.DefaultServerStreamWithHooksHandler(accessor),
+		BidirectionalHandler:          persist_lib.DefaultBidirectionalHandler(accessor),
+		BidirectionalWithHooksHandler: persist_lib.DefaultBidirectionalWithHooksHandler(accessor),
+		ClientStreamHandler:           persist_lib.DefaultClientStreamHandler(accessor),
+		ClientStreamWithHookHandler:   persist_lib.DefaultClientStreamWithHookHandler(accessor),
+	}
+	b.queryHandlers = queryHandlers
+	return b
+}
+func (b *AmazingImplBuilder) WithSqlClient(c *sql.DB) *AmazingImplBuilder {
+	b.db = c
+	return b
+}
+func (b *AmazingImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *AmazingImplBuilder {
+	db, err := sql.Open(driverName, dataSourceName)
+	b.err = err
+	b.db = db
+	return b
+}
+func (b *AmazingImplBuilder) Build() (*AmazingImpl, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
+	b.i.PERSIST = &persist_lib.AmazingMethodReceiver{Handlers: *b.queryHandlers}
+	b.i.FORWARDED = b.rest
+	return b.i, nil
+}
+
 func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
-	var (
-		Id        int64
-		Name      string
-		StartTime mytime.MyTime
-		err       error
-	)
-
-	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time>$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
-		Scan(&Id,
-			&StartTime,
-			&Name,
-		)
+	var err error
+	var res = test.ExampleTable{}
+	_ = err
+	_ = res
+	params := &persist_lib.Test_PartialTableForAmazing{}
+	err = func() error {
+		params.Id = req.Id
+		params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+		return nil
+	}()
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-		} else if strings.Contains(err.Error(), "duplicate key") {
-			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+		return nil, err
+	}
+	var iterErr error
+	err = s.PERSIST.UniarySelect(ctx, params, func(row persist_lib.Scanable) {
+		if row == nil { // there was no return data
+			return
 		}
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	res := test.ExampleTable{
-
-		Id:        Id,
-		Name:      Name,
-		StartTime: StartTime.ToProto(),
-	}
-
-	return &res, nil
-}
-
-// sql unary UniarySelectWithHooks
-func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
-	var (
-		Id        int64
-		Name      string
-		StartTime mytime.MyTime
-		err       error
-	)
-
-	beforeRes, err := hooks.UniarySelectBeforeHook(req)
-
-	if err != nil {
-
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-
-	}
-	if beforeRes != nil {
-
-		return beforeRes, nil
-
-	}
-
-	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time>$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
-		Scan(&Id,
-			&StartTime,
-			&Name,
-		)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-		} else if strings.Contains(err.Error(), "duplicate key") {
-			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
-		}
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	res := test.ExampleTable{
-
-		Id:        Id,
-		Name:      Name,
-		StartTime: StartTime.ToProto(),
-	}
-
-	err = hooks.UniarySelectAfterHook(req, &res)
-
-	if err != nil {
-
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-
-	}
-
-	return &res, nil
-}
-
-// sql server streaming ServerStream
-func (s *AmazingImpl) ServerStream(req *test.Name, stream pb.Amazing_ServerStreamServer) error {
-	var (
-		Id        int64
-		Name      string
-		StartTime mytime.MyTime
-		err       error
-	)
-
-	rows, err := s.SqlDB.Query("SELECT * FROM example_table WHERE name=$1", req.Name)
-	if err != nil {
-		return grpc.Errorf(codes.Unknown, err.Error())
-	}
-	defer rows.Close()
-	for rows.Next() {
-		err = rows.Err()
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
-			}
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		err := rows.Scan(&Id, &StartTime, &Name)
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		res := test.ExampleTable{
-
-			Id:        Id,
-			Name:      Name,
-			StartTime: StartTime.ToProto(),
-		}
-
-		stream.Send(&res)
-	}
-	return nil
-}
-
-// sql server streaming ServerStreamWithHooks
-func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream pb.Amazing_ServerStreamWithHooksServer) error {
-	var (
-		Id        int64
-		Name      string
-		StartTime mytime.MyTime
-		err       error
-	)
-
-	beforeRes, err := hooks.ServerStreamBeforeHook(req)
-
-	if err != nil {
-
-		return grpc.Errorf(codes.Unknown, err.Error())
-
-	}
-	if beforeRes != nil {
-
-		for _, res := range beforeRes {
-			err = stream.Send(res)
-			if err != nil {
+		res = test.ExampleTable{}
+		err = func() error {
+			var (
+				Id        int64
+				StartTime mytime.MyTime
+				Name      string
+			)
+			if err := row.Scan(
+				&Id,
+				&StartTime,
+				&Name,
+			); err != nil {
 				return err
 			}
+			res.Id = Id
+			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
+	})
+	if err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
+	}
+	return &res, nil
+}
+
+func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
+	var err error
+	var res = test.ExampleTable{}
+	_ = err
+	_ = res
+	beforeRes, err := hooks.UniarySelectBeforeHook(req)
+	if err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+	} else if beforeRes != nil {
+		return beforeRes, nil
+	}
+	params := &persist_lib.Test_PartialTableForAmazing{}
+	err = func() error {
+		params.Id = req.Id
+		params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
 		return nil
-
-	}
-
-	rows, err := s.SqlDB.Query("SELECT * FROM example_table WHERE name=$1", req.Name)
+	}()
 	if err != nil {
-		return grpc.Errorf(codes.Unknown, err.Error())
+		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		err = rows.Err()
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+	var iterErr error
+	err = s.PERSIST.UniarySelectWithHooks(ctx, params, func(row persist_lib.Scanable) {
+		if row == nil { // there was no return data
+			return
+		}
+		res = test.ExampleTable{}
+		err = func() error {
+			var (
+				Id        int64
+				StartTime mytime.MyTime
+				Name      string
+			)
+			if err := row.Scan(
+				&Id,
+				&StartTime,
+				&Name,
+			); err != nil {
+				return err
 			}
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		err := rows.Scan(&Id, &StartTime, &Name)
+			res.Id = Id
+			res.Name = Name
+			return nil
+		}()
 		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+			iterErr = err
+			return
 		}
-		res := test.ExampleTable{
-
-			Id:        Id,
-			Name:      Name,
-			StartTime: StartTime.ToProto(),
-		}
-
-		err = hooks.ServerStreamAfterHook(req, &res)
-
-		if err != nil {
-
-			return grpc.Errorf(codes.Unknown, err.Error())
-
-		}
-
-		stream.Send(&res)
+	})
+	if err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
-	return nil
+	if err := hooks.UniarySelectAfterHook(req, &res); err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+	}
+	return &res, nil
 }
 
-// sql bidi streaming Bidirectional
-func (s *AmazingImpl) Bidirectional(stream pb.Amazing_BidirectionalServer) error {
+func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
 	var err error
-	stmt, err := s.SqlDB.Prepare("UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *")
+	_ = err
+	params := &persist_lib.Test_NameForAmazing{}
+	err = func() error {
+		params.Name = req.Name
+		return nil
+	}()
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			break
+	var iterErr error
+	err = s.PERSIST.ServerStream(stream.Context(), params, func(row persist_lib.Scanable) {
+		if row == nil { // there was no return data
+			return
 		}
-		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-
-		var (
-			Id        int64
-			Name      string
-			StartTime mytime.MyTime
-		)
-		err = stmt.QueryRow(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name).
-			Scan(&Id, &StartTime, &Name)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+		res := test.ExampleTable{}
+		err = func() error {
+			var (
+				Id        int64
+				StartTime mytime.MyTime
+				Name      string
+			)
+			if err := row.Scan(
+				&Id,
+				&StartTime,
+				&Name,
+			); err != nil {
+				return err
 			}
-			return grpc.Errorf(codes.Unknown, err.Error())
+			res.Id = Id
+			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
-		res := test.ExampleTable{
-
-			Id:        Id,
-			Name:      Name,
-			StartTime: StartTime.ToProto(),
-		}
-
 		if err := stream.Send(&res); err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
+	})
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
+	} else if iterErr != nil {
+		return iterErr
 	}
 	return nil
 }
 
-// sql bidi streaming BidirectionalWithHooks
-func (s *AmazingImpl) BidirectionalWithHooks(stream pb.Amazing_BidirectionalWithHooksServer) error {
+func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
 	var err error
-	stmt, err := s.SqlDB.Prepare("UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *")
+	_ = err
+	beforeRes, err := hooks.ServerStreamBeforeHook(req)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+	} else if beforeRes != nil {
+		for _, res := range beforeRes {
+			if err := stream.Send(res); err != nil {
+				return gstatus.Errorf(codes.Unknown, "error sending back before hook result: %v", err)
+			}
+		}
+	}
+	params := &persist_lib.Test_NameForAmazing{}
+	err = func() error {
+		params.Name = req.Name
+		return nil
+	}()
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
+	var iterErr error
+	err = s.PERSIST.ServerStreamWithHooks(stream.Context(), params, func(row persist_lib.Scanable) {
+		if row == nil { // there was no return data
+			return
+		}
+		res := test.ExampleTable{}
+		err = func() error {
+			var (
+				Id        int64
+				StartTime mytime.MyTime
+				Name      string
+			)
+			if err := row.Scan(
+				&Id,
+				&StartTime,
+				&Name,
+			); err != nil {
+				return err
+			}
+			res.Id = Id
+			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
+		}
+		if err := hooks.ServerStreamAfterHook(req, &res); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+			return
+		}
+		if err := stream.Send(&res); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
+		}
+	})
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
+	} else if iterErr != nil {
+		return iterErr
+	}
+	return nil
+}
+
+func (s *AmazingImpl) Bidirectional(req *test.ExampleTable, stream Amazing_BidirectionalServer) error {
+	var err error
+	_ = err
+	feed, stop := s.PERSIST.Bidirectional(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
+		} else if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
+		params := &persist_lib.Test_ExampleTableForAmazing{}
+		err = func() error {
+			params.Id = req.Id
+			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+			params.Name = req.Name
+			return nil
+		}()
 		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+			return err
 		}
+		row, err := feed(params)
+		if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
+		}
+		if row != nil {
+			res := test.ExampleTable{}
+			err = func() error {
+				var (
+					Id        int64
+					StartTime mytime.MyTime
+					Name      string
+				)
+				if err := row.Scan(
+					&Id,
+					&StartTime,
+					&Name,
+				); err != nil {
+					return err
+				}
+				res.Id = Id
+				res.Name = Name
+				return nil
+			}()
+		}
+	}
+	return stop()
+}
 
+func (s *AmazingImpl) BidirectionalWithHooks(req *test.ExampleTable, stream Amazing_BidirectionalWithHooksServer) error {
+	var err error
+	_ = err
+	feed, stop := s.PERSIST.BidirectionalWithHooks(stream.Context())
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
+		}
 		beforeRes, err := hooks.BidirectionalBeforeHook(req)
-
 		if err != nil {
-
-			return grpc.Errorf(codes.Unknown, err.Error())
-
-		}
-		if beforeRes != nil {
-
-			err = stream.Send(beforeRes)
-			if err != nil {
-				return grpc.Errorf(codes.Unknown, err.Error())
-			}
+			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+		} else if beforeRes != nil {
 			continue
-
 		}
-
-		var (
-			Id        int64
-			Name      string
-			StartTime mytime.MyTime
-		)
-		err = stmt.QueryRow(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name).
-			Scan(&Id, &StartTime, &Name)
+		params := &persist_lib.Test_ExampleTableForAmazing{}
+		err = func() error {
+			params.Id = req.Id
+			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+			params.Name = req.Name
+			return nil
+		}()
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+			return err
+		}
+		row, err := feed(params)
+		if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
+		}
+		if row != nil {
+			res := test.ExampleTable{}
+			err = func() error {
+				var (
+					Id        int64
+					StartTime mytime.MyTime
+					Name      string
+				)
+				if err := row.Scan(
+					&Id,
+					&StartTime,
+					&Name,
+				); err != nil {
+					return err
+				}
+				res.Id = Id
+				res.Name = Name
+				return nil
+			}()
+			if err := hooks.BidirectionalAfterHook(req, &res); err != nil {
+				return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			}
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-		res := test.ExampleTable{
-
-			Id:        Id,
-			Name:      Name,
-			StartTime: StartTime.ToProto(),
-		}
-
-		err = hooks.BidirectionalAfterHook(req, &res)
-
-		if err != nil {
-
-			return grpc.Errorf(codes.Unknown, err.Error())
-
-		}
-
-		if err := stream.Send(&res); err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
 		}
 	}
-	return nil
+	return stop()
 }
 
-// sql client streaming ClientStream
-func (s *AmazingImpl) ClientStream(stream pb.Amazing_ClientStreamServer) error {
+func (s *AmazingImpl) ClientStream(req *test.ExampleTable, stream Amazing_ClientStreamServer) error {
 	var err error
-	tx, err := s.SqlDB.Begin()
-	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)")
-	if err != nil {
-		return err
-	}
-
+	_ = err
 	res := test.NumRows{}
+	feed, stop := s.PERSIST.ClientStream(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
+		} else if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
+		params := &persist_lib.Test_ExampleTableForAmazing{}
+		err = func() error {
+			params.Id = req.Id
+			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+			params.Name = req.Name
+			return nil
+		}()
 		if err != nil {
-			tx.Rollback()
-			return grpc.Errorf(codes.Unknown, err.Error())
+			return err
 		}
-
-		_, err = stmt.Exec(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name)
-		if err != nil {
-			tx.Rollback()
-			if err == sql.ErrNoRows {
-				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
-			}
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-
+		feed(params)
 	}
-	err = tx.Commit()
+	row, err := stop()
 	if err != nil {
-		fmt.Println("Commiting transaction failed, rolling back...")
-		return grpc.Errorf(codes.Unknown, err.Error())
+		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
-	stream.SendAndClose(&res)
+	if row != nil {
+		err = func() error {
+			var (
+				Count int64
+			)
+			if err := row.Scan(
+				&Count,
+			); err != nil {
+				return err
+			}
+			res.Count = Count
+			return nil
+		}()
+	}
+	if err := stream.SendAndClose(&res); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
+	}
 	return nil
 }
 
-// sql client streaming ClientStreamWithHook
-func (s *AmazingImpl) ClientStreamWithHook(stream pb.Amazing_ClientStreamWithHookServer) error {
+func (s *AmazingImpl) ClientStreamWithHook(req *test.ExampleTable, stream Amazing_ClientStreamWithHookServer) error {
 	var err error
-	tx, err := s.SqlDB.Begin()
-	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)")
-	if err != nil {
-		return err
-	}
-
+	_ = err
 	res := test.Ids{}
+	feed, stop := s.PERSIST.ClientStreamWithHook(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
+		} else if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		if err != nil {
-			tx.Rollback()
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-
 		beforeRes, err := hooks.ClientStreamBeforeHook(req)
-
 		if err != nil {
-
-			tx.Rollback()
-			return grpc.Errorf(codes.Unknown, err.Error())
-
-		}
-		if beforeRes != nil {
-
+			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+		} else if beforeRes != nil {
 			continue
-
 		}
-
-		_, err = stmt.Exec(req.Id, mytime.MyTime{}.ToSql(req.StartTime), req.Name)
+		params := &persist_lib.Test_ExampleTableForAmazing{}
+		err = func() error {
+			params.Id = req.Id
+			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+			params.Name = req.Name
+			return nil
+		}()
 		if err != nil {
-			tx.Rollback()
-			if err == sql.ErrNoRows {
-				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
-			}
-			return grpc.Errorf(codes.Unknown, err.Error())
+			return err
 		}
-
-		err = hooks.ClientStreamAfterHook(req, &res)
-
-		if err != nil {
-
-			tx.Rollback()
-			return grpc.Errorf(codes.Unknown, err.Error())
-
-		}
-
+		feed(params)
 	}
-	err = tx.Commit()
+	row, err := stop()
 	if err != nil {
-		fmt.Println("Commiting transaction failed, rolling back...")
-		return grpc.Errorf(codes.Unknown, err.Error())
+		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
-	stream.SendAndClose(&res)
+	if row != nil {
+		err = func() error {
+			var (
+				Ids []int64
+			)
+			if err := row.Scan(
+				&Ids,
+			); err != nil {
+				return err
+			}
+			res.Ids = Ids
+			return nil
+		}()
+	}
+	// NOTE: I dont want to store your requests in memory
+	// so the after hook for client streaming calls
+	// is called with an empty request struct
+	fakeReq := &test.ExampleTable{}
+	if err := hooks.ClientStreamAfterHook(fakeReq, &res); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+	}
+	if err := stream.SendAndClose(&res); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
+	}
 	return nil
+}
+
+func (s *AmazingImpl) UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+	return s.FORWARDED.UnImplementedPersistMethod(ctx, req)
 }
