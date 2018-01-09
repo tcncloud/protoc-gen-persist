@@ -50,6 +50,27 @@ func (b *BobsImplBuilder) WithDefaultQueryHandlers() *BobsImplBuilder {
 	b.queryHandlers = queryHandlers
 	return b
 }
+
+// set the custom handlers you want to use in the handlers
+// this method will make sure to use a default handler if
+// the handler is nil.
+func (b *BobsImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.BobsQueryHandlers) *BobsImplBuilder {
+	accessor := persist_lib.NewSpannerClientGetter(b.db)
+	if p.DeleteBobsHandler == nil {
+		p.DeleteBobsHandler = persist_lib.DefaultDeleteBobsHandler(accessor)
+	}
+	if p.PutBobsHandler == nil {
+		p.PutBobsHandler = persist_lib.DefaultPutBobsHandler(accessor)
+	}
+	if p.GetBobsHandler == nil {
+		p.GetBobsHandler = persist_lib.DefaultGetBobsHandler(accessor)
+	}
+	if p.GetPeopleFromNamesHandler == nil {
+		p.GetPeopleFromNamesHandler = persist_lib.DefaultGetPeopleFromNamesHandler(accessor)
+	}
+	b.queryHandlers = p
+	return b
+}
 func (b *BobsImplBuilder) WithSpannerClient(c *spanner.Client) *BobsImplBuilder {
 	b.db = c
 	return b
@@ -95,13 +116,6 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 			return
 		}
 		res = Empty{}
-		err = func() error {
-			return nil
-		}()
-		if err != nil {
-			iterErr = err
-			return
-		}
 	})
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)

@@ -52,6 +52,18 @@ func (b *ExtraSrvImplBuilder) WithDefaultQueryHandlers() *ExtraSrvImplBuilder {
 	b.queryHandlers = queryHandlers
 	return b
 }
+
+// set the custom handlers you want to use in the handlers
+// this method will make sure to use a default handler if
+// the handler is nil.
+func (b *ExtraSrvImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.ExtraSrvQueryHandlers) *ExtraSrvImplBuilder {
+	accessor := persist_lib.NewSpannerClientGetter(b.db)
+	if p.ExtraUnaryHandler == nil {
+		p.ExtraUnaryHandler = persist_lib.DefaultExtraUnaryHandler(accessor)
+	}
+	b.queryHandlers = p
+	return b
+}
 func (b *ExtraSrvImplBuilder) WithSpannerClient(c *spanner.Client) *ExtraSrvImplBuilder {
 	b.db = c
 	return b
@@ -193,6 +205,72 @@ func (b *MySpannerImplBuilder) WithDefaultQueryHandlers() *MySpannerImplBuilder 
 		ClientStreamUpdateWithHooksHandler: persist_lib.DefaultClientStreamUpdateWithHooksHandler(accessor),
 	}
 	b.queryHandlers = queryHandlers
+	return b
+}
+
+// set the custom handlers you want to use in the handlers
+// this method will make sure to use a default handler if
+// the handler is nil.
+func (b *MySpannerImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.MySpannerQueryHandlers) *MySpannerImplBuilder {
+	accessor := persist_lib.NewSpannerClientGetter(b.db)
+	if p.UniaryInsertHandler == nil {
+		p.UniaryInsertHandler = persist_lib.DefaultUniaryInsertHandler(accessor)
+	}
+	if p.UniarySelectHandler == nil {
+		p.UniarySelectHandler = persist_lib.DefaultUniarySelectHandler(accessor)
+	}
+	if p.TestNestHandler == nil {
+		p.TestNestHandler = persist_lib.DefaultTestNestHandler(accessor)
+	}
+	if p.TestEverythingHandler == nil {
+		p.TestEverythingHandler = persist_lib.DefaultTestEverythingHandler(accessor)
+	}
+	if p.UniarySelectWithDirectivesHandler == nil {
+		p.UniarySelectWithDirectivesHandler = persist_lib.DefaultUniarySelectWithDirectivesHandler(accessor)
+	}
+	if p.UniaryUpdateHandler == nil {
+		p.UniaryUpdateHandler = persist_lib.DefaultUniaryUpdateHandler(accessor)
+	}
+	if p.UniaryDeleteRangeHandler == nil {
+		p.UniaryDeleteRangeHandler = persist_lib.DefaultUniaryDeleteRangeHandler(accessor)
+	}
+	if p.UniaryDeleteSingleHandler == nil {
+		p.UniaryDeleteSingleHandler = persist_lib.DefaultUniaryDeleteSingleHandler(accessor)
+	}
+	if p.NoArgsHandler == nil {
+		p.NoArgsHandler = persist_lib.DefaultNoArgsHandler(accessor)
+	}
+	if p.ServerStreamHandler == nil {
+		p.ServerStreamHandler = persist_lib.DefaultServerStreamHandler(accessor)
+	}
+	if p.ClientStreamInsertHandler == nil {
+		p.ClientStreamInsertHandler = persist_lib.DefaultClientStreamInsertHandler(accessor)
+	}
+	if p.ClientStreamDeleteHandler == nil {
+		p.ClientStreamDeleteHandler = persist_lib.DefaultClientStreamDeleteHandler(accessor)
+	}
+	if p.ClientStreamUpdateHandler == nil {
+		p.ClientStreamUpdateHandler = persist_lib.DefaultClientStreamUpdateHandler(accessor)
+	}
+	if p.UniaryInsertWithHooksHandler == nil {
+		p.UniaryInsertWithHooksHandler = persist_lib.DefaultUniaryInsertWithHooksHandler(accessor)
+	}
+	if p.UniarySelectWithHooksHandler == nil {
+		p.UniarySelectWithHooksHandler = persist_lib.DefaultUniarySelectWithHooksHandler(accessor)
+	}
+	if p.UniaryUpdateWithHooksHandler == nil {
+		p.UniaryUpdateWithHooksHandler = persist_lib.DefaultUniaryUpdateWithHooksHandler(accessor)
+	}
+	if p.UniaryDeleteWithHooksHandler == nil {
+		p.UniaryDeleteWithHooksHandler = persist_lib.DefaultUniaryDeleteWithHooksHandler(accessor)
+	}
+	if p.ServerStreamWithHooksHandler == nil {
+		p.ServerStreamWithHooksHandler = persist_lib.DefaultServerStreamWithHooksHandler(accessor)
+	}
+	if p.ClientStreamUpdateWithHooksHandler == nil {
+		p.ClientStreamUpdateWithHooksHandler = persist_lib.DefaultClientStreamUpdateWithHooksHandler(accessor)
+	}
+	b.queryHandlers = p
 	return b
 }
 func (b *MySpannerImplBuilder) WithSpannerClient(c *spanner.Client) *MySpannerImplBuilder {
