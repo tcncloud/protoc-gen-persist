@@ -18,9 +18,6 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-// don't eat our spanner import, or complain
-var _ = spanner.NewClient
-
 type ExtraSrvImpl struct {
 	PERSIST   *persist_lib.ExtraSrvMethodReceiver
 	FORWARDED RestOfExtraSrvHandlers
@@ -76,52 +73,69 @@ func (b *ExtraSrvImplBuilder) Build() (*ExtraSrvImpl, error) {
 
 func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test.ExampleTable, error) {
 	var err error
-	_ = err
-	params := &persist_lib.Test_NumRowsForExtraSrv{}
 	var res = test.ExampleTable{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.Test_NumRowsForExtraSrv{}
+	err = func() error {
+		// set 'NumRows.count' in params
+		params.Count = req.Count
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.ExtraUnary(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime []byte
+			if err := row.ColumnByName("start_time", &StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime []byte
-		if err := row.ColumnByName("start_time", &StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := new(timestamp.Timestamp)
-			if err := proto.Unmarshal(StartTime, local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := new(timestamp.Timestamp)
+				if err := proto.Unmarshal(StartTime, local); err != nil {
+					return err
+				}
+				res.StartTime = local
 			}
-			res.StartTime = local
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
@@ -129,9 +143,6 @@ func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test
 func (s *ExtraSrvImpl) ExtraMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	return s.FORWARDED.ExtraMethod(ctx, req)
 }
-
-// don't eat our spanner import, or complain
-var _ = spanner.NewClient
 
 type MySpannerImpl struct {
 	PERSIST   *persist_lib.MySpannerMethodReceiver
@@ -205,599 +216,756 @@ func (b *MySpannerImplBuilder) Build() (*MySpannerImpl, error) {
 
 func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	_ = err
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.start_time' in params
-	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
-	}
-	// set 'ExampleTable.name' in params
-	params.Name = req.Name
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
 	var res = test.ExampleTable{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
+	err = func() error {
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
+		// set 'ExampleTable.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.UniaryInsert(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
 
 func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	_ = err
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
-	// set 'ExampleTable.name' in params
-	params.Name = req.Name
 	var res = test.ExampleTable{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
+	err = func() error {
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
+		// set 'ExampleTable.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.UniarySelect(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
 
 func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Something, error) {
 	var err error
-	_ = err
-	params := &persist_lib.SomethingForMySpanner{}
-	// set 'Something.thing' in params
-	{
-		raw, err := proto.Marshal(req.Thing)
-		if err != nil {
-			return nil, gstatus.Errorf(codes.Unknown, "could not convert type to []byte, err: %s", err)
-		}
-		params.Thing = raw
-	}
 	var res = Something{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.SomethingForMySpanner{}
+	err = func() error {
+		// set 'Something.thing' in params
+		{
+			raw, err := proto.Marshal(req.Thing)
+			if err != nil {
+				return err
+			}
+			params.Thing = raw
+		}
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.TestNest(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Thing []byte
-		if err := row.ColumnByName("thing", &Thing); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := new(Something_SomethingElse)
-			if err := proto.Unmarshal(Thing, local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = Something{}
+		err = func() error {
+			var Thing []byte
+			if err := row.ColumnByName("thing", &Thing); err != nil {
+				return err
 			}
-			res.Thing = local
+			{
+				local := new(Something_SomethingElse)
+				if err := proto.Unmarshal(Thing, local); err != nil {
+					return err
+				}
+				res.Thing = local
+			}
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
 
 func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (*HasTimestamp, error) {
 	var err error
-	_ = err
-	params := &persist_lib.HasTimestampForMySpanner{}
-	// set 'HasTimestamp.tables' in params
-	{
-		var bytesOfBytes [][]byte
-		for _, msg := range req.Tables {
-			raw, err := proto.Marshal(msg)
-			if err != nil {
-				return nil, gstatus.Errorf(codes.Unknown, "could not convert type to [][]byte, err: %s", err)
-			}
-			bytesOfBytes = append(bytesOfBytes, raw)
-		}
-		params.Tables = bytesOfBytes
-	}
-	// set 'HasTimestamp.time' in params
-	if params.Time, err = (mytime.MyTime{}).ToSpanner(req.Time).SpannerValue(); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
-	}
-	// set 'HasTimestamp.some' in params
-	{
-		raw, err := proto.Marshal(req.Some)
-		if err != nil {
-			return nil, gstatus.Errorf(codes.Unknown, "could not convert type to []byte, err: %s", err)
-		}
-		params.Some = raw
-	}
-	// set 'HasTimestamp.str' in params
-	params.Str = req.Str
-	// set 'HasTimestamp.table' in params
-	{
-		raw, err := proto.Marshal(req.Table)
-		if err != nil {
-			return nil, gstatus.Errorf(codes.Unknown, "could not convert type to []byte, err: %s", err)
-		}
-		params.Table = raw
-	}
-	// set 'HasTimestamp.times' in params
-	{
-		var bytesOfBytes [][]byte
-		for _, msg := range req.Times {
-			raw, err := proto.Marshal(msg)
-			if err != nil {
-				return nil, gstatus.Errorf(codes.Unknown, "could not convert type to [][]byte, err: %s", err)
-			}
-			bytesOfBytes = append(bytesOfBytes, raw)
-		}
-		params.Times = bytesOfBytes
-	}
-	// set 'HasTimestamp.somes' in params
-	{
-		var bytesOfBytes [][]byte
-		for _, msg := range req.Somes {
-			raw, err := proto.Marshal(msg)
-			if err != nil {
-				return nil, gstatus.Errorf(codes.Unknown, "could not convert type to [][]byte, err: %s", err)
-			}
-			bytesOfBytes = append(bytesOfBytes, raw)
-		}
-		params.Somes = bytesOfBytes
-	}
-	// set 'HasTimestamp.strs' in params
-	params.Strs = req.Strs
 	var res = HasTimestamp{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.HasTimestampForMySpanner{}
+	err = func() error {
+		// set 'HasTimestamp.time' in params
+		if params.Time, err = (mytime.MyTime{}).ToSpanner(req.Time).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'HasTimestamp.some' in params
+		{
+			raw, err := proto.Marshal(req.Some)
+			if err != nil {
+				return err
+			}
+			params.Some = raw
+		}
+		// set 'HasTimestamp.str' in params
+		params.Str = req.Str
+		// set 'HasTimestamp.table' in params
+		{
+			raw, err := proto.Marshal(req.Table)
+			if err != nil {
+				return err
+			}
+			params.Table = raw
+		}
+		// set 'HasTimestamp.strs' in params
+		params.Strs = req.Strs
+		// set 'HasTimestamp.tables' in params
+		{
+			var bytesOfBytes [][]byte
+			for _, msg := range req.Tables {
+				raw, err := proto.Marshal(msg)
+				if err != nil {
+					return err
+				}
+				bytesOfBytes = append(bytesOfBytes, raw)
+			}
+			params.Tables = bytesOfBytes
+		}
+		// set 'HasTimestamp.somes' in params
+		{
+			var bytesOfBytes [][]byte
+			for _, msg := range req.Somes {
+				raw, err := proto.Marshal(msg)
+				if err != nil {
+					return err
+				}
+				bytesOfBytes = append(bytesOfBytes, raw)
+			}
+			params.Somes = bytesOfBytes
+		}
+		// set 'HasTimestamp.times' in params
+		{
+			var bytesOfBytes [][]byte
+			for _, msg := range req.Times {
+				raw, err := proto.Marshal(msg)
+				if err != nil {
+					return err
+				}
+				bytesOfBytes = append(bytesOfBytes, raw)
+			}
+			params.Times = bytesOfBytes
+		}
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.TestEverything(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Time *spanner.GenericColumnValue
-		if err := row.ColumnByName("time", Time); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(Time); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = HasTimestamp{}
+		err = func() error {
+			var Time *spanner.GenericColumnValue
+			if err := row.ColumnByName("time", Time); err != nil {
+				return err
 			}
-			res.Time = local.ToProto()
-		}
-		var Some []byte
-		if err := row.ColumnByName("some", &Some); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := new(Something)
-			if err := proto.Unmarshal(Some, local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(Time); err != nil {
+					return err
+				}
+				res.Time = local.ToProto()
 			}
-			res.Some = local
-		}
-		var Str string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("str", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Some []byte
+			if err := row.ColumnByName("some", &Some); err != nil {
+				return err
 			}
-			if local.Valid {
-				Str = local.StringVal
+			{
+				local := new(Something)
+				if err := proto.Unmarshal(Some, local); err != nil {
+					return err
+				}
+				res.Some = local
 			}
-			res.Str = Str
-		}
-		var Table []byte
-		if err := row.ColumnByName("table", &Table); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := new(test.ExampleTable)
-			if err := proto.Unmarshal(Table, local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Str string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("str", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Str = local.StringVal
+				}
+				res.Str = Str
 			}
-			res.Table = local
-		}
-		var Strs []string
-		{
-			local := make([]spanner.NullString, 0)
-			if err := row.ColumnByName("strs", &local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Table []byte
+			if err := row.ColumnByName("table", &Table); err != nil {
+				return err
 			}
-			for _, l := range local {
-				if l.Valid {
-					Strs = append(Strs, l.StringVal)
-					res.Strs = Strs
+			{
+				local := new(test.ExampleTable)
+				if err := proto.Unmarshal(Table, local); err != nil {
+					return err
+				}
+				res.Table = local
+			}
+			var Strs []string
+			{
+				local := make([]spanner.NullString, 0)
+				if err := row.ColumnByName("strs", &local); err != nil {
+					return err
+				}
+				for _, l := range local {
+					if l.Valid {
+						Strs = append(Strs, l.StringVal)
+						res.Strs = Strs
+					}
 				}
 			}
-		}
-		var Tables [][]byte
-		if err := row.ColumnByName("tables", &Tables); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := make([]*test.ExampleTable, len(Tables))
-			for i := range local {
-				local[i] = new(test.ExampleTable)
-				if err := proto.Unmarshal(Tables[i], local[i]); err != nil {
-					iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-				}
+			var Tables [][]byte
+			if err := row.ColumnByName("tables", &Tables); err != nil {
+				return err
 			}
-			res.Tables = local
-		}
-		var Somes [][]byte
-		if err := row.ColumnByName("somes", &Somes); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := make([]*Something, len(Somes))
-			for i := range local {
-				local[i] = new(Something)
-				if err := proto.Unmarshal(Somes[i], local[i]); err != nil {
-					iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := make([]*test.ExampleTable, len(Tables))
+				for i := range local {
+					local[i] = new(test.ExampleTable)
+					if err := proto.Unmarshal(Tables[i], local[i]); err != nil {
+						return err
+					}
 				}
+				res.Tables = local
 			}
-			res.Somes = local
-		}
-		var Times [][]byte
-		if err := row.ColumnByName("times", &Times); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := make([]*timestamp.Timestamp, len(Times))
-			for i := range local {
-				local[i] = new(timestamp.Timestamp)
-				if err := proto.Unmarshal(Times[i], local[i]); err != nil {
-					iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Somes [][]byte
+			if err := row.ColumnByName("somes", &Somes); err != nil {
+				return err
+			}
+			{
+				local := make([]*Something, len(Somes))
+				for i := range local {
+					local[i] = new(Something)
+					if err := proto.Unmarshal(Somes[i], local[i]); err != nil {
+						return err
+					}
 				}
+				res.Somes = local
 			}
-			res.Times = local
+			var Times [][]byte
+			if err := row.ColumnByName("times", &Times); err != nil {
+				return err
+			}
+			{
+				local := make([]*timestamp.Timestamp, len(Times))
+				for i := range local {
+					local[i] = new(timestamp.Timestamp)
+					if err := proto.Unmarshal(Times[i], local[i]); err != nil {
+						return err
+					}
+				}
+				res.Times = local
+			}
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
 
 func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	_ = err
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
-	// set 'ExampleTable.name' in params
-	params.Name = req.Name
 	var res = test.ExampleTable{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
+	err = func() error {
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
+		// set 'ExampleTable.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.UniarySelectWithDirectives(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
 
 func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	var err error
-	_ = err
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.start_time' in params
-	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
-	}
-	// set 'ExampleTable.name' in params
-	params.Name = req.Name
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
 	var res = test.PartialTable{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
+	err = func() error {
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
+		// set 'ExampleTable.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.UniaryUpdate(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.PartialTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
 
 func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
 	var err error
-	_ = err
-	params := &persist_lib.Test_ExampleTableRangeForMySpanner{}
-	// set 'ExampleTableRange.start_id' in params
-	params.StartId = req.StartId
-	// set 'ExampleTableRange.end_id' in params
-	params.EndId = req.EndId
 	var res = test.ExampleTable{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.Test_ExampleTableRangeForMySpanner{}
+	err = func() error {
+		// set 'ExampleTableRange.start_id' in params
+		params.StartId = req.StartId
+		// set 'ExampleTableRange.end_id' in params
+		params.EndId = req.EndId
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.UniaryDeleteRange(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
 
 func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	_ = err
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
 	var res = test.ExampleTable{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
+	err = func() error {
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
+		// set 'ExampleTable.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.UniaryDeleteSingle(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
 
 func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	_ = err
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
 	var res = test.ExampleTable{}
-	var iterErr error
-	_ = iterErr
+	_ = err
 	_ = res
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
+	err = func() error {
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
+		// set 'ExampleTable.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
 	err = s.PERSIST.NoArgs(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return &res, nil
 }
@@ -806,47 +974,62 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 	var err error
 	_ = err
 	params := &persist_lib.Test_NameForMySpanner{}
+	err = func() error {
+		// set 'Name.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
 	var iterErr error
 	err = s.PERSIST.ServerStream(stream.Context(), params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
 		res := test.ExampleTable{}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 		if err := stream.Send(&res); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
 	if err != nil {
@@ -857,141 +1040,176 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 	return nil
 }
 
-func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertServer) error {
+func (s *MySpannerImpl) ClientStreamInsert(req *test.ExampleTable, stream MySpanner_ClientStreamInsertServer) error {
 	var err error
 	_ = err
+	res := test.NumRows{}
 	feed, stop := s.PERSIST.ClientStreamInsert(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
 		params := &persist_lib.Test_ExampleTableForMySpanner{}
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
+		err = func() error {
+			// set 'ExampleTable.id' in params
+			params.Id = req.Id
+			// set 'ExampleTable.start_time' in params
+			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+				return err
+			}
+			// set 'ExampleTable.name' in params
+			params.Name = req.Name
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
 		feed(params)
 	}
 	row, err := stop()
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
-	res := test.NumRows{}
 	if row != nil {
-		var Count int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("count", local); err != nil {
-				return gstatus.Errorf(codes.Unknown, "couldnt scan out message, err: %v", err)
+		err = func() error {
+			var Count int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("count", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Count = local.Int64
+				}
+				res.Count = Count
 			}
-			if local.Valid {
-				Count = local.Int64
-			}
-			res.Count = Count
-		}
+			return nil
+		}()
 	}
 	if err := stream.SendAndClose(&res); err != nil {
-		return gstatus.Errorf(codes.Unknown, "error sending response: %v", err)
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
 }
 
-func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteServer) error {
+func (s *MySpannerImpl) ClientStreamDelete(req *test.ExampleTable, stream MySpanner_ClientStreamDeleteServer) error {
 	var err error
 	_ = err
+	res := test.NumRows{}
 	feed, stop := s.PERSIST.ClientStreamDelete(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
 		params := &persist_lib.Test_ExampleTableForMySpanner{}
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
+		err = func() error {
+			// set 'ExampleTable.id' in params
+			params.Id = req.Id
+			// set 'ExampleTable.start_time' in params
+			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+				return err
+			}
+			// set 'ExampleTable.name' in params
+			params.Name = req.Name
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
 		feed(params)
 	}
 	row, err := stop()
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
-	res := test.NumRows{}
 	if row != nil {
-		var Count int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("count", local); err != nil {
-				return gstatus.Errorf(codes.Unknown, "couldnt scan out message, err: %v", err)
+		err = func() error {
+			var Count int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("count", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Count = local.Int64
+				}
+				res.Count = Count
 			}
-			if local.Valid {
-				Count = local.Int64
-			}
-			res.Count = Count
-		}
+			return nil
+		}()
 	}
 	if err := stream.SendAndClose(&res); err != nil {
-		return gstatus.Errorf(codes.Unknown, "error sending response: %v", err)
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
 }
 
-func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateServer) error {
+func (s *MySpannerImpl) ClientStreamUpdate(req *test.ExampleTable, stream MySpanner_ClientStreamUpdateServer) error {
 	var err error
 	_ = err
+	res := test.NumRows{}
 	feed, stop := s.PERSIST.ClientStreamUpdate(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
 		params := &persist_lib.Test_ExampleTableForMySpanner{}
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
+		err = func() error {
+			// set 'ExampleTable.id' in params
+			params.Id = req.Id
+			// set 'ExampleTable.start_time' in params
+			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+				return err
+			}
+			// set 'ExampleTable.name' in params
+			params.Name = req.Name
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
 		feed(params)
 	}
 	row, err := stop()
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
-	res := test.NumRows{}
 	if row != nil {
-		var Count int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("count", local); err != nil {
-				return gstatus.Errorf(codes.Unknown, "couldnt scan out message, err: %v", err)
+		err = func() error {
+			var Count int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("count", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Count = local.Int64
+				}
+				res.Count = Count
 			}
-			if local.Valid {
-				Count = local.Int64
-			}
-			res.Count = Count
-		}
+			return nil
+		}()
 	}
 	if err := stream.SendAndClose(&res); err != nil {
-		return gstatus.Errorf(codes.Unknown, "error sending response: %v", err)
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
 }
 
 func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
+	var res = test.ExampleTable{}
 	_ = err
+	_ = res
 	beforeRes, err := hooks.UniaryInsertBeforeHook(req)
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
@@ -999,58 +1217,71 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 		return beforeRes, nil
 	}
 	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
-	// set 'ExampleTable.start_time' in params
-	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
+	err = func() error {
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
+		// set 'ExampleTable.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
 	}
-	// set 'ExampleTable.name' in params
-	params.Name = req.Name
-	var res = test.ExampleTable{}
 	var iterErr error
-	_ = iterErr
-	_ = res
 	err = s.PERSIST.UniaryInsertWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	if err := hooks.UniaryInsertAfterHook(req, &res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
@@ -1060,7 +1291,9 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 
 func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
+	var res = test.ExampleTable{}
 	_ = err
+	_ = res
 	beforeRes, err := hooks.UniaryInsertBeforeHook(req)
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
@@ -1068,52 +1301,71 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 		return beforeRes, nil
 	}
 	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
-	var res = test.ExampleTable{}
+	err = func() error {
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
+		// set 'ExampleTable.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
 	var iterErr error
-	_ = iterErr
-	_ = res
 	err = s.PERSIST.UniarySelectWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	if err := hooks.UniaryInsertAfterHook(req, &res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
@@ -1123,7 +1375,9 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 
 func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	var err error
+	var res = test.PartialTable{}
 	_ = err
+	_ = res
 	beforeRes, err := hooks.UniaryUpdateBeforeHook(req)
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
@@ -1131,47 +1385,60 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 		return beforeRes, nil
 	}
 	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
-	// set 'ExampleTable.start_time' in params
-	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "could not convert type to persist_lib type: %v, err", err)
+	err = func() error {
+		// set 'ExampleTable.id' in params
+		params.Id = req.Id
+		// set 'ExampleTable.start_time' in params
+		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+			return err
+		}
+		// set 'ExampleTable.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
 	}
-	// set 'ExampleTable.name' in params
-	params.Name = req.Name
-	var res = test.PartialTable{}
 	var iterErr error
-	_ = iterErr
-	_ = res
 	err = s.PERSIST.UniaryUpdateWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.PartialTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	if err := hooks.UniaryUpdateAfterHook(req, &res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
@@ -1181,7 +1448,9 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 
 func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
 	var err error
+	var res = test.ExampleTable{}
 	_ = err
+	_ = res
 	beforeRes, err := hooks.UniaryDeleteBeforeHook(req)
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
@@ -1189,54 +1458,67 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 		return beforeRes, nil
 	}
 	params := &persist_lib.Test_ExampleTableRangeForMySpanner{}
-	// set 'ExampleTableRange.start_id' in params
-	params.StartId = req.StartId
-	// set 'ExampleTableRange.end_id' in params
-	params.EndId = req.EndId
-	var res = test.ExampleTable{}
+	err = func() error {
+		// set 'ExampleTableRange.start_id' in params
+		params.StartId = req.StartId
+		// set 'ExampleTableRange.end_id' in params
+		params.EndId = req.EndId
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
 	var iterErr error
-	_ = iterErr
-	_ = res
 	err = s.PERSIST.UniaryDeleteWithHooks(ctx, params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		res = test.ExampleTable{}
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 	})
 	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in closure: %v", err)
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	if err := hooks.UniaryDeleteAfterHook(req, &res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
@@ -1258,51 +1540,66 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 		}
 	}
 	params := &persist_lib.Test_NameForMySpanner{}
+	err = func() error {
+		// set 'Name.name' in params
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
 	var iterErr error
 	err = s.PERSIST.ServerStreamWithHooks(stream.Context(), params, func(row *spanner.Row) {
 		if row == nil { // there was no return data
 			return
 		}
 		res := test.ExampleTable{}
-		var Id int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("id", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+		err = func() error {
+			var Id int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("id", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Id = local.Int64
+				}
+				res.Id = Id
 			}
-			if local.Valid {
-				Id = local.Int64
+			var StartTime *spanner.GenericColumnValue
+			if err := row.ColumnByName("start_time", StartTime); err != nil {
+				return err
 			}
-			res.Id = Id
-		}
-		var StartTime *spanner.GenericColumnValue
-		if err := row.ColumnByName("start_time", StartTime); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
-		}
-		{
-			local := &mytime.MyTime{}
-			if err := local.SpannerScan(StartTime); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			{
+				local := &mytime.MyTime{}
+				if err := local.SpannerScan(StartTime); err != nil {
+					return err
+				}
+				res.StartTime = local.ToProto()
 			}
-			res.StartTime = local.ToProto()
-		}
-		var Name string
-		{
-			local := &spanner.NullString{}
-			if err := row.ColumnByName("name", local); err != nil {
-				iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			var Name string
+			{
+				local := &spanner.NullString{}
+				if err := row.ColumnByName("name", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Name = local.StringVal
+				}
+				res.Name = Name
 			}
-			if local.Valid {
-				Name = local.StringVal
-			}
-			res.Name = Name
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
 		}
 		if err := hooks.ServerStreamAfterHook(req, &res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			return
 		}
 		if err := stream.Send(&res); err != nil {
-			iterErr = gstatus.Errorf(codes.Unknown, "couldnt scan out message err: %v", err)
+			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
 	if err != nil {
@@ -1313,16 +1610,17 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 	return nil
 }
 
-func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
+func (s *MySpannerImpl) ClientStreamUpdateWithHooks(req *test.ExampleTable, stream MySpanner_ClientStreamUpdateWithHooksServer) error {
 	var err error
 	_ = err
+	res := test.NumRows{}
 	feed, stop := s.PERSIST.ClientStreamUpdateWithHooks(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return gstatus.Errorf(codes.Unknown, "error recieving input: %v", err)
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
 		beforeRes, err := hooks.ClientStreamUpdateBeforeHook(req)
 		if err != nil {
@@ -1331,38 +1629,51 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 			continue
 		}
 		params := &persist_lib.Test_ExampleTableForMySpanner{}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
+		err = func() error {
+			// set 'ExampleTable.id' in params
+			params.Id = req.Id
+			// set 'ExampleTable.start_time' in params
+			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+				return err
+			}
+			// set 'ExampleTable.name' in params
+			params.Name = req.Name
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
 		feed(params)
 	}
 	row, err := stop()
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
-	res := test.NumRows{}
 	if row != nil {
-		var Count int64
-		{
-			local := &spanner.NullInt64{}
-			if err := row.ColumnByName("count", local); err != nil {
-				return gstatus.Errorf(codes.Unknown, "couldnt scan out message, err: %v", err)
+		err = func() error {
+			var Count int64
+			{
+				local := &spanner.NullInt64{}
+				if err := row.ColumnByName("count", local); err != nil {
+					return err
+				}
+				if local.Valid {
+					Count = local.Int64
+				}
+				res.Count = Count
 			}
-			if local.Valid {
-				Count = local.Int64
-			}
-			res.Count = Count
-		}
+			return nil
+		}()
 	}
 	// NOTE: I dont want to store your requests in memory
-	// So the after hook is called with an empty request
-	req := &test.ExampleTable{}
-	if err := hooks.ClientStreamUpdateAfterHook(req, &res); err != nil {
+	// so the after hook for client streaming calls
+	// is called with an empty request struct
+	fakeReq := &test.ExampleTable{}
+	if err := hooks.ClientStreamUpdateAfterHook(fakeReq, &res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
 	if err := stream.SendAndClose(&res); err != nil {
-		return gstatus.Errorf(codes.Unknown, "error sending response: %v", err)
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
 }

@@ -32,27 +32,10 @@ package templates
 const ServicesTemplate = `{{define "implement_services"}}
 {{range $srv := .}}
 {{if $srv.IsServiceEnabled}}
-{{if $srv.IsSQL}}
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-// In order for your code to work you have to create a file
-// in this package with the following content:
-//
-// type {{$srv.GetName}}Impl struct {
-// 	SqlDB *sql.DB
-// }
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-{{end}}
-// don't eat our spanner import, or complain
-var _ = spanner.NewClient
-
-{{if $srv.IsSpanner}}
 {{$srv.PrintBuilder}}
 {{end}}
 {{range $method := $srv.Methods}}
 {{template "implement_method" $method}}
-{{end}}
 {{end}}
 {{end}}
 {{end}}`

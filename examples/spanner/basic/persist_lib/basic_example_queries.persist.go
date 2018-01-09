@@ -10,9 +10,9 @@ func NumRowsFromExtraUnaryQuery(req NumRowsFromExtraUnaryQueryParams) spanner.St
 }
 func ExampleTableFromUniaryInsertQuery(req ExampleTableFromUniaryInsertQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"name":       "bananas",
 		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
+		"name":       "bananas",
 	})
 }
 func ExampleTableFromUniarySelectQuery(req ExampleTableFromUniarySelectQueryParams) spanner.Statement {
@@ -114,9 +114,9 @@ func ExampleTableFromClientStreamUpdateQuery(req ExampleTableFromClientStreamUpd
 }
 func ExampleTableFromUniaryInsertWithHooksQuery(req ExampleTableFromUniaryInsertWithHooksQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"name":       "bananas",
 		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
+		"name":       "bananas",
 	})
 }
 func ExampleTableFromUniarySelectWithHooksQuery(req ExampleTableFromUniarySelectWithHooksQueryParams) spanner.Statement {
@@ -173,27 +173,27 @@ type SomethingFromTestNestQueryParams interface {
 	GetThing() []byte
 }
 type HasTimestampFromTestEverythingQueryParams interface {
-	GetStr() string
-	GetTable() []byte
-	GetTimes() [][]byte
 	GetSomes() [][]byte
 	GetStrs() []string
 	GetTables() [][]byte
 	GetTime() interface{}
 	GetSome() []byte
+	GetStr() string
+	GetTable() []byte
+	GetTimes() [][]byte
 }
 type ExampleTableFromUniarySelectWithDirectivesQueryParams interface {
 	GetId() int64
 	GetName() string
 }
 type ExampleTableFromUniaryUpdateQueryParams interface {
+	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
-	GetId() int64
 }
 type ExampleTableRangeFromUniaryDeleteRangeQueryParams interface {
-	GetEndId() int64
 	GetStartId() int64
+	GetEndId() int64
 }
 type ExampleTableFromUniaryDeleteSingleQueryParams interface {
 	GetId() int64
@@ -224,9 +224,9 @@ type ExampleTableFromUniarySelectWithHooksQueryParams interface {
 	GetId() int64
 }
 type ExampleTableFromUniaryUpdateWithHooksQueryParams interface {
-	GetStartTime() interface{}
 	GetName() string
 	GetId() int64
+	GetStartTime() interface{}
 }
 type ExampleTableRangeFromUniaryDeleteWithHooksQueryParams interface {
 	GetStartId() int64

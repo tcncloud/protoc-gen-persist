@@ -1,6 +1,8 @@
 package persist_lib
 
-import "cloud.google.com/go/spanner"
+import (
+	"cloud.google.com/go/spanner"
+)
 
 type SpannerClientGetter func() (*spanner.Client, error)
 

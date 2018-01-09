@@ -1,9 +1,7 @@
 package persist_lib
 
-import (
-	"cloud.google.com/go/spanner"
-	"golang.org/x/net/context"
-)
+import "golang.org/x/net/context"
+import "cloud.google.com/go/spanner"
 
 type BobsMethodReceiver struct {
 	Handlers BobsQueryHandlers
@@ -23,7 +21,7 @@ func (p *BobsMethodReceiver) DeleteBobs(ctx context.Context, params *BobForBobs,
 // given a context, returns two functions.  (feed, stop)
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
-//a  *spanner.Row to be returned, or nil.
+//a  row to be returned, or nil.
 func (p *BobsMethodReceiver) PutBobs(ctx context.Context) (func(*BobForBobs), func() (*spanner.Row, error)) {
 	return p.Handlers.PutBobsHandler(ctx)
 }
