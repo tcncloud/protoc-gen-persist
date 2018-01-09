@@ -161,7 +161,7 @@ func (s *Service) ProcessImports() {
 	}
 	if opt := s.GetServiceOption(); opt != nil {
 		for _, m := range opt.GetTypes() {
-			logrus.Debugf("adding import: %+v  for type: %s", GetGoPackage(m.GetGoPackage()), m)
+			logrus.Warnf("adding import: %+v  for type: %s", GetGoPackage(m.GetGoPackage()), m)
 			s.File.ImportList.GetOrAddImport(GetGoPackage(m.GetGoPackage()), GetGoPath(m.GetGoPackage()))
 		}
 	}

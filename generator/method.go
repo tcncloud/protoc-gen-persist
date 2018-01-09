@@ -34,7 +34,6 @@ import (
 	"strings"
 
 	"bytes"
-	"github.com/Shrugs/fauxgaux"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -87,30 +86,6 @@ func (m *Method) GetMethodOption() *persist.QLImpl {
 		}
 	}
 	return nil
-}
-
-func (m *Method) GetQueryParamString(comma bool) string {
-	c := ""
-	if comma {
-		c = ","
-	}
-	if inputTypeStruct := m.GetInputTypeStruct(); inputTypeStruct != nil {
-		if opt := m.GetMethodOption(); opt != nil {
-			if opt.GetArguments() != nil {
-				return c + strings.Join(fauxgaux.Chain(opt.GetArguments()).Map(func(arg string) string {
-					// TODO check if the type is a mapped type
-					if fld := inputTypeStruct.GetFieldType(arg); fld != nil {
-						if m.IsTypeMapped(fld) {
-							return m.GetMappedObject(fld) + "{}.ToSql(" + "req." + _gen.CamelCase(arg) + ")"
-						}
-					}
-
-					return "req." + _gen.CamelCase(arg)
-				}).ConvertString(), ",")
-			}
-		}
-	}
-	return ""
 }
 
 func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string {
@@ -173,17 +148,13 @@ func (m *Method) GetFilePackage() string {
 }
 
 func (m *Method) GetGoTypeName(typ string) string {
-	str := m.GetAllStructs().GetStructByProtoName(typ)
-	// if m.Service.File.GetPackageName() != str.File.GetPackageName() {
+	str := m.Service.File.AllStructures.GetStructByProtoName(typ)
 	if imp := m.Service.File.ImportList.GetGoNameByStruct(str); imp != nil {
-		return imp.GoPackageName + "." + str.GetGoName()
-	} else {
-		// logrus.WithField("struct", str).Warnf("Can't find struct in import list: type: %s", typ)
-		return str.GetGoName()
+		if m.Service.File.NotSameAsMyPackage(imp.GoImportPath) {
+			return imp.GoPackageName + "." + str.GetGoName()
+		}
 	}
-	// } else {
-	// 	return str.GetGoName()
-	// }
+	return str.GetGoName()
 }
 
 func (m *Method) GetInputType() string {
@@ -237,6 +208,9 @@ func (m *Method) GetMappedObject(typ *descriptor.FieldDescriptorProto) string {
 			if mapp.GetProtoType() == typ.GetType() &&
 				mapp.GetProtoLabel() == typ.GetLabel() &&
 				mapp.GetProtoTypeName() == typ.GetTypeName() {
+				if m.Service.File.IsSameAsMyPackage(GetGoPath(mapp.GetGoPackage())) {
+					return mapp.GetGoType()
+				}
 				return m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
 			}
 		}
@@ -246,7 +220,8 @@ func (m *Method) GetMappedObject(typ *descriptor.FieldDescriptorProto) string {
 
 func (m *Method) GetTypeNameMinusPackage(ty *descriptor.FieldDescriptorProto) string {
 	if structure := m.Service.AllStructs.GetStructByProtoName(ty.GetTypeName()); structure != nil {
-		if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil {
+		if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil &&
+			m.Service.File.NotSameAsMyPackage(imp.GoImportPath) {
 			return imp.GoPackageName + "." + structure.GetGoName()
 		} else {
 			return structure.GetGoName()
@@ -370,12 +345,17 @@ func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 	if mapping := m.GetTypeMapping(); mapping != nil {
 		// if we have a mapping we are going to process it first
 		for _, mapp := range mapping.Types {
-			logrus.WithField("mapping", mapp).Debug("checking mapping")
+			logrus.Debugf("TYPE MAPPING\nfiles dir: %s\ntypes dir: %s\nsame? %s",
+				m.Service.File.GetImplDir(),
+				GetGoPath(mapp.GetGoPackage()),
+				m.Service.File.NotSameAsMyPackage(GetGoPath(mapp.GetGoPackage())),
+			)
+
 			if mapp.GetProtoType() == typ.GetType() &&
 				mapp.GetProtoLabel() == typ.GetLabel() &&
 				mapp.GetProtoTypeName() == typ.GetTypeName() {
 				p := m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage()))
-				if p != "" {
+				if p != "" && m.Service.File.NotSameAsMyPackage(GetGoPath(mapp.GetGoPackage())) {
 					return p + "." + mapp.GetGoType()
 				} else {
 					return mapp.GetGoType()
@@ -548,14 +528,6 @@ func (m *Method) GetTypeDescForQueryFields() map[string]TypeDesc {
 	return fields
 }
 
-func (m *Method) GetServiceName() string {
-	return m.Service.GetName()
-}
-
-func (m *Method) GetAllStructs() *StructList {
-	return m.Service.AllStructs
-}
-
 func (m *Method) GetName() string {
 	return m.Desc.GetName()
 }
@@ -567,14 +539,6 @@ func (m *Method) IsEnabled() bool {
 func (m *Method) IsSQL() bool {
 	return m.Service.IsSQL() && m.GetMethodOption() != nil
 }
-
-// func (m *Method) IsMongo() bool {
-// 	if opt := m.GetMethodOption(); opt != nil {
-// 		return opt.GetPersist() == persist.PersistenceOptions_MONGO
-// 	}
-// 	return false
-// }
-
 func (m *Method) IsSpanner() bool {
 	return m.Service.IsSpanner() && m.GetMethodOption() != nil
 }

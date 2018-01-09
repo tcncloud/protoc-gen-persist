@@ -137,7 +137,32 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		)
 	}
 	printer.P("}\n b.queryHandlers = queryHandlers\n return b\n}\n")
+	// fill in holes with defaults
+	printer.PA([]string{
+		"// set the custom handlers you want to use in the handlers\n",
+		"// this method will make sure to use a default handler if\n",
+		"// the handler is nil.\n",
+		"func (b *%sImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.%sQueryHandlers)",
+		"*%sImplBuilder {\n",
+		"accessor := persist_lib.New%sClientGetter(b.db)\n",
+	},
+		service.GetName(), service.GetName(),
+		service.GetName(),
+		backend,
+	)
+	for _, m := range *service.Methods {
+		if m.GetMethodOption() == nil {
+			continue
+		}
+		phn := NewPersistHandlerName(m)
+		printer.P(
+			"if p.%s == nil {\np.%s = persist_lib.Default%s(accessor)\n}\n",
+			phn, phn, phn,
+		)
+	}
+	printer.P("b.queryHandlers = p\n return b\n}\n")
 
+	// provide the builder with a client
 	printer.PA([]string{
 		"func (b *%sImplBuilder) With%sClient(c *%s) *%sImplBuilder {\n",
 		"b.db = c\n return b\n}\n",
@@ -430,7 +455,6 @@ func (per *PersistStringer) DefaultSqlFunctionsImpl(method *Method) string {
 			"return nil\n}\n}\n",
 		},
 			method.GetName(),
-			NewPLInputName(method),
 			NewPLInputName(method),
 			NewPLInputName(method),
 			NewPLQueryMethodName(method),

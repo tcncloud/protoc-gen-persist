@@ -22,7 +22,7 @@ func (s *UnaryStringer) String() string {
 	// print child level scopes
 	s.printer.P(
 		"func (s *%sImpl) %s(ctx context.Context, req *%s) (*%s, error) {\n",
-		s.method.GetServiceName(),
+		s.method.Service.GetName(),
 		s.method.GetName(),
 		s.method.GetInputType(),
 		s.method.GetOutputType(),
@@ -39,7 +39,7 @@ func (s *UnaryStringer) String() string {
 func (s *UnaryStringer) Unimplemented() string {
 	s.printer.P(
 		"func (s *%sImpl) %s(ctx context.Context, req *%s) (*%s, error) {\n",
-		s.method.GetServiceName(),
+		s.method.Service.GetName(),
 		s.method.GetName(),
 		s.method.GetInputType(),
 		s.method.GetOutputType(),
@@ -100,12 +100,14 @@ func (s *UnaryStringer) HandleRow() {
 
 func (s *UnaryStringer) ResultFromRow() {
 	s.printer.P("res = %s{}\n", s.method.GetOutputType())
-	s.printer.PA([]string{
-		"err = %s\n",
-		"if err != nil {\n iterErr = err\n return\n}\n",
-	},
-		s.backend.TranslateRowToResult(),
-	)
+	if len(s.method.GetTypeDescForFieldsInStruct(s.method.GetOutputTypeStruct())) > 0 {
+		s.printer.PA([]string{
+			"err = %s\n",
+			"if err != nil {\n iterErr = err\n return\n}\n",
+		},
+			s.backend.TranslateRowToResult(),
+		)
+	}
 }
 
 func (s *UnaryStringer) AfterHook() {
@@ -144,7 +146,7 @@ func (s *BidiStreamStringer) String() string {
 
 	s.printer.P(
 		"func (s *%sImpl) %s(req *%s, stream %s) error {\n",
-		s.method.GetServiceName(),
+		s.method.Service.GetName(),
 		s.method.GetName(),
 		s.method.GetInputType(),
 		NewStreamType(s.method),
@@ -164,14 +166,12 @@ func (s *BidiStreamStringer) String() string {
 	s.Params()
 	s.HandleRow()
 	s.printer.P("}\n")
-	// s.printer.P("// limitation of the library, stop doesn't return Scanable\n")
-	// s.printer.P("if _, err := stop(); err != nil {\nreturn err\n}\n")
 	s.printer.P("return stop()\n}\n")
 
 	return s.printer.String()
 }
 func (s *BidiStreamStringer) Unimplemented() string {
-	srvName := s.method.GetServiceName()
+	srvName := s.method.Service.GetName()
 	name := s.method.GetName()
 
 	s.printer.PA([]string{
@@ -220,12 +220,13 @@ func (s *BidiStreamStringer) HandleRow() {
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 		"if row != nil {\n",
 		"res := %s{}\n",
-		"err = %s\n",
 	},
 		"error receiving result row: %v",
 		s.method.GetOutputType(),
-		s.backend.TranslateRowToResult(),
 	)
+	if len(s.method.GetTypeDescForFieldsInStruct(s.method.GetOutputTypeStruct())) > 0 {
+		s.printer.P("err = %s\n if err != nil {\n return err\n}\n", s.backend.TranslateRowToResult())
+	}
 	s.AfterHook()
 	s.printer.P("}\n")
 }
@@ -268,7 +269,7 @@ func (s *ClientStreamStringer) String() string {
 
 	s.printer.P(
 		"func (s *%sImpl) %s(req *%s, stream %s) error {\n",
-		s.method.GetServiceName(),
+		s.method.Service.GetName(),
 		s.method.GetName(),
 		s.method.GetInputType(),
 		NewStreamType(s.method),
@@ -303,7 +304,7 @@ func (s *ClientStreamStringer) String() string {
 	return s.printer.String()
 }
 func (s *ClientStreamStringer) Unimplemented() string {
-	srvName := s.method.GetServiceName()
+	srvName := s.method.Service.GetName()
 	name := s.method.GetName()
 
 	s.printer.PA([]string{
@@ -399,7 +400,7 @@ func (s *ServerStreamStringer) String() string {
 	// print child level scopes
 	s.printer.P(
 		"func (s *%sImpl) %s(req *%s, stream %s) error{\n",
-		s.method.GetServiceName(),
+		s.method.Service.GetName(),
 		s.method.GetName(),
 		s.method.GetInputType(),
 		NewStreamType(s.method),
@@ -414,7 +415,7 @@ func (s *ServerStreamStringer) String() string {
 }
 
 func (s *ServerStreamStringer) Unimplemented() string {
-	srvName := s.method.GetServiceName()
+	srvName := s.method.Service.GetName()
 	name := s.method.GetName()
 	in := s.method.GetInputType()
 
@@ -488,10 +489,12 @@ func (s *ServerStreamStringer) HandleRow() {
 
 func (s *ServerStreamStringer) ResultFromRow() {
 	s.printer.P("res := %s{}\n", s.method.GetOutputType())
-	s.printer.P(
-		"err = %s\n if err != nil {\n iterErr = err\n return\n}\n",
-		s.backend.TranslateRowToResult(),
-	)
+	if len(s.method.GetTypeDescForFieldsInStruct(s.method.GetOutputTypeStruct())) > 0 {
+		s.printer.P(
+			"err = %s\n if err != nil {\n iterErr = err\n return\n}\n",
+			s.backend.TranslateRowToResult(),
+		)
+	}
 }
 
 func (s *ServerStreamStringer) AfterHook() {

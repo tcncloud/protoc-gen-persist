@@ -178,12 +178,8 @@ func (s *SqlStringer) MapRequestToParams() string {
 			p.P("params.%s = (%s{}).ToSql(req.%s)\n", td.Name, td.GoName, td.Name)
 		} else if td.IsMessage {
 			p.PA([]string{
-				"// even repeated Message types are turned into []byte. You should probably\n",
-				"// provide a type mapping if you don't want this\n",
-				"{\nvar bytes []byte\n",
-				"for _, msg := range req.%s{\n",
-				"raw, err := proto.Marshal(msg)\nif err != nil {\n return err\n}\n",
-				"params.%s = bytes\n}\n",
+				"{\nraw, err := proto.Marshal(req.%s)\nif err != nil {\n return err\n}\n",
+				"params.%s = raw\n}\n",
 			},
 				td.Name,
 				td.Name,
@@ -204,18 +200,16 @@ func (s *SqlStringer) TranslateRowToResult() string {
 	p := &Printer{}
 	outputFields := s.method.GetTypeDescArrayForStruct(s.method.GetOutputTypeStruct())
 	p.P("func() error {\n")
-	p.P("var(\n")
 	for _, td := range outputFields {
 		if td.IsMessage {
-			p.P("%s []byte\n", td.Name)
+			p.P("var %s_ []byte\n", td.Name)
 		} else {
-			p.P("%s %s\n", td.Name, td.GoName)
+			p.P("var %s_ %s\n", td.Name, td.GoName)
 		}
 	}
-	p.P(")\n")
 	p.P("if err := row.Scan(\n")
 	for _, td := range outputFields {
-		p.P("&%s,\n", td.Name)
+		p.P("&%s_,\n", td.Name)
 	}
 	// TODO: handle sql no rows
 	p.P("); err != nil {\n return err \n}\n")
@@ -228,14 +222,15 @@ func (s *SqlStringer) TranslateRowToResult() string {
 				File.ImportList.GetOrAddImport("proto", "github.com/golang/protobuf/proto")
 			p.PA([]string{
 				"{\n var converted %s\n",
-				"if err := proto.Unmarshal(converted, %s); err != nil {\n return err\n}\n",
+				"if err := proto.Unmarshal(%s_, converted); err != nil {\n return err\n}\n",
 				"res.%s = converted\n}\n",
 			},
 				td.GoName,
 				td.Name,
+				td.Name,
 			)
 		} else {
-			p.P("res.%s = %s\n", td.Name, td.Name)
+			p.P("res.%s = %s_\n", td.Name, td.Name)
 		}
 	}
 	p.P("return nil\n}()\n")
