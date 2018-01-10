@@ -89,7 +89,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		"rest RestOf%sHandlers\n",
 		"queryHandlers *persist_lib.%sQueryHandlers\n",
 		"i *%sImpl\n",
-		"db *%s\n}\n",
+		"db %s\n}\n",
 		"func New%sBuilder() *%sImplBuilder {\nreturn &%sImplBuilder{i: &%sImpl{}}\n}\n",
 	},
 		service.GetName(),
@@ -119,7 +119,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	// setup default query functions
 	printer.PA([]string{
 		"func (b *%sImplBuilder) WithDefaultQueryHandlers() *%sImplBuilder {\n",
-		"accessor := persist_lib.New%sClientGetter(b.db)\n",
+		"accessor := persist_lib.New%sClientGetter(&b.db)\n",
 		"queryHandlers := &persist_lib.%sQueryHandlers{\n",
 	},
 		service.GetName(), service.GetName(),
@@ -142,9 +142,9 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		"// set the custom handlers you want to use in the handlers\n",
 		"// this method will make sure to use a default handler if\n",
 		"// the handler is nil.\n",
-		"func (b *%sImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.%sQueryHandlers)",
+		"func (b *%sImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.%sQueryHandlers)",
 		"*%sImplBuilder {\n",
-		"accessor := persist_lib.New%sClientGetter(b.db)\n",
+		"accessor := persist_lib.New%sClientGetter(&b.db)\n",
 	},
 		service.GetName(), service.GetName(),
 		service.GetName(),
@@ -165,7 +165,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	// provide the builder with a client
 	printer.PA([]string{
 		"func (b *%sImplBuilder) With%sClient(c *%s) *%sImplBuilder {\n",
-		"b.db = c\n return b\n}\n",
+		"b.db = *c\n return b\n}\n",
 	},
 		service.GetName(), backend, dbType, service.GetName(),
 	)
@@ -173,7 +173,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	if service.IsSpanner() {
 		printer.PA([]string{
 			"func (b *%sImplBuilder) WithSpannerURI(ctx context.Context, uri string) *%sImplBuilder {\n",
-			"cli, err := spanner.NewClient(ctx, uri)\n b.err = err\n b.db = cli\n return b\n}\n",
+			"cli, err := spanner.NewClient(ctx, uri)\n b.err = err\n b.db = *cli\n return b\n}\n",
 		},
 			service.GetName(), service.GetName(),
 		)
@@ -181,12 +181,12 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		printer.PA([]string{
 			"func (b *%sImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *%sImplBuilder {\n",
 			"db, err := sql.Open(driverName, dataSourceName)\n",
-			"b.err = err\n b.db = db\n return b\n}\n",
+			"b.err = err\n b.db = *db\n return b\n}\n",
 		},
 			service.GetName(), service.GetName(),
 		)
 	}
-
+	// Build method, returns impl, err
 	printer.PA([]string{
 		"func (b *%sImplBuilder) Build() (*%sImpl, error) {\n",
 		"if b.err != nil {\n return nil, b.err\n}\n",
@@ -197,7 +197,15 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		service.GetName(), service.GetName(),
 		NewPersistHelperName(service),
 	)
-
+	// MustBuild method, returns impl.  Can panic.
+	printer.PA([]string{
+		"func (b *%sImplBuilder) MustBuild() *%sImpl {\n",
+		"s, err := b.Build()\n",
+		"if err != nil {\n panic(\"error in builder: \" + err.Error())\n}\n",
+		"return s\n}\n",
+	},
+		service.GetName(), service.GetName(),
+	)
 	return printer.String()
 }
 

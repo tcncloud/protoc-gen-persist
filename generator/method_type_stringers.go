@@ -145,10 +145,9 @@ func (s *BidiStreamStringer) String() string {
 	}
 
 	s.printer.P(
-		"func (s *%sImpl) %s(req *%s, stream %s) error {\n",
+		"func (s *%sImpl) %s(stream %s) error {\n",
 		s.method.Service.GetName(),
 		s.method.GetName(),
-		s.method.GetInputType(),
 		NewStreamType(s.method),
 	)
 	s.printer.P("var err error\n _ = err\n")
@@ -268,10 +267,9 @@ func (s *ClientStreamStringer) String() string {
 	}
 
 	s.printer.P(
-		"func (s *%sImpl) %s(req *%s, stream %s) error {\n",
+		"func (s *%sImpl) %s(stream %s) error {\n",
 		s.method.Service.GetName(),
 		s.method.GetName(),
-		s.method.GetInputType(),
 		NewStreamType(s.method),
 	)
 	s.printer.P("var err error\n _ = err\n")

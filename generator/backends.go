@@ -47,10 +47,12 @@ func (s *SpannerStringer) MapRequestToParams() string {
 				)
 			} else {
 				p.PA([]string{
+					"if req.%s == nil {\n req.%s = new(%s)\n}\n",
 					"{\nraw, err := proto.Marshal(req.%s)\nif err != nil {\n",
 					"return err\n}\n",
 					"params.%s = raw\n}\n",
 				},
+					td.Name, td.Name, td.GoTypeName,
 					td.Name,
 					td.Name,
 				)
@@ -178,9 +180,11 @@ func (s *SqlStringer) MapRequestToParams() string {
 			p.P("params.%s = (%s{}).ToSql(req.%s)\n", td.Name, td.GoName, td.Name)
 		} else if td.IsMessage {
 			p.PA([]string{
+				"if req.%s == nil {\n req.%s = new(%s) \n}\n",
 				"{\nraw, err := proto.Marshal(req.%s)\nif err != nil {\n return err\n}\n",
 				"params.%s = raw\n}\n",
 			},
+				td.Name, td.Name, td.GoTypeName,
 				td.Name,
 				td.Name,
 			)
@@ -215,17 +219,18 @@ func (s *SqlStringer) TranslateRowToResult() string {
 	p.P("); err != nil {\n return err \n}\n")
 	for _, td := range outputFields {
 		if td.IsMapped {
+			p.P("res.%s = %s_.ToProto()\n", td.Name, td.Name)
 		} else if td.IsMessage {
 			// this is super tacky.  But I can be sure I need this import at this point
 			s.method.
 				Service.
 				File.ImportList.GetOrAddImport("proto", "github.com/golang/protobuf/proto")
 			p.PA([]string{
-				"{\n var converted %s\n",
+				"{\n var converted = new(%s)\n",
 				"if err := proto.Unmarshal(%s_, converted); err != nil {\n return err\n}\n",
 				"res.%s = converted\n}\n",
 			},
-				td.GoName,
+				td.GoTypeName,
 				td.Name,
 				td.Name,
 			)
