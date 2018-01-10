@@ -52,7 +52,7 @@ func (s StreamType) String() string {
 	p.P(
 		"%s%s_%sServer",
 		s.m.GetFilePackage(),
-		s.m.GetServiceName(),
+		s.m.Service.GetName(),
 		s.m.GetName(),
 	)
 	return p.String()

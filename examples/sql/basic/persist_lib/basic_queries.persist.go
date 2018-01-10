@@ -86,9 +86,9 @@ type ExampleTableFromBidirectionalWithHooksQueryParams interface {
 	GetName() string
 }
 type ExampleTableFromClientStreamQueryParams interface {
+	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
-	GetId() int64
 }
 type ExampleTableFromClientStreamWithHookQueryParams interface {
 	GetId() int64

@@ -10,9 +10,9 @@ func NumRowsFromExtraUnaryQuery(req NumRowsFromExtraUnaryQueryParams) spanner.St
 }
 func ExampleTableFromUniaryInsertQuery(req ExampleTableFromUniaryInsertQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
 		"name":       "bananas",
+		"id":         req.GetId(),
 	})
 }
 func ExampleTableFromUniarySelectQuery(req ExampleTableFromUniarySelectQueryParams) spanner.Statement {
@@ -173,23 +173,23 @@ type SomethingFromTestNestQueryParams interface {
 	GetThing() []byte
 }
 type HasTimestampFromTestEverythingQueryParams interface {
-	GetSomes() [][]byte
-	GetStrs() []string
-	GetTables() [][]byte
 	GetTime() interface{}
 	GetSome() []byte
 	GetStr() string
 	GetTable() []byte
 	GetTimes() [][]byte
+	GetSomes() [][]byte
+	GetStrs() []string
+	GetTables() [][]byte
 }
 type ExampleTableFromUniarySelectWithDirectivesQueryParams interface {
 	GetId() int64
 	GetName() string
 }
 type ExampleTableFromUniaryUpdateQueryParams interface {
-	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
+	GetId() int64
 }
 type ExampleTableRangeFromUniaryDeleteRangeQueryParams interface {
 	GetStartId() int64
@@ -216,17 +216,17 @@ type ExampleTableFromClientStreamUpdateQueryParams interface {
 	GetId() int64
 }
 type ExampleTableFromUniaryInsertWithHooksQueryParams interface {
+	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
-	GetName() string
 }
 type ExampleTableFromUniarySelectWithHooksQueryParams interface {
 	GetId() int64
 }
 type ExampleTableFromUniaryUpdateWithHooksQueryParams interface {
+	GetStartTime() interface{}
 	GetName() string
 	GetId() int64
-	GetStartTime() interface{}
 }
 type ExampleTableRangeFromUniaryDeleteWithHooksQueryParams interface {
 	GetStartId() int64
@@ -235,6 +235,6 @@ type ExampleTableRangeFromUniaryDeleteWithHooksQueryParams interface {
 type NameFromServerStreamWithHooksQueryParams interface {
 }
 type ExampleTableFromClientStreamUpdateWithHooksQueryParams interface {
-	GetName() string
 	GetId() int64
+	GetName() string
 }

@@ -73,7 +73,6 @@ func (f *FileStruct) GetOrigName() string {
 
 func (f *FileStruct) GetPackageName() string {
 	return f.GetImplPackage()
-	// return f.Desc.GetPackage()
 }
 func (f *FileStruct) IsSameAsMyPackage(pkg string) bool {
 	return f.GetImplDir() == pkg

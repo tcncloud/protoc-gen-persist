@@ -25,7 +25,7 @@ type BobsImplBuilder struct {
 	rest          RestOfBobsHandlers
 	queryHandlers *persist_lib.BobsQueryHandlers
 	i             *BobsImpl
-	db            *spanner.Client
+	db            spanner.Client
 }
 
 func NewBobsBuilder() *BobsImplBuilder {
@@ -40,7 +40,7 @@ func (b *BobsImplBuilder) WithPersistQueryHandlers(p *persist_lib.BobsQueryHandl
 	return b
 }
 func (b *BobsImplBuilder) WithDefaultQueryHandlers() *BobsImplBuilder {
-	accessor := persist_lib.NewSpannerClientGetter(b.db)
+	accessor := persist_lib.NewSpannerClientGetter(&b.db)
 	queryHandlers := &persist_lib.BobsQueryHandlers{
 		DeleteBobsHandler:         persist_lib.DefaultDeleteBobsHandler(accessor),
 		PutBobsHandler:            persist_lib.DefaultPutBobsHandler(accessor),
@@ -50,14 +50,35 @@ func (b *BobsImplBuilder) WithDefaultQueryHandlers() *BobsImplBuilder {
 	b.queryHandlers = queryHandlers
 	return b
 }
+
+// set the custom handlers you want to use in the handlers
+// this method will make sure to use a default handler if
+// the handler is nil.
+func (b *BobsImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.BobsQueryHandlers) *BobsImplBuilder {
+	accessor := persist_lib.NewSpannerClientGetter(&b.db)
+	if p.DeleteBobsHandler == nil {
+		p.DeleteBobsHandler = persist_lib.DefaultDeleteBobsHandler(accessor)
+	}
+	if p.PutBobsHandler == nil {
+		p.PutBobsHandler = persist_lib.DefaultPutBobsHandler(accessor)
+	}
+	if p.GetBobsHandler == nil {
+		p.GetBobsHandler = persist_lib.DefaultGetBobsHandler(accessor)
+	}
+	if p.GetPeopleFromNamesHandler == nil {
+		p.GetPeopleFromNamesHandler = persist_lib.DefaultGetPeopleFromNamesHandler(accessor)
+	}
+	b.queryHandlers = p
+	return b
+}
 func (b *BobsImplBuilder) WithSpannerClient(c *spanner.Client) *BobsImplBuilder {
-	b.db = c
+	b.db = *c
 	return b
 }
 func (b *BobsImplBuilder) WithSpannerURI(ctx context.Context, uri string) *BobsImplBuilder {
 	cli, err := spanner.NewClient(ctx, uri)
 	b.err = err
-	b.db = cli
+	b.db = *cli
 	return b
 }
 func (b *BobsImplBuilder) Build() (*BobsImpl, error) {
@@ -67,6 +88,13 @@ func (b *BobsImplBuilder) Build() (*BobsImpl, error) {
 	b.i.PERSIST = &persist_lib.BobsMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
 	return b.i, nil
+}
+func (b *BobsImplBuilder) MustBuild() *BobsImpl {
+	s, err := b.Build()
+	if err != nil {
+		panic("error in builder: " + err.Error())
+	}
+	return s
 }
 
 func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
@@ -95,13 +123,6 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 			return
 		}
 		res = Empty{}
-		err = func() error {
-			return nil
-		}()
-		if err != nil {
-			iterErr = err
-			return
-		}
 	})
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
@@ -111,7 +132,7 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 	return &res, nil
 }
 
-func (s *BobsImpl) PutBobs(req *Bob, stream Bobs_PutBobsServer) error {
+func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 	var err error
 	_ = err
 	res := NumRows{}
