@@ -97,6 +97,9 @@ test-compile:
 	# 	-I./examples/spanner/import_tests -I./examples/test \
 	# 	--plugin=./protoc-gen-persist \
 	# 	--persist_out=$$GOPATH/src  examples/spanner/import_tests/persist_and_go.proto
+	cd ./examples/sql/basic && go build
+	cd ./examples/spanner/basic && go build
+	cd ./examples/spanner/bob_example && go build
 
 
 deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/dep
