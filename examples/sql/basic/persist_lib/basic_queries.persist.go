@@ -62,8 +62,8 @@ func ExampleTableFromClientStreamWithHookQuery(tx Runable, req ExampleTableFromC
 }
 
 type PartialTableFromUniarySelectQueryParams interface {
-	GetStartTime() interface{}
 	GetId() int64
+	GetStartTime() interface{}
 }
 type PartialTableFromUniarySelectWithHooksQueryParams interface {
 	GetId() int64
@@ -76,14 +76,14 @@ type NameFromServerStreamWithHooksQueryParams interface {
 	GetName() string
 }
 type ExampleTableFromBidirectionalQueryParams interface {
-	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
+	GetName() string
 }
 type ExampleTableFromBidirectionalWithHooksQueryParams interface {
-	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
+	GetName() string
 }
 type ExampleTableFromClientStreamQueryParams interface {
 	GetId() int64
@@ -91,7 +91,7 @@ type ExampleTableFromClientStreamQueryParams interface {
 	GetName() string
 }
 type ExampleTableFromClientStreamWithHookQueryParams interface {
+	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
-	GetId() int64
 }

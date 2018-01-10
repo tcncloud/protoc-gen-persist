@@ -28,7 +28,7 @@ type AmazingImplBuilder struct {
 	rest          RestOfAmazingHandlers
 	queryHandlers *persist_lib.AmazingQueryHandlers
 	i             *AmazingImpl
-	db            *sql.DB
+	db            sql.DB
 }
 
 func NewAmazingBuilder() *AmazingImplBuilder {
@@ -43,7 +43,7 @@ func (b *AmazingImplBuilder) WithPersistQueryHandlers(p *persist_lib.AmazingQuer
 	return b
 }
 func (b *AmazingImplBuilder) WithDefaultQueryHandlers() *AmazingImplBuilder {
-	accessor := persist_lib.NewSqlClientGetter(b.db)
+	accessor := persist_lib.NewSqlClientGetter(&b.db)
 	queryHandlers := &persist_lib.AmazingQueryHandlers{
 		UniarySelectHandler:           persist_lib.DefaultUniarySelectHandler(accessor),
 		UniarySelectWithHooksHandler:  persist_lib.DefaultUniarySelectWithHooksHandler(accessor),
@@ -61,8 +61,8 @@ func (b *AmazingImplBuilder) WithDefaultQueryHandlers() *AmazingImplBuilder {
 // set the custom handlers you want to use in the handlers
 // this method will make sure to use a default handler if
 // the handler is nil.
-func (b *AmazingImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.AmazingQueryHandlers) *AmazingImplBuilder {
-	accessor := persist_lib.NewSqlClientGetter(b.db)
+func (b *AmazingImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.AmazingQueryHandlers) *AmazingImplBuilder {
+	accessor := persist_lib.NewSqlClientGetter(&b.db)
 	if p.UniarySelectHandler == nil {
 		p.UniarySelectHandler = persist_lib.DefaultUniarySelectHandler(accessor)
 	}
@@ -91,13 +91,13 @@ func (b *AmazingImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.AmazingQuer
 	return b
 }
 func (b *AmazingImplBuilder) WithSqlClient(c *sql.DB) *AmazingImplBuilder {
-	b.db = c
+	b.db = *c
 	return b
 }
 func (b *AmazingImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *AmazingImplBuilder {
 	db, err := sql.Open(driverName, dataSourceName)
 	b.err = err
-	b.db = db
+	b.db = *db
 	return b
 }
 func (b *AmazingImplBuilder) Build() (*AmazingImpl, error) {
@@ -107,6 +107,13 @@ func (b *AmazingImplBuilder) Build() (*AmazingImpl, error) {
 	b.i.PERSIST = &persist_lib.AmazingMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
 	return b.i, nil
+}
+func (b *AmazingImplBuilder) MustBuild() *AmazingImpl {
+	s, err := b.Build()
+	if err != nil {
+		panic("error in builder: " + err.Error())
+	}
+	return s
 }
 
 func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
@@ -141,6 +148,7 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) 
 				return err
 			}
 			res.Id = Id_
+			res.StartTime = StartTime_.ToProto()
 			res.Name = Name_
 			return nil
 		}()
@@ -195,6 +203,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 				return err
 			}
 			res.Id = Id_
+			res.StartTime = StartTime_.ToProto()
 			res.Name = Name_
 			return nil
 		}()
@@ -243,6 +252,7 @@ func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamSe
 				return err
 			}
 			res.Id = Id_
+			res.StartTime = StartTime_.ToProto()
 			res.Name = Name_
 			return nil
 		}()
@@ -301,6 +311,7 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 				return err
 			}
 			res.Id = Id_
+			res.StartTime = StartTime_.ToProto()
 			res.Name = Name_
 			return nil
 		}()
@@ -324,7 +335,7 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 	return nil
 }
 
-func (s *AmazingImpl) Bidirectional(req *test.ExampleTable, stream Amazing_BidirectionalServer) error {
+func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 	var err error
 	_ = err
 	feed, stop := s.PERSIST.Bidirectional(stream.Context())
@@ -363,6 +374,7 @@ func (s *AmazingImpl) Bidirectional(req *test.ExampleTable, stream Amazing_Bidir
 					return err
 				}
 				res.Id = Id_
+				res.StartTime = StartTime_.ToProto()
 				res.Name = Name_
 				return nil
 			}()
@@ -374,7 +386,7 @@ func (s *AmazingImpl) Bidirectional(req *test.ExampleTable, stream Amazing_Bidir
 	return stop()
 }
 
-func (s *AmazingImpl) BidirectionalWithHooks(req *test.ExampleTable, stream Amazing_BidirectionalWithHooksServer) error {
+func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHooksServer) error {
 	var err error
 	_ = err
 	feed, stop := s.PERSIST.BidirectionalWithHooks(stream.Context())
@@ -419,6 +431,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(req *test.ExampleTable, stream Amaz
 					return err
 				}
 				res.Id = Id_
+				res.StartTime = StartTime_.ToProto()
 				res.Name = Name_
 				return nil
 			}()
@@ -433,7 +446,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(req *test.ExampleTable, stream Amaz
 	return stop()
 }
 
-func (s *AmazingImpl) ClientStream(req *test.ExampleTable, stream Amazing_ClientStreamServer) error {
+func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 	var err error
 	_ = err
 	res := test.NumRows{}
@@ -479,7 +492,7 @@ func (s *AmazingImpl) ClientStream(req *test.ExampleTable, stream Amazing_Client
 	return nil
 }
 
-func (s *AmazingImpl) ClientStreamWithHook(req *test.ExampleTable, stream Amazing_ClientStreamWithHookServer) error {
+func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookServer) error {
 	var err error
 	_ = err
 	res := test.Ids{}

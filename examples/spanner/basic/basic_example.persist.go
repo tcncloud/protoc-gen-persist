@@ -30,7 +30,7 @@ type ExtraSrvImplBuilder struct {
 	rest          RestOfExtraSrvHandlers
 	queryHandlers *persist_lib.ExtraSrvQueryHandlers
 	i             *ExtraSrvImpl
-	db            *spanner.Client
+	db            spanner.Client
 }
 
 func NewExtraSrvBuilder() *ExtraSrvImplBuilder {
@@ -45,7 +45,7 @@ func (b *ExtraSrvImplBuilder) WithPersistQueryHandlers(p *persist_lib.ExtraSrvQu
 	return b
 }
 func (b *ExtraSrvImplBuilder) WithDefaultQueryHandlers() *ExtraSrvImplBuilder {
-	accessor := persist_lib.NewSpannerClientGetter(b.db)
+	accessor := persist_lib.NewSpannerClientGetter(&b.db)
 	queryHandlers := &persist_lib.ExtraSrvQueryHandlers{
 		ExtraUnaryHandler: persist_lib.DefaultExtraUnaryHandler(accessor),
 	}
@@ -56,8 +56,8 @@ func (b *ExtraSrvImplBuilder) WithDefaultQueryHandlers() *ExtraSrvImplBuilder {
 // set the custom handlers you want to use in the handlers
 // this method will make sure to use a default handler if
 // the handler is nil.
-func (b *ExtraSrvImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.ExtraSrvQueryHandlers) *ExtraSrvImplBuilder {
-	accessor := persist_lib.NewSpannerClientGetter(b.db)
+func (b *ExtraSrvImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.ExtraSrvQueryHandlers) *ExtraSrvImplBuilder {
+	accessor := persist_lib.NewSpannerClientGetter(&b.db)
 	if p.ExtraUnaryHandler == nil {
 		p.ExtraUnaryHandler = persist_lib.DefaultExtraUnaryHandler(accessor)
 	}
@@ -65,13 +65,13 @@ func (b *ExtraSrvImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.ExtraSrvQu
 	return b
 }
 func (b *ExtraSrvImplBuilder) WithSpannerClient(c *spanner.Client) *ExtraSrvImplBuilder {
-	b.db = c
+	b.db = *c
 	return b
 }
 func (b *ExtraSrvImplBuilder) WithSpannerURI(ctx context.Context, uri string) *ExtraSrvImplBuilder {
 	cli, err := spanner.NewClient(ctx, uri)
 	b.err = err
-	b.db = cli
+	b.db = *cli
 	return b
 }
 func (b *ExtraSrvImplBuilder) Build() (*ExtraSrvImpl, error) {
@@ -81,6 +81,13 @@ func (b *ExtraSrvImplBuilder) Build() (*ExtraSrvImpl, error) {
 	b.i.PERSIST = &persist_lib.ExtraSrvMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
 	return b.i, nil
+}
+func (b *ExtraSrvImplBuilder) MustBuild() *ExtraSrvImpl {
+	s, err := b.Build()
+	if err != nil {
+		panic("error in builder: " + err.Error())
+	}
+	return s
 }
 
 func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test.ExampleTable, error) {
@@ -167,7 +174,7 @@ type MySpannerImplBuilder struct {
 	rest          RestOfMySpannerHandlers
 	queryHandlers *persist_lib.MySpannerQueryHandlers
 	i             *MySpannerImpl
-	db            *spanner.Client
+	db            spanner.Client
 }
 
 func NewMySpannerBuilder() *MySpannerImplBuilder {
@@ -182,7 +189,7 @@ func (b *MySpannerImplBuilder) WithPersistQueryHandlers(p *persist_lib.MySpanner
 	return b
 }
 func (b *MySpannerImplBuilder) WithDefaultQueryHandlers() *MySpannerImplBuilder {
-	accessor := persist_lib.NewSpannerClientGetter(b.db)
+	accessor := persist_lib.NewSpannerClientGetter(&b.db)
 	queryHandlers := &persist_lib.MySpannerQueryHandlers{
 		UniaryInsertHandler:                persist_lib.DefaultUniaryInsertHandler(accessor),
 		UniarySelectHandler:                persist_lib.DefaultUniarySelectHandler(accessor),
@@ -211,8 +218,8 @@ func (b *MySpannerImplBuilder) WithDefaultQueryHandlers() *MySpannerImplBuilder 
 // set the custom handlers you want to use in the handlers
 // this method will make sure to use a default handler if
 // the handler is nil.
-func (b *MySpannerImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.MySpannerQueryHandlers) *MySpannerImplBuilder {
-	accessor := persist_lib.NewSpannerClientGetter(b.db)
+func (b *MySpannerImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.MySpannerQueryHandlers) *MySpannerImplBuilder {
+	accessor := persist_lib.NewSpannerClientGetter(&b.db)
 	if p.UniaryInsertHandler == nil {
 		p.UniaryInsertHandler = persist_lib.DefaultUniaryInsertHandler(accessor)
 	}
@@ -274,13 +281,13 @@ func (b *MySpannerImplBuilder) WithNilAsDefaultHandlers(p *persist_lib.MySpanner
 	return b
 }
 func (b *MySpannerImplBuilder) WithSpannerClient(c *spanner.Client) *MySpannerImplBuilder {
-	b.db = c
+	b.db = *c
 	return b
 }
 func (b *MySpannerImplBuilder) WithSpannerURI(ctx context.Context, uri string) *MySpannerImplBuilder {
 	cli, err := spanner.NewClient(ctx, uri)
 	b.err = err
-	b.db = cli
+	b.db = *cli
 	return b
 }
 func (b *MySpannerImplBuilder) Build() (*MySpannerImpl, error) {
@@ -290,6 +297,13 @@ func (b *MySpannerImplBuilder) Build() (*MySpannerImpl, error) {
 	b.i.PERSIST = &persist_lib.MySpannerMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
 	return b.i, nil
+}
+func (b *MySpannerImplBuilder) MustBuild() *MySpannerImpl {
+	s, err := b.Build()
+	if err != nil {
+		panic("error in builder: " + err.Error())
+	}
+	return s
 }
 
 func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
@@ -450,6 +464,9 @@ func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Somethin
 	params := &persist_lib.SomethingForMySpanner{}
 	err = func() error {
 		// set 'Something.thing' in params
+		if req.Thing == nil {
+			req.Thing = new(Something_SomethingElse)
+		}
 		{
 			raw, err := proto.Marshal(req.Thing)
 			if err != nil {
@@ -507,6 +524,9 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 			return err
 		}
 		// set 'HasTimestamp.some' in params
+		if req.Some == nil {
+			req.Some = new(Something)
+		}
 		{
 			raw, err := proto.Marshal(req.Some)
 			if err != nil {
@@ -517,6 +537,9 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 		// set 'HasTimestamp.str' in params
 		params.Str = req.Str
 		// set 'HasTimestamp.table' in params
+		if req.Table == nil {
+			req.Table = new(test.ExampleTable)
+		}
 		{
 			raw, err := proto.Marshal(req.Table)
 			if err != nil {
@@ -1118,7 +1141,7 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 	return nil
 }
 
-func (s *MySpannerImpl) ClientStreamInsert(req *test.ExampleTable, stream MySpanner_ClientStreamInsertServer) error {
+func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertServer) error {
 	var err error
 	_ = err
 	res := test.NumRows{}
@@ -1173,7 +1196,7 @@ func (s *MySpannerImpl) ClientStreamInsert(req *test.ExampleTable, stream MySpan
 	return nil
 }
 
-func (s *MySpannerImpl) ClientStreamDelete(req *test.ExampleTable, stream MySpanner_ClientStreamDeleteServer) error {
+func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteServer) error {
 	var err error
 	_ = err
 	res := test.NumRows{}
@@ -1228,7 +1251,7 @@ func (s *MySpannerImpl) ClientStreamDelete(req *test.ExampleTable, stream MySpan
 	return nil
 }
 
-func (s *MySpannerImpl) ClientStreamUpdate(req *test.ExampleTable, stream MySpanner_ClientStreamUpdateServer) error {
+func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateServer) error {
 	var err error
 	_ = err
 	res := test.NumRows{}
@@ -1688,7 +1711,7 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 	return nil
 }
 
-func (s *MySpannerImpl) ClientStreamUpdateWithHooks(req *test.ExampleTable, stream MySpanner_ClientStreamUpdateWithHooksServer) error {
+func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
 	var err error
 	_ = err
 	res := test.NumRows{}
