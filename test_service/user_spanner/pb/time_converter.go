@@ -26,76 +26,53 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package mytime
+package pb
 
 import (
 	"cloud.google.com/go/spanner"
-	"database/sql/driver"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"strconv"
-	"strings"
+	"time"
 )
 
-type MyTime struct {
-	Seconds int64
-	Nanos   int32
+type TimeString struct {
+	t *timestamp.Timestamp
 }
 
-func (s MyTime) ToSql(src *timestamp.Timestamp) *MyTime {
-	s.Seconds = src.Seconds
-	s.Nanos = src.Nanos
-	return &s
+func (ts TimeString) ToSpanner(t *timestamp.Timestamp) *TimeString {
+	ts.t = t
+	return &ts
 }
 
-func (s MyTime) ToSpanner(src *timestamp.Timestamp) *MyTime {
-	s.Seconds = src.Seconds
-	s.Nanos = src.Nanos
-	return &s
+func (ts TimeString) ToProto() *timestamp.Timestamp {
+	return ts.t
 }
 
-func (s MyTime) ToProto() *timestamp.Timestamp {
-	return &timestamp.Timestamp{
-		Nanos:   s.Nanos,
-		Seconds: s.Seconds,
+func (t *TimeString) SpannerScan(src *spanner.GenericColumnValue) error {
+	var tStr string
+	if err := src.Decode(&tStr); err != nil {
+		return err
 	}
-
-}
-
-func (t *MyTime) Scan(src interface{}) error {
-	ti, ok := src.(string)
-	if !ok {
-		t.Seconds = int64(0)
-		t.Nanos = 0
-	}
-	tis := strings.Split(ti, ",")
-	secs, err := strconv.ParseInt(tis[0], 10, 64)
+	ti, err := time.Parse(time.RFC3339, tStr)
 	if err != nil {
 		return err
 	}
-	nans, err := strconv.ParseInt(tis[1], 10, 32)
+	stamp, err := ptypes.TimestampProto(ti)
 	if err != nil {
 		return err
 	}
-	t.Seconds = secs
-	t.Nanos = int32(nans)
-
+	t.t = stamp
 	return nil
 }
 
-func (t *MyTime) Value() (driver.Value, error) {
-	ti := strconv.FormatInt(t.Seconds, 10) + "," + strconv.FormatInt(int64(t.Nanos), 10)
-	return ti, nil
+func (t *TimeString) SpannerValue() (interface{}, error) {
+	return ptypes.TimestampString(t.t), nil
 }
 
-func (t *MyTime) SpannerScan(src *spanner.GenericColumnValue) error {
-	var strTime string
-	err := src.Decode(&strTime)
-	if err != nil {
-		return err
-	}
-	return t.Scan(strTime)
-}
+var inc int64
 
-func (t *MyTime) SpannerValue() (interface{}, error) {
-	return t.Value()
+func IncId(u *User) ([]*User, error) {
+	u.Id = inc
+	inc++
+	return nil, nil
 }

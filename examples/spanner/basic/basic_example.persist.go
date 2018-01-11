@@ -7,7 +7,7 @@ import (
 	io "io"
 
 	spanner "cloud.google.com/go/spanner"
-	"github.com/golang/protobuf/proto"
+	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic/persist_lib"
@@ -111,38 +111,38 @@ func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime []byte
-			if err := row.ColumnByName("start_time", &StartTime); err != nil {
+			var StartTime_ []byte
+			if err := row.ColumnByName("start_time", &StartTime_); err != nil {
 				return err
 			}
 			{
 				local := new(timestamp.Timestamp)
-				if err := proto.Unmarshal(StartTime, local); err != nil {
+				if err := proto.Unmarshal(StartTime_, local); err != nil {
 					return err
 				}
 				res.StartTime = local
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -333,38 +333,38 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -408,38 +408,38 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -486,13 +486,13 @@ func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Somethin
 		}
 		res = Something{}
 		err = func() error {
-			var Thing []byte
-			if err := row.ColumnByName("thing", &Thing); err != nil {
+			var Thing_ []byte
+			if err := row.ColumnByName("thing", &Thing_); err != nil {
 				return err
 			}
 			{
 				local := new(Something_SomethingElse)
-				if err := proto.Unmarshal(Thing, local); err != nil {
+				if err := proto.Unmarshal(Thing_, local); err != nil {
 					return err
 				}
 				res.Thing = local
@@ -597,51 +597,51 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 		}
 		res = HasTimestamp{}
 		err = func() error {
-			var Time *spanner.GenericColumnValue
-			if err := row.ColumnByName("time", Time); err != nil {
+			var Time_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("time", Time_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(Time); err != nil {
+				if err := local.SpannerScan(Time_); err != nil {
 					return err
 				}
 				res.Time = local.ToProto()
 			}
-			var Some []byte
-			if err := row.ColumnByName("some", &Some); err != nil {
+			var Some_ []byte
+			if err := row.ColumnByName("some", &Some_); err != nil {
 				return err
 			}
 			{
 				local := new(Something)
-				if err := proto.Unmarshal(Some, local); err != nil {
+				if err := proto.Unmarshal(Some_, local); err != nil {
 					return err
 				}
 				res.Some = local
 			}
-			var Str string
+			var Str_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("str", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Str = local.StringVal
+					Str_ = local.StringVal
 				}
-				res.Str = Str
+				res.Str = Str_
 			}
-			var Table []byte
-			if err := row.ColumnByName("table", &Table); err != nil {
+			var Table_ []byte
+			if err := row.ColumnByName("table", &Table_); err != nil {
 				return err
 			}
 			{
 				local := new(test.ExampleTable)
-				if err := proto.Unmarshal(Table, local); err != nil {
+				if err := proto.Unmarshal(Table_, local); err != nil {
 					return err
 				}
 				res.Table = local
 			}
-			var Strs []string
+			var Strs_ []string
 			{
 				local := make([]spanner.NullString, 0)
 				if err := row.ColumnByName("strs", &local); err != nil {
@@ -649,48 +649,48 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 				}
 				for _, l := range local {
 					if l.Valid {
-						Strs = append(Strs, l.StringVal)
-						res.Strs = Strs
+						Strs_ = append(Strs_, l.StringVal)
+						res.Strs = Strs_
 					}
 				}
 			}
-			var Tables [][]byte
-			if err := row.ColumnByName("tables", &Tables); err != nil {
+			var Tables_ [][]byte
+			if err := row.ColumnByName("tables", &Tables_); err != nil {
 				return err
 			}
 			{
-				local := make([]*test.ExampleTable, len(Tables))
+				local := make([]*test.ExampleTable, len(Tables_))
 				for i := range local {
 					local[i] = new(test.ExampleTable)
-					if err := proto.Unmarshal(Tables[i], local[i]); err != nil {
+					if err := proto.Unmarshal(Tables_[i], local[i]); err != nil {
 						return err
 					}
 				}
 				res.Tables = local
 			}
-			var Somes [][]byte
-			if err := row.ColumnByName("somes", &Somes); err != nil {
+			var Somes_ [][]byte
+			if err := row.ColumnByName("somes", &Somes_); err != nil {
 				return err
 			}
 			{
-				local := make([]*Something, len(Somes))
+				local := make([]*Something, len(Somes_))
 				for i := range local {
 					local[i] = new(Something)
-					if err := proto.Unmarshal(Somes[i], local[i]); err != nil {
+					if err := proto.Unmarshal(Somes_[i], local[i]); err != nil {
 						return err
 					}
 				}
 				res.Somes = local
 			}
-			var Times [][]byte
-			if err := row.ColumnByName("times", &Times); err != nil {
+			var Times_ [][]byte
+			if err := row.ColumnByName("times", &Times_); err != nil {
 				return err
 			}
 			{
-				local := make([]*timestamp.Timestamp, len(Times))
+				local := make([]*timestamp.Timestamp, len(Times_))
 				for i := range local {
 					local[i] = new(timestamp.Timestamp)
-					if err := proto.Unmarshal(Times[i], local[i]); err != nil {
+					if err := proto.Unmarshal(Times_[i], local[i]); err != nil {
 						return err
 					}
 				}
@@ -738,38 +738,38 @@ func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *tes
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -813,24 +813,24 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 		}
 		res = test.PartialTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
@@ -873,38 +873,38 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -948,38 +948,38 @@ func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.Exampl
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -1023,38 +1023,38 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -1090,38 +1090,38 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 		}
 		res := test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -1176,16 +1176,16 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 	}
 	if row != nil {
 		err = func() error {
-			var Count int64
+			var Count_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("count", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Count = local.Int64
+					Count_ = local.Int64
 				}
-				res.Count = Count
+				res.Count = Count_
 			}
 			return nil
 		}()
@@ -1231,16 +1231,16 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 	}
 	if row != nil {
 		err = func() error {
-			var Count int64
+			var Count_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("count", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Count = local.Int64
+					Count_ = local.Int64
 				}
-				res.Count = Count
+				res.Count = Count_
 			}
 			return nil
 		}()
@@ -1286,16 +1286,16 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 	}
 	if row != nil {
 		err = func() error {
-			var Count int64
+			var Count_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("count", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Count = local.Int64
+					Count_ = local.Int64
 				}
-				res.Count = Count
+				res.Count = Count_
 			}
 			return nil
 		}()
@@ -1339,38 +1339,38 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -1423,38 +1423,38 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -1507,24 +1507,24 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 		}
 		res = test.PartialTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
@@ -1576,38 +1576,38 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 		}
 		res = test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -1656,38 +1656,38 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 		}
 		res := test.ExampleTable{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -1752,16 +1752,16 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 	}
 	if row != nil {
 		err = func() error {
-			var Count int64
+			var Count_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("count", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Count = local.Int64
+					Count_ = local.Int64
 				}
-				res.Count = Count
+				res.Count = Count_
 			}
 			return nil
 		}()

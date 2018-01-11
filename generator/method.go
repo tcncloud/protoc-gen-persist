@@ -563,7 +563,6 @@ func (m *Method) Process() error {
 	logrus.Debug("Process method %s", m.GetName())
 	if m.IsSpanner() {
 		logrus.Debug("We are a spanner method")
-		//s, err := NewSpannerHelper(m)
 		query := m.GetQuery()
 		reader := bytes.NewBufferString(query)
 		p := parser.NewParser(reader)
@@ -575,6 +574,7 @@ func (m *Method) Process() error {
 		// WE REALLY SHOULD PUT THIS PART IN THE TEMPLATES, BUT IM TOO TIRED
 		types := m.GetTypeDescArrayForStruct(m.GetInputTypeStruct())
 		for _, t := range types {
+			// this needs to be @, otherwise it will not be found
 			m.Query.AddParam("@"+t.ProtoName, fmt.Sprintf("req.Get%s()", t.Name))
 		}
 		//m.Spanner = s

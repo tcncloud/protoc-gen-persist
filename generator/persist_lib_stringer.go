@@ -58,7 +58,8 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	)
 	printer.P("type RestOf%sHandlers interface{\n", service.GetName())
 	for _, m := range *service.Methods {
-		if m.GetMethodOption() == nil {
+		spannerBi := m.Service.IsSpanner() && m.IsBidiStreaming()
+		if m.GetMethodOption() == nil || spannerBi {
 			if m.IsUnary() {
 				printer.P(
 					"%s(ctx context.Context, req *%s) (*%s, error)\n",
@@ -127,7 +128,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		service.GetName(),
 	)
 	for _, m := range *service.Methods {
-		if m.GetMethodOption() == nil {
+		if m.GetMethodOption() == nil || (m.Service.IsSpanner() && m.IsBidiStreaming()) {
 			continue
 		}
 		printer.P(
@@ -151,7 +152,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		backend,
 	)
 	for _, m := range *service.Methods {
-		if m.GetMethodOption() == nil {
+		if m.GetMethodOption() == nil || (m.Service.IsSpanner() && m.IsBidiStreaming()) {
 			continue
 		}
 		phn := NewPersistHandlerName(m)

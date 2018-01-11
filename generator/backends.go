@@ -74,10 +74,10 @@ func (s *SpannerStringer) TranslateRowToResult() string {
 	for _, td := range s.method.GetTypeDescArrayForStruct(s.method.GetOutputTypeStruct()) {
 		if td.IsMapped {
 			p.PA([]string{
-				"var %s *spanner.GenericColumnValue\n",
-				"if err := row.ColumnByName(\"%s\", %s); err != nil {\nreturn err\n}\n{\n",
+				"var %s_ = new(spanner.GenericColumnValue)\n",
+				"if err := row.ColumnByName(\"%s\", %s_); err != nil {\nreturn err\n}\n{\n",
 				"local := &%s{}\n",
-				"if err := local.SpannerScan(%s); err != nil {\n return err\n}\n",
+				"if err := local.SpannerScan(%s_); err != nil {\n return err\n}\n",
 				"res.%s = local.ToProto()\n}\n",
 			},
 				td.Name,
@@ -94,11 +94,11 @@ func (s *SpannerStringer) TranslateRowToResult() string {
 				File.ImportList.GetOrAddImport("proto", "github.com/golang/protobuf/proto")
 			if td.IsRepeated {
 				p.PA([]string{
-					"var %s [][]byte\n",
-					"if err := row.ColumnByName(\"%s\", &%s); err != nil {\n return err\n}\n{\n",
-					"local := make(%s, len(%s))\n",
+					"var %s_ [][]byte\n",
+					"if err := row.ColumnByName(\"%s\", &%s_); err != nil {\n return err\n}\n{\n",
+					"local := make(%s, len(%s_))\n",
 					"for i := range local {\nlocal[i] = new(%s)\n",
-					"if err := proto.Unmarshal(%s[i], local[i]); err != nil {\n return err\n}\n}\n",
+					"if err := proto.Unmarshal(%s_[i], local[i]); err != nil {\n return err\n}\n}\n",
 					"res.%s = local\n}\n",
 				},
 					td.Name,
@@ -112,10 +112,10 @@ func (s *SpannerStringer) TranslateRowToResult() string {
 				)
 			} else {
 				p.PA([]string{
-					"var %s[]byte\n",
-					"if err := row.ColumnByName(\"%s\", &%s); err != nil {\n return err\n}\n{\n",
+					"var %s_ []byte\n",
+					"if err := row.ColumnByName(\"%s\", &%s_); err != nil {\n return err\n}\n{\n",
 					"local := new(%s)\n",
-					"if err := proto.Unmarshal(%s, local); err != nil {\n return err\n}\n",
+					"if err := proto.Unmarshal(%s_, local); err != nil {\n return err\n}\n",
 					"res.%s = local\n}\n",
 				},
 					td.Name,
@@ -128,12 +128,12 @@ func (s *SpannerStringer) TranslateRowToResult() string {
 			}
 		} else if td.IsRepeated {
 			p.PA([]string{
-				"var %s %s\n{\n",
+				"var %s_ %s\n{\n",
 				"local := make(%s, 0)\n",
 				"if err := row.ColumnByName(\"%s\", &local); err != nil {\n return err\n}\n",
 				"for _, l := range local {\nif l.Valid {\n",
-				"%s = append(%s, l.%s)\n",
-				"res.%s = %s\n}\n}\n}\n",
+				"%s_ = append(%s_, l.%s)\n",
+				"res.%s = %s_\n}\n}\n}\n",
 			},
 				td.Name,
 				td.GoName,
@@ -147,10 +147,10 @@ func (s *SpannerStringer) TranslateRowToResult() string {
 			)
 		} else {
 			p.PA([]string{
-				"var %s %s\n{\nlocal := &%s{}\n",
+				"var %s_ %s\n{\nlocal := &%s{}\n",
 				"if err := row.ColumnByName(\"%s\", local); err != nil {\n return err\n}\n",
-				"if local.Valid {\n %s = local.%s\n}\n",
-				"res.%s = %s\n}\n",
+				"if local.Valid {\n %s_ = local.%s\n}\n",
+				"res.%s = %s_\n}\n",
 			},
 				td.Name,
 				td.GoName,

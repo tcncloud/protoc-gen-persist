@@ -88,7 +88,7 @@ func NewSelectQuery(q string, fields []*Token) *SelectQuery {
 func (q *SelectQuery) String() string {
 	params := "map[string]interface{}{"
 	for _, v := range q.fields {
-		params += fmt.Sprintf("\n\t\"%s\": %s,", v.raw, q.params[v.raw])
+		params += fmt.Sprintf("\n\t\"%s\": %s,", v.raw[1:], q.params[v.raw])
 	}
 	params += "\n}"
 	return fmt.Sprintf(`spanner.Statement{

@@ -31,7 +31,7 @@ func NamesFromGetPeopleFromNamesQuery(req NamesFromGetPeopleFromNamesQueryParams
 	return spanner.Statement{
 		SQL: "SELECT * FROM bob_table WHERE name IN UNNEST(@names)",
 		Params: map[string]interface{}{
-			"@names": req.GetNames(),
+			"names": req.GetNames(),
 		},
 	}
 }
