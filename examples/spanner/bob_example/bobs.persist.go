@@ -167,16 +167,16 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 	}
 	if row != nil {
 		err = func() error {
-			var Count int64
+			var Count_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("count", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Count = local.Int64
+					Count_ = local.Int64
 				}
-				res.Count = Count
+				res.Count = Count_
 			}
 			return nil
 		}()
@@ -204,38 +204,38 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 		}
 		res := Bob{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()
@@ -274,38 +274,38 @@ func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNames
 		}
 		res := Bob{}
 		err = func() error {
-			var Id int64
+			var Id_ int64
 			{
 				local := &spanner.NullInt64{}
 				if err := row.ColumnByName("id", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Id = local.Int64
+					Id_ = local.Int64
 				}
-				res.Id = Id
+				res.Id = Id_
 			}
-			var StartTime *spanner.GenericColumnValue
-			if err := row.ColumnByName("start_time", StartTime); err != nil {
+			var StartTime_ = new(spanner.GenericColumnValue)
+			if err := row.ColumnByName("start_time", StartTime_); err != nil {
 				return err
 			}
 			{
 				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime); err != nil {
+				if err := local.SpannerScan(StartTime_); err != nil {
 					return err
 				}
 				res.StartTime = local.ToProto()
 			}
-			var Name string
+			var Name_ string
 			{
 				local := &spanner.NullString{}
 				if err := row.ColumnByName("name", local); err != nil {
 					return err
 				}
 				if local.Valid {
-					Name = local.StringVal
+					Name_ = local.StringVal
 				}
-				res.Name = Name
+				res.Name = Name_
 			}
 			return nil
 		}()

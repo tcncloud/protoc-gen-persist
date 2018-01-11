@@ -10,17 +10,17 @@ func NumRowsFromExtraUnaryQuery(req NumRowsFromExtraUnaryQueryParams) spanner.St
 }
 func ExampleTableFromUniaryInsertQuery(req ExampleTableFromUniaryInsertQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
+		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
 		"name":       "bananas",
-		"id":         req.GetId(),
 	})
 }
 func ExampleTableFromUniarySelectQuery(req ExampleTableFromUniarySelectQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@id AND name=@name",
 		Params: map[string]interface{}{
-			"@id":   req.GetId(),
-			"@name": req.GetName(),
+			"id":   req.GetId(),
+			"name": req.GetName(),
 		},
 	}
 }
@@ -28,7 +28,7 @@ func SomethingFromTestNestQuery(req SomethingFromTestNestQueryParams) spanner.St
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@thing",
 		Params: map[string]interface{}{
-			"@thing": req.GetThing(),
+			"thing": req.GetThing(),
 		},
 	}
 }
@@ -36,14 +36,14 @@ func HasTimestampFromTestEverythingQuery(req HasTimestampFromTestEverythingQuery
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@time AND some=@some AND str=@str AND table=@table AND times = @times AND somes = @somes AND strs = @strs AND tables = @tables",
 		Params: map[string]interface{}{
-			"@time":   req.GetTime(),
-			"@some":   req.GetSome(),
-			"@str":    req.GetStr(),
-			"@table":  req.GetTable(),
-			"@times":  req.GetTimes(),
-			"@somes":  req.GetSomes(),
-			"@strs":   req.GetStrs(),
-			"@tables": req.GetTables(),
+			"time":   req.GetTime(),
+			"some":   req.GetSome(),
+			"str":    req.GetStr(),
+			"table":  req.GetTable(),
+			"times":  req.GetTimes(),
+			"somes":  req.GetSomes(),
+			"strs":   req.GetStrs(),
+			"tables": req.GetTables(),
 		},
 	}
 }
@@ -51,8 +51,8 @@ func ExampleTableFromUniarySelectWithDirectivesQuery(req ExampleTableFromUniaryS
 	return spanner.Statement{
 		SQL: "SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name",
 		Params: map[string]interface{}{
-			"@id":   req.GetId(),
-			"@name": req.GetName(),
+			"id":   req.GetId(),
+			"name": req.GetName(),
 		},
 	}
 }
@@ -114,16 +114,16 @@ func ExampleTableFromClientStreamUpdateQuery(req ExampleTableFromClientStreamUpd
 }
 func ExampleTableFromUniaryInsertWithHooksQuery(req ExampleTableFromUniaryInsertWithHooksQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
 		"name":       "bananas",
+		"id":         req.GetId(),
 	})
 }
 func ExampleTableFromUniarySelectWithHooksQuery(req ExampleTableFromUniarySelectWithHooksQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@id",
 		Params: map[string]interface{}{
-			"@id": req.GetId(),
+			"id": req.GetId(),
 		},
 	}
 }
@@ -173,14 +173,14 @@ type SomethingFromTestNestQueryParams interface {
 	GetThing() []byte
 }
 type HasTimestampFromTestEverythingQueryParams interface {
-	GetTime() interface{}
-	GetSome() []byte
 	GetStr() string
 	GetTable() []byte
 	GetTimes() [][]byte
 	GetSomes() [][]byte
 	GetStrs() []string
 	GetTables() [][]byte
+	GetTime() interface{}
+	GetSome() []byte
 }
 type ExampleTableFromUniarySelectWithDirectivesQueryParams interface {
 	GetId() int64
@@ -203,22 +203,22 @@ type ExampleTableFromNoArgsQueryParams interface {
 type NameFromServerStreamQueryParams interface {
 }
 type ExampleTableFromClientStreamInsertQueryParams interface {
-	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
+	GetId() int64
 }
 type ExampleTableFromClientStreamDeleteQueryParams interface {
 	GetId() int64
 }
 type ExampleTableFromClientStreamUpdateQueryParams interface {
+	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
-	GetId() int64
 }
 type ExampleTableFromUniaryInsertWithHooksQueryParams interface {
-	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
+	GetName() string
 }
 type ExampleTableFromUniarySelectWithHooksQueryParams interface {
 	GetId() int64
@@ -235,6 +235,6 @@ type ExampleTableRangeFromUniaryDeleteWithHooksQueryParams interface {
 type NameFromServerStreamWithHooksQueryParams interface {
 }
 type ExampleTableFromClientStreamUpdateWithHooksQueryParams interface {
-	GetId() int64
 	GetName() string
+	GetId() int64
 }
