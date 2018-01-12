@@ -378,31 +378,34 @@ func SpannerTypeFieldName(t TypeDesc) string {
 
 func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 	ret := make([]TypeDesc, 0)
-	if str != nil && str.IsMessage {
-		for _, mp := range str.MsgDesc.GetField() {
-			if mp.OneofIndex == nil {
-				typeDesc := TypeDesc{
-					Name:            _gen.CamelCase(mp.GetName()),
-					Struct:          m.Service.AllStructs.GetStructByFieldDesc(mp),
-					ProtoName:       mp.GetName(),
-					GoName:          m.GetMappedType(mp),
-					GoTypeName:      m.GetGoTypeNameByFieldDesc(mp),
-					OrigGoName:      m.DefaultMapping(mp),
-					Mapping:         m.GetMapping(mp),
-					IsMapped:        (m.GetMapping(mp) != nil),
-					FieldDescriptor: mp,
-					IsRepeated:      (mp.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED),
-					IsEnum:          (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
-					IsMessage:       (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && m.GetMapping(mp) == nil),
-				}
-				//TODO refactor typeDesc into using a NewTypeDesc method
-				typeDesc.SpannerType = SpannerType(typeDesc)
-				typeDesc.SpannerTypeFieldName = SpannerTypeFieldName(typeDesc)
-				typeDesc.NeedsSpannerConversion = (typeDesc.SpannerType != typeDesc.GoName)
-
-				ret = append(ret, typeDesc)
-			}
+	if str == nil && !str.IsMessage {
+		return ret
+	}
+	for _, mp := range str.MsgDesc.GetField() {
+		if mp.OneofIndex != nil {
+			continue
 		}
+		typeDesc := TypeDesc{
+			Name:            _gen.CamelCase(mp.GetName()),
+			Struct:          m.Service.AllStructs.GetStructByFieldDesc(mp),
+			ProtoName:       mp.GetName(),
+			GoName:          m.GetMappedType(mp),
+			GoTypeName:      m.GetGoTypeNameByFieldDesc(mp),
+			OrigGoName:      m.DefaultMapping(mp),
+			Mapping:         m.GetMapping(mp),
+			IsMapped:        (m.GetMapping(mp) != nil),
+			FieldDescriptor: mp,
+			IsRepeated:      (mp.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED),
+			IsEnum:          (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
+			IsMessage: (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE &&
+				m.GetMapping(mp) == nil),
+		}
+		//TODO refactor typeDesc into using a NewTypeDesc method
+		typeDesc.SpannerType = SpannerType(typeDesc)
+		typeDesc.SpannerTypeFieldName = SpannerTypeFieldName(typeDesc)
+		typeDesc.NeedsSpannerConversion = (typeDesc.SpannerType != typeDesc.GoName)
+
+		ret = append(ret, typeDesc)
 	}
 	return ret
 }
