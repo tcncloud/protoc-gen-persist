@@ -89,7 +89,6 @@ func (b *ExtraSrvImplBuilder) MustBuild() *ExtraSrvImpl {
 	}
 	return s
 }
-
 func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -158,7 +157,6 @@ func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test
 	}
 	return &res, nil
 }
-
 func (s *ExtraSrvImpl) ExtraMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	return s.FORWARDED.ExtraMethod(ctx, req)
 }
@@ -305,7 +303,6 @@ func (b *MySpannerImplBuilder) MustBuild() *MySpannerImpl {
 	}
 	return s
 }
-
 func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -380,7 +377,6 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -455,7 +451,6 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Something, error) {
 	var err error
 	var res = Something{}
@@ -511,7 +506,6 @@ func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Somethin
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (*HasTimestamp, error) {
 	var err error
 	var res = HasTimestamp{}
@@ -710,7 +704,6 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -785,7 +778,6 @@ func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *tes
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	var err error
 	var res = test.PartialTable{}
@@ -849,7 +841,6 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -920,7 +911,6 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -995,7 +985,6 @@ func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.Exampl
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -1070,7 +1059,6 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStreamServer) error {
 	var err error
 	_ = err
@@ -1140,7 +1128,6 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 	}
 	return nil
 }
-
 func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertServer) error {
 	var err error
 	_ = err
@@ -1195,7 +1182,6 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 	}
 	return nil
 }
-
 func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteServer) error {
 	var err error
 	_ = err
@@ -1250,7 +1236,6 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 	}
 	return nil
 }
-
 func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateServer) error {
 	var err error
 	_ = err
@@ -1305,7 +1290,6 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 	}
 	return nil
 }
-
 func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -1389,7 +1373,6 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -1473,7 +1456,6 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	var err error
 	var res = test.PartialTable{}
@@ -1546,7 +1528,6 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -1626,7 +1607,6 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 	}
 	return &res, nil
 }
-
 func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_ServerStreamWithHooksServer) error {
 	var err error
 	_ = err
@@ -1710,7 +1690,6 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 	}
 	return nil
 }
-
 func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
 	var err error
 	_ = err

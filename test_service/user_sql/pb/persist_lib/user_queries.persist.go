@@ -49,10 +49,10 @@ func EmptyFromDropTableQuery(tx Runable, req EmptyFromDropTableQueryParams) (sql
 type EmptyFromCreateTableQueryParams interface {
 }
 type UserFromInsertUsersQueryParams interface {
+	GetId() int64
 	GetName() string
 	GetFriends() []byte
 	GetCreatedOn() interface{}
-	GetId() int64
 }
 type EmptyFromGetAllUsersQueryParams interface {
 }

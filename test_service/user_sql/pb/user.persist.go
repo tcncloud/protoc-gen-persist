@@ -7,7 +7,7 @@ import (
 	sql "database/sql"
 	io "io"
 
-	"github.com/golang/protobuf/proto"
+	proto "github.com/golang/protobuf/proto"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/test_service/user_sql/pb/persist_lib"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
@@ -109,7 +109,6 @@ func (b *UServImplBuilder) MustBuild() *UServImpl {
 	}
 	return s
 }
-
 func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
 	var err error
 	var res = Empty{}
@@ -136,7 +135,6 @@ func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error)
 	}
 	return &res, nil
 }
-
 func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	var err error
 	_ = err
@@ -194,7 +192,6 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	}
 	return nil
 }
-
 func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
 	var err error
 	_ = err
@@ -251,7 +248,6 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 	}
 	return nil
 }
-
 func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error) {
 	var err error
 	var res = User{}
@@ -320,7 +316,6 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 	}
 	return &res, nil
 }
-
 func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 	var err error
 	_ = err
@@ -390,7 +385,6 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 	}
 	return stop()
 }
-
 func (s *UServImpl) GetFriends(req *FriendsQuery, stream UServ_GetFriendsServer) error {
 	var err error
 	_ = err
@@ -448,7 +442,6 @@ func (s *UServImpl) GetFriends(req *FriendsQuery, stream UServ_GetFriendsServer)
 	}
 	return nil
 }
-
 func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 	var err error
 	var res = Empty{}
@@ -475,7 +468,6 @@ func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 	}
 	return &res, nil
 }
-
 func (s *UServImpl) Shutdown(ctx context.Context, req *Empty) (*Empty, error) {
 	return s.FORWARDED.Shutdown(ctx, req)
 }

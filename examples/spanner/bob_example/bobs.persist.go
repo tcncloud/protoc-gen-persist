@@ -96,7 +96,6 @@ func (b *BobsImplBuilder) MustBuild() *BobsImpl {
 	}
 	return s
 }
-
 func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 	var err error
 	var res = Empty{}
@@ -131,7 +130,6 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 	}
 	return &res, nil
 }
-
 func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 	var err error
 	_ = err
@@ -186,7 +184,6 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 	}
 	return nil
 }
-
 func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 	var err error
 	_ = err
@@ -254,7 +251,6 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 	}
 	return nil
 }
-
 func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNamesServer) error {
 	var err error
 	_ = err

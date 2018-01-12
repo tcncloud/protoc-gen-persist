@@ -102,11 +102,9 @@ func (b *UServImplBuilder) MustBuild() *UServImpl {
 	}
 	return s
 }
-
 func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
 	return s.FORWARDED.CreateTable(ctx, req)
 }
-
 func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	var err error
 	_ = err
@@ -169,7 +167,6 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	}
 	return nil
 }
-
 func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
 	var err error
 	_ = err
@@ -261,7 +258,6 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 	}
 	return nil
 }
-
 func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error) {
 	var err error
 	var res = User{}
@@ -373,7 +369,6 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 	}
 	return &res, nil
 }
-
 func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 	var err error
 	_ = err
@@ -430,7 +425,6 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 	}
 	return nil
 }
-
 func (s *UServImpl) GetFriends(req *Friends, stream UServ_GetFriendsServer) error {
 	var err error
 	_ = err
@@ -524,7 +518,6 @@ func (s *UServImpl) GetFriends(req *Friends, stream UServ_GetFriendsServer) erro
 	}
 	return nil
 }
-
 func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 	return s.FORWARDED.DropTable(ctx, req)
 }

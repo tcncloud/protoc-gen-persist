@@ -115,7 +115,6 @@ func (b *AmazingImplBuilder) MustBuild() *AmazingImpl {
 	}
 	return s
 }
-
 func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -164,7 +163,6 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) 
 	}
 	return &res, nil
 }
-
 func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	var err error
 	var res = test.ExampleTable{}
@@ -222,7 +220,6 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 	}
 	return &res, nil
 }
-
 func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
 	var err error
 	_ = err
@@ -271,7 +268,6 @@ func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamSe
 	}
 	return nil
 }
-
 func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
 	var err error
 	_ = err
@@ -334,7 +330,6 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 	}
 	return nil
 }
-
 func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 	var err error
 	_ = err
@@ -385,7 +380,6 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 	}
 	return stop()
 }
-
 func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHooksServer) error {
 	var err error
 	_ = err
@@ -445,7 +439,6 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 	}
 	return stop()
 }
-
 func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 	var err error
 	_ = err
@@ -491,7 +484,6 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 	}
 	return nil
 }
-
 func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookServer) error {
 	var err error
 	_ = err
@@ -550,7 +542,6 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 	}
 	return nil
 }
-
 func (s *AmazingImpl) UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	return s.FORWARDED.UnImplementedPersistMethod(ctx, req)
 }

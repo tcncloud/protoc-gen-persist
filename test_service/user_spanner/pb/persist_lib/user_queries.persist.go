@@ -41,11 +41,11 @@ func FriendsFromGetFriendsQuery(req FriendsFromGetFriendsQueryParams) spanner.St
 }
 
 type UserFromInsertUsersQueryParams interface {
+	GetCreatedOn() interface{}
+	GetFavoriteNumbers() []int64
 	GetId() int64
 	GetName() string
 	GetFriends() []byte
-	GetCreatedOn() interface{}
-	GetFavoriteNumbers() []int64
 }
 type EmptyFromGetAllUsersQueryParams interface {
 }
