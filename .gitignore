@@ -31,9 +31,8 @@ examples/*.go
 examples/test/*.go
 *.cover*
 
-# test client, and test server binaries
-test-impl/client.main
-test-impl/server.main
+test_service/user_spanner/user_spanner
+test_service/user_sql/user_sql
 
 # docs
 docs/_site
