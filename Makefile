@@ -48,9 +48,9 @@ proto-examples:
 	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 	 	examples/spanner/basic/*.proto
-	# $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	# 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	# 	examples/sql/little_of_everything/*.proto
+	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+	 	examples/sql/little_of_everything/*.proto
 	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 	 	examples/sql/basic/*.proto
@@ -76,9 +76,9 @@ test: deps build
 
 test-compile:
 	go build
-	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	# 	--plugin=./protoc-gen-persist \
-	# 	--persist_out=$$GOPATH/src  examples/sql/little_of_everything/*.proto
+	 DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	 	--plugin=./protoc-gen-persist \
+	 	--persist_out=$$GOPATH/src  examples/sql/little_of_everything/*.proto
 	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--plugin=./protoc-gen-persist \
 	 	--persist_out=$$GOPATH/src  examples/sql/basic/*.proto
@@ -97,6 +97,7 @@ test-compile:
 	# 	-I./examples/spanner/import_tests -I./examples/test \
 	# 	--plugin=./protoc-gen-persist \
 	# 	--persist_out=$$GOPATH/src  examples/spanner/import_tests/persist_and_go.proto
+	cd ./examples/sql/little_of_everything && go build
 	cd ./examples/sql/basic && go build
 	cd ./examples/spanner/basic && go build
 	cd ./examples/spanner/bob_example && go build

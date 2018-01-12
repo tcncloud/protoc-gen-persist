@@ -5,221 +5,474 @@ package little_of_everything
 
 import (
 	sql "database/sql"
-	fmt "fmt"
 	io "io"
-	strings "strings"
 
+	proto "github.com/golang/protobuf/proto"
 	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
-	pb "github.com/tcncloud/protoc-gen-persist/examples/sql/little_of_everything"
+	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/sql/little_of_everything/persist_lib"
 	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"
-	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
+	gstatus "google.golang.org/grpc/status"
 )
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-// In order for your code to work you have to create a file
-// in this package with the following content:
-//
-// type ExampleService1Impl struct {
-// 	SqlDB *sql.DB
-// }
-// WARNING ! WARNING ! WARNING ! WARNING !WARNING ! WARNING !
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// sql unary UnaryExample1
-func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *pb.ExampleTable1) (*pb.ExampleTable1, error) {
-	var (
-		BytesField   []byte
-		InnerEnum    int32
-		InnerMessage pb.ExampleTable1_InnerMessage
-		Key          string
-		StartTime    mytime.MyTime
-		StringArray  []string
-		TableId      int32
-		TestField    test.Test
-		Value        string
-		err          error
-	)
-
-	err = s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.TableId, mytime.MyTime{}.ToSql(req.StartTime)).
-		Scan(&TableId,
-			&Key,
-			&Value,
-			&InnerMessage,
-			&InnerEnum,
-			&StringArray,
-			&BytesField,
-			&StartTime,
-			&TestField,
-		)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-		} else if strings.Contains(err.Error(), "duplicate key") {
-			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
-		}
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	res := pb.ExampleTable1{
-
-		BytesField:   BytesField,
-		InnerEnum:    pb.ExampleTable1_InnerEnum(InnerEnum.ToProto()),
-		InnerMessage: &InnerMessage,
-		Key:          Key,
-		StartTime:    StartTime.ToProto(),
-		StringArray:  StringArray,
-		TableId:      TableId,
-		TestField:    &TestField,
-		Value:        Value,
-	}
-
-	return &res, nil
+type ExampleService1Impl struct {
+	PERSIST   *persist_lib.ExampleService1MethodReceiver
+	FORWARDED RestOfExampleService1Handlers
+}
+type RestOfExampleService1Handlers interface {
+}
+type ExampleService1ImplBuilder struct {
+	err           error
+	rest          RestOfExampleService1Handlers
+	queryHandlers *persist_lib.ExampleService1QueryHandlers
+	i             *ExampleService1Impl
+	db            sql.DB
 }
 
-// sql unary UnaryExample2
-func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test) (*pb.ExampleTable1, error) {
-	var (
-		BytesField   []byte
-		InnerEnum    int32
-		InnerMessage pb.ExampleTable1_InnerMessage
-		Key          string
-		StartTime    mytime.MyTime
-		StringArray  []string
-		TableId      int32
-		TestField    test.Test
-		Value        string
-		err          error
-	)
-
-	err = s.SqlDB.QueryRow("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.Id).
-		Scan(&TableId,
-			&Key,
-			&Value,
-			&InnerMessage,
-			&InnerEnum,
-			&StringArray,
-			&BytesField,
-			&StartTime,
-			&TestField,
-		)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-		} else if strings.Contains(err.Error(), "duplicate key") {
-			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
-		}
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
+func NewExampleService1Builder() *ExampleService1ImplBuilder {
+	return &ExampleService1ImplBuilder{i: &ExampleService1Impl{}}
+}
+func (b *ExampleService1ImplBuilder) WithRestOfGrpcHandlers(r RestOfExampleService1Handlers) *ExampleService1ImplBuilder {
+	b.rest = r
+	return b
+}
+func (b *ExampleService1ImplBuilder) WithPersistQueryHandlers(p *persist_lib.ExampleService1QueryHandlers) *ExampleService1ImplBuilder {
+	b.queryHandlers = p
+	return b
+}
+func (b *ExampleService1ImplBuilder) WithDefaultQueryHandlers() *ExampleService1ImplBuilder {
+	accessor := persist_lib.NewSqlClientGetter(&b.db)
+	queryHandlers := &persist_lib.ExampleService1QueryHandlers{
+		UnaryExample1Handler:          persist_lib.DefaultUnaryExample1Handler(accessor),
+		UnaryExample2Handler:          persist_lib.DefaultUnaryExample2Handler(accessor),
+		ServerStreamSelectHandler:     persist_lib.DefaultServerStreamSelectHandler(accessor),
+		ClientStreamingExampleHandler: persist_lib.DefaultClientStreamingExampleHandler(accessor),
 	}
-	res := pb.ExampleTable1{
-
-		BytesField:   BytesField,
-		InnerEnum:    pb.ExampleTable1_InnerEnum(InnerEnum.ToProto()),
-		InnerMessage: &InnerMessage,
-		Key:          Key,
-		StartTime:    StartTime.ToProto(),
-		StringArray:  StringArray,
-		TableId:      TableId,
-		TestField:    &TestField,
-		Value:        Value,
-	}
-
-	return &res, nil
+	b.queryHandlers = queryHandlers
+	return b
 }
 
-// sql server streaming ServerStreamSelect
-func (s *ExampleService1Impl) ServerStreamSelect(req *pb.ExampleTable1, stream pb.ExampleService1_ServerStreamSelectServer) error {
-	var (
-		BytesField   []byte
-		InnerEnum    int32
-		InnerMessage pb.ExampleTable1_InnerMessage
-		Key          string
-		StartTime    mytime.MyTime
-		StringArray  []string
-		TableId      int32
-		TestField    test.Test
-		Value        string
-		err          error
-	)
-
-	rows, err := s.SqlDB.Query("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", req.TableId)
-	if err != nil {
-		return grpc.Errorf(codes.Unknown, err.Error())
+// set the custom handlers you want to use in the handlers
+// this method will make sure to use a default handler if
+// the handler is nil.
+func (b *ExampleService1ImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.ExampleService1QueryHandlers) *ExampleService1ImplBuilder {
+	accessor := persist_lib.NewSqlClientGetter(&b.db)
+	if p.UnaryExample1Handler == nil {
+		p.UnaryExample1Handler = persist_lib.DefaultUnaryExample1Handler(accessor)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		err = rows.Err()
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+	if p.UnaryExample2Handler == nil {
+		p.UnaryExample2Handler = persist_lib.DefaultUnaryExample2Handler(accessor)
+	}
+	if p.ServerStreamSelectHandler == nil {
+		p.ServerStreamSelectHandler = persist_lib.DefaultServerStreamSelectHandler(accessor)
+	}
+	if p.ClientStreamingExampleHandler == nil {
+		p.ClientStreamingExampleHandler = persist_lib.DefaultClientStreamingExampleHandler(accessor)
+	}
+	b.queryHandlers = p
+	return b
+}
+func (b *ExampleService1ImplBuilder) WithSqlClient(c *sql.DB) *ExampleService1ImplBuilder {
+	b.db = *c
+	return b
+}
+func (b *ExampleService1ImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *ExampleService1ImplBuilder {
+	db, err := sql.Open(driverName, dataSourceName)
+	b.err = err
+	b.db = *db
+	return b
+}
+func (b *ExampleService1ImplBuilder) Build() (*ExampleService1Impl, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
+	b.i.PERSIST = &persist_lib.ExampleService1MethodReceiver{Handlers: *b.queryHandlers}
+	b.i.FORWARDED = b.rest
+	return b.i, nil
+}
+func (b *ExampleService1ImplBuilder) MustBuild() *ExampleService1Impl {
+	s, err := b.Build()
+	if err != nil {
+		panic("error in builder: " + err.Error())
+	}
+	return s
+}
+func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTable1) (*ExampleTable1, error) {
+	var err error
+	var res = ExampleTable1{}
+	_ = err
+	_ = res
+	params := &persist_lib.ExampleTable1ForExampleService1{}
+	err = func() error {
+		params.TableId = req.TableId
+		params.Key = req.Key
+		params.Value = req.Value
+		if req.InnerMessage == nil {
+			req.InnerMessage = new(ExampleTable1_InnerMessage)
+		}
+		{
+			raw, err := proto.Marshal(req.InnerMessage)
+			if err != nil {
+				return err
 			}
-			return grpc.Errorf(codes.Unknown, err.Error())
+			params.InnerMessage = raw
 		}
-		err := rows.Scan(&TableId, &Key, &Value, &InnerMessage, &InnerEnum, &StringArray, &BytesField, &StartTime, &TestField)
+		params.InnerEnum = int32(req.InnerEnum)
+		params.StringArray = req.StringArray
+		params.BytesField = req.BytesField
+		params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+		if req.TestField == nil {
+			req.TestField = new(test.Test)
+		}
+		{
+			raw, err := proto.Marshal(req.TestField)
+			if err != nil {
+				return err
+			}
+			params.TestField = raw
+		}
+		params.Myyenum = int32(req.Myyenum)
+		params.Testsenum = int32(req.Testsenum)
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
+	err = s.PERSIST.UnaryExample1(ctx, params, func(row persist_lib.Scanable) {
+		if row == nil { // there was no return data
+			return
+		}
+		res = ExampleTable1{}
+		err = func() error {
+			var TableId_ int32
+			var Key_ string
+			var Value_ string
+			var InnerMessage_ []byte
+			var InnerEnum_ int32
+			var StringArray_ []string
+			var BytesField_ []byte
+			var StartTime_ mytime.MyTime
+			var TestField_ []byte
+			var Myyenum_ int32
+			var Testsenum_ int32
+			if err := row.Scan(
+				&TableId_,
+				&Key_,
+				&Value_,
+				&InnerMessage_,
+				&InnerEnum_,
+				&StringArray_,
+				&BytesField_,
+				&StartTime_,
+				&TestField_,
+				&Myyenum_,
+				&Testsenum_,
+			); err != nil {
+				return err
+			}
+			res.TableId = TableId_
+			res.Key = Key_
+			res.Value = Value_
+			{
+				var converted = new(ExampleTable1_InnerMessage)
+				if err := proto.Unmarshal(InnerMessage_, converted); err != nil {
+					return err
+				}
+				res.InnerMessage = converted
+			}
+			res.InnerEnum = ExampleTable1_InnerEnum(InnerEnum_)
+			res.StringArray = StringArray_
+			res.BytesField = BytesField_
+			res.StartTime = StartTime_.ToProto()
+			{
+				var converted = new(test.Test)
+				if err := proto.Unmarshal(TestField_, converted); err != nil {
+					return err
+				}
+				res.TestField = converted
+			}
+			res.Myyenum = MyEnum(Myyenum_)
+			res.Testsenum = test.TestEnum(Testsenum_)
+			return nil
+		}()
 		if err != nil {
-			return grpc.Errorf(codes.Unknown, err.Error())
+			iterErr = err
+			return
 		}
-		res := pb.ExampleTable1{
-
-			BytesField:   BytesField,
-			InnerEnum:    pb.ExampleTable1_InnerEnum(InnerEnum.ToProto()),
-			InnerMessage: &InnerMessage,
-			Key:          Key,
-			StartTime:    StartTime.ToProto(),
-			StringArray:  StringArray,
-			TableId:      TableId,
-			TestField:    &TestField,
-			Value:        Value,
+	})
+	if err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
+	}
+	return &res, nil
+}
+func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test) (*ExampleTable1, error) {
+	var err error
+	var res = ExampleTable1{}
+	_ = err
+	_ = res
+	params := &persist_lib.Test_TestForExampleService1{}
+	err = func() error {
+		params.Id = req.Id
+		params.Name = req.Name
+		return nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
+	err = s.PERSIST.UnaryExample2(ctx, params, func(row persist_lib.Scanable) {
+		if row == nil { // there was no return data
+			return
 		}
-
-		stream.Send(&res)
+		res = ExampleTable1{}
+		err = func() error {
+			var TableId_ int32
+			var Key_ string
+			var Value_ string
+			var InnerMessage_ []byte
+			var InnerEnum_ int32
+			var StringArray_ []string
+			var BytesField_ []byte
+			var StartTime_ mytime.MyTime
+			var TestField_ []byte
+			var Myyenum_ int32
+			var Testsenum_ int32
+			if err := row.Scan(
+				&TableId_,
+				&Key_,
+				&Value_,
+				&InnerMessage_,
+				&InnerEnum_,
+				&StringArray_,
+				&BytesField_,
+				&StartTime_,
+				&TestField_,
+				&Myyenum_,
+				&Testsenum_,
+			); err != nil {
+				return err
+			}
+			res.TableId = TableId_
+			res.Key = Key_
+			res.Value = Value_
+			{
+				var converted = new(ExampleTable1_InnerMessage)
+				if err := proto.Unmarshal(InnerMessage_, converted); err != nil {
+					return err
+				}
+				res.InnerMessage = converted
+			}
+			res.InnerEnum = ExampleTable1_InnerEnum(InnerEnum_)
+			res.StringArray = StringArray_
+			res.BytesField = BytesField_
+			res.StartTime = StartTime_.ToProto()
+			{
+				var converted = new(test.Test)
+				if err := proto.Unmarshal(TestField_, converted); err != nil {
+					return err
+				}
+				res.TestField = converted
+			}
+			res.Myyenum = MyEnum(Myyenum_)
+			res.Testsenum = test.TestEnum(Testsenum_)
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
+		}
+	})
+	if err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
+	}
+	return &res, nil
+}
+func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream ExampleService1_ServerStreamSelectServer) error {
+	var err error
+	_ = err
+	params := &persist_lib.ExampleTable1ForExampleService1{}
+	err = func() error {
+		params.TableId = req.TableId
+		params.Key = req.Key
+		params.Value = req.Value
+		if req.InnerMessage == nil {
+			req.InnerMessage = new(ExampleTable1_InnerMessage)
+		}
+		{
+			raw, err := proto.Marshal(req.InnerMessage)
+			if err != nil {
+				return err
+			}
+			params.InnerMessage = raw
+		}
+		params.InnerEnum = int32(req.InnerEnum)
+		params.StringArray = req.StringArray
+		params.BytesField = req.BytesField
+		params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+		if req.TestField == nil {
+			req.TestField = new(test.Test)
+		}
+		{
+			raw, err := proto.Marshal(req.TestField)
+			if err != nil {
+				return err
+			}
+			params.TestField = raw
+		}
+		params.Myyenum = int32(req.Myyenum)
+		params.Testsenum = int32(req.Testsenum)
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
+	var iterErr error
+	err = s.PERSIST.ServerStreamSelect(stream.Context(), params, func(row persist_lib.Scanable) {
+		if row == nil { // there was no return data
+			return
+		}
+		res := ExampleTable1{}
+		err = func() error {
+			var TableId_ int32
+			var Key_ string
+			var Value_ string
+			var InnerMessage_ []byte
+			var InnerEnum_ int32
+			var StringArray_ []string
+			var BytesField_ []byte
+			var StartTime_ mytime.MyTime
+			var TestField_ []byte
+			var Myyenum_ int32
+			var Testsenum_ int32
+			if err := row.Scan(
+				&TableId_,
+				&Key_,
+				&Value_,
+				&InnerMessage_,
+				&InnerEnum_,
+				&StringArray_,
+				&BytesField_,
+				&StartTime_,
+				&TestField_,
+				&Myyenum_,
+				&Testsenum_,
+			); err != nil {
+				return err
+			}
+			res.TableId = TableId_
+			res.Key = Key_
+			res.Value = Value_
+			{
+				var converted = new(ExampleTable1_InnerMessage)
+				if err := proto.Unmarshal(InnerMessage_, converted); err != nil {
+					return err
+				}
+				res.InnerMessage = converted
+			}
+			res.InnerEnum = ExampleTable1_InnerEnum(InnerEnum_)
+			res.StringArray = StringArray_
+			res.BytesField = BytesField_
+			res.StartTime = StartTime_.ToProto()
+			{
+				var converted = new(test.Test)
+				if err := proto.Unmarshal(TestField_, converted); err != nil {
+					return err
+				}
+				res.TestField = converted
+			}
+			res.Myyenum = MyEnum(Myyenum_)
+			res.Testsenum = test.TestEnum(Testsenum_)
+			return nil
+		}()
+		if err != nil {
+			iterErr = err
+			return
+		}
+		if err := stream.Send(&res); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
+		}
+	})
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
+	} else if iterErr != nil {
+		return iterErr
 	}
 	return nil
 }
-
-// sql client streaming ClientStreamingExample
-func (s *ExampleService1Impl) ClientStreamingExample(stream pb.ExampleService1_ClientStreamingExampleServer) error {
+func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_ClientStreamingExampleServer) error {
 	var err error
-	tx, err := s.SqlDB.Begin()
-	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("SELECT id AS \"table_id\", key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1")
-	if err != nil {
-		return err
-	}
-
-	res := pb.CountRows{}
+	_ = err
+	res := CountRows{}
+	feed, stop := s.PERSIST.ClientStreamingExample(stream.Context())
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			break
+		} else if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		if err != nil {
-			tx.Rollback()
-			return grpc.Errorf(codes.Unknown, err.Error())
-		}
-
-		_, err = stmt.Exec(req.TableId)
-		if err != nil {
-			tx.Rollback()
-			if err == sql.ErrNoRows {
-				return grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-			} else if strings.Contains(err.Error(), "duplicate key") {
-				return grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
+		params := &persist_lib.ExampleTable1ForExampleService1{}
+		err = func() error {
+			params.TableId = req.TableId
+			params.Key = req.Key
+			params.Value = req.Value
+			if req.InnerMessage == nil {
+				req.InnerMessage = new(ExampleTable1_InnerMessage)
 			}
-			return grpc.Errorf(codes.Unknown, err.Error())
+			{
+				raw, err := proto.Marshal(req.InnerMessage)
+				if err != nil {
+					return err
+				}
+				params.InnerMessage = raw
+			}
+			params.InnerEnum = int32(req.InnerEnum)
+			params.StringArray = req.StringArray
+			params.BytesField = req.BytesField
+			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+			if req.TestField == nil {
+				req.TestField = new(test.Test)
+			}
+			{
+				raw, err := proto.Marshal(req.TestField)
+				if err != nil {
+					return err
+				}
+				params.TestField = raw
+			}
+			params.Myyenum = int32(req.Myyenum)
+			params.Testsenum = int32(req.Testsenum)
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
-
+		feed(params)
 	}
-	err = tx.Commit()
+	row, err := stop()
 	if err != nil {
-		fmt.Println("Commiting transaction failed, rolling back...")
-		return grpc.Errorf(codes.Unknown, err.Error())
+		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
-	stream.SendAndClose(&res)
+	if row != nil {
+		err = func() error {
+			var Count_ int64
+			if err := row.Scan(
+				&Count_,
+			); err != nil {
+				return err
+			}
+			res.Count = Count_
+			return nil
+		}()
+	}
+	if err := stream.SendAndClose(&res); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
+	}
 	return nil
 }
