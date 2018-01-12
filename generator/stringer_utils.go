@@ -125,9 +125,9 @@ func (p PersistHandlerName) String() string {
 	return p.m.GetName() + "Handler"
 }
 
-func GetHookName(method *Method, hook *persist.QLImpl_CallbackFunction) string {
+func GetHookName(hook *persist.QLImpl_CallbackFunction) string {
 	var name string
-	pkg := method.GetGoPackage(hook.GetPackage())
+	pkg := GetGoPackage(hook.GetPackage())
 	if pkg != "" {
 		name = pkg + "."
 	}

@@ -58,7 +58,7 @@ func (s *UnaryStringer) BeforeHook() {
 	if before == nil {
 		return
 	}
-	hookName := GetHookName(s.method, before)
+	hookName := GetHookName(before)
 
 	s.printer.PA([]string{
 		"beforeRes, err := %s(req)\n",
@@ -119,7 +119,7 @@ func (s *UnaryStringer) AfterHook() {
 		"if err := %s(req, &res); err != nil {\n",
 		"return nil, gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 	},
-		GetHookName(s.method, after),
+		GetHookName(after),
 		"error in after hook: %v",
 	)
 }
@@ -198,7 +198,7 @@ func (s *BidiStreamStringer) BeforeHook() {
 	if before == nil {
 		return
 	}
-	hookName := GetHookName(s.method, before)
+	hookName := GetHookName(before)
 	s.printer.PA([]string{
 		"beforeRes, err := %s(req)\n",
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n} ",
@@ -242,7 +242,7 @@ func (s *BidiStreamStringer) AfterHook() {
 		"if err := %s(req, &res); err != nil {\n",
 		"return gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 	},
-		GetHookName(s.method, after),
+		GetHookName(after),
 		"error in after hook: %v",
 	)
 }
@@ -330,7 +330,7 @@ func (s *ClientStreamStringer) BeforeHook() {
 	if before == nil {
 		return
 	}
-	hookName := GetHookName(s.method, before)
+	hookName := GetHookName(before)
 	s.printer.PA([]string{
 		"beforeRes, err := %s(req)\n",
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n} ",
@@ -371,7 +371,7 @@ func (s *ClientStreamStringer) AfterHook() {
 		"return gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 	},
 		s.method.GetInputType(),
-		GetHookName(s.method, after),
+		GetHookName(after),
 		"error in after hook: %v",
 	)
 }
@@ -436,7 +436,7 @@ func (s *ServerStreamStringer) BeforeHook() {
 	if before == nil {
 		return
 	}
-	hookName := GetHookName(s.method, before)
+	hookName := GetHookName(before)
 	s.printer.PA([]string{
 		"beforeRes, err := %s(req)\n",
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n} ",
@@ -508,7 +508,7 @@ func (s *ServerStreamStringer) AfterHook() {
 		"if err := %s(req, &res); err != nil {\n",
 		"iterErr = gstatus.Errorf(codes.Unknown, \"%s\", err)\n return\n}\n",
 	},
-		GetHookName(s.method, after),
+		GetHookName(after),
 		"error in after hook: %v",
 	)
 }

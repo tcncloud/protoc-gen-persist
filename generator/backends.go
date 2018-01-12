@@ -57,6 +57,8 @@ func (s *SpannerStringer) MapRequestToParams() string {
 					td.Name,
 				)
 			}
+		} else if td.IsEnum {
+			p.P("params.%s = int32(req.%s)\n", td.Name, td.Name)
 		} else {
 			p.P("params.%s = req.%s\n", td.Name, td.Name)
 		}
@@ -126,6 +128,22 @@ func (s *SpannerStringer) TranslateRowToResult() string {
 					td.Name,
 				)
 			}
+		} else if td.IsEnum {
+			if td.IsRepeated {
+				// TODO: UNSUPPORTED YET
+			} else {
+				// even though we scan them in as int32, we scan out of spanner as int64
+				// they should always fit in an int32 though,
+				p.PA([]string{
+					"var %s_ int64\n",
+					"if err := row.ColumnByName(\"%s\", &%s_); err != nil {\n return err\n}\n",
+					"res.%s = %s(%s_)\n",
+				},
+					td.Name,
+					td.ProtoName, td.Name,
+					td.Name, td.GoTypeName, td.Name,
+				)
+			}
 		} else if td.IsRepeated {
 			p.PA([]string{
 				"var %s_ %s\n{\n",
@@ -188,6 +206,8 @@ func (s *SqlStringer) MapRequestToParams() string {
 				td.Name,
 				td.Name,
 			)
+		} else if td.IsEnum {
+			p.P("params.%s = int32(req.%s)\n", td.Name, td.Name)
 		} else {
 			p.P("params.%s = req.%s\n", td.Name, td.Name)
 		}
@@ -207,6 +227,8 @@ func (s *SqlStringer) TranslateRowToResult() string {
 	for _, td := range outputFields {
 		if td.IsMessage {
 			p.P("var %s_ []byte\n", td.Name)
+		} else if td.IsEnum {
+			p.P("var %s_ int32\n", td.Name)
 		} else {
 			p.P("var %s_ %s\n", td.Name, td.GoName)
 		}
@@ -234,6 +256,8 @@ func (s *SqlStringer) TranslateRowToResult() string {
 				td.Name,
 				td.Name,
 			)
+		} else if td.IsEnum {
+			p.P("res.%s = %s(%s_)\n", td.Name, td.GoTypeName, td.Name)
 		} else {
 			p.P("res.%s = %s_\n", td.Name, td.Name)
 		}

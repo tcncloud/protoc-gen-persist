@@ -88,27 +88,6 @@ func (m *Method) GetMethodOption() *persist.QLImpl {
 	return nil
 }
 
-func (m *Method) GetFieldsWithLocalTypesFor(st *Struct) map[string]string {
-	if st == nil {
-		return nil
-	}
-	// The Fields on the struct
-	mapping := make(map[string]string)
-	//ranges over the proto fields
-	for _, field := range st.MsgDesc.GetField() {
-		// dont support oneof fields yet
-		if field.Name != nil && field.OneofIndex == nil {
-			name := _gen.CamelCase(*field.Name)
-			if m.IsTypeMapped(field) {
-				mapping[name] = m.GetMappedType(field)
-			} else {
-				mapping[name] = m.DefaultMapping(field)
-			}
-		}
-	}
-	return mapping
-}
-
 func (m *Method) GetTypeStructByProtoName(proto string) *Struct {
 	return m.Service.AllStructs.GetStructByProtoName(proto)
 }
@@ -133,6 +112,7 @@ func (m *Method) GetQuery() string {
 // if the service.pb.go and the persist.go are in different packages
 // it will return the import prefix+.  of the package,  otherwise it returns
 // the empty string
+
 func (m *Method) GetFilePackage() string {
 	if !m.Service.File.DifferentImpl() {
 		logrus.Debugf("the impl and file are in same package")
@@ -149,12 +129,18 @@ func (m *Method) GetFilePackage() string {
 
 func (m *Method) GetGoTypeName(typ string) string {
 	str := m.Service.File.AllStructures.GetStructByProtoName(typ)
+	if str == nil {
+		return ""
+	}
 	if imp := m.Service.File.ImportList.GetGoNameByStruct(str); imp != nil {
 		if m.Service.File.NotSameAsMyPackage(imp.GoImportPath) {
 			return imp.GoPackageName + "." + str.GetGoName()
 		}
 	}
 	return str.GetGoName()
+}
+func (m *Method) GetGoTypeNameByFieldDesc(ty *descriptor.FieldDescriptorProto) string {
+	return m.GetGoTypeName(ty.GetTypeName())
 }
 
 func (m *Method) GetInputType() string {
@@ -172,7 +158,8 @@ func (m *Method) GetOutputType() string {
 	return m.GetGoTypeName(m.Desc.GetOutputType())
 }
 
-func (m *Method) GetTypeMapping() *persist.TypeMapping {
+// returns the type mapping option on either the method, or the service.
+func (m *Method) GetTypeMappingOpts() *persist.TypeMapping {
 	if opt := m.GetMethodOption(); opt != nil {
 		if opt.GetMapping() != nil {
 			return opt.GetMapping()
@@ -185,51 +172,6 @@ func (m *Method) GetTypeMapping() *persist.TypeMapping {
 
 }
 
-func (m *Method) IsTypeMapped(typ *descriptor.FieldDescriptorProto) bool {
-	if mapping := m.GetTypeMapping(); mapping != nil {
-		// if we have a mapping we are going to process it first
-		for _, mapp := range mapping.Types {
-			logrus.WithField("mapping", mapp).WithField("type", typ).Debug("checking mapping")
-			if mapp.GetProtoType() == typ.GetType() &&
-				mapp.GetProtoLabel() == typ.GetLabel() &&
-				mapp.GetProtoTypeName() == typ.GetTypeName() {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func (m *Method) GetMappedObject(typ *descriptor.FieldDescriptorProto) string {
-	if mapping := m.GetTypeMapping(); mapping != nil {
-		// if we have a mapping we are going to process it first
-		for _, mapp := range mapping.Types {
-			logrus.WithField("mapping", mapp).WithField("type", typ).Debug("checking mapping")
-			if mapp.GetProtoType() == typ.GetType() &&
-				mapp.GetProtoLabel() == typ.GetLabel() &&
-				mapp.GetProtoTypeName() == typ.GetTypeName() {
-				if m.Service.File.IsSameAsMyPackage(GetGoPath(mapp.GetGoPackage())) {
-					return mapp.GetGoType()
-				}
-				return m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage())) + "." + mapp.GetGoType()
-			}
-		}
-	}
-	return ""
-}
-
-func (m *Method) GetTypeNameMinusPackage(ty *descriptor.FieldDescriptorProto) string {
-	if structure := m.Service.AllStructs.GetStructByProtoName(ty.GetTypeName()); structure != nil {
-		if imp := m.Service.File.ImportList.GetGoNameByStruct(structure); imp != nil &&
-			m.Service.File.NotSameAsMyPackage(imp.GoImportPath) {
-			return imp.GoPackageName + "." + structure.GetGoName()
-		} else {
-			return structure.GetGoName()
-		}
-	}
-	return ""
-}
-
 func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	switch typ.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
@@ -238,7 +180,7 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 		return "__unsupported__type__"
 		//logrus.Fatalf("we currently don't support groups/oneof structures %s", typ.GetName())
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
-		if ret := m.GetTypeNameMinusPackage(typ); ret != "" {
+		if ret := m.GetGoTypeNameByFieldDesc(typ); ret != "" {
 			if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
 				return "[]*" + ret
 			} else {
@@ -340,39 +282,28 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	//default mapping
 }
 
-// GetMappedType return mapped type for a proto name
+// GetMappedType return mapped type's package + type for a mapped proto, otherwise
+// it returns the default type data
 func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
-	if mapping := m.GetTypeMapping(); mapping != nil {
-		// if we have a mapping we are going to process it first
-		for _, mapp := range mapping.Types {
-			logrus.Debugf("TYPE MAPPING\nfiles dir: %s\ntypes dir: %s\nsame? %s",
-				m.Service.File.GetImplDir(),
-				GetGoPath(mapp.GetGoPackage()),
-				m.Service.File.NotSameAsMyPackage(GetGoPath(mapp.GetGoPackage())),
-			)
-
-			if mapp.GetProtoType() == typ.GetType() &&
-				mapp.GetProtoLabel() == typ.GetLabel() &&
-				mapp.GetProtoTypeName() == typ.GetTypeName() {
-				p := m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapp.GetGoPackage()))
-				if p != "" && m.Service.File.NotSameAsMyPackage(GetGoPath(mapp.GetGoPackage())) {
-					return p + "." + mapp.GetGoType()
-				} else {
-					return mapp.GetGoType()
-				}
-			}
+	if mapping := m.GetMapping(typ); mapping != nil {
+		p := m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapping.GetGoPackage()))
+		if p != "" && m.Service.File.NotSameAsMyPackage(GetGoPath(mapping.GetGoPackage())) {
+			return p + "." + mapping.GetGoType()
+		} else {
+			return mapping.GetGoType()
 		}
 	}
 	return m.DefaultMapping(typ)
 }
 
 func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeMapping_TypeDescriptor {
-	if mapping := m.GetTypeMapping(); mapping != nil {
+	if mapping := m.GetTypeMappingOpts(); mapping != nil {
 		// if we have a mapping we are going to process it first
 		for _, mapp := range mapping.Types {
+			ptn := mapp.GetProtoTypeName()
 			if mapp.GetProtoType() == typ.GetType() &&
 				mapp.GetProtoLabel() == typ.GetLabel() &&
-				mapp.GetProtoTypeName() == typ.GetTypeName() {
+				((ptn == typ.GetTypeName()) || ("."+ptn == typ.GetTypeName())) {
 				return mapp
 			}
 		}
@@ -390,7 +321,6 @@ type TypeDesc struct {
 	OrigGoName      string // Timestamp
 	Struct          *Struct
 	Mapping         *persist.TypeMapping_TypeDescriptor
-	EnumName        string // Timestamp
 	IsMapped        bool
 	IsRepeated      bool
 	IsEnum          bool
@@ -446,31 +376,19 @@ func SpannerTypeFieldName(t TypeDesc) string {
 	return ""
 }
 
-type ResultHook interface {
-	AddResult(req, row interface{}) error
-}
-
 func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 	ret := make([]TypeDesc, 0)
 	if str != nil && str.IsMessage {
 		for _, mp := range str.MsgDesc.GetField() {
-			// make sure we have the imports before we attempt to use the type
-			if mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE &&
-				m.GetMapping(mp) == nil {
-				m.Service.File.ProcessImportsForType(mp.GetTypeName())
-			}
-
-			logrus.Debugf("mp name: %s\n", mp.GetName())
 			if mp.OneofIndex == nil {
 				typeDesc := TypeDesc{
 					Name:            _gen.CamelCase(mp.GetName()),
 					Struct:          m.Service.AllStructs.GetStructByFieldDesc(mp),
 					ProtoName:       mp.GetName(),
 					GoName:          m.GetMappedType(mp),
-					GoTypeName:      m.GetTypeNameMinusPackage(mp),
+					GoTypeName:      m.GetGoTypeNameByFieldDesc(mp),
 					OrigGoName:      m.DefaultMapping(mp),
 					Mapping:         m.GetMapping(mp),
-					EnumName:        m.GetTypeNameMinusPackage(mp),
 					IsMapped:        (m.GetMapping(mp) != nil),
 					FieldDescriptor: mp,
 					IsRepeated:      (mp.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED),
@@ -532,10 +450,6 @@ func (m *Method) GetName() string {
 	return m.Desc.GetName()
 }
 
-func (m *Method) IsEnabled() bool {
-	return m.GetMethodOption() != nil
-}
-
 func (m *Method) IsSQL() bool {
 	return m.Service.IsSQL() && m.GetMethodOption() != nil
 }
@@ -562,7 +476,6 @@ func (m *Method) IsBidiStreaming() bool {
 func (m *Method) Process() error {
 	logrus.Debug("Process method %s", m.GetName())
 	if m.IsSpanner() {
-		logrus.Debug("We are a spanner method")
 		query := m.GetQuery()
 		reader := bytes.NewBufferString(query)
 		p := parser.NewParser(reader)
@@ -577,41 +490,8 @@ func (m *Method) Process() error {
 			// this needs to be @, otherwise it will not be found
 			m.Query.AddParam("@"+t.ProtoName, fmt.Sprintf("req.Get%s()", t.Name))
 		}
-		//m.Spanner = s
-	} else if m.IsSQL() {
-		logrus.Debug("we are a sql method")
-	} else {
-		logrus.Debug("we are neither?")
 	}
 	return nil
-}
-
-func (m *Method) ProcessImports() {
-	if m.GetMethodOption() != nil {
-		if m.GetMethodOption().GetMapping() != nil {
-			for _, mapping := range m.GetMethodOption().GetMapping().GetTypes() {
-				m.Service.File.ImportList.GetOrAddImport(GetGoPackage(mapping.GetGoPackage()), GetGoPath(mapping.GetGoPackage()))
-			}
-		}
-		// if CallbackFunction options exist,  import the packages
-		// name string, package string
-		beforeOpt := m.GetMethodOption().GetBefore()
-		afterOpt := m.GetMethodOption().GetAfter()
-		if beforeOpt != nil {
-			m.Service.File.ImportList.GetOrAddImport(GetGoPackage(beforeOpt.GetPackage()), GetGoPath(beforeOpt.GetPackage()))
-		}
-		if afterOpt != nil {
-			m.Service.File.ImportList.GetOrAddImport(GetGoPackage(afterOpt.GetPackage()), GetGoPath(afterOpt.GetPackage()))
-		}
-	}
-}
-
-func (m *Method) GetGoPackage(path string) string {
-	return GetGoPackage(path)
-}
-
-func (m *Method) GetGoPath(path string) string {
-	return GetGoPath(path)
 }
 
 // -- Methods
@@ -623,24 +503,13 @@ func (m *Methods) AddMethod(desc *descriptor.MethodDescriptorProto, service *Ser
 	if err != nil {
 		return err
 	}
-	//if meth.GetMethodOption() != nil {
 	*m = append(*m, meth)
-	//}
 	return nil
-}
-
-func (m *Methods) String() string {
-	ret := "Methods:\n"
-	for i, met := range *m {
-		ret += fmt.Sprintf("\ti:%d val: %v", i, met)
-	}
-	return ret
 }
 
 func (m *Methods) PreGenerate() error {
 	for _, meth := range *m {
-		err := meth.Process()
-		if err != nil {
+		if err := meth.Process(); err != nil {
 			return err
 		}
 	}

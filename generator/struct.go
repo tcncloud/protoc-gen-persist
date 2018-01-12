@@ -32,8 +32,6 @@ package generator
 import (
 	"strings"
 
-	"fmt"
-
 	"github.com/Sirupsen/logrus"
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	gen "github.com/golang/protobuf/protoc-gen-go/generator"
@@ -44,26 +42,14 @@ type GenericDescriptor interface {
 }
 
 type Struct struct {
-	Descriptor GenericDescriptor
-	Package    string
-	// GoPackage        string
+	Descriptor       GenericDescriptor
+	Package          string
 	ParentDescriptor *Struct
 	IsMessage        bool
 	IsInnerType      bool
-	IsUsedAsField    bool
 	File             *FileStruct // for determine go import path and go package
 	EnumDesc         *desc.EnumDescriptorProto
 	MsgDesc          *desc.DescriptorProto
-}
-
-func (s *Struct) String() string {
-	return fmt.Sprintf("[desc: %s, pkg: %s, file: %s, proto_pkg: %s, get_proto_name: %s]",
-		s.Descriptor.GetName(),
-		s.Package,
-		s.File.Desc.GetName(),
-		s.File.Desc.GetPackage(),
-		s.GetProtoName(),
-	)
 }
 
 func (s *Struct) GetGoPath() string {
@@ -138,15 +124,6 @@ func NewStructList() *StructList {
 	return &StructList{}
 }
 
-func (s *StructList) String() string {
-	ret := ""
-	for _, st := range *s {
-		ret += st.String() + "\n"
-
-	}
-	return ret
-}
-
 func (s *StructList) GetStructByProtoName(name string) *Struct {
 	for _, str := range *s {
 		if str.GetProtoName() == name {
@@ -198,11 +175,8 @@ func (s *StructList) Append(struc *Struct) {
 	*s = append(*s, struc)
 }
 
-//TODO  str.GetProtoName  will never  be equal to fld.GetName
 func (s *StructList) GetStructByFieldDesc(fld *desc.FieldDescriptorProto) *Struct {
-	//logrus.Debugf("finding struct: %s", fld.GetName())
 	for _, str := range *s {
-		//logrus.Debugf("checking str:  %s", str.GetProtoName())
 		if str.GetProtoName() == fld.GetName() {
 			logrus.Debugf("the struct name matches. Struct: %s  fld: %s", str.GetProtoName, fld.GetName())
 			return str
