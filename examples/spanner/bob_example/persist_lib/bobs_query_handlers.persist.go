@@ -41,7 +41,7 @@ func DefaultDeleteBobsHandler(accessor SpannerClientGetter) func(context.Context
 		if err != nil {
 			return err
 		}
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{BobFromDeleteBobsQuery(req)}); err != nil {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{BobsDeleteBobsQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
@@ -52,7 +52,7 @@ func DefaultPutBobsHandler(accessor SpannerClientGetter) func(context.Context) (
 	return func(ctx context.Context) (func(*BobForBobs), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
 		feed := func(req *BobForBobs) {
-			muts = append(muts, BobFromPutBobsQuery(req))
+			muts = append(muts, BobsPutBobsQuery(req))
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -73,7 +73,7 @@ func DefaultGetBobsHandler(accessor SpannerClientGetter) func(context.Context, *
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, EmptyFromGetBobsQuery(req))
+		iter := cli.Single().Query(ctx, BobsGetBobsQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -89,7 +89,7 @@ func DefaultGetPeopleFromNamesHandler(accessor SpannerClientGetter) func(context
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, NamesFromGetPeopleFromNamesQuery(req))
+		iter := cli.Single().Query(ctx, BobsGetPeopleFromNamesQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil

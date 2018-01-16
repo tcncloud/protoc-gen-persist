@@ -107,6 +107,14 @@ service UServ {
 			arguments: ["name", "id"],
 		};
 	};
+	rpc UpdateNameToFoo(User) returns (Empty) {
+		option (persist.ql) = {
+			query: ["Update users set name = 'foo' WHERE id = $1"],
+			arguments: ["id"]
+		};
+	};
+	rpc UpdateAllNames(Empty) returns (stream User) {};
+
 	rpc GetFriends(FriendsQuery) returns(stream User) {
 		option (persist.ql) = {
 			query: ["SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)"],

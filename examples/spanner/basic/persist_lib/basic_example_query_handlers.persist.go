@@ -20,7 +20,7 @@ func DefaultExtraUnaryHandler(accessor SpannerClientGetter) func(context.Context
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, NumRowsFromExtraUnaryQuery(req))
+		iter := cli.Single().Query(ctx, ExtraSrvExtraUnaryQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -168,7 +168,7 @@ func DefaultUniaryInsertHandler(accessor SpannerClientGetter) func(context.Conte
 		if err != nil {
 			return err
 		}
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryInsertQuery(req)}); err != nil {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{MySpannerUniaryInsertQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
@@ -181,7 +181,7 @@ func DefaultUniarySelectHandler(accessor SpannerClientGetter) func(context.Conte
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, ExampleTableFromUniarySelectQuery(req))
+		iter := cli.Single().Query(ctx, MySpannerUniarySelectQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -197,7 +197,7 @@ func DefaultTestNestHandler(accessor SpannerClientGetter) func(context.Context, 
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, SomethingFromTestNestQuery(req))
+		iter := cli.Single().Query(ctx, MySpannerTestNestQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -213,7 +213,7 @@ func DefaultTestEverythingHandler(accessor SpannerClientGetter) func(context.Con
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, HasTimestampFromTestEverythingQuery(req))
+		iter := cli.Single().Query(ctx, MySpannerTestEverythingQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -229,7 +229,7 @@ func DefaultUniarySelectWithDirectivesHandler(accessor SpannerClientGetter) func
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, ExampleTableFromUniarySelectWithDirectivesQuery(req))
+		iter := cli.Single().Query(ctx, MySpannerUniarySelectWithDirectivesQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -245,7 +245,7 @@ func DefaultUniaryUpdateHandler(accessor SpannerClientGetter) func(context.Conte
 		if err != nil {
 			return err
 		}
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryUpdateQuery(req)}); err != nil {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{MySpannerUniaryUpdateQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
@@ -258,7 +258,7 @@ func DefaultUniaryDeleteRangeHandler(accessor SpannerClientGetter) func(context.
 		if err != nil {
 			return err
 		}
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableRangeFromUniaryDeleteRangeQuery(req)}); err != nil {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{MySpannerUniaryDeleteRangeQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
@@ -271,7 +271,7 @@ func DefaultUniaryDeleteSingleHandler(accessor SpannerClientGetter) func(context
 		if err != nil {
 			return err
 		}
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryDeleteSingleQuery(req)}); err != nil {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{MySpannerUniaryDeleteSingleQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
@@ -284,7 +284,7 @@ func DefaultNoArgsHandler(accessor SpannerClientGetter) func(context.Context, *T
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, ExampleTableFromNoArgsQuery(req))
+		iter := cli.Single().Query(ctx, MySpannerNoArgsQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -300,7 +300,7 @@ func DefaultServerStreamHandler(accessor SpannerClientGetter) func(context.Conte
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, NameFromServerStreamQuery(req))
+		iter := cli.Single().Query(ctx, MySpannerServerStreamQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -314,7 +314,7 @@ func DefaultClientStreamInsertHandler(accessor SpannerClientGetter) func(context
 	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
 		feed := func(req *Test_ExampleTableForMySpanner) {
-			muts = append(muts, ExampleTableFromClientStreamInsertQuery(req))
+			muts = append(muts, MySpannerClientStreamInsertQuery(req))
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -333,7 +333,7 @@ func DefaultClientStreamDeleteHandler(accessor SpannerClientGetter) func(context
 	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
 		feed := func(req *Test_ExampleTableForMySpanner) {
-			muts = append(muts, ExampleTableFromClientStreamDeleteQuery(req))
+			muts = append(muts, MySpannerClientStreamDeleteQuery(req))
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -352,7 +352,7 @@ func DefaultClientStreamUpdateHandler(accessor SpannerClientGetter) func(context
 	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
 		feed := func(req *Test_ExampleTableForMySpanner) {
-			muts = append(muts, ExampleTableFromClientStreamUpdateQuery(req))
+			muts = append(muts, MySpannerClientStreamUpdateQuery(req))
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -373,7 +373,7 @@ func DefaultUniaryInsertWithHooksHandler(accessor SpannerClientGetter) func(cont
 		if err != nil {
 			return err
 		}
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryInsertWithHooksQuery(req)}); err != nil {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{MySpannerUniaryInsertWithHooksQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
@@ -386,7 +386,7 @@ func DefaultUniarySelectWithHooksHandler(accessor SpannerClientGetter) func(cont
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, ExampleTableFromUniarySelectWithHooksQuery(req))
+		iter := cli.Single().Query(ctx, MySpannerUniarySelectWithHooksQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -402,7 +402,7 @@ func DefaultUniaryUpdateWithHooksHandler(accessor SpannerClientGetter) func(cont
 		if err != nil {
 			return err
 		}
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableFromUniaryUpdateWithHooksQuery(req)}); err != nil {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{MySpannerUniaryUpdateWithHooksQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
@@ -415,7 +415,7 @@ func DefaultUniaryDeleteWithHooksHandler(accessor SpannerClientGetter) func(cont
 		if err != nil {
 			return err
 		}
-		if _, err := cli.Apply(ctx, []*spanner.Mutation{ExampleTableRangeFromUniaryDeleteWithHooksQuery(req)}); err != nil {
+		if _, err := cli.Apply(ctx, []*spanner.Mutation{MySpannerUniaryDeleteWithHooksQuery(req)}); err != nil {
 			return err
 		}
 		next(nil) // this is an apply, it has no result
@@ -428,7 +428,7 @@ func DefaultServerStreamWithHooksHandler(accessor SpannerClientGetter) func(cont
 		if err != nil {
 			return err
 		}
-		iter := cli.Single().Query(ctx, NameFromServerStreamWithHooksQuery(req))
+		iter := cli.Single().Query(ctx, MySpannerServerStreamWithHooksQuery(req))
 		if err := iter.Do(func(r *spanner.Row) error {
 			next(r)
 			return nil
@@ -442,7 +442,7 @@ func DefaultClientStreamUpdateWithHooksHandler(accessor SpannerClientGetter) fun
 	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
 		var muts []*spanner.Mutation
 		feed := func(req *Test_ExampleTableForMySpanner) {
-			muts = append(muts, ExampleTableFromClientStreamUpdateWithHooksQuery(req))
+			muts = append(muts, MySpannerClientStreamUpdateWithHooksQuery(req))
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()

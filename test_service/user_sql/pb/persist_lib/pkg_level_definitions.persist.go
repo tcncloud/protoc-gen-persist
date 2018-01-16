@@ -20,6 +20,64 @@ type Runable interface {
 	QueryRow(string, ...interface{}) *sql.Row
 	Exec(string, ...interface{}) (sql.Result, error)
 }
+type Result struct {
+	result sql.Result
+	row    *sql.Row
+	rows   *sql.Rows
+	err    error
+}
+
+func newResultFromSqlResult(r sql.Result) *Result {
+	return &Result{result: r}
+}
+func newResultFromRow(r *sql.Row) *Result {
+	return &Result{row: r}
+}
+func newResultFromRows(r *sql.Rows) *Result {
+	return &Result{rows: r}
+}
+func newResultFromErr(err error) *Result {
+	return &Result{err: err}
+}
+func (r *Result) Do(fun func(Scanable) error) error {
+	if r.err != nil {
+		return r.err
+	}
+	if r.row != nil {
+		if err := fun(r.row); err != nil {
+			return err
+		}
+	}
+	if r.rows != nil {
+		defer r.rows.Close()
+		for r.rows.Next() {
+			if err := fun(r.rows); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// returns sql.ErrNoRows if it did not scan into dest
+func (r *Result) Scan(dest ...interface{}) error {
+	if r.result != nil {
+		return sql.ErrNoRows
+	} else if r.row != nil {
+		return r.row.Scan(dest...)
+	} else if r.rows != nil {
+		err := r.rows.Scan(dest...)
+		if r.rows.Next() {
+			r.rows.Close()
+		}
+		return err
+	}
+	return sql.ErrNoRows
+}
+func (r *Result) Err() error {
+	return r.err
+}
+
 type EmptyForUServ struct {
 }
 

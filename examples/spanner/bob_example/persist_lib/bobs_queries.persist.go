@@ -2,7 +2,7 @@ package persist_lib
 
 import "cloud.google.com/go/spanner"
 
-func BobFromDeleteBobsQuery(req BobFromDeleteBobsQueryParams) *spanner.Mutation {
+func BobsDeleteBobsQuery(req BobsDeleteBobsQueryParams) *spanner.Mutation {
 	return spanner.Delete("bob_table", spanner.KeyRange{
 		Start: spanner.Key{
 			"Bob",
@@ -14,20 +14,20 @@ func BobFromDeleteBobsQuery(req BobFromDeleteBobsQueryParams) *spanner.Mutation 
 		Kind: spanner.ClosedOpen,
 	})
 }
-func BobFromPutBobsQuery(req BobFromPutBobsQueryParams) *spanner.Mutation {
+func BobsPutBobsQuery(req BobsPutBobsQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("bob_table", map[string]interface{}{
 		"id":         req.GetId(),
 		"name":       req.GetName(),
 		"start_time": req.GetStartTime(),
 	})
 }
-func EmptyFromGetBobsQuery(req EmptyFromGetBobsQueryParams) spanner.Statement {
+func BobsGetBobsQuery(req BobsGetBobsQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "SELECT * from bob_table",
 		Params: map[string]interface{}{},
 	}
 }
-func NamesFromGetPeopleFromNamesQuery(req NamesFromGetPeopleFromNamesQueryParams) spanner.Statement {
+func BobsGetPeopleFromNamesQuery(req BobsGetPeopleFromNamesQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * FROM bob_table WHERE name IN UNNEST(@names)",
 		Params: map[string]interface{}{
@@ -36,16 +36,16 @@ func NamesFromGetPeopleFromNamesQuery(req NamesFromGetPeopleFromNamesQueryParams
 	}
 }
 
-type BobFromDeleteBobsQueryParams interface {
+type BobsDeleteBobsQueryParams interface {
 	GetStartTime() interface{}
 }
-type BobFromPutBobsQueryParams interface {
-	GetStartTime() interface{}
+type BobsPutBobsQueryParams interface {
 	GetId() int64
 	GetName() string
+	GetStartTime() interface{}
 }
-type EmptyFromGetBobsQueryParams interface {
+type BobsGetBobsQueryParams interface {
 }
-type NamesFromGetPeopleFromNamesQueryParams interface {
+type BobsGetPeopleFromNamesQueryParams interface {
 	GetNames() []string
 }

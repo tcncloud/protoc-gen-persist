@@ -144,6 +144,22 @@ var _ = Describe("persist", func() {
 		}
 	})
 
+	It("can change all names to foo", func() {
+		stream, err := client.UpdateAllNames(context.Background(), &pb.Empty{})
+		Expect(err).ToNot(HaveOccurred())
+		var resps int
+		for {
+			u, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			Expect(err).ToNot(HaveOccurred())
+			Expect(u.Name).To(Equal("foo"))
+			resps++
+		}
+		Expect(resps).To(BeNumerically(">", 0))
+	})
+
 	It("can drop a table", func() {
 		_, err := client.DropTable(context.Background(), &pb.Empty{})
 		Expect(err).ToNot(HaveOccurred())

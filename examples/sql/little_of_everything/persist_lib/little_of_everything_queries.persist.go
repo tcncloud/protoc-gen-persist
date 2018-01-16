@@ -1,43 +1,51 @@
 package persist_lib
 
-import "database/sql"
-
-func ExampleTable1FromUnaryExample1Query(tx Runable, req ExampleTable1FromUnaryExample1QueryParams) *sql.Row {
-	return tx.QueryRow(
+func ExampleService1UnaryExample1Query(tx Runable, req ExampleService1UnaryExample1QueryParams) *Result {
+	row := tx.QueryRow(
 		"SELECT id AS 'table_key', id, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1 ",
 		req.GetTableId(),
 		req.GetStartTime(),
 	)
+	return newResultFromRow(row)
 }
-func TestFromUnaryExample2Query(tx Runable, req TestFromUnaryExample2QueryParams) *sql.Row {
-	return tx.QueryRow(
+func ExampleService1UnaryExample2Query(tx Runable, req ExampleService1UnaryExample2QueryParams) *Result {
+	row := tx.QueryRow(
 		"SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1 ",
 		req.GetId(),
 	)
+	return newResultFromRow(row)
 }
-func ExampleTable1FromServerStreamSelectQuery(tx Runable, req ExampleTable1FromServerStreamSelectQueryParams) (*sql.Rows, error) {
-	return tx.Query(
+func ExampleService1ServerStreamSelectQuery(tx Runable, req ExampleService1ServerStreamSelectQueryParams) *Result {
+	res, err := tx.Query(
 		"SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1 ",
 		req.GetTableId(),
 	)
+	if err != nil {
+		return newResultFromErr(err)
+	}
+	return newResultFromRows(res)
 }
-func ExampleTable1FromClientStreamingExampleQuery(tx Runable, req ExampleTable1FromClientStreamingExampleQueryParams) (sql.Result, error) {
-	return tx.Exec(
+func ExampleService1ClientStreamingExampleQuery(tx Runable, req ExampleService1ClientStreamingExampleQueryParams) *Result {
+	res, err := tx.Exec(
 		"SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1 ",
 		req.GetTableId(),
 	)
+	if err != nil {
+		return newResultFromErr(err)
+	}
+	return newResultFromSqlResult(res)
 }
 
-type ExampleTable1FromUnaryExample1QueryParams interface {
+type ExampleService1UnaryExample1QueryParams interface {
 	GetTableId() int32
 	GetStartTime() interface{}
 }
-type TestFromUnaryExample2QueryParams interface {
+type ExampleService1UnaryExample2QueryParams interface {
 	GetId() int32
 }
-type ExampleTable1FromServerStreamSelectQueryParams interface {
+type ExampleService1ServerStreamSelectQueryParams interface {
 	GetTableId() int32
 }
-type ExampleTable1FromClientStreamingExampleQueryParams interface {
+type ExampleService1ClientStreamingExampleQueryParams interface {
 	GetTableId() int32
 }

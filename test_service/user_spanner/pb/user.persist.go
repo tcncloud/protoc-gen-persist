@@ -20,6 +20,7 @@ type UServImpl struct {
 }
 type RestOfUServHandlers interface {
 	CreateTable(ctx context.Context, req *Empty) (*Empty, error)
+	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
 	DropTable(ctx context.Context, req *Empty) (*Empty, error)
 }
 type UServImplBuilder struct {
@@ -48,6 +49,7 @@ func (b *UServImplBuilder) WithDefaultQueryHandlers() *UServImplBuilder {
 		GetAllUsersHandler:     persist_lib.DefaultGetAllUsersHandler(accessor),
 		SelectUserByIdHandler:  persist_lib.DefaultSelectUserByIdHandler(accessor),
 		UpdateUserNamesHandler: persist_lib.DefaultUpdateUserNamesHandler(accessor),
+		UpdateNameToFooHandler: persist_lib.DefaultUpdateNameToFooHandler(accessor),
 		GetFriendsHandler:      persist_lib.DefaultGetFriendsHandler(accessor),
 	}
 	b.queryHandlers = queryHandlers
@@ -70,6 +72,9 @@ func (b *UServImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.UServQue
 	}
 	if p.UpdateUserNamesHandler == nil {
 		p.UpdateUserNamesHandler = persist_lib.DefaultUpdateUserNamesHandler(accessor)
+	}
+	if p.UpdateNameToFooHandler == nil {
+		p.UpdateNameToFooHandler = persist_lib.DefaultUpdateNameToFooHandler(accessor)
 	}
 	if p.GetFriendsHandler == nil {
 		p.GetFriendsHandler = persist_lib.DefaultGetFriendsHandler(accessor)
@@ -102,13 +107,119 @@ func (b *UServImplBuilder) MustBuild() *UServImpl {
 	}
 	return s
 }
+func EmptyToUServPersistType(req *Empty) (*persist_lib.EmptyForUServ, error) {
+	var err error
+	_ = err
+	params := &persist_lib.EmptyForUServ{}
+	return params, nil
+}
+func EmptyFromUServRow(row *spanner.Row) (*Empty, error) {
+	res := &Empty{}
+	return res, nil
+}
+func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
+	var err error
+	_ = err
+	params := &persist_lib.UserForUServ{}
+	// set 'User.id' in params
+	params.Id = req.Id
+	// set 'User.name' in params
+	params.Name = req.Name
+	// set 'User.friends' in params
+	if req.Friends == nil {
+		req.Friends = new(Friends)
+	}
+	{
+		raw, err := proto.Marshal(req.Friends)
+		if err != nil {
+			return nil, err
+		}
+		params.Friends = raw
+	}
+	// set 'User.created_on' in params
+	if params.CreatedOn, err = (TimeString{}).ToSpanner(req.CreatedOn).SpannerValue(); err != nil {
+		return nil, err
+	}
+	// set 'User.favorite_numbers' in params
+	params.FavoriteNumbers = req.FavoriteNumbers
+	return params, nil
+}
+func UserFromUServRow(row *spanner.Row) (*User, error) {
+	res := &User{}
+	var Id_ int64
+	{
+		local := &spanner.NullInt64{}
+		if err := row.ColumnByName("id", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Id_ = local.Int64
+		}
+		res.Id = Id_
+	}
+	var Name_ string
+	{
+		local := &spanner.NullString{}
+		if err := row.ColumnByName("name", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Name_ = local.StringVal
+		}
+		res.Name = Name_
+	}
+	var Friends_ []byte
+	if err := row.ColumnByName("friends", &Friends_); err != nil {
+		return nil, err
+	}
+	{
+		local := new(Friends)
+		if err := proto.Unmarshal(Friends_, local); err != nil {
+			return nil, err
+		}
+		res.Friends = local
+	}
+	var CreatedOn_ = new(spanner.GenericColumnValue)
+	if err := row.ColumnByName("created_on", CreatedOn_); err != nil {
+		return nil, err
+	}
+	{
+		local := &TimeString{}
+		if err := local.SpannerScan(CreatedOn_); err != nil {
+			return nil, err
+		}
+		res.CreatedOn = local.ToProto()
+	}
+	var FavoriteNumbers_ []int64
+	{
+		local := make([]spanner.NullInt64, 0)
+		if err := row.ColumnByName("favorite_numbers", &local); err != nil {
+			return nil, err
+		}
+		for _, l := range local {
+			if l.Valid {
+				FavoriteNumbers_ = append(FavoriteNumbers_, l.Int64)
+				res.FavoriteNumbers = FavoriteNumbers_
+			}
+		}
+	}
+	return res, nil
+}
+func FriendsToUServPersistType(req *Friends) (*persist_lib.FriendsForUServ, error) {
+	var err error
+	_ = err
+	params := &persist_lib.FriendsForUServ{}
+	// set 'Friends.names' in params
+	params.Names = req.Names
+	return params, nil
+}
 func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
 	return s.FORWARDED.CreateTable(ctx, req)
 }
 func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	var err error
 	_ = err
-	res := Empty{}
+	res := &Empty{}
 	feed, stop := s.PERSIST.InsertUsers(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -123,31 +234,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		} else if beforeRes != nil {
 			continue
 		}
-		params := &persist_lib.UserForUServ{}
-		err = func() error {
-			// set 'User.id' in params
-			params.Id = req.Id
-			// set 'User.name' in params
-			params.Name = req.Name
-			// set 'User.friends' in params
-			if req.Friends == nil {
-				req.Friends = new(Friends)
-			}
-			{
-				raw, err := proto.Marshal(req.Friends)
-				if err != nil {
-					return err
-				}
-				params.Friends = raw
-			}
-			// set 'User.created_on' in params
-			if params.CreatedOn, err = (TimeString{}).ToSpanner(req.CreatedOn).SpannerValue(); err != nil {
-				return err
-			}
-			// set 'User.favorite_numbers' in params
-			params.FavoriteNumbers = req.FavoriteNumbers
-			return nil
-		}()
+		params, err := UserToUServPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -158,11 +245,12 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			return nil
-		}()
+		res, err = EmptyFromUServRow(row)
+		if err != nil {
+			return err
+		}
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
@@ -170,10 +258,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.EmptyForUServ{}
-	err = func() error {
-		return nil
-	}()
+	params, err := EmptyToUServPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -182,72 +267,12 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 		if row == nil { // there was no return data
 			return
 		}
-		res := User{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			var Friends_ []byte
-			if err := row.ColumnByName("friends", &Friends_); err != nil {
-				return err
-			}
-			{
-				local := new(Friends)
-				if err := proto.Unmarshal(Friends_, local); err != nil {
-					return err
-				}
-				res.Friends = local
-			}
-			var CreatedOn_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("created_on", CreatedOn_); err != nil {
-				return err
-			}
-			{
-				local := &TimeString{}
-				if err := local.SpannerScan(CreatedOn_); err != nil {
-					return err
-				}
-				res.CreatedOn = local.ToProto()
-			}
-			var FavoriteNumbers_ []int64
-			{
-				local := make([]spanner.NullInt64, 0)
-				if err := row.ColumnByName("favorite_numbers", &local); err != nil {
-					return err
-				}
-				for _, l := range local {
-					if l.Valid {
-						FavoriteNumbers_ = append(FavoriteNumbers_, l.Int64)
-						res.FavoriteNumbers = FavoriteNumbers_
-					}
-				}
-			}
-			return nil
-		}()
+		res, err := UserFromUServRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
@@ -260,34 +285,10 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 }
 func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error) {
 	var err error
-	var res = User{}
+	var res = &User{}
 	_ = err
 	_ = res
-	params := &persist_lib.UserForUServ{}
-	err = func() error {
-		// set 'User.id' in params
-		params.Id = req.Id
-		// set 'User.name' in params
-		params.Name = req.Name
-		// set 'User.friends' in params
-		if req.Friends == nil {
-			req.Friends = new(Friends)
-		}
-		{
-			raw, err := proto.Marshal(req.Friends)
-			if err != nil {
-				return err
-			}
-			params.Friends = raw
-		}
-		// set 'User.created_on' in params
-		if params.CreatedOn, err = (TimeString{}).ToSpanner(req.CreatedOn).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'User.favorite_numbers' in params
-		params.FavoriteNumbers = req.FavoriteNumbers
-		return nil
-	}()
+	params, err := UserToUServPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -296,67 +297,7 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 		if row == nil { // there was no return data
 			return
 		}
-		res = User{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			var Friends_ []byte
-			if err := row.ColumnByName("friends", &Friends_); err != nil {
-				return err
-			}
-			{
-				local := new(Friends)
-				if err := proto.Unmarshal(Friends_, local); err != nil {
-					return err
-				}
-				res.Friends = local
-			}
-			var CreatedOn_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("created_on", CreatedOn_); err != nil {
-				return err
-			}
-			{
-				local := &TimeString{}
-				if err := local.SpannerScan(CreatedOn_); err != nil {
-					return err
-				}
-				res.CreatedOn = local.ToProto()
-			}
-			var FavoriteNumbers_ []int64
-			{
-				local := make([]spanner.NullInt64, 0)
-				if err := row.ColumnByName("favorite_numbers", &local); err != nil {
-					return err
-				}
-				for _, l := range local {
-					if l.Valid {
-						FavoriteNumbers_ = append(FavoriteNumbers_, l.Int64)
-						res.FavoriteNumbers = FavoriteNumbers_
-					}
-				}
-			}
-			return nil
-		}()
+		res, err = UserFromUServRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -367,12 +308,12 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 	var err error
 	_ = err
-	res := Empty{}
+	res := &Empty{}
 	feed, stop := s.PERSIST.UpdateUserNames(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -381,31 +322,7 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params := &persist_lib.UserForUServ{}
-		err = func() error {
-			// set 'User.id' in params
-			params.Id = req.Id
-			// set 'User.name' in params
-			params.Name = req.Name
-			// set 'User.friends' in params
-			if req.Friends == nil {
-				req.Friends = new(Friends)
-			}
-			{
-				raw, err := proto.Marshal(req.Friends)
-				if err != nil {
-					return err
-				}
-				params.Friends = raw
-			}
-			// set 'User.created_on' in params
-			if params.CreatedOn, err = (TimeString{}).ToSpanner(req.CreatedOn).SpannerValue(); err != nil {
-				return err
-			}
-			// set 'User.favorite_numbers' in params
-			params.FavoriteNumbers = req.FavoriteNumbers
-			return nil
-		}()
+		params, err := UserToUServPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -416,24 +333,50 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			return nil
-		}()
+		res, err = EmptyFromUServRow(row)
+		if err != nil {
+			return err
+		}
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
 }
+func (s *UServImpl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
+	var err error
+	var res = &Empty{}
+	_ = err
+	_ = res
+	params, err := UserToUServPersistType(req)
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
+	err = s.PERSIST.UpdateNameToFoo(ctx, params, func(row *spanner.Row) {
+		if row == nil { // there was no return data
+			return
+		}
+		res, err = EmptyFromUServRow(row)
+		if err != nil {
+			iterErr = err
+			return
+		}
+	})
+	if err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
+	}
+	return res, nil
+}
+func (s *UServImpl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
+	return s.FORWARDED.UpdateAllNames(req, stream)
+}
 func (s *UServImpl) GetFriends(req *Friends, stream UServ_GetFriendsServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.FriendsForUServ{}
-	err = func() error {
-		// set 'Friends.names' in params
-		params.Names = req.Names
-		return nil
-	}()
+	params, err := FriendsToUServPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -442,72 +385,12 @@ func (s *UServImpl) GetFriends(req *Friends, stream UServ_GetFriendsServer) erro
 		if row == nil { // there was no return data
 			return
 		}
-		res := User{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			var Friends_ []byte
-			if err := row.ColumnByName("friends", &Friends_); err != nil {
-				return err
-			}
-			{
-				local := new(Friends)
-				if err := proto.Unmarshal(Friends_, local); err != nil {
-					return err
-				}
-				res.Friends = local
-			}
-			var CreatedOn_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("created_on", CreatedOn_); err != nil {
-				return err
-			}
-			{
-				local := &TimeString{}
-				if err := local.SpannerScan(CreatedOn_); err != nil {
-					return err
-				}
-				res.CreatedOn = local.ToProto()
-			}
-			var FavoriteNumbers_ []int64
-			{
-				local := make([]spanner.NullInt64, 0)
-				if err := row.ColumnByName("favorite_numbers", &local); err != nil {
-					return err
-				}
-				for _, l := range local {
-					if l.Valid {
-						FavoriteNumbers_ = append(FavoriteNumbers_, l.Int64)
-						res.FavoriteNumbers = FavoriteNumbers_
-					}
-				}
-			}
-			return nil
-		}()
+		res, err := UserFromUServRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})

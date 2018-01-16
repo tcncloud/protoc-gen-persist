@@ -2,20 +2,20 @@ package persist_lib
 
 import "cloud.google.com/go/spanner"
 
-func NumRowsFromExtraUnaryQuery(req NumRowsFromExtraUnaryQueryParams) spanner.Statement {
+func ExtraSrvExtraUnaryQuery(req ExtraSrvExtraUnaryQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "SELECT * FROM extra_unary",
 		Params: map[string]interface{}{},
 	}
 }
-func ExampleTableFromUniaryInsertQuery(req ExampleTableFromUniaryInsertQueryParams) *spanner.Mutation {
+func MySpannerUniaryInsertQuery(req MySpannerUniaryInsertQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"name":       "bananas",
 		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
+		"name":       "bananas",
 	})
 }
-func ExampleTableFromUniarySelectQuery(req ExampleTableFromUniarySelectQueryParams) spanner.Statement {
+func MySpannerUniarySelectQuery(req MySpannerUniarySelectQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@id AND name=@name",
 		Params: map[string]interface{}{
@@ -24,7 +24,7 @@ func ExampleTableFromUniarySelectQuery(req ExampleTableFromUniarySelectQueryPara
 		},
 	}
 }
-func SomethingFromTestNestQuery(req SomethingFromTestNestQueryParams) spanner.Statement {
+func MySpannerTestNestQuery(req MySpannerTestNestQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@thing",
 		Params: map[string]interface{}{
@@ -32,7 +32,7 @@ func SomethingFromTestNestQuery(req SomethingFromTestNestQueryParams) spanner.St
 		},
 	}
 }
-func HasTimestampFromTestEverythingQuery(req HasTimestampFromTestEverythingQueryParams) spanner.Statement {
+func MySpannerTestEverythingQuery(req MySpannerTestEverythingQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@time AND some=@some AND str=@str AND table=@table AND times = @times AND somes = @somes AND strs = @strs AND tables = @tables",
 		Params: map[string]interface{}{
@@ -47,7 +47,7 @@ func HasTimestampFromTestEverythingQuery(req HasTimestampFromTestEverythingQuery
 		},
 	}
 }
-func ExampleTableFromUniarySelectWithDirectivesQuery(req ExampleTableFromUniarySelectWithDirectivesQueryParams) spanner.Statement {
+func MySpannerUniarySelectWithDirectivesQuery(req MySpannerUniarySelectWithDirectivesQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name",
 		Params: map[string]interface{}{
@@ -56,14 +56,14 @@ func ExampleTableFromUniarySelectWithDirectivesQuery(req ExampleTableFromUniaryS
 		},
 	}
 }
-func ExampleTableFromUniaryUpdateQuery(req ExampleTableFromUniaryUpdateQueryParams) *spanner.Mutation {
+func MySpannerUniaryUpdateQuery(req MySpannerUniaryUpdateQueryParams) *spanner.Mutation {
 	return spanner.UpdateMap("example_table", map[string]interface{}{
 		"start_time": req.GetStartTime(),
 		"name":       "oranges",
 		"id":         req.GetId(),
 	})
 }
-func ExampleTableRangeFromUniaryDeleteRangeQuery(req ExampleTableRangeFromUniaryDeleteRangeQueryParams) *spanner.Mutation {
+func MySpannerUniaryDeleteRangeQuery(req MySpannerUniaryDeleteRangeQueryParams) *spanner.Mutation {
 	return spanner.Delete("example_table", spanner.KeyRange{
 		Start: spanner.Key{
 			req.GetStartId(),
@@ -74,52 +74,52 @@ func ExampleTableRangeFromUniaryDeleteRangeQuery(req ExampleTableRangeFromUniary
 		Kind: spanner.ClosedOpen,
 	})
 }
-func ExampleTableFromUniaryDeleteSingleQuery(req ExampleTableFromUniaryDeleteSingleQueryParams) *spanner.Mutation {
+func MySpannerUniaryDeleteSingleQuery(req MySpannerUniaryDeleteSingleQueryParams) *spanner.Mutation {
 	return spanner.Delete("example_table", spanner.Key{
 		"abc",
 		123,
 		req.GetId(),
 	})
 }
-func ExampleTableFromNoArgsQuery(req ExampleTableFromNoArgsQueryParams) spanner.Statement {
+func MySpannerNoArgsQuery(req MySpannerNoArgsQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "select * from example_table limit 1",
 		Params: map[string]interface{}{},
 	}
 }
-func NameFromServerStreamQuery(req NameFromServerStreamQueryParams) spanner.Statement {
+func MySpannerServerStreamQuery(req MySpannerServerStreamQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "SELECT * FROM example_table",
 		Params: map[string]interface{}{},
 	}
 }
-func ExampleTableFromClientStreamInsertQuery(req ExampleTableFromClientStreamInsertQueryParams) *spanner.Mutation {
+func MySpannerClientStreamInsertQuery(req MySpannerClientStreamInsertQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
 		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
 		"name":       3,
 	})
 }
-func ExampleTableFromClientStreamDeleteQuery(req ExampleTableFromClientStreamDeleteQueryParams) *spanner.Mutation {
+func MySpannerClientStreamDeleteQuery(req MySpannerClientStreamDeleteQueryParams) *spanner.Mutation {
 	return spanner.Delete("example_table", spanner.Key{
 		req.GetId(),
 	})
 }
-func ExampleTableFromClientStreamUpdateQuery(req ExampleTableFromClientStreamUpdateQueryParams) *spanner.Mutation {
+func MySpannerClientStreamUpdateQuery(req MySpannerClientStreamUpdateQueryParams) *spanner.Mutation {
 	return spanner.UpdateMap("example_table", map[string]interface{}{
 		"start_time": req.GetStartTime(),
 		"name":       req.GetName(),
 		"id":         req.GetId(),
 	})
 }
-func ExampleTableFromUniaryInsertWithHooksQuery(req ExampleTableFromUniaryInsertWithHooksQueryParams) *spanner.Mutation {
+func MySpannerUniaryInsertWithHooksQuery(req MySpannerUniaryInsertWithHooksQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
 		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
 		"name":       "bananas",
 	})
 }
-func ExampleTableFromUniarySelectWithHooksQuery(req ExampleTableFromUniarySelectWithHooksQueryParams) spanner.Statement {
+func MySpannerUniarySelectWithHooksQuery(req MySpannerUniarySelectWithHooksQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT * from example_table Where id=@id",
 		Params: map[string]interface{}{
@@ -127,14 +127,14 @@ func ExampleTableFromUniarySelectWithHooksQuery(req ExampleTableFromUniarySelect
 		},
 	}
 }
-func ExampleTableFromUniaryUpdateWithHooksQuery(req ExampleTableFromUniaryUpdateWithHooksQueryParams) *spanner.Mutation {
+func MySpannerUniaryUpdateWithHooksQuery(req MySpannerUniaryUpdateWithHooksQueryParams) *spanner.Mutation {
 	return spanner.UpdateMap("example_table", map[string]interface{}{
 		"start_time": req.GetStartTime(),
 		"name":       "oranges",
 		"id":         req.GetId(),
 	})
 }
-func ExampleTableRangeFromUniaryDeleteWithHooksQuery(req ExampleTableRangeFromUniaryDeleteWithHooksQueryParams) *spanner.Mutation {
+func MySpannerUniaryDeleteWithHooksQuery(req MySpannerUniaryDeleteWithHooksQueryParams) *spanner.Mutation {
 	return spanner.Delete("example_table", spanner.KeyRange{
 		Start: spanner.Key{
 			req.GetStartId(),
@@ -145,96 +145,96 @@ func ExampleTableRangeFromUniaryDeleteWithHooksQuery(req ExampleTableRangeFromUn
 		Kind: spanner.ClosedOpen,
 	})
 }
-func NameFromServerStreamWithHooksQuery(req NameFromServerStreamWithHooksQueryParams) spanner.Statement {
+func MySpannerServerStreamWithHooksQuery(req MySpannerServerStreamWithHooksQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "SELECT * FROM example_table",
 		Params: map[string]interface{}{},
 	}
 }
-func ExampleTableFromClientStreamUpdateWithHooksQuery(req ExampleTableFromClientStreamUpdateWithHooksQueryParams) *spanner.Mutation {
+func MySpannerClientStreamUpdateWithHooksQuery(req MySpannerClientStreamUpdateWithHooksQueryParams) *spanner.Mutation {
 	return spanner.UpdateMap("example_table", map[string]interface{}{
 		"name": "asdf",
 		"id":   req.GetId(),
 	})
 }
 
-type NumRowsFromExtraUnaryQueryParams interface {
+type ExtraSrvExtraUnaryQueryParams interface {
 }
-type ExampleTableFromUniaryInsertQueryParams interface {
+type MySpannerUniaryInsertQueryParams interface {
 	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
 }
-type ExampleTableFromUniarySelectQueryParams interface {
+type MySpannerUniarySelectQueryParams interface {
 	GetId() int64
 	GetName() string
 }
-type SomethingFromTestNestQueryParams interface {
+type MySpannerTestNestQueryParams interface {
 	GetThing() []byte
 }
-type HasTimestampFromTestEverythingQueryParams interface {
+type MySpannerTestEverythingQueryParams interface {
+	GetSome() []byte
+	GetStr() string
 	GetTable() []byte
 	GetTimes() [][]byte
 	GetSomes() [][]byte
 	GetStrs() []string
 	GetTables() [][]byte
 	GetTime() interface{}
-	GetSome() []byte
-	GetStr() string
 }
-type ExampleTableFromUniarySelectWithDirectivesQueryParams interface {
+type MySpannerUniarySelectWithDirectivesQueryParams interface {
 	GetId() int64
 	GetName() string
 }
-type ExampleTableFromUniaryUpdateQueryParams interface {
-	GetName() string
-	GetId() int64
-	GetStartTime() interface{}
-}
-type ExampleTableRangeFromUniaryDeleteRangeQueryParams interface {
-	GetStartId() int64
-	GetEndId() int64
-}
-type ExampleTableFromUniaryDeleteSingleQueryParams interface {
-	GetId() int64
-}
-type ExampleTableFromNoArgsQueryParams interface {
-}
-type NameFromServerStreamQueryParams interface {
-}
-type ExampleTableFromClientStreamInsertQueryParams interface {
-	GetId() int64
-	GetStartTime() interface{}
-	GetName() string
-}
-type ExampleTableFromClientStreamDeleteQueryParams interface {
-	GetId() int64
-}
-type ExampleTableFromClientStreamUpdateQueryParams interface {
+type MySpannerUniaryUpdateQueryParams interface {
 	GetStartTime() interface{}
 	GetName() string
 	GetId() int64
 }
-type ExampleTableFromUniaryInsertWithHooksQueryParams interface {
-	GetStartTime() interface{}
-	GetName() string
-	GetId() int64
-}
-type ExampleTableFromUniarySelectWithHooksQueryParams interface {
-	GetId() int64
-}
-type ExampleTableFromUniaryUpdateWithHooksQueryParams interface {
-	GetStartTime() interface{}
-	GetName() string
-	GetId() int64
-}
-type ExampleTableRangeFromUniaryDeleteWithHooksQueryParams interface {
+type MySpannerUniaryDeleteRangeQueryParams interface {
 	GetEndId() int64
 	GetStartId() int64
 }
-type NameFromServerStreamWithHooksQueryParams interface {
-}
-type ExampleTableFromClientStreamUpdateWithHooksQueryParams interface {
+type MySpannerUniaryDeleteSingleQueryParams interface {
 	GetId() int64
+}
+type MySpannerNoArgsQueryParams interface {
+}
+type MySpannerServerStreamQueryParams interface {
+}
+type MySpannerClientStreamInsertQueryParams interface {
+	GetStartTime() interface{}
 	GetName() string
+	GetId() int64
+}
+type MySpannerClientStreamDeleteQueryParams interface {
+	GetId() int64
+}
+type MySpannerClientStreamUpdateQueryParams interface {
+	GetName() string
+	GetId() int64
+	GetStartTime() interface{}
+}
+type MySpannerUniaryInsertWithHooksQueryParams interface {
+	GetId() int64
+	GetStartTime() interface{}
+	GetName() string
+}
+type MySpannerUniarySelectWithHooksQueryParams interface {
+	GetId() int64
+}
+type MySpannerUniaryUpdateWithHooksQueryParams interface {
+	GetStartTime() interface{}
+	GetName() string
+	GetId() int64
+}
+type MySpannerUniaryDeleteWithHooksQueryParams interface {
+	GetStartId() int64
+	GetEndId() int64
+}
+type MySpannerServerStreamWithHooksQueryParams interface {
+}
+type MySpannerClientStreamUpdateWithHooksQueryParams interface {
+	GetName() string
+	GetId() int64
 }

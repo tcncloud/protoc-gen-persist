@@ -1,70 +1,103 @@
 package persist_lib
 
-import "database/sql"
-
-func EmptyFromCreateTableQuery(tx Runable, req EmptyFromCreateTableQueryParams) (sql.Result, error) {
-	return tx.Exec(
+func UServCreateTableQuery(tx Runable, req UServCreateTableQueryParams) *Result {
+	res, err := tx.Exec(
 		"CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50)) ",
 	)
+	if err != nil {
+		return newResultFromErr(err)
+	}
+	return newResultFromSqlResult(res)
 }
-func UserFromInsertUsersQuery(tx Runable, req UserFromInsertUsersQueryParams) (sql.Result, error) {
-	return tx.Exec(
+func UServInsertUsersQuery(tx Runable, req UServInsertUsersQueryParams) *Result {
+	res, err := tx.Exec(
 		"INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4) ",
 		req.GetId(),
 		req.GetName(),
 		req.GetFriends(),
 		req.GetCreatedOn(),
 	)
+	if err != nil {
+		return newResultFromErr(err)
+	}
+	return newResultFromSqlResult(res)
 }
-func EmptyFromGetAllUsersQuery(tx Runable, req EmptyFromGetAllUsersQueryParams) (*sql.Rows, error) {
-	return tx.Query(
+func UServGetAllUsersQuery(tx Runable, req UServGetAllUsersQueryParams) *Result {
+	res, err := tx.Query(
 		"SELECT id, name, friends, created_on FROM users ",
 	)
+	if err != nil {
+		return newResultFromErr(err)
+	}
+	return newResultFromRows(res)
 }
-func UserFromSelectUserByIdQuery(tx Runable, req UserFromSelectUserByIdQueryParams) *sql.Row {
-	return tx.QueryRow(
+func UServSelectUserByIdQuery(tx Runable, req UServSelectUserByIdQueryParams) *Result {
+	row := tx.QueryRow(
 		"SELECT id, name, friends, created_on FROM users WHERE id = $1 ",
 		req.GetId(),
 	)
+	return newResultFromRow(row)
 }
-func UserFromUpdateUserNamesQuery(tx Runable, req UserFromUpdateUserNamesQueryParams) *sql.Row {
-	return tx.QueryRow(
+func UServUpdateUserNamesQuery(tx Runable, req UServUpdateUserNamesQueryParams) *Result {
+	row := tx.QueryRow(
 		"Update users set name = $1 WHERE id = $2  RETURNING id, name, friends, created_on ",
 		req.GetName(),
 		req.GetId(),
 	)
+	return newResultFromRow(row)
 }
-func FriendsQueryFromGetFriendsQuery(tx Runable, req FriendsQueryFromGetFriendsQueryParams) (*sql.Rows, error) {
-	return tx.Query(
+func UServUpdateNameToFooQuery(tx Runable, req UServUpdateNameToFooQueryParams) *Result {
+	res, err := tx.Exec(
+		"Update users set name = 'foo' WHERE id = $1 ",
+		req.GetId(),
+	)
+	if err != nil {
+		return newResultFromErr(err)
+	}
+	return newResultFromSqlResult(res)
+}
+func UServGetFriendsQuery(tx Runable, req UServGetFriendsQueryParams) *Result {
+	res, err := tx.Query(
 		"SELECT id, name, friends, created_on FROM users WHERE name = ANY($1) ",
 		req.GetNames(),
 	)
+	if err != nil {
+		return newResultFromErr(err)
+	}
+	return newResultFromRows(res)
 }
-func EmptyFromDropTableQuery(tx Runable, req EmptyFromDropTableQueryParams) (sql.Result, error) {
-	return tx.Exec(
+func UServDropTableQuery(tx Runable, req UServDropTableQueryParams) *Result {
+	res, err := tx.Exec(
 		"drop table users ",
 	)
+	if err != nil {
+		return newResultFromErr(err)
+	}
+	return newResultFromSqlResult(res)
 }
 
-type EmptyFromCreateTableQueryParams interface {
+type UServCreateTableQueryParams interface {
 }
-type UserFromInsertUsersQueryParams interface {
+type UServInsertUsersQueryParams interface {
 	GetId() int64
 	GetName() string
 	GetFriends() []byte
 	GetCreatedOn() interface{}
 }
-type EmptyFromGetAllUsersQueryParams interface {
+type UServGetAllUsersQueryParams interface {
 }
-type UserFromSelectUserByIdQueryParams interface {
+type UServSelectUserByIdQueryParams interface {
 	GetId() int64
 }
-type UserFromUpdateUserNamesQueryParams interface {
+type UServUpdateUserNamesQueryParams interface {
 	GetName() string
 	GetId() int64
 }
-type FriendsQueryFromGetFriendsQueryParams interface {
+type UServUpdateNameToFooQueryParams interface {
+	GetId() int64
+}
+type UServGetFriendsQueryParams interface {
 	GetNames() interface{}
 }
-type EmptyFromDropTableQueryParams interface {
+type UServDropTableQueryParams interface {
 }

@@ -96,23 +96,96 @@ func (b *BobsImplBuilder) MustBuild() *BobsImpl {
 	}
 	return s
 }
+func BobToBobsPersistType(req *Bob) (*persist_lib.BobForBobs, error) {
+	var err error
+	_ = err
+	params := &persist_lib.BobForBobs{}
+	// set 'Bob.id' in params
+	params.Id = req.Id
+	// set 'Bob.start_time' in params
+	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+		return nil, err
+	}
+	// set 'Bob.name' in params
+	params.Name = req.Name
+	return params, nil
+}
+func EmptyFromBobsRow(row *spanner.Row) (*Empty, error) {
+	res := &Empty{}
+	return res, nil
+}
+func NumRowsFromBobsRow(row *spanner.Row) (*NumRows, error) {
+	res := &NumRows{}
+	var Count_ int64
+	{
+		local := &spanner.NullInt64{}
+		if err := row.ColumnByName("count", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Count_ = local.Int64
+		}
+		res.Count = Count_
+	}
+	return res, nil
+}
+func EmptyToBobsPersistType(req *Empty) (*persist_lib.EmptyForBobs, error) {
+	var err error
+	_ = err
+	params := &persist_lib.EmptyForBobs{}
+	return params, nil
+}
+func BobFromBobsRow(row *spanner.Row) (*Bob, error) {
+	res := &Bob{}
+	var Id_ int64
+	{
+		local := &spanner.NullInt64{}
+		if err := row.ColumnByName("id", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Id_ = local.Int64
+		}
+		res.Id = Id_
+	}
+	var StartTime_ = new(spanner.GenericColumnValue)
+	if err := row.ColumnByName("start_time", StartTime_); err != nil {
+		return nil, err
+	}
+	{
+		local := &mytime.MyTime{}
+		if err := local.SpannerScan(StartTime_); err != nil {
+			return nil, err
+		}
+		res.StartTime = local.ToProto()
+	}
+	var Name_ string
+	{
+		local := &spanner.NullString{}
+		if err := row.ColumnByName("name", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Name_ = local.StringVal
+		}
+		res.Name = Name_
+	}
+	return res, nil
+}
+func NamesToBobsPersistType(req *Names) (*persist_lib.NamesForBobs, error) {
+	var err error
+	_ = err
+	params := &persist_lib.NamesForBobs{}
+	// set 'Names.names' in params
+	params.Names = req.Names
+	return params, nil
+}
 func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 	var err error
-	var res = Empty{}
+	var res = &Empty{}
 	_ = err
 	_ = res
-	params := &persist_lib.BobForBobs{}
-	err = func() error {
-		// set 'Bob.id' in params
-		params.Id = req.Id
-		// set 'Bob.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'Bob.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := BobToBobsPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -121,19 +194,23 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 		if row == nil { // there was no return data
 			return
 		}
-		res = Empty{}
+		res, err = EmptyFromBobsRow(row)
+		if err != nil {
+			iterErr = err
+			return
+		}
 	})
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 	var err error
 	_ = err
-	res := NumRows{}
+	res := &NumRows{}
 	feed, stop := s.PERSIST.PutBobs(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -142,18 +219,7 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params := &persist_lib.BobForBobs{}
-		err = func() error {
-			// set 'Bob.id' in params
-			params.Id = req.Id
-			// set 'Bob.start_time' in params
-			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-				return err
-			}
-			// set 'Bob.name' in params
-			params.Name = req.Name
-			return nil
-		}()
+		params, err := BobToBobsPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -164,22 +230,12 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			var Count_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("count", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Count_ = local.Int64
-				}
-				res.Count = Count_
-			}
-			return nil
-		}()
+		res, err = NumRowsFromBobsRow(row)
+		if err != nil {
+			return err
+		}
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
@@ -187,10 +243,7 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.EmptyForBobs{}
-	err = func() error {
-		return nil
-	}()
+	params, err := EmptyToBobsPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -199,48 +252,12 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 		if row == nil { // there was no return data
 			return
 		}
-		res := Bob{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err := BobFromBobsRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
@@ -254,12 +271,7 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNamesServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.NamesForBobs{}
-	err = func() error {
-		// set 'Names.names' in params
-		params.Names = req.Names
-		return nil
-	}()
+	params, err := NamesToBobsPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -268,48 +280,12 @@ func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNames
 		if row == nil { // there was no return data
 			return
 		}
-		res := Bob{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err := BobFromBobsRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})

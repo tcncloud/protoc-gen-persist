@@ -2,7 +2,7 @@ package persist_lib
 
 import "cloud.google.com/go/spanner"
 
-func UserFromInsertUsersQuery(req UserFromInsertUsersQueryParams) *spanner.Mutation {
+func UServInsertUsersQuery(req UServInsertUsersQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("users", map[string]interface{}{
 		"id":               req.GetId(),
 		"name":             req.GetName(),
@@ -11,13 +11,13 @@ func UserFromInsertUsersQuery(req UserFromInsertUsersQueryParams) *spanner.Mutat
 		"favorite_numbers": req.GetFavoriteNumbers(),
 	})
 }
-func EmptyFromGetAllUsersQuery(req EmptyFromGetAllUsersQueryParams) spanner.Statement {
+func UServGetAllUsersQuery(req UServGetAllUsersQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL:    "SELECT id, name, friends, created_on, favorite_numbers FROM users",
 		Params: map[string]interface{}{},
 	}
 }
-func UserFromSelectUserByIdQuery(req UserFromSelectUserByIdQueryParams) spanner.Statement {
+func UServSelectUserByIdQuery(req UServSelectUserByIdQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT id, name, friends, created_on, favorite_numbers  FROM users WHERE id = @id",
 		Params: map[string]interface{}{
@@ -25,13 +25,19 @@ func UserFromSelectUserByIdQuery(req UserFromSelectUserByIdQueryParams) spanner.
 		},
 	}
 }
-func UserFromUpdateUserNamesQuery(req UserFromUpdateUserNamesQueryParams) *spanner.Mutation {
+func UServUpdateUserNamesQuery(req UServUpdateUserNamesQueryParams) *spanner.Mutation {
 	return spanner.UpdateMap("users", map[string]interface{}{
 		"name": req.GetName(),
 		"id":   req.GetId(),
 	})
 }
-func FriendsFromGetFriendsQuery(req FriendsFromGetFriendsQueryParams) spanner.Statement {
+func UServUpdateNameToFooQuery(req UServUpdateNameToFooQueryParams) *spanner.Mutation {
+	return spanner.UpdateMap("users", map[string]interface{}{
+		"name": "foo",
+		"id":   req.GetId(),
+	})
+}
+func UServGetFriendsQuery(req UServGetFriendsQueryParams) spanner.Statement {
 	return spanner.Statement{
 		SQL: "SELECT id, name, friends, created_on, favorite_numbers  FROM users WHERE name IN UNNEST(@names)",
 		Params: map[string]interface{}{
@@ -40,22 +46,26 @@ func FriendsFromGetFriendsQuery(req FriendsFromGetFriendsQueryParams) spanner.St
 	}
 }
 
-type UserFromInsertUsersQueryParams interface {
-	GetCreatedOn() interface{}
-	GetFavoriteNumbers() []int64
+type UServInsertUsersQueryParams interface {
 	GetId() int64
 	GetName() string
 	GetFriends() []byte
+	GetCreatedOn() interface{}
+	GetFavoriteNumbers() []int64
 }
-type EmptyFromGetAllUsersQueryParams interface {
+type UServGetAllUsersQueryParams interface {
 }
-type UserFromSelectUserByIdQueryParams interface {
+type UServSelectUserByIdQueryParams interface {
 	GetId() int64
 }
-type UserFromUpdateUserNamesQueryParams interface {
+type UServUpdateUserNamesQueryParams interface {
 	GetName() string
 	GetId() int64
 }
-type FriendsFromGetFriendsQueryParams interface {
+type UServUpdateNameToFooQueryParams interface {
+	GetName() string
+	GetId() int64
+}
+type UServGetFriendsQueryParams interface {
 	GetNames() []string
 }

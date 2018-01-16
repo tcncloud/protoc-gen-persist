@@ -89,17 +89,78 @@ func (b *ExtraSrvImplBuilder) MustBuild() *ExtraSrvImpl {
 	}
 	return s
 }
+func NumRowsToExtraSrvPersistType(req *test.NumRows) (*persist_lib.Test_NumRowsForExtraSrv, error) {
+	var err error
+	_ = err
+	params := &persist_lib.Test_NumRowsForExtraSrv{}
+	// set 'NumRows.count' in params
+	params.Count = req.Count
+	return params, nil
+}
+func ExampleTableFromExtraSrvRow(row *spanner.Row) (*test.ExampleTable, error) {
+	res := &test.ExampleTable{}
+	var Id_ int64
+	{
+		local := &spanner.NullInt64{}
+		if err := row.ColumnByName("id", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Id_ = local.Int64
+		}
+		res.Id = Id_
+	}
+	var StartTime_ []byte
+	if err := row.ColumnByName("start_time", &StartTime_); err != nil {
+		return nil, err
+	}
+	{
+		local := new(timestamp.Timestamp)
+		if err := proto.Unmarshal(StartTime_, local); err != nil {
+			return nil, err
+		}
+		res.StartTime = local
+	}
+	var Name_ string
+	{
+		local := &spanner.NullString{}
+		if err := row.ColumnByName("name", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Name_ = local.StringVal
+		}
+		res.Name = Name_
+	}
+	return res, nil
+}
+func ExampleTableToExtraSrvPersistType(req *test.ExampleTable) (*persist_lib.Test_ExampleTableForExtraSrv, error) {
+	var err error
+	_ = err
+	params := &persist_lib.Test_ExampleTableForExtraSrv{}
+	// set 'ExampleTable.id' in params
+	params.Id = req.Id
+	// set 'ExampleTable.start_time' in params
+	if req.StartTime == nil {
+		req.StartTime = new(timestamp.Timestamp)
+	}
+	{
+		raw, err := proto.Marshal(req.StartTime)
+		if err != nil {
+			return nil, err
+		}
+		params.StartTime = raw
+	}
+	// set 'ExampleTable.name' in params
+	params.Name = req.Name
+	return params, nil
+}
 func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_NumRowsForExtraSrv{}
-	err = func() error {
-		// set 'NumRows.count' in params
-		params.Count = req.Count
-		return nil
-	}()
+	params, err := NumRowsToExtraSrvPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -108,43 +169,7 @@ func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ []byte
-			if err := row.ColumnByName("start_time", &StartTime_); err != nil {
-				return err
-			}
-			{
-				local := new(timestamp.Timestamp)
-				if err := proto.Unmarshal(StartTime_, local); err != nil {
-					return err
-				}
-				res.StartTime = local
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromExtraSrvRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -155,7 +180,7 @@ func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *ExtraSrvImpl) ExtraMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	return s.FORWARDED.ExtraMethod(ctx, req)
@@ -303,23 +328,343 @@ func (b *MySpannerImplBuilder) MustBuild() *MySpannerImpl {
 	}
 	return s
 }
+func ExampleTableToMySpannerPersistType(req *test.ExampleTable) (*persist_lib.Test_ExampleTableForMySpanner, error) {
+	var err error
+	_ = err
+	params := &persist_lib.Test_ExampleTableForMySpanner{}
+	// set 'ExampleTable.id' in params
+	params.Id = req.Id
+	// set 'ExampleTable.start_time' in params
+	if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
+		return nil, err
+	}
+	// set 'ExampleTable.name' in params
+	params.Name = req.Name
+	return params, nil
+}
+func ExampleTableFromMySpannerRow(row *spanner.Row) (*test.ExampleTable, error) {
+	res := &test.ExampleTable{}
+	var Id_ int64
+	{
+		local := &spanner.NullInt64{}
+		if err := row.ColumnByName("id", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Id_ = local.Int64
+		}
+		res.Id = Id_
+	}
+	var StartTime_ = new(spanner.GenericColumnValue)
+	if err := row.ColumnByName("start_time", StartTime_); err != nil {
+		return nil, err
+	}
+	{
+		local := &mytime.MyTime{}
+		if err := local.SpannerScan(StartTime_); err != nil {
+			return nil, err
+		}
+		res.StartTime = local.ToProto()
+	}
+	var Name_ string
+	{
+		local := &spanner.NullString{}
+		if err := row.ColumnByName("name", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Name_ = local.StringVal
+		}
+		res.Name = Name_
+	}
+	return res, nil
+}
+func SomethingToMySpannerPersistType(req *Something) (*persist_lib.SomethingForMySpanner, error) {
+	var err error
+	_ = err
+	params := &persist_lib.SomethingForMySpanner{}
+	// set 'Something.thing' in params
+	if req.Thing == nil {
+		req.Thing = new(Something_SomethingElse)
+	}
+	{
+		raw, err := proto.Marshal(req.Thing)
+		if err != nil {
+			return nil, err
+		}
+		params.Thing = raw
+	}
+	// set 'Something.myenum' in params
+	params.Myenum = int32(req.Myenum)
+	// set 'Something.mappedenum' in params
+	params.Mappedenum = int32(req.Mappedenum)
+	return params, nil
+}
+func SomethingFromMySpannerRow(row *spanner.Row) (*Something, error) {
+	res := &Something{}
+	var Thing_ []byte
+	if err := row.ColumnByName("thing", &Thing_); err != nil {
+		return nil, err
+	}
+	{
+		local := new(Something_SomethingElse)
+		if err := proto.Unmarshal(Thing_, local); err != nil {
+			return nil, err
+		}
+		res.Thing = local
+	}
+	var Myenum_ int64
+	if err := row.ColumnByName("myenum", &Myenum_); err != nil {
+		return nil, err
+	}
+	res.Myenum = MyEnum(Myenum_)
+	var Mappedenum_ int64
+	if err := row.ColumnByName("mappedenum", &Mappedenum_); err != nil {
+		return nil, err
+	}
+	res.Mappedenum = MappedEnum(Mappedenum_)
+	return res, nil
+}
+func HasTimestampToMySpannerPersistType(req *HasTimestamp) (*persist_lib.HasTimestampForMySpanner, error) {
+	var err error
+	_ = err
+	params := &persist_lib.HasTimestampForMySpanner{}
+	// set 'HasTimestamp.time' in params
+	if params.Time, err = (mytime.MyTime{}).ToSpanner(req.Time).SpannerValue(); err != nil {
+		return nil, err
+	}
+	// set 'HasTimestamp.some' in params
+	if req.Some == nil {
+		req.Some = new(Something)
+	}
+	{
+		raw, err := proto.Marshal(req.Some)
+		if err != nil {
+			return nil, err
+		}
+		params.Some = raw
+	}
+	// set 'HasTimestamp.str' in params
+	params.Str = req.Str
+	// set 'HasTimestamp.table' in params
+	if req.Table == nil {
+		req.Table = new(test.ExampleTable)
+	}
+	{
+		raw, err := proto.Marshal(req.Table)
+		if err != nil {
+			return nil, err
+		}
+		params.Table = raw
+	}
+	// set 'HasTimestamp.strs' in params
+	params.Strs = req.Strs
+	// set 'HasTimestamp.tables' in params
+	{
+		var bytesOfBytes [][]byte
+		for _, msg := range req.Tables {
+			raw, err := proto.Marshal(msg)
+			if err != nil {
+				return nil, err
+			}
+			bytesOfBytes = append(bytesOfBytes, raw)
+		}
+		params.Tables = bytesOfBytes
+	}
+	// set 'HasTimestamp.somes' in params
+	{
+		var bytesOfBytes [][]byte
+		for _, msg := range req.Somes {
+			raw, err := proto.Marshal(msg)
+			if err != nil {
+				return nil, err
+			}
+			bytesOfBytes = append(bytesOfBytes, raw)
+		}
+		params.Somes = bytesOfBytes
+	}
+	// set 'HasTimestamp.times' in params
+	{
+		var bytesOfBytes [][]byte
+		for _, msg := range req.Times {
+			raw, err := proto.Marshal(msg)
+			if err != nil {
+				return nil, err
+			}
+			bytesOfBytes = append(bytesOfBytes, raw)
+		}
+		params.Times = bytesOfBytes
+	}
+	return params, nil
+}
+func HasTimestampFromMySpannerRow(row *spanner.Row) (*HasTimestamp, error) {
+	res := &HasTimestamp{}
+	var Time_ = new(spanner.GenericColumnValue)
+	if err := row.ColumnByName("time", Time_); err != nil {
+		return nil, err
+	}
+	{
+		local := &mytime.MyTime{}
+		if err := local.SpannerScan(Time_); err != nil {
+			return nil, err
+		}
+		res.Time = local.ToProto()
+	}
+	var Some_ []byte
+	if err := row.ColumnByName("some", &Some_); err != nil {
+		return nil, err
+	}
+	{
+		local := new(Something)
+		if err := proto.Unmarshal(Some_, local); err != nil {
+			return nil, err
+		}
+		res.Some = local
+	}
+	var Str_ string
+	{
+		local := &spanner.NullString{}
+		if err := row.ColumnByName("str", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Str_ = local.StringVal
+		}
+		res.Str = Str_
+	}
+	var Table_ []byte
+	if err := row.ColumnByName("table", &Table_); err != nil {
+		return nil, err
+	}
+	{
+		local := new(test.ExampleTable)
+		if err := proto.Unmarshal(Table_, local); err != nil {
+			return nil, err
+		}
+		res.Table = local
+	}
+	var Strs_ []string
+	{
+		local := make([]spanner.NullString, 0)
+		if err := row.ColumnByName("strs", &local); err != nil {
+			return nil, err
+		}
+		for _, l := range local {
+			if l.Valid {
+				Strs_ = append(Strs_, l.StringVal)
+				res.Strs = Strs_
+			}
+		}
+	}
+	var Tables_ [][]byte
+	if err := row.ColumnByName("tables", &Tables_); err != nil {
+		return nil, err
+	}
+	{
+		local := make([]*test.ExampleTable, len(Tables_))
+		for i := range local {
+			local[i] = new(test.ExampleTable)
+			if err := proto.Unmarshal(Tables_[i], local[i]); err != nil {
+				return nil, err
+			}
+		}
+		res.Tables = local
+	}
+	var Somes_ [][]byte
+	if err := row.ColumnByName("somes", &Somes_); err != nil {
+		return nil, err
+	}
+	{
+		local := make([]*Something, len(Somes_))
+		for i := range local {
+			local[i] = new(Something)
+			if err := proto.Unmarshal(Somes_[i], local[i]); err != nil {
+				return nil, err
+			}
+		}
+		res.Somes = local
+	}
+	var Times_ [][]byte
+	if err := row.ColumnByName("times", &Times_); err != nil {
+		return nil, err
+	}
+	{
+		local := make([]*timestamp.Timestamp, len(Times_))
+		for i := range local {
+			local[i] = new(timestamp.Timestamp)
+			if err := proto.Unmarshal(Times_[i], local[i]); err != nil {
+				return nil, err
+			}
+		}
+		res.Times = local
+	}
+	return res, nil
+}
+func PartialTableFromMySpannerRow(row *spanner.Row) (*test.PartialTable, error) {
+	res := &test.PartialTable{}
+	var Id_ int64
+	{
+		local := &spanner.NullInt64{}
+		if err := row.ColumnByName("id", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Id_ = local.Int64
+		}
+		res.Id = Id_
+	}
+	var StartTime_ = new(spanner.GenericColumnValue)
+	if err := row.ColumnByName("start_time", StartTime_); err != nil {
+		return nil, err
+	}
+	{
+		local := &mytime.MyTime{}
+		if err := local.SpannerScan(StartTime_); err != nil {
+			return nil, err
+		}
+		res.StartTime = local.ToProto()
+	}
+	return res, nil
+}
+func ExampleTableRangeToMySpannerPersistType(req *test.ExampleTableRange) (*persist_lib.Test_ExampleTableRangeForMySpanner, error) {
+	var err error
+	_ = err
+	params := &persist_lib.Test_ExampleTableRangeForMySpanner{}
+	// set 'ExampleTableRange.start_id' in params
+	params.StartId = req.StartId
+	// set 'ExampleTableRange.end_id' in params
+	params.EndId = req.EndId
+	return params, nil
+}
+func NameToMySpannerPersistType(req *test.Name) (*persist_lib.Test_NameForMySpanner, error) {
+	var err error
+	_ = err
+	params := &persist_lib.Test_NameForMySpanner{}
+	// set 'Name.name' in params
+	params.Name = req.Name
+	return params, nil
+}
+func NumRowsFromMySpannerRow(row *spanner.Row) (*test.NumRows, error) {
+	res := &test.NumRows{}
+	var Count_ int64
+	{
+		local := &spanner.NullInt64{}
+		if err := row.ColumnByName("count", local); err != nil {
+			return nil, err
+		}
+		if local.Valid {
+			Count_ = local.Int64
+		}
+		res.Count = Count_
+	}
+	return res, nil
+}
 func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	err = func() error {
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := ExampleTableToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -328,43 +673,7 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -375,25 +684,14 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	err = func() error {
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := ExampleTableToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -402,43 +700,7 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -449,28 +711,14 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Something, error) {
 	var err error
-	var res = Something{}
+	var res = &Something{}
 	_ = err
 	_ = res
-	params := &persist_lib.SomethingForMySpanner{}
-	err = func() error {
-		// set 'Something.thing' in params
-		if req.Thing == nil {
-			req.Thing = new(Something_SomethingElse)
-		}
-		{
-			raw, err := proto.Marshal(req.Thing)
-			if err != nil {
-				return err
-			}
-			params.Thing = raw
-		}
-		return nil
-	}()
+	params, err := SomethingToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -479,21 +727,7 @@ func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Somethin
 		if row == nil { // there was no return data
 			return
 		}
-		res = Something{}
-		err = func() error {
-			var Thing_ []byte
-			if err := row.ColumnByName("thing", &Thing_); err != nil {
-				return err
-			}
-			{
-				local := new(Something_SomethingElse)
-				if err := proto.Unmarshal(Thing_, local); err != nil {
-					return err
-				}
-				res.Thing = local
-			}
-			return nil
-		}()
+		res, err = SomethingFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -504,83 +738,14 @@ func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Somethin
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (*HasTimestamp, error) {
 	var err error
-	var res = HasTimestamp{}
+	var res = &HasTimestamp{}
 	_ = err
 	_ = res
-	params := &persist_lib.HasTimestampForMySpanner{}
-	err = func() error {
-		// set 'HasTimestamp.time' in params
-		if params.Time, err = (mytime.MyTime{}).ToSpanner(req.Time).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'HasTimestamp.some' in params
-		if req.Some == nil {
-			req.Some = new(Something)
-		}
-		{
-			raw, err := proto.Marshal(req.Some)
-			if err != nil {
-				return err
-			}
-			params.Some = raw
-		}
-		// set 'HasTimestamp.str' in params
-		params.Str = req.Str
-		// set 'HasTimestamp.table' in params
-		if req.Table == nil {
-			req.Table = new(test.ExampleTable)
-		}
-		{
-			raw, err := proto.Marshal(req.Table)
-			if err != nil {
-				return err
-			}
-			params.Table = raw
-		}
-		// set 'HasTimestamp.strs' in params
-		params.Strs = req.Strs
-		// set 'HasTimestamp.tables' in params
-		{
-			var bytesOfBytes [][]byte
-			for _, msg := range req.Tables {
-				raw, err := proto.Marshal(msg)
-				if err != nil {
-					return err
-				}
-				bytesOfBytes = append(bytesOfBytes, raw)
-			}
-			params.Tables = bytesOfBytes
-		}
-		// set 'HasTimestamp.somes' in params
-		{
-			var bytesOfBytes [][]byte
-			for _, msg := range req.Somes {
-				raw, err := proto.Marshal(msg)
-				if err != nil {
-					return err
-				}
-				bytesOfBytes = append(bytesOfBytes, raw)
-			}
-			params.Somes = bytesOfBytes
-		}
-		// set 'HasTimestamp.times' in params
-		{
-			var bytesOfBytes [][]byte
-			for _, msg := range req.Times {
-				raw, err := proto.Marshal(msg)
-				if err != nil {
-					return err
-				}
-				bytesOfBytes = append(bytesOfBytes, raw)
-			}
-			params.Times = bytesOfBytes
-		}
-		return nil
-	}()
+	params, err := HasTimestampToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -589,109 +754,7 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 		if row == nil { // there was no return data
 			return
 		}
-		res = HasTimestamp{}
-		err = func() error {
-			var Time_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("time", Time_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(Time_); err != nil {
-					return err
-				}
-				res.Time = local.ToProto()
-			}
-			var Some_ []byte
-			if err := row.ColumnByName("some", &Some_); err != nil {
-				return err
-			}
-			{
-				local := new(Something)
-				if err := proto.Unmarshal(Some_, local); err != nil {
-					return err
-				}
-				res.Some = local
-			}
-			var Str_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("str", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Str_ = local.StringVal
-				}
-				res.Str = Str_
-			}
-			var Table_ []byte
-			if err := row.ColumnByName("table", &Table_); err != nil {
-				return err
-			}
-			{
-				local := new(test.ExampleTable)
-				if err := proto.Unmarshal(Table_, local); err != nil {
-					return err
-				}
-				res.Table = local
-			}
-			var Strs_ []string
-			{
-				local := make([]spanner.NullString, 0)
-				if err := row.ColumnByName("strs", &local); err != nil {
-					return err
-				}
-				for _, l := range local {
-					if l.Valid {
-						Strs_ = append(Strs_, l.StringVal)
-						res.Strs = Strs_
-					}
-				}
-			}
-			var Tables_ [][]byte
-			if err := row.ColumnByName("tables", &Tables_); err != nil {
-				return err
-			}
-			{
-				local := make([]*test.ExampleTable, len(Tables_))
-				for i := range local {
-					local[i] = new(test.ExampleTable)
-					if err := proto.Unmarshal(Tables_[i], local[i]); err != nil {
-						return err
-					}
-				}
-				res.Tables = local
-			}
-			var Somes_ [][]byte
-			if err := row.ColumnByName("somes", &Somes_); err != nil {
-				return err
-			}
-			{
-				local := make([]*Something, len(Somes_))
-				for i := range local {
-					local[i] = new(Something)
-					if err := proto.Unmarshal(Somes_[i], local[i]); err != nil {
-						return err
-					}
-				}
-				res.Somes = local
-			}
-			var Times_ [][]byte
-			if err := row.ColumnByName("times", &Times_); err != nil {
-				return err
-			}
-			{
-				local := make([]*timestamp.Timestamp, len(Times_))
-				for i := range local {
-					local[i] = new(timestamp.Timestamp)
-					if err := proto.Unmarshal(Times_[i], local[i]); err != nil {
-						return err
-					}
-				}
-				res.Times = local
-			}
-			return nil
-		}()
+		res, err = HasTimestampFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -702,25 +765,14 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	err = func() error {
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := ExampleTableToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -729,43 +781,7 @@ func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *tes
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -776,25 +792,14 @@ func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *tes
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	var err error
-	var res = test.PartialTable{}
+	var res = &test.PartialTable{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	err = func() error {
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := ExampleTableToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -803,32 +808,7 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.PartialTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			return nil
-		}()
+		res, err = PartialTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -839,21 +819,14 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_ExampleTableRangeForMySpanner{}
-	err = func() error {
-		// set 'ExampleTableRange.start_id' in params
-		params.StartId = req.StartId
-		// set 'ExampleTableRange.end_id' in params
-		params.EndId = req.EndId
-		return nil
-	}()
+	params, err := ExampleTableRangeToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -862,43 +835,7 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -909,25 +846,14 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	err = func() error {
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := ExampleTableToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -936,43 +862,7 @@ func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.Exampl
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -983,25 +873,14 @@ func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.Exampl
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	err = func() error {
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := ExampleTableToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -1010,43 +889,7 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1057,17 +900,12 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStreamServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.Test_NameForMySpanner{}
-	err = func() error {
-		// set 'Name.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := NameToMySpannerPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -1076,48 +914,12 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 		if row == nil { // there was no return data
 			return
 		}
-		res := test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err := ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
@@ -1131,7 +933,7 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertServer) error {
 	var err error
 	_ = err
-	res := test.NumRows{}
+	res := &test.NumRows{}
 	feed, stop := s.PERSIST.ClientStreamInsert(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -1140,18 +942,7 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params := &persist_lib.Test_ExampleTableForMySpanner{}
-		err = func() error {
-			// set 'ExampleTable.id' in params
-			params.Id = req.Id
-			// set 'ExampleTable.start_time' in params
-			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-				return err
-			}
-			// set 'ExampleTable.name' in params
-			params.Name = req.Name
-			return nil
-		}()
+		params, err := ExampleTableToMySpannerPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -1162,22 +953,12 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			var Count_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("count", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Count_ = local.Int64
-				}
-				res.Count = Count_
-			}
-			return nil
-		}()
+		res, err = NumRowsFromMySpannerRow(row)
+		if err != nil {
+			return err
+		}
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
@@ -1185,7 +966,7 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteServer) error {
 	var err error
 	_ = err
-	res := test.NumRows{}
+	res := &test.NumRows{}
 	feed, stop := s.PERSIST.ClientStreamDelete(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -1194,18 +975,7 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params := &persist_lib.Test_ExampleTableForMySpanner{}
-		err = func() error {
-			// set 'ExampleTable.id' in params
-			params.Id = req.Id
-			// set 'ExampleTable.start_time' in params
-			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-				return err
-			}
-			// set 'ExampleTable.name' in params
-			params.Name = req.Name
-			return nil
-		}()
+		params, err := ExampleTableToMySpannerPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -1216,22 +986,12 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			var Count_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("count", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Count_ = local.Int64
-				}
-				res.Count = Count_
-			}
-			return nil
-		}()
+		res, err = NumRowsFromMySpannerRow(row)
+		if err != nil {
+			return err
+		}
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
@@ -1239,7 +999,7 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateServer) error {
 	var err error
 	_ = err
-	res := test.NumRows{}
+	res := &test.NumRows{}
 	feed, stop := s.PERSIST.ClientStreamUpdate(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -1248,18 +1008,7 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params := &persist_lib.Test_ExampleTableForMySpanner{}
-		err = func() error {
-			// set 'ExampleTable.id' in params
-			params.Id = req.Id
-			// set 'ExampleTable.start_time' in params
-			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-				return err
-			}
-			// set 'ExampleTable.name' in params
-			params.Name = req.Name
-			return nil
-		}()
+		params, err := ExampleTableToMySpannerPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -1270,29 +1019,19 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			var Count_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("count", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Count_ = local.Int64
-				}
-				res.Count = Count_
-			}
-			return nil
-		}()
+		res, err = NumRowsFromMySpannerRow(row)
+		if err != nil {
+			return err
+		}
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
 }
 func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
 	beforeRes, err := hooks.UniaryInsertBeforeHook(req)
@@ -1301,18 +1040,7 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	err = func() error {
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := ExampleTableToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -1321,43 +1049,7 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1368,14 +1060,14 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	if err := hooks.UniaryInsertAfterHook(req, &res); err != nil {
+	if err := hooks.UniaryInsertAfterHook(req, res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
 	beforeRes, err := hooks.UniaryInsertBeforeHook(req)
@@ -1384,18 +1076,7 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	err = func() error {
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := ExampleTableToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -1404,43 +1085,7 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1451,14 +1096,14 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	if err := hooks.UniaryInsertAfterHook(req, &res); err != nil {
+	if err := hooks.UniaryInsertAfterHook(req, res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	var err error
-	var res = test.PartialTable{}
+	var res = &test.PartialTable{}
 	_ = err
 	_ = res
 	beforeRes, err := hooks.UniaryUpdateBeforeHook(req)
@@ -1467,18 +1112,7 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params := &persist_lib.Test_ExampleTableForMySpanner{}
-	err = func() error {
-		// set 'ExampleTable.id' in params
-		params.Id = req.Id
-		// set 'ExampleTable.start_time' in params
-		if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-			return err
-		}
-		// set 'ExampleTable.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := ExampleTableToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -1487,32 +1121,7 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.PartialTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			return nil
-		}()
+		res, err = PartialTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1523,14 +1132,14 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	if err := hooks.UniaryUpdateAfterHook(req, &res); err != nil {
+	if err := hooks.UniaryUpdateAfterHook(req, res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
 	beforeRes, err := hooks.UniaryDeleteBeforeHook(req)
@@ -1539,14 +1148,7 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params := &persist_lib.Test_ExampleTableRangeForMySpanner{}
-	err = func() error {
-		// set 'ExampleTableRange.start_id' in params
-		params.StartId = req.StartId
-		// set 'ExampleTableRange.end_id' in params
-		params.EndId = req.EndId
-		return nil
-	}()
+	params, err := ExampleTableRangeToMySpannerPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -1555,43 +1157,7 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err = ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1602,10 +1168,10 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	if err := hooks.UniaryDeleteAfterHook(req, &res); err != nil {
+	if err := hooks.UniaryDeleteAfterHook(req, res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_ServerStreamWithHooksServer) error {
 	var err error
@@ -1620,12 +1186,7 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 			}
 		}
 	}
-	params := &persist_lib.Test_NameForMySpanner{}
-	err = func() error {
-		// set 'Name.name' in params
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := NameToMySpannerPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -1634,52 +1195,16 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 		if row == nil { // there was no return data
 			return
 		}
-		res := test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("id", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Id_ = local.Int64
-				}
-				res.Id = Id_
-			}
-			var StartTime_ = new(spanner.GenericColumnValue)
-			if err := row.ColumnByName("start_time", StartTime_); err != nil {
-				return err
-			}
-			{
-				local := &mytime.MyTime{}
-				if err := local.SpannerScan(StartTime_); err != nil {
-					return err
-				}
-				res.StartTime = local.ToProto()
-			}
-			var Name_ string
-			{
-				local := &spanner.NullString{}
-				if err := row.ColumnByName("name", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Name_ = local.StringVal
-				}
-				res.Name = Name_
-			}
-			return nil
-		}()
+		res, err := ExampleTableFromMySpannerRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := hooks.ServerStreamAfterHook(req, &res); err != nil {
+		if err := hooks.ServerStreamAfterHook(req, res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
@@ -1693,7 +1218,7 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
 	var err error
 	_ = err
-	res := test.NumRows{}
+	res := &test.NumRows{}
 	feed, stop := s.PERSIST.ClientStreamUpdateWithHooks(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -1708,18 +1233,7 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 		} else if beforeRes != nil {
 			continue
 		}
-		params := &persist_lib.Test_ExampleTableForMySpanner{}
-		err = func() error {
-			// set 'ExampleTable.id' in params
-			params.Id = req.Id
-			// set 'ExampleTable.start_time' in params
-			if params.StartTime, err = (mytime.MyTime{}).ToSpanner(req.StartTime).SpannerValue(); err != nil {
-				return err
-			}
-			// set 'ExampleTable.name' in params
-			params.Name = req.Name
-			return nil
-		}()
+		params, err := ExampleTableToMySpannerPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -1730,29 +1244,19 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			var Count_ int64
-			{
-				local := &spanner.NullInt64{}
-				if err := row.ColumnByName("count", local); err != nil {
-					return err
-				}
-				if local.Valid {
-					Count_ = local.Int64
-				}
-				res.Count = Count_
-			}
-			return nil
-		}()
+		res, err = NumRowsFromMySpannerRow(row)
+		if err != nil {
+			return err
+		}
 	}
 	// NOTE: I dont want to store your requests in memory
 	// so the after hook for client streaming calls
 	// is called with an empty request struct
 	fakeReq := &test.ExampleTable{}
-	if err := hooks.ClientStreamUpdateAfterHook(fakeReq, &res); err != nil {
+	if err := hooks.ClientStreamUpdateAfterHook(fakeReq, res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil

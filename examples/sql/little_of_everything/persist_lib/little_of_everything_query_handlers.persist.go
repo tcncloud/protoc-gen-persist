@@ -40,8 +40,14 @@ func DefaultUnaryExample1Handler(accessor SqlClientGetter) func(context.Context,
 		if err != nil {
 			return err
 		}
-		row := ExampleTable1FromUnaryExample1Query(sqlDB, req)
-		next(row)
+		res := ExampleService1UnaryExample1Query(sqlDB, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 }
@@ -51,8 +57,14 @@ func DefaultUnaryExample2Handler(accessor SqlClientGetter) func(context.Context,
 		if err != nil {
 			return err
 		}
-		row := TestFromUnaryExample2Query(sqlDB, req)
-		next(row)
+		res := ExampleService1UnaryExample2Query(sqlDB, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 }
@@ -66,18 +78,18 @@ func DefaultServerStreamSelectHandler(accessor SqlClientGetter) func(context.Con
 		if err != nil {
 			return err
 		}
-		rows, err := ExampleTable1FromServerStreamSelectQuery(tx, req)
+		res := ExampleService1ServerStreamSelectQuery(tx, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
 		if err != nil {
 			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			next(rows)
 		}
 		if err := tx.Commit(); err != nil {
 			return err
 		}
-		return rows.Err()
+		return res.Err()
 	}
 }
 func DefaultClientStreamingExampleHandler(accessor SqlClientGetter) func(context.Context) (func(*ExampleTable1ForExampleService1), func() (Scanable, error)) {
@@ -95,7 +107,7 @@ func DefaultClientStreamingExampleHandler(accessor SqlClientGetter) func(context
 			if feedErr != nil {
 				return
 			}
-			if _, err := ExampleTable1FromClientStreamingExampleQuery(tx, req); err != nil {
+			if res := ExampleService1ClientStreamingExampleQuery(tx, req); res.Err() != nil {
 				feedErr = err
 			}
 		}

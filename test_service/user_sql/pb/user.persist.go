@@ -19,6 +19,7 @@ type UServImpl struct {
 	FORWARDED RestOfUServHandlers
 }
 type RestOfUServHandlers interface {
+	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
 	Shutdown(ctx context.Context, req *Empty) (*Empty, error)
 }
 type UServImplBuilder struct {
@@ -48,6 +49,7 @@ func (b *UServImplBuilder) WithDefaultQueryHandlers() *UServImplBuilder {
 		GetAllUsersHandler:     persist_lib.DefaultGetAllUsersHandler(accessor),
 		SelectUserByIdHandler:  persist_lib.DefaultSelectUserByIdHandler(accessor),
 		UpdateUserNamesHandler: persist_lib.DefaultUpdateUserNamesHandler(accessor),
+		UpdateNameToFooHandler: persist_lib.DefaultUpdateNameToFooHandler(accessor),
 		GetFriendsHandler:      persist_lib.DefaultGetFriendsHandler(accessor),
 		DropTableHandler:       persist_lib.DefaultDropTableHandler(accessor),
 	}
@@ -74,6 +76,9 @@ func (b *UServImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.UServQue
 	}
 	if p.UpdateUserNamesHandler == nil {
 		p.UpdateUserNamesHandler = persist_lib.DefaultUpdateUserNamesHandler(accessor)
+	}
+	if p.UpdateNameToFooHandler == nil {
+		p.UpdateNameToFooHandler = persist_lib.DefaultUpdateNameToFooHandler(accessor)
 	}
 	if p.GetFriendsHandler == nil {
 		p.GetFriendsHandler = persist_lib.DefaultGetFriendsHandler(accessor)
@@ -109,15 +114,71 @@ func (b *UServImplBuilder) MustBuild() *UServImpl {
 	}
 	return s
 }
+func EmptyToUServPersistType(req *Empty) (*persist_lib.EmptyForUServ, error) {
+	params := &persist_lib.EmptyForUServ{}
+	return params, nil
+}
+func EmptyFromUServRow(row persist_lib.Scanable) (*Empty, error) {
+	res := &Empty{}
+	if err := row.Scan(); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	return res, nil
+}
+func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
+	params := &persist_lib.UserForUServ{}
+	params.Id = req.Id
+	params.Name = req.Name
+	if req.Friends == nil {
+		req.Friends = new(Friends)
+	}
+	{
+		raw, err := proto.Marshal(req.Friends)
+		if err != nil {
+			return nil, err
+		}
+		params.Friends = raw
+	}
+	params.CreatedOn = (TimeString{}).ToSql(req.CreatedOn)
+	return params, nil
+}
+func UserFromUServRow(row persist_lib.Scanable) (*User, error) {
+	res := &User{}
+	var Id_ int64
+	var Name_ string
+	var Friends_ []byte
+	var CreatedOn_ TimeString
+	if err := row.Scan(
+		&Id_,
+		&Name_,
+		&Friends_,
+		&CreatedOn_,
+	); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	res.Id = Id_
+	res.Name = Name_
+	{
+		var converted = new(Friends)
+		if err := proto.Unmarshal(Friends_, converted); err != nil {
+			return nil, err
+		}
+		res.Friends = converted
+	}
+	res.CreatedOn = CreatedOn_.ToProto()
+	return res, nil
+}
+func FriendsQueryToUServPersistType(req *FriendsQuery) (*persist_lib.FriendsQueryForUServ, error) {
+	params := &persist_lib.FriendsQueryForUServ{}
+	params.Names = (SliceStringConverter{}).ToSql(req.Names)
+	return params, nil
+}
 func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
 	var err error
-	var res = Empty{}
+	var res = &Empty{}
 	_ = err
 	_ = res
-	params := &persist_lib.EmptyForUServ{}
-	err = func() error {
-		return nil
-	}()
+	params, err := EmptyToUServPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -126,19 +187,23 @@ func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error)
 		if row == nil { // there was no return data
 			return
 		}
-		res = Empty{}
+		res, err = EmptyFromUServRow(row)
+		if err != nil {
+			iterErr = err
+			return
+		}
 	})
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	var err error
 	_ = err
-	res := Empty{}
+	res := &Empty{}
 	feed, stop := s.PERSIST.InsertUsers(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -153,23 +218,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		} else if beforeRes != nil {
 			continue
 		}
-		params := &persist_lib.UserForUServ{}
-		err = func() error {
-			params.Id = req.Id
-			params.Name = req.Name
-			if req.Friends == nil {
-				req.Friends = new(Friends)
-			}
-			{
-				raw, err := proto.Marshal(req.Friends)
-				if err != nil {
-					return err
-				}
-				params.Friends = raw
-			}
-			params.CreatedOn = (TimeString{}).ToSql(req.CreatedOn)
-			return nil
-		}()
+		params, err := UserToUServPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -180,14 +229,12 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			if err := row.Scan(); err != nil {
-				return err
-			}
-			return nil
-		}()
+		res, err = EmptyFromUServRow(row)
+		if err != nil {
+			return err
+		}
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
@@ -195,10 +242,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.EmptyForUServ{}
-	err = func() error {
-		return nil
-	}()
+	params, err := EmptyToUServPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -207,37 +251,12 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 		if row == nil { // there was no return data
 			return
 		}
-		res := User{}
-		err = func() error {
-			var Id_ int64
-			var Name_ string
-			var Friends_ []byte
-			var CreatedOn_ TimeString
-			if err := row.Scan(
-				&Id_,
-				&Name_,
-				&Friends_,
-				&CreatedOn_,
-			); err != nil {
-				return err
-			}
-			res.Id = Id_
-			res.Name = Name_
-			{
-				var converted = new(Friends)
-				if err := proto.Unmarshal(Friends_, converted); err != nil {
-					return err
-				}
-				res.Friends = converted
-			}
-			res.CreatedOn = CreatedOn_.ToProto()
-			return nil
-		}()
+		res, err := UserFromUServRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
@@ -250,26 +269,10 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 }
 func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error) {
 	var err error
-	var res = User{}
+	var res = &User{}
 	_ = err
 	_ = res
-	params := &persist_lib.UserForUServ{}
-	err = func() error {
-		params.Id = req.Id
-		params.Name = req.Name
-		if req.Friends == nil {
-			req.Friends = new(Friends)
-		}
-		{
-			raw, err := proto.Marshal(req.Friends)
-			if err != nil {
-				return err
-			}
-			params.Friends = raw
-		}
-		params.CreatedOn = (TimeString{}).ToSql(req.CreatedOn)
-		return nil
-	}()
+	params, err := UserToUServPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -278,32 +281,7 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 		if row == nil { // there was no return data
 			return
 		}
-		res = User{}
-		err = func() error {
-			var Id_ int64
-			var Name_ string
-			var Friends_ []byte
-			var CreatedOn_ TimeString
-			if err := row.Scan(
-				&Id_,
-				&Name_,
-				&Friends_,
-				&CreatedOn_,
-			); err != nil {
-				return err
-			}
-			res.Id = Id_
-			res.Name = Name_
-			{
-				var converted = new(Friends)
-				if err := proto.Unmarshal(Friends_, converted); err != nil {
-					return err
-				}
-				res.Friends = converted
-			}
-			res.CreatedOn = CreatedOn_.ToProto()
-			return nil
-		}()
+		res, err = UserFromUServRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -314,7 +292,7 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 	var err error
@@ -327,23 +305,7 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params := &persist_lib.UserForUServ{}
-		err = func() error {
-			params.Id = req.Id
-			params.Name = req.Name
-			if req.Friends == nil {
-				req.Friends = new(Friends)
-			}
-			{
-				raw, err := proto.Marshal(req.Friends)
-				if err != nil {
-					return err
-				}
-				params.Friends = raw
-			}
-			params.CreatedOn = (TimeString{}).ToSql(req.CreatedOn)
-			return nil
-		}()
+		params, err := UserToUServPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -352,47 +314,51 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 		}
 		if row != nil {
-			res := User{}
-			err = func() error {
-				var Id_ int64
-				var Name_ string
-				var Friends_ []byte
-				var CreatedOn_ TimeString
-				if err := row.Scan(
-					&Id_,
-					&Name_,
-					&Friends_,
-					&CreatedOn_,
-				); err != nil {
-					return err
-				}
-				res.Id = Id_
-				res.Name = Name_
-				{
-					var converted = new(Friends)
-					if err := proto.Unmarshal(Friends_, converted); err != nil {
-						return err
-					}
-					res.Friends = converted
-				}
-				res.CreatedOn = CreatedOn_.ToProto()
-				return nil
-			}()
+			res, err := UserFromUServRow(row)
 			if err != nil {
+				return err
+			}
+			if err := stream.Send(res); err != nil {
 				return err
 			}
 		}
 	}
 	return stop()
 }
+func (s *UServImpl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
+	var err error
+	var res = &Empty{}
+	_ = err
+	_ = res
+	params, err := UserToUServPersistType(req)
+	if err != nil {
+		return nil, err
+	}
+	var iterErr error
+	err = s.PERSIST.UpdateNameToFoo(ctx, params, func(row persist_lib.Scanable) {
+		if row == nil { // there was no return data
+			return
+		}
+		res, err = EmptyFromUServRow(row)
+		if err != nil {
+			iterErr = err
+			return
+		}
+	})
+	if err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
+	}
+	return res, nil
+}
+func (s *UServImpl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
+	return s.FORWARDED.UpdateAllNames(req, stream)
+}
 func (s *UServImpl) GetFriends(req *FriendsQuery, stream UServ_GetFriendsServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.FriendsQueryForUServ{}
-	err = func() error {
-		params.Names = (SliceStringConverter{}).ToSql(req.Names)
-		return nil
-	}()
+	params, err := FriendsQueryToUServPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -401,37 +367,12 @@ func (s *UServImpl) GetFriends(req *FriendsQuery, stream UServ_GetFriendsServer)
 		if row == nil { // there was no return data
 			return
 		}
-		res := User{}
-		err = func() error {
-			var Id_ int64
-			var Name_ string
-			var Friends_ []byte
-			var CreatedOn_ TimeString
-			if err := row.Scan(
-				&Id_,
-				&Name_,
-				&Friends_,
-				&CreatedOn_,
-			); err != nil {
-				return err
-			}
-			res.Id = Id_
-			res.Name = Name_
-			{
-				var converted = new(Friends)
-				if err := proto.Unmarshal(Friends_, converted); err != nil {
-					return err
-				}
-				res.Friends = converted
-			}
-			res.CreatedOn = CreatedOn_.ToProto()
-			return nil
-		}()
+		res, err := UserFromUServRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
@@ -444,13 +385,10 @@ func (s *UServImpl) GetFriends(req *FriendsQuery, stream UServ_GetFriendsServer)
 }
 func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 	var err error
-	var res = Empty{}
+	var res = &Empty{}
 	_ = err
 	_ = res
-	params := &persist_lib.EmptyForUServ{}
-	err = func() error {
-		return nil
-	}()
+	params, err := EmptyToUServPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -459,14 +397,18 @@ func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 		if row == nil { // there was no return data
 			return
 		}
-		res = Empty{}
+		res, err = EmptyFromUServRow(row)
+		if err != nil {
+			iterErr = err
+			return
+		}
 	})
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *UServImpl) Shutdown(ctx context.Context, req *Empty) (*Empty, error) {
 	return s.FORWARDED.Shutdown(ctx, req)

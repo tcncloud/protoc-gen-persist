@@ -98,44 +98,119 @@ func (b *ExampleService1ImplBuilder) MustBuild() *ExampleService1Impl {
 	}
 	return s
 }
+func ExampleTable1ToExampleService1PersistType(req *ExampleTable1) (*persist_lib.ExampleTable1ForExampleService1, error) {
+	params := &persist_lib.ExampleTable1ForExampleService1{}
+	params.TableId = req.TableId
+	params.Key = req.Key
+	params.Value = req.Value
+	if req.InnerMessage == nil {
+		req.InnerMessage = new(ExampleTable1_InnerMessage)
+	}
+	{
+		raw, err := proto.Marshal(req.InnerMessage)
+		if err != nil {
+			return nil, err
+		}
+		params.InnerMessage = raw
+	}
+	params.InnerEnum = int32(req.InnerEnum)
+	params.StringArray = req.StringArray
+	params.BytesField = req.BytesField
+	params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+	if req.TestField == nil {
+		req.TestField = new(test.Test)
+	}
+	{
+		raw, err := proto.Marshal(req.TestField)
+		if err != nil {
+			return nil, err
+		}
+		params.TestField = raw
+	}
+	params.Myyenum = int32(req.Myyenum)
+	params.Testsenum = int32(req.Testsenum)
+	params.Mappedenum = (MyMappedEnum{}).ToSql(req.Mappedenum)
+	return params, nil
+}
+func ExampleTable1FromExampleService1Row(row persist_lib.Scanable) (*ExampleTable1, error) {
+	res := &ExampleTable1{}
+	var TableId_ int32
+	var Key_ string
+	var Value_ string
+	var InnerMessage_ []byte
+	var InnerEnum_ int32
+	var StringArray_ []string
+	var BytesField_ []byte
+	var StartTime_ mytime.MyTime
+	var TestField_ []byte
+	var Myyenum_ int32
+	var Testsenum_ int32
+	var Mappedenum_ MyMappedEnum
+	if err := row.Scan(
+		&TableId_,
+		&Key_,
+		&Value_,
+		&InnerMessage_,
+		&InnerEnum_,
+		&StringArray_,
+		&BytesField_,
+		&StartTime_,
+		&TestField_,
+		&Myyenum_,
+		&Testsenum_,
+		&Mappedenum_,
+	); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	res.TableId = TableId_
+	res.Key = Key_
+	res.Value = Value_
+	{
+		var converted = new(ExampleTable1_InnerMessage)
+		if err := proto.Unmarshal(InnerMessage_, converted); err != nil {
+			return nil, err
+		}
+		res.InnerMessage = converted
+	}
+	res.InnerEnum = ExampleTable1_InnerEnum(InnerEnum_)
+	res.StringArray = StringArray_
+	res.BytesField = BytesField_
+	res.StartTime = StartTime_.ToProto()
+	{
+		var converted = new(test.Test)
+		if err := proto.Unmarshal(TestField_, converted); err != nil {
+			return nil, err
+		}
+		res.TestField = converted
+	}
+	res.Myyenum = MyEnum(Myyenum_)
+	res.Testsenum = test.TestEnum(Testsenum_)
+	res.Mappedenum = Mappedenum_.ToProto()
+	return res, nil
+}
+func TestToExampleService1PersistType(req *test.Test) (*persist_lib.Test_TestForExampleService1, error) {
+	params := &persist_lib.Test_TestForExampleService1{}
+	params.Id = req.Id
+	params.Name = req.Name
+	return params, nil
+}
+func CountRowsFromExampleService1Row(row persist_lib.Scanable) (*CountRows, error) {
+	res := &CountRows{}
+	var Count_ int64
+	if err := row.Scan(
+		&Count_,
+	); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	res.Count = Count_
+	return res, nil
+}
 func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTable1) (*ExampleTable1, error) {
 	var err error
-	var res = ExampleTable1{}
+	var res = &ExampleTable1{}
 	_ = err
 	_ = res
-	params := &persist_lib.ExampleTable1ForExampleService1{}
-	err = func() error {
-		params.TableId = req.TableId
-		params.Key = req.Key
-		params.Value = req.Value
-		if req.InnerMessage == nil {
-			req.InnerMessage = new(ExampleTable1_InnerMessage)
-		}
-		{
-			raw, err := proto.Marshal(req.InnerMessage)
-			if err != nil {
-				return err
-			}
-			params.InnerMessage = raw
-		}
-		params.InnerEnum = int32(req.InnerEnum)
-		params.StringArray = req.StringArray
-		params.BytesField = req.BytesField
-		params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
-		if req.TestField == nil {
-			req.TestField = new(test.Test)
-		}
-		{
-			raw, err := proto.Marshal(req.TestField)
-			if err != nil {
-				return err
-			}
-			params.TestField = raw
-		}
-		params.Myyenum = int32(req.Myyenum)
-		params.Testsenum = int32(req.Testsenum)
-		return nil
-	}()
+	params, err := ExampleTable1ToExampleService1PersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -144,59 +219,7 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 		if row == nil { // there was no return data
 			return
 		}
-		res = ExampleTable1{}
-		err = func() error {
-			var TableId_ int32
-			var Key_ string
-			var Value_ string
-			var InnerMessage_ []byte
-			var InnerEnum_ int32
-			var StringArray_ []string
-			var BytesField_ []byte
-			var StartTime_ mytime.MyTime
-			var TestField_ []byte
-			var Myyenum_ int32
-			var Testsenum_ int32
-			if err := row.Scan(
-				&TableId_,
-				&Key_,
-				&Value_,
-				&InnerMessage_,
-				&InnerEnum_,
-				&StringArray_,
-				&BytesField_,
-				&StartTime_,
-				&TestField_,
-				&Myyenum_,
-				&Testsenum_,
-			); err != nil {
-				return err
-			}
-			res.TableId = TableId_
-			res.Key = Key_
-			res.Value = Value_
-			{
-				var converted = new(ExampleTable1_InnerMessage)
-				if err := proto.Unmarshal(InnerMessage_, converted); err != nil {
-					return err
-				}
-				res.InnerMessage = converted
-			}
-			res.InnerEnum = ExampleTable1_InnerEnum(InnerEnum_)
-			res.StringArray = StringArray_
-			res.BytesField = BytesField_
-			res.StartTime = StartTime_.ToProto()
-			{
-				var converted = new(test.Test)
-				if err := proto.Unmarshal(TestField_, converted); err != nil {
-					return err
-				}
-				res.TestField = converted
-			}
-			res.Myyenum = MyEnum(Myyenum_)
-			res.Testsenum = test.TestEnum(Testsenum_)
-			return nil
-		}()
+		res, err = ExampleTable1FromExampleService1Row(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -207,19 +230,14 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test) (*ExampleTable1, error) {
 	var err error
-	var res = ExampleTable1{}
+	var res = &ExampleTable1{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_TestForExampleService1{}
-	err = func() error {
-		params.Id = req.Id
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := TestToExampleService1PersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -228,59 +246,7 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 		if row == nil { // there was no return data
 			return
 		}
-		res = ExampleTable1{}
-		err = func() error {
-			var TableId_ int32
-			var Key_ string
-			var Value_ string
-			var InnerMessage_ []byte
-			var InnerEnum_ int32
-			var StringArray_ []string
-			var BytesField_ []byte
-			var StartTime_ mytime.MyTime
-			var TestField_ []byte
-			var Myyenum_ int32
-			var Testsenum_ int32
-			if err := row.Scan(
-				&TableId_,
-				&Key_,
-				&Value_,
-				&InnerMessage_,
-				&InnerEnum_,
-				&StringArray_,
-				&BytesField_,
-				&StartTime_,
-				&TestField_,
-				&Myyenum_,
-				&Testsenum_,
-			); err != nil {
-				return err
-			}
-			res.TableId = TableId_
-			res.Key = Key_
-			res.Value = Value_
-			{
-				var converted = new(ExampleTable1_InnerMessage)
-				if err := proto.Unmarshal(InnerMessage_, converted); err != nil {
-					return err
-				}
-				res.InnerMessage = converted
-			}
-			res.InnerEnum = ExampleTable1_InnerEnum(InnerEnum_)
-			res.StringArray = StringArray_
-			res.BytesField = BytesField_
-			res.StartTime = StartTime_.ToProto()
-			{
-				var converted = new(test.Test)
-				if err := proto.Unmarshal(TestField_, converted); err != nil {
-					return err
-				}
-				res.TestField = converted
-			}
-			res.Myyenum = MyEnum(Myyenum_)
-			res.Testsenum = test.TestEnum(Testsenum_)
-			return nil
-		}()
+		res, err = ExampleTable1FromExampleService1Row(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -291,44 +257,12 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream ExampleService1_ServerStreamSelectServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.ExampleTable1ForExampleService1{}
-	err = func() error {
-		params.TableId = req.TableId
-		params.Key = req.Key
-		params.Value = req.Value
-		if req.InnerMessage == nil {
-			req.InnerMessage = new(ExampleTable1_InnerMessage)
-		}
-		{
-			raw, err := proto.Marshal(req.InnerMessage)
-			if err != nil {
-				return err
-			}
-			params.InnerMessage = raw
-		}
-		params.InnerEnum = int32(req.InnerEnum)
-		params.StringArray = req.StringArray
-		params.BytesField = req.BytesField
-		params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
-		if req.TestField == nil {
-			req.TestField = new(test.Test)
-		}
-		{
-			raw, err := proto.Marshal(req.TestField)
-			if err != nil {
-				return err
-			}
-			params.TestField = raw
-		}
-		params.Myyenum = int32(req.Myyenum)
-		params.Testsenum = int32(req.Testsenum)
-		return nil
-	}()
+	params, err := ExampleTable1ToExampleService1PersistType(req)
 	if err != nil {
 		return err
 	}
@@ -337,64 +271,12 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 		if row == nil { // there was no return data
 			return
 		}
-		res := ExampleTable1{}
-		err = func() error {
-			var TableId_ int32
-			var Key_ string
-			var Value_ string
-			var InnerMessage_ []byte
-			var InnerEnum_ int32
-			var StringArray_ []string
-			var BytesField_ []byte
-			var StartTime_ mytime.MyTime
-			var TestField_ []byte
-			var Myyenum_ int32
-			var Testsenum_ int32
-			if err := row.Scan(
-				&TableId_,
-				&Key_,
-				&Value_,
-				&InnerMessage_,
-				&InnerEnum_,
-				&StringArray_,
-				&BytesField_,
-				&StartTime_,
-				&TestField_,
-				&Myyenum_,
-				&Testsenum_,
-			); err != nil {
-				return err
-			}
-			res.TableId = TableId_
-			res.Key = Key_
-			res.Value = Value_
-			{
-				var converted = new(ExampleTable1_InnerMessage)
-				if err := proto.Unmarshal(InnerMessage_, converted); err != nil {
-					return err
-				}
-				res.InnerMessage = converted
-			}
-			res.InnerEnum = ExampleTable1_InnerEnum(InnerEnum_)
-			res.StringArray = StringArray_
-			res.BytesField = BytesField_
-			res.StartTime = StartTime_.ToProto()
-			{
-				var converted = new(test.Test)
-				if err := proto.Unmarshal(TestField_, converted); err != nil {
-					return err
-				}
-				res.TestField = converted
-			}
-			res.Myyenum = MyEnum(Myyenum_)
-			res.Testsenum = test.TestEnum(Testsenum_)
-			return nil
-		}()
+		res, err := ExampleTable1FromExampleService1Row(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
@@ -408,7 +290,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_ClientStreamingExampleServer) error {
 	var err error
 	_ = err
-	res := CountRows{}
+	res := &CountRows{}
 	feed, stop := s.PERSIST.ClientStreamingExample(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -417,39 +299,7 @@ func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_Clie
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params := &persist_lib.ExampleTable1ForExampleService1{}
-		err = func() error {
-			params.TableId = req.TableId
-			params.Key = req.Key
-			params.Value = req.Value
-			if req.InnerMessage == nil {
-				req.InnerMessage = new(ExampleTable1_InnerMessage)
-			}
-			{
-				raw, err := proto.Marshal(req.InnerMessage)
-				if err != nil {
-					return err
-				}
-				params.InnerMessage = raw
-			}
-			params.InnerEnum = int32(req.InnerEnum)
-			params.StringArray = req.StringArray
-			params.BytesField = req.BytesField
-			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
-			if req.TestField == nil {
-				req.TestField = new(test.Test)
-			}
-			{
-				raw, err := proto.Marshal(req.TestField)
-				if err != nil {
-					return err
-				}
-				params.TestField = raw
-			}
-			params.Myyenum = int32(req.Myyenum)
-			params.Testsenum = int32(req.Testsenum)
-			return nil
-		}()
+		params, err := ExampleTable1ToExampleService1PersistType(req)
 		if err != nil {
 			return err
 		}
@@ -460,18 +310,12 @@ func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_Clie
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			var Count_ int64
-			if err := row.Scan(
-				&Count_,
-			); err != nil {
-				return err
-			}
-			res.Count = Count_
-			return nil
-		}()
+		res, err = CountRowsFromExampleService1Row(row)
+		if err != nil {
+			return err
+		}
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil

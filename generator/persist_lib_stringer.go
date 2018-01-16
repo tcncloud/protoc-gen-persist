@@ -364,25 +364,27 @@ func (per *PersistStringer) SqlQueryFunction(method *Method) string {
 
 	printer := &Printer{}
 	queryMethodName := NewPLQueryMethodName(method)
-	printer.P("func %s(tx Runable, req %sParams)", queryMethodName, queryMethodName)
+	printer.P("func %s(tx Runable, req %sParams) *Result {", queryMethodName, queryMethodName)
 	if lenOfResult == 0 || method.IsClientStreaming() { // use an exec
 		printer.PA([]string{
-			"(sql.Result, error) {\n",
-			"return tx.Exec(\n\"%s\",\n%s)",
+			"res, err := tx.Exec(\n\"%s\",\n%s)\n",
+			"if err != nil {\n return newResultFromErr(err)\n}\n",
+			"return newResultFromSqlResult(res)\n",
 		},
 			query, argParams,
 		)
 	} else if method.IsServerStreaming() {
 		printer.PA([]string{
-			"(*sql.Rows, error) {\n",
-			"return tx.Query(\n\"%s\",\n%s)",
+			"res, err := tx.Query(\n\"%s\",\n%s)\n",
+			"if err != nil {\n return newResultFromErr(err)\n}\n",
+			"return newResultFromRows(res)",
 		},
 			query, argParams,
 		)
 	} else {
 		printer.PA([]string{
-			"*sql.Row {\n",
-			"return tx.QueryRow(\n\"%s\",\n%s)",
+			"row := tx.QueryRow(\n\"%s\",\n%s)\n",
+			"return newResultFromRow(row)\n",
 		},
 			query, argParams,
 		)
@@ -443,7 +445,7 @@ func (per *PersistStringer) DefaultSqlFunctionsImpl(method *Method) string {
 			"if err != nil {\n feedErr = err\n}\n",
 			"feed := func(req *%s) {\n",
 			"if feedErr != nil {\n return \n}\n",
-			"if _, err := %s(tx, req); err != nil {\n feedErr = err\n}\n}\n",
+			"if res := %s(tx, req); res.Err() != nil {\n feedErr = err\n}\n}\n",
 			"done := func() (Scanable, error) {\n if err := tx.Commit();err != nil {\n",
 			"return nil, err\n}\n return nil, feedErr\n}\n",
 			"return feed, done\n}\n}\n",
@@ -460,7 +462,7 @@ func (per *PersistStringer) DefaultSqlFunctionsImpl(method *Method) string {
 			"func (context.Context, *%s, func(Scanable)) error {\n",
 			"return func(ctx context.Context, req *%s, next func(Scanable)) error {\n",
 			"sqlDB, err := accessor()\n if err != nil {\n return err \n}\n",
-			"if _, err := %s(sqlDB, req); err != nil {\n return err \n}\n",
+			"if res := %s(sqlDB, req); res.Err() != nil {\n return err \n}\n",
 			"return nil\n}\n}\n",
 		},
 			method.GetName(),
@@ -476,13 +478,12 @@ func (per *PersistStringer) DefaultSqlFunctionsImpl(method *Method) string {
 			"sqlDB, err := accessor()\n if err != nil {\n return err\n}\n",
 			"tx, err := sqlDB.Begin()\n",
 			"if err != nil {\n return err\n}\n",
-			"rows, err := %s(tx, req)\n",
+			"res := %s(tx, req)\n",
+			"err = res.Do(func(row Scanable) error {\n",
+			"next(row)\n return nil\n})\n",
 			"if err != nil {\n return err \n}\n",
-			"defer rows.Close()\n",
-			"for rows.Next() {\n",
-			"next(rows)\n",
-			"}\n if err := tx.Commit(); err != nil { return err \n}\n",
-			"return rows.Err()\n}\n}\n",
+			"if err := tx.Commit(); err != nil { return err \n}\n",
+			"return res.Err()\n}\n}\n",
 		},
 			method.GetName(),
 			NewPLInputName(method),
@@ -495,8 +496,12 @@ func (per *PersistStringer) DefaultSqlFunctionsImpl(method *Method) string {
 			"func(context.Context, *%s, func(Scanable)) error {\n",
 			"return func(ctx context.Context, req *%s, next func(Scanable)) error {\n",
 			"sqlDB, err := accessor()\n if err != nil {\n return err\n}\n",
-			"row := %s(sqlDB, req)\n",
-			"next(row)\nreturn nil}\n}\n",
+			"res := %s(sqlDB, req)\n",
+			"err = res.Do(func(row Scanable) error {\n",
+			"next(row)\nreturn nil})\n",
+			"if err != nil {\n return err\n}\n",
+			"return nil\n}\n",
+			"}\n",
 		},
 			method.GetName(),
 			NewPLInputName(method),
@@ -514,8 +519,8 @@ func (per *PersistStringer) DefaultSqlFunctionsImpl(method *Method) string {
 			"tx, err := sqlDb.Begin()\n",
 			"if err != nil {\n feedErr = err\n}\n",
 			"feed := func(req *%s) (Scanable, error) {\n",
-			"if feedErr != nil{\n return nil, feedErr\n}\n row := %s(tx, req)\n",
-			"return row, nil\n}\n",
+			"if feedErr != nil{\n return nil, feedErr\n}\n res := %s(tx, req)\n",
+			"return res, nil\n}\n",
 			"done := func() error {\n if feedErr != nil {\n tx.Rollback()\n} else {\n feedErr = tx.Commit()\n}\n",
 			"return feedErr\n}\n",
 			"return feed,done\n}\n}\n",
@@ -598,6 +603,7 @@ func (per *PersistStringer) DeclareSpannerGetter() string {
 // SqlClientGetter
 // Scanable interface
 // Runable interface
+// Result struct
 func (per *PersistStringer) DeclareSqlPackageDefs() string {
 	printer := &Printer{}
 	printer.P("type SqlClientGetter func() (*sql.DB, error)\n")
@@ -611,6 +617,59 @@ func (per *PersistStringer) DeclareSqlPackageDefs() string {
 		"Query(string, ...interface{}) (*sql.Rows, error)\n",
 		"QueryRow(string, ...interface{}) *sql.Row\n",
 		"Exec(string, ...interface{}) (sql.Result, error)\n}\n",
+	})
+	printer.PA([]string{
+		"type Result struct {\n",
+		"result sql.Result\n",
+		"row    *sql.Row\n",
+		"rows   *sql.Rows\n",
+		"err    error\n",
+		"}\n",
+		"func newResultFromSqlResult(r sql.Result) *Result {\n",
+		"return &Result{result: r}\n",
+		"}\n",
+		"func newResultFromRow(r *sql.Row) *Result {\n",
+		"return &Result{row: r}\n",
+		"}\n",
+		"func newResultFromRows(r *sql.Rows) *Result {\n",
+		"return &Result{rows: r}\n",
+		"}\n",
+		"func newResultFromErr(err error) *Result {\n",
+		"return &Result{err: err}\n",
+		"}\n",
+		"func (r *Result) Do(fun func(Scanable) error) error {\n",
+		"if r.err != nil {\n",
+		"return r.err\n",
+		"}\n",
+		"if r.row != nil {\n",
+		"if err := fun(r.row); err != nil {\n",
+		"return err\n",
+		"}\n",
+		"}\n",
+		"if r.rows != nil {\n",
+		"defer r.rows.Close()\n",
+		"for r.rows.Next() {\n",
+		"if err := fun(r.rows); err != nil {\n",
+		"return err\n",
+		"}\n",
+		"}\n",
+		"}\n",
+		"return nil\n",
+		"}\n",
+		"// returns sql.ErrNoRows if it did not scan into dest\n",
+		"func (r *Result) Scan(dest ...interface{}) error {\n",
+		"if r.result != nil {\n return sql.ErrNoRows\n}",
+		"else if r.row != nil {\n return r.row.Scan(dest...)\n}",
+		"else if r.rows != nil {\n",
+		"err := r.rows.Scan(dest...)\n",
+		"if r.rows.Next() {\n r.rows.Close()\n}\n",
+		"return err\n",
+		"}\n",
+		"return sql.ErrNoRows\n",
+		"}\n",
+		"func (r *Result) Err() error {\n",
+		"return r.err\n",
+		"}\n",
 	})
 	return printer.String()
 }

@@ -40,12 +40,25 @@ import "google/protobuf/descriptor.proto";
 
 import "examples/test/test.proto";
 
+enum MyEnum {
+    OPTION_0 = 0;
+    OPTION_1 = 1;
+}
+
+enum MappedEnum {
+	OPT_0 = 0;
+	OPT_1 = 1;
+}
+
 message Something {
 	message SomethingElse {
 		string thing = 1;
 	}
 	SomethingElse thing = 2;
+	MyEnum myenum = 3;
+	MappedEnum mappedenum = 4;
 }
+
 message HasTimestamp {
 	google.protobuf.Timestamp time = 1;
 	Something some = 2;
@@ -74,16 +87,16 @@ service MySpanner {
   option (persist.mapping) = {
     types: [
       {
-        proto_type_name: ".google.protobuf.Timestamp"
+        proto_type_name: "google.protobuf.Timestamp"
         proto_type:  TYPE_MESSAGE
         go_type: "MyTime"
         go_package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
       },
       {
-        proto_type_name: ".examples.test.TestEnum"
+        proto_type_name: "examples.MyMappedEnum"
         proto_type: TYPE_ENUM
         go_type: "MyEnum"
-        go_package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+        go_package: "github.com/tcncloud/protoc-gen-persist/examples/spanner/basic"
       }
     ]
   };

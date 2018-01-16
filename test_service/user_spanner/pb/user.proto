@@ -90,6 +90,13 @@ service UServ {
 			query: ["Update users set name = @name PK(id = @id) "]
 		};
 	};
+	rpc UpdateNameToFoo(User) returns (Empty) {
+		option (persist.ql) = {
+			query: ["Update users set name = 'foo' PRIMARY_KEY(id = @id)"],
+		};
+	};
+	rpc UpdateAllNames(Empty) returns (stream User) {};
+
 	rpc GetFriends(Friends) returns(stream User) {
 		option (persist.ql) = {
 			query: ["SELECT id, name, friends, created_on, favorite_numbers ",

@@ -46,30 +46,28 @@ type Method struct {
 	Desc    *descriptor.MethodDescriptorProto
 	Service *Service
 	Query   parser.Query
+	backend BackendStringer
 }
 
 func NewMethod(desc *descriptor.MethodDescriptorProto, srv *Service) (*Method, error) {
 	meth := &Method{Desc: desc, Service: srv}
-
+	if meth.Service.IsSpanner() {
+		meth.backend = &SpannerStringer{method: meth}
+	} else {
+		meth.backend = &SqlStringer{method: meth}
+	}
 	return meth, nil
 }
 
 func (m *Method) String() string {
-	back := func() BackendStringer {
-		if m.IsSpanner() {
-			return &SpannerStringer{method: m}
-		} else {
-			return &SqlStringer{method: m}
-		}
-	}()
 	if m.IsUnary() {
-		return NewUnaryStringer(m, back).String()
+		return NewUnaryStringer(m, m.backend).String()
 	} else if m.IsClientStreaming() {
-		return NewClientStreamStringer(m, back).String()
+		return NewClientStreamStringer(m, m.backend).String()
 	} else if m.IsServerStreaming() {
-		return NewServerStreamStringer(m, back).String()
+		return NewServerStreamStringer(m, m.backend).String()
 	} else {
-		return NewBidiStreamStringer(m, back).String()
+		return NewBidiStreamStringer(m, m.backend).String()
 	}
 }
 func (m *Method) IsSelect() bool {
@@ -112,15 +110,13 @@ func (m *Method) GetQuery() string {
 // if the service.pb.go and the persist.go are in different packages
 // it will return the import prefix+.  of the package,  otherwise it returns
 // the empty string
-
 func (m *Method) GetFilePackage() string {
 	if !m.Service.File.DifferentImpl() {
-		logrus.Debugf("the impl and file are in same package")
 		return ""
 	}
-	logrus.Debugf("the impl and file are different. file: %s", GetGoPackage(m.Service.File.GetFullGoPackage()))
-	//return GetGoPackage(m.Service.File.GetFullGoPackage())
-	if imp := m.Service.File.ImportList.GetImportPkgForPath(m.Service.File.GetFullGoPackage()); imp != "__invalid__import__" {
+
+	imp := m.Service.File.ImportList.GetImportPkgForPath(m.Service.File.GetFullGoPackage())
+	if imp != "__invalid__import__" {
 		return imp + "."
 	}
 	return ""
@@ -149,7 +145,14 @@ func (m *Method) GetInputType() string {
 
 // returns the last element of the type.  So instead of test.ExampleTable,
 // it returns ExampleTable
-func (m *Method) GetInputTypeName() string {
+func (m *Method) GetOutputTypeMinusPackage() string {
+	strs := strings.Split(m.GetOutputType(), ".")
+	return strs[len(strs)-1]
+}
+
+// returns the last element of the type.  So instead of test.ExampleTable,
+// it returns ExampleTable
+func (m *Method) GetInputTypeMinusPackage() string {
 	strs := strings.Split(m.GetInputType(), ".")
 	return strs[len(strs)-1]
 }
@@ -396,7 +399,8 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 			IsMapped:        (m.GetMapping(mp) != nil),
 			FieldDescriptor: mp,
 			IsRepeated:      (mp.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED),
-			IsEnum:          (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM),
+			IsEnum: (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM &&
+				m.GetMapping(mp) == nil),
 			IsMessage: (mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE &&
 				m.GetMapping(mp) == nil),
 		}

@@ -11,6 +11,7 @@ type UServQueryHandlers struct {
 	GetAllUsersHandler     func(context.Context, *EmptyForUServ, func(Scanable)) error
 	SelectUserByIdHandler  func(context.Context, *UserForUServ, func(Scanable)) error
 	UpdateUserNamesHandler func(context.Context) (func(*UserForUServ) (Scanable, error), func() error)
+	UpdateNameToFooHandler func(context.Context, *UserForUServ, func(Scanable)) error
 	GetFriendsHandler      func(context.Context, *FriendsQueryForUServ, func(Scanable)) error
 	DropTableHandler       func(context.Context, *EmptyForUServ, func(Scanable)) error
 }
@@ -46,6 +47,11 @@ func (p *UServMethodReceiver) UpdateUserNames(ctx context.Context) (func(*UserFo
 }
 
 // next must be called on each result row
+func (p *UServMethodReceiver) UpdateNameToFoo(ctx context.Context, params *UserForUServ, next func(Scanable)) error {
+	return p.Handlers.UpdateNameToFooHandler(ctx, params, next)
+}
+
+// next must be called on each result row
 func (p *UServMethodReceiver) GetFriends(ctx context.Context, params *FriendsQueryForUServ, next func(Scanable)) error {
 	return p.Handlers.GetFriendsHandler(ctx, params, next)
 }
@@ -60,7 +66,7 @@ func DefaultCreateTableHandler(accessor SqlClientGetter) func(context.Context, *
 		if err != nil {
 			return err
 		}
-		if _, err := EmptyFromCreateTableQuery(sqlDB, req); err != nil {
+		if res := UServCreateTableQuery(sqlDB, req); res.Err() != nil {
 			return err
 		}
 		return nil
@@ -81,7 +87,7 @@ func DefaultInsertUsersHandler(accessor SqlClientGetter) func(context.Context) (
 			if feedErr != nil {
 				return
 			}
-			if _, err := UserFromInsertUsersQuery(tx, req); err != nil {
+			if res := UServInsertUsersQuery(tx, req); res.Err() != nil {
 				feedErr = err
 			}
 		}
@@ -104,18 +110,18 @@ func DefaultGetAllUsersHandler(accessor SqlClientGetter) func(context.Context, *
 		if err != nil {
 			return err
 		}
-		rows, err := EmptyFromGetAllUsersQuery(tx, req)
+		res := UServGetAllUsersQuery(tx, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
 		if err != nil {
 			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			next(rows)
 		}
 		if err := tx.Commit(); err != nil {
 			return err
 		}
-		return rows.Err()
+		return res.Err()
 	}
 }
 func DefaultSelectUserByIdHandler(accessor SqlClientGetter) func(context.Context, *UserForUServ, func(Scanable)) error {
@@ -124,8 +130,14 @@ func DefaultSelectUserByIdHandler(accessor SqlClientGetter) func(context.Context
 		if err != nil {
 			return err
 		}
-		row := UserFromSelectUserByIdQuery(sqlDB, req)
-		next(row)
+		res := UServSelectUserByIdQuery(sqlDB, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 }
@@ -144,8 +156,8 @@ func DefaultUpdateUserNamesHandler(accessor SqlClientGetter) func(context.Contex
 			if feedErr != nil {
 				return nil, feedErr
 			}
-			row := UserFromUpdateUserNamesQuery(tx, req)
-			return row, nil
+			res := UServUpdateUserNamesQuery(tx, req)
+			return res, nil
 		}
 		done := func() error {
 			if feedErr != nil {
@@ -158,6 +170,18 @@ func DefaultUpdateUserNamesHandler(accessor SqlClientGetter) func(context.Contex
 		return feed, done
 	}
 }
+func DefaultUpdateNameToFooHandler(accessor SqlClientGetter) func(context.Context, *UserForUServ, func(Scanable)) error {
+	return func(ctx context.Context, req *UserForUServ, next func(Scanable)) error {
+		sqlDB, err := accessor()
+		if err != nil {
+			return err
+		}
+		if res := UServUpdateNameToFooQuery(sqlDB, req); res.Err() != nil {
+			return err
+		}
+		return nil
+	}
+}
 func DefaultGetFriendsHandler(accessor SqlClientGetter) func(context.Context, *FriendsQueryForUServ, func(Scanable)) error {
 	return func(ctx context.Context, req *FriendsQueryForUServ, next func(Scanable)) error {
 		sqlDB, err := accessor()
@@ -168,18 +192,18 @@ func DefaultGetFriendsHandler(accessor SqlClientGetter) func(context.Context, *F
 		if err != nil {
 			return err
 		}
-		rows, err := FriendsQueryFromGetFriendsQuery(tx, req)
+		res := UServGetFriendsQuery(tx, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
 		if err != nil {
 			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			next(rows)
 		}
 		if err := tx.Commit(); err != nil {
 			return err
 		}
-		return rows.Err()
+		return res.Err()
 	}
 }
 func DefaultDropTableHandler(accessor SqlClientGetter) func(context.Context, *EmptyForUServ, func(Scanable)) error {
@@ -188,7 +212,7 @@ func DefaultDropTableHandler(accessor SqlClientGetter) func(context.Context, *Em
 		if err != nil {
 			return err
 		}
-		if _, err := EmptyFromDropTableQuery(sqlDB, req); err != nil {
+		if res := UServDropTableQuery(sqlDB, req); res.Err() != nil {
 			return err
 		}
 		return nil

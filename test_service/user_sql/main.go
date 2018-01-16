@@ -43,6 +43,52 @@ func (d *ShutdownImpl) Shutdown(ctx context.Context, req *pb.Empty) (*pb.Empty, 
 	return nil, fmt.Errorf("Unimplemented")
 }
 
+func (d *ShutdownImpl) UpdateAllNames(r *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {
+	db, err := sql.Open(
+		"postgres",
+		"user=postgres password=postgres dbname=postgres sslmode=disable",
+	)
+	if err != nil {
+		return err
+	}
+	// the params part is turned into this function.
+	params, err := pb.EmptyToUServPersistType(r)
+	res := pl.UServGetAllUsersQuery(db, params)
+	err = res.Do(func(s pl.Scanable) error {
+		user, err := pb.UserFromUServRow(s)
+		if err != nil {
+			return err
+		}
+		params, err := pb.UserToUServPersistType(user)
+		if err != nil {
+			return err
+		}
+		res := pl.UServUpdateNameToFooQuery(db, params)
+		if res.Err() != nil {
+			return res.Err()
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	res = pl.UServGetAllUsersQuery(db, params)
+	if res.Err() != nil {
+		return res.Err()
+	}
+	err = res.Do(func(s pl.Scanable) error {
+		user, err := pb.UserFromUServRow(s)
+		if err != nil {
+			return err
+		}
+		if err := stream.Send(user); err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}
+
 // an example of using a custom query handler instead of the default query handler.
 // you can do whatever you want here, and have the pb/persist_lib package available
 func myDrop(ctx context.Context, req *pl.EmptyForUServ, _ func(pl.Scanable)) error {
@@ -53,10 +99,11 @@ func myDrop(ctx context.Context, req *pl.EmptyForUServ, _ func(pl.Scanable)) err
 	if err != nil {
 		return err
 	}
-	res, err := pl.EmptyFromDropTableQuery(db, req)
+	res := pl.UServDropTableQuery(db, req)
 	if err != nil {
 		return err
 	}
+
 	fmt.Printf("result? %+v\n", res)
 	return nil
 }

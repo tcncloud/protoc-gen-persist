@@ -94,7 +94,8 @@ func NewPLQueryMethodName(m *Method) PLQueryMethodName {
 
 func (pl PLQueryMethodName) String() string {
 	p := &Printer{}
-	p.P("%sFrom%sQuery", pl.m.GetInputTypeName(), pl.m.Desc.GetName())
+
+	p.P("%s%sQuery", pl.m.Service.GetName(), pl.m.Desc.GetName())
 	return p.String()
 }
 
@@ -133,4 +134,16 @@ func GetHookName(hook *persist.QLImpl_CallbackFunction) string {
 	}
 	name += hook.GetName()
 	return name
+}
+
+func ToParamsFuncName(m *Method) string {
+	printer := &Printer{}
+	printer.P("%sTo%sPersistType", m.GetInputTypeMinusPackage(), m.Service.GetName())
+	return printer.String()
+}
+
+func FromScanableFuncName(m *Method) string {
+	printer := &Printer{}
+	printer.P("%sFrom%sRow", m.GetOutputTypeMinusPackage(), m.Service.GetName())
+	return printer.String()
 }

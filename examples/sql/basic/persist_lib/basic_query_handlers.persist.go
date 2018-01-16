@@ -71,8 +71,14 @@ func DefaultUniarySelectHandler(accessor SqlClientGetter) func(context.Context, 
 		if err != nil {
 			return err
 		}
-		row := PartialTableFromUniarySelectQuery(sqlDB, req)
-		next(row)
+		res := AmazingUniarySelectQuery(sqlDB, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 }
@@ -82,8 +88,14 @@ func DefaultUniarySelectWithHooksHandler(accessor SqlClientGetter) func(context.
 		if err != nil {
 			return err
 		}
-		row := PartialTableFromUniarySelectWithHooksQuery(sqlDB, req)
-		next(row)
+		res := AmazingUniarySelectWithHooksQuery(sqlDB, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 }
@@ -97,18 +109,18 @@ func DefaultServerStreamHandler(accessor SqlClientGetter) func(context.Context, 
 		if err != nil {
 			return err
 		}
-		rows, err := NameFromServerStreamQuery(tx, req)
+		res := AmazingServerStreamQuery(tx, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
 		if err != nil {
 			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			next(rows)
 		}
 		if err := tx.Commit(); err != nil {
 			return err
 		}
-		return rows.Err()
+		return res.Err()
 	}
 }
 func DefaultServerStreamWithHooksHandler(accessor SqlClientGetter) func(context.Context, *Test_NameForAmazing, func(Scanable)) error {
@@ -121,18 +133,18 @@ func DefaultServerStreamWithHooksHandler(accessor SqlClientGetter) func(context.
 		if err != nil {
 			return err
 		}
-		rows, err := NameFromServerStreamWithHooksQuery(tx, req)
+		res := AmazingServerStreamWithHooksQuery(tx, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
 		if err != nil {
 			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			next(rows)
 		}
 		if err := tx.Commit(); err != nil {
 			return err
 		}
-		return rows.Err()
+		return res.Err()
 	}
 }
 func DefaultBidirectionalHandler(accessor SqlClientGetter) func(context.Context) (func(*Test_ExampleTableForAmazing) (Scanable, error), func() error) {
@@ -150,8 +162,8 @@ func DefaultBidirectionalHandler(accessor SqlClientGetter) func(context.Context)
 			if feedErr != nil {
 				return nil, feedErr
 			}
-			row := ExampleTableFromBidirectionalQuery(tx, req)
-			return row, nil
+			res := AmazingBidirectionalQuery(tx, req)
+			return res, nil
 		}
 		done := func() error {
 			if feedErr != nil {
@@ -179,8 +191,8 @@ func DefaultBidirectionalWithHooksHandler(accessor SqlClientGetter) func(context
 			if feedErr != nil {
 				return nil, feedErr
 			}
-			row := ExampleTableFromBidirectionalWithHooksQuery(tx, req)
-			return row, nil
+			res := AmazingBidirectionalWithHooksQuery(tx, req)
+			return res, nil
 		}
 		done := func() error {
 			if feedErr != nil {
@@ -208,7 +220,7 @@ func DefaultClientStreamHandler(accessor SqlClientGetter) func(context.Context) 
 			if feedErr != nil {
 				return
 			}
-			if _, err := ExampleTableFromClientStreamQuery(tx, req); err != nil {
+			if res := AmazingClientStreamQuery(tx, req); res.Err() != nil {
 				feedErr = err
 			}
 		}
@@ -236,7 +248,7 @@ func DefaultClientStreamWithHookHandler(accessor SqlClientGetter) func(context.C
 			if feedErr != nil {
 				return
 			}
-			if _, err := ExampleTableFromClientStreamWithHookQuery(tx, req); err != nil {
+			if res := AmazingClientStreamWithHookQuery(tx, req); res.Err() != nil {
 				feedErr = err
 			}
 		}

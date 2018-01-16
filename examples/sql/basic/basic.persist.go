@@ -115,17 +115,69 @@ func (b *AmazingImplBuilder) MustBuild() *AmazingImpl {
 	}
 	return s
 }
+func PartialTableToAmazingPersistType(req *test.PartialTable) (*persist_lib.Test_PartialTableForAmazing, error) {
+	params := &persist_lib.Test_PartialTableForAmazing{}
+	params.Id = req.Id
+	params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+	return params, nil
+}
+func ExampleTableFromAmazingRow(row persist_lib.Scanable) (*test.ExampleTable, error) {
+	res := &test.ExampleTable{}
+	var Id_ int64
+	var StartTime_ mytime.MyTime
+	var Name_ string
+	if err := row.Scan(
+		&Id_,
+		&StartTime_,
+		&Name_,
+	); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	res.Id = Id_
+	res.StartTime = StartTime_.ToProto()
+	res.Name = Name_
+	return res, nil
+}
+func NameToAmazingPersistType(req *test.Name) (*persist_lib.Test_NameForAmazing, error) {
+	params := &persist_lib.Test_NameForAmazing{}
+	params.Name = req.Name
+	return params, nil
+}
+func ExampleTableToAmazingPersistType(req *test.ExampleTable) (*persist_lib.Test_ExampleTableForAmazing, error) {
+	params := &persist_lib.Test_ExampleTableForAmazing{}
+	params.Id = req.Id
+	params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+	params.Name = req.Name
+	return params, nil
+}
+func NumRowsFromAmazingRow(row persist_lib.Scanable) (*test.NumRows, error) {
+	res := &test.NumRows{}
+	var Count_ int64
+	if err := row.Scan(
+		&Count_,
+	); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	res.Count = Count_
+	return res, nil
+}
+func IdsFromAmazingRow(row persist_lib.Scanable) (*test.Ids, error) {
+	res := &test.Ids{}
+	var Ids_ []int64
+	if err := row.Scan(
+		&Ids_,
+	); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	res.Ids = Ids_
+	return res, nil
+}
 func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	params := &persist_lib.Test_PartialTableForAmazing{}
-	err = func() error {
-		params.Id = req.Id
-		params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
-		return nil
-	}()
+	params, err := PartialTableToAmazingPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -134,23 +186,7 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) 
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			var StartTime_ mytime.MyTime
-			var Name_ string
-			if err := row.Scan(
-				&Id_,
-				&StartTime_,
-				&Name_,
-			); err != nil {
-				return err
-			}
-			res.Id = Id_
-			res.StartTime = StartTime_.ToProto()
-			res.Name = Name_
-			return nil
-		}()
+		res, err = ExampleTableFromAmazingRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -161,11 +197,11 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) 
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	var err error
-	var res = test.ExampleTable{}
+	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
 	beforeRes, err := hooks.UniarySelectBeforeHook(req)
@@ -174,12 +210,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params := &persist_lib.Test_PartialTableForAmazing{}
-	err = func() error {
-		params.Id = req.Id
-		params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
-		return nil
-	}()
+	params, err := PartialTableToAmazingPersistType(req)
 	if err != nil {
 		return nil, err
 	}
@@ -188,23 +219,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 		if row == nil { // there was no return data
 			return
 		}
-		res = test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			var StartTime_ mytime.MyTime
-			var Name_ string
-			if err := row.Scan(
-				&Id_,
-				&StartTime_,
-				&Name_,
-			); err != nil {
-				return err
-			}
-			res.Id = Id_
-			res.StartTime = StartTime_.ToProto()
-			res.Name = Name_
-			return nil
-		}()
+		res, err = ExampleTableFromAmazingRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -215,19 +230,15 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	if err := hooks.UniarySelectAfterHook(req, &res); err != nil {
+	if err := hooks.UniarySelectAfterHook(req, res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
-	return &res, nil
+	return res, nil
 }
 func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
 	var err error
 	_ = err
-	params := &persist_lib.Test_NameForAmazing{}
-	err = func() error {
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := NameToAmazingPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -236,28 +247,12 @@ func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamSe
 		if row == nil { // there was no return data
 			return
 		}
-		res := test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			var StartTime_ mytime.MyTime
-			var Name_ string
-			if err := row.Scan(
-				&Id_,
-				&StartTime_,
-				&Name_,
-			); err != nil {
-				return err
-			}
-			res.Id = Id_
-			res.StartTime = StartTime_.ToProto()
-			res.Name = Name_
-			return nil
-		}()
+		res, err := ExampleTableFromAmazingRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
@@ -281,11 +276,7 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 			}
 		}
 	}
-	params := &persist_lib.Test_NameForAmazing{}
-	err = func() error {
-		params.Name = req.Name
-		return nil
-	}()
+	params, err := NameToAmazingPersistType(req)
 	if err != nil {
 		return err
 	}
@@ -294,32 +285,16 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 		if row == nil { // there was no return data
 			return
 		}
-		res := test.ExampleTable{}
-		err = func() error {
-			var Id_ int64
-			var StartTime_ mytime.MyTime
-			var Name_ string
-			if err := row.Scan(
-				&Id_,
-				&StartTime_,
-				&Name_,
-			); err != nil {
-				return err
-			}
-			res.Id = Id_
-			res.StartTime = StartTime_.ToProto()
-			res.Name = Name_
-			return nil
-		}()
+		res, err := ExampleTableFromAmazingRow(row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := hooks.ServerStreamAfterHook(req, &res); err != nil {
+		if err := hooks.ServerStreamAfterHook(req, res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			return
 		}
-		if err := stream.Send(&res); err != nil {
+		if err := stream.Send(res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error during iteration: %v", err)
 		}
 	})
@@ -341,13 +316,7 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params := &persist_lib.Test_ExampleTableForAmazing{}
-		err = func() error {
-			params.Id = req.Id
-			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
-			params.Name = req.Name
-			return nil
-		}()
+		params, err := ExampleTableToAmazingPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -356,24 +325,11 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 		}
 		if row != nil {
-			res := test.ExampleTable{}
-			err = func() error {
-				var Id_ int64
-				var StartTime_ mytime.MyTime
-				var Name_ string
-				if err := row.Scan(
-					&Id_,
-					&StartTime_,
-					&Name_,
-				); err != nil {
-					return err
-				}
-				res.Id = Id_
-				res.StartTime = StartTime_.ToProto()
-				res.Name = Name_
-				return nil
-			}()
+			res, err := ExampleTableFromAmazingRow(row)
 			if err != nil {
+				return err
+			}
+			if err := stream.Send(res); err != nil {
 				return err
 			}
 		}
@@ -397,13 +353,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 		} else if beforeRes != nil {
 			continue
 		}
-		params := &persist_lib.Test_ExampleTableForAmazing{}
-		err = func() error {
-			params.Id = req.Id
-			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
-			params.Name = req.Name
-			return nil
-		}()
+		params, err := ExampleTableToAmazingPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -412,28 +362,15 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 		}
 		if row != nil {
-			res := test.ExampleTable{}
-			err = func() error {
-				var Id_ int64
-				var StartTime_ mytime.MyTime
-				var Name_ string
-				if err := row.Scan(
-					&Id_,
-					&StartTime_,
-					&Name_,
-				); err != nil {
-					return err
-				}
-				res.Id = Id_
-				res.StartTime = StartTime_.ToProto()
-				res.Name = Name_
-				return nil
-			}()
+			res, err := ExampleTableFromAmazingRow(row)
 			if err != nil {
 				return err
 			}
-			if err := hooks.BidirectionalAfterHook(req, &res); err != nil {
+			if err := hooks.BidirectionalAfterHook(req, res); err != nil {
 				return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+			}
+			if err := stream.Send(res); err != nil {
+				return err
 			}
 		}
 	}
@@ -442,7 +379,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 	var err error
 	_ = err
-	res := test.NumRows{}
+	res := &test.NumRows{}
 	feed, stop := s.PERSIST.ClientStream(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -451,13 +388,7 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params := &persist_lib.Test_ExampleTableForAmazing{}
-		err = func() error {
-			params.Id = req.Id
-			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
-			params.Name = req.Name
-			return nil
-		}()
+		params, err := ExampleTableToAmazingPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -468,18 +399,12 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			var Count_ int64
-			if err := row.Scan(
-				&Count_,
-			); err != nil {
-				return err
-			}
-			res.Count = Count_
-			return nil
-		}()
+		res, err = NumRowsFromAmazingRow(row)
+		if err != nil {
+			return err
+		}
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
@@ -487,7 +412,7 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookServer) error {
 	var err error
 	_ = err
-	res := test.Ids{}
+	res := &test.Ids{}
 	feed, stop := s.PERSIST.ClientStreamWithHook(stream.Context())
 	for {
 		req, err := stream.Recv()
@@ -502,13 +427,7 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 		} else if beforeRes != nil {
 			continue
 		}
-		params := &persist_lib.Test_ExampleTableForAmazing{}
-		err = func() error {
-			params.Id = req.Id
-			params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
-			params.Name = req.Name
-			return nil
-		}()
+		params, err := ExampleTableToAmazingPersistType(req)
 		if err != nil {
 			return err
 		}
@@ -519,25 +438,19 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		err = func() error {
-			var Ids_ []int64
-			if err := row.Scan(
-				&Ids_,
-			); err != nil {
-				return err
-			}
-			res.Ids = Ids_
-			return nil
-		}()
+		res, err = IdsFromAmazingRow(row)
+		if err != nil {
+			return err
+		}
 	}
 	// NOTE: I dont want to store your requests in memory
 	// so the after hook for client streaming calls
 	// is called with an empty request struct
 	fakeReq := &test.ExampleTable{}
-	if err := hooks.ClientStreamAfterHook(fakeReq, &res); err != nil {
+	if err := hooks.ClientStreamAfterHook(fakeReq, res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
-	if err := stream.SendAndClose(&res); err != nil {
+	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil

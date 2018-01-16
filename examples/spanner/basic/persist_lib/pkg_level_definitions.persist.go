@@ -49,12 +49,18 @@ func (p *Test_ExampleTableForMySpanner) GetName() string                { return
 func (p *Test_ExampleTableForMySpanner) SetName(param string)           { p.Name = param }
 
 type SomethingForMySpanner struct {
-	Thing []byte
+	Thing      []byte
+	Myenum     int32
+	Mappedenum int32
 }
 
 // this could be used in a query, so generate the getters/setters
-func (p *SomethingForMySpanner) GetThing() []byte      { return p.Thing }
-func (p *SomethingForMySpanner) SetThing(param []byte) { p.Thing = param }
+func (p *SomethingForMySpanner) GetThing() []byte          { return p.Thing }
+func (p *SomethingForMySpanner) SetThing(param []byte)     { p.Thing = param }
+func (p *SomethingForMySpanner) GetMyenum() int32          { return p.Myenum }
+func (p *SomethingForMySpanner) SetMyenum(param int32)     { p.Myenum = param }
+func (p *SomethingForMySpanner) GetMappedenum() int32      { return p.Mappedenum }
+func (p *SomethingForMySpanner) SetMappedenum(param int32) { p.Mappedenum = param }
 
 type HasTimestampForMySpanner struct {
 	Time   interface{}
