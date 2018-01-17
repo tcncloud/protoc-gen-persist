@@ -32,7 +32,6 @@ package generator
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
-	//"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
 )
 
@@ -44,9 +43,7 @@ type Generator struct {
 	OriginalRequest *plugin_go.CodeGeneratorRequest
 	AllStructures   *StructList // all structures present in the files
 	Files           *FileList
-
-	//crtFile *descriptor.FileDescriptorProto
-	Response *plugin_go.CodeGeneratorResponse
+	Response        *plugin_go.CodeGeneratorResponse
 }
 
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
@@ -60,7 +57,6 @@ func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 }
 
 func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
-	//logrus.WithField("structs", g.AllStructures).Debug("collected structures")
 	ret := g.Response
 	logrus.Debugf("going over %d files\n", len(*g.Files))
 	for _, fileStruct := range *g.Files {
@@ -88,7 +84,6 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 		})
 	}
 
-	//logrus.WithField("response", ret).Debug("result")
 	return ret, nil
 }
 

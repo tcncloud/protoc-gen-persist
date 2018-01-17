@@ -28,7 +28,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-PROTO_FILES:= persist/options.proto examples/example1.proto
+PROTO_FILES:= persist/options.proto tests/example1.proto
 PROTOC_DIR?=/usr/local
 
 PROTOC_INCLUDE:=$(PROTOC_DIR)/include
@@ -47,22 +47,19 @@ proto-persist:
 proto-examples:
 	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	 	examples/spanner/basic/*.proto
-	# $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	# 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	# 	examples/sql/little_of_everything/*.proto
+	 	tests/spanner/basic/*.proto
 	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	 	examples/sql/basic/*.proto
+	 	tests/sql/little_of_everything/*.proto
+	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+	 	tests/sql/basic/*.proto
 	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src  \
 	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	 	examples/spanner/bob_example/*.proto
+	 	tests/spanner/bob_example/*.proto
 	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	 	examples/test/*.proto
-	# $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src -I./examples/test \
-	# 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	# 	examples/spanner/import_tests/persist_and_go.proto
+	 	tests/test/*.proto
 
 build: generate
 	dep ensure
@@ -76,30 +73,22 @@ test: deps build
 
 test-compile:
 	go build
-	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	# 	--plugin=./protoc-gen-persist \
-	# 	--persist_out=$$GOPATH/src  examples/sql/little_of_everything/*.proto
+	 DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	 	--plugin=./protoc-gen-persist \
+	 	--persist_out=$$GOPATH/src  tests/sql/little_of_everything/*.proto
 	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--plugin=./protoc-gen-persist \
-	 	--persist_out=$$GOPATH/src  examples/sql/basic/*.proto
+	 	--persist_out=$$GOPATH/src  tests/sql/basic/*.proto
 	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
-		--persist_out=$$GOPATH/src  examples/spanner/basic/*.proto
+		--persist_out=$$GOPATH/src  tests/spanner/basic/*.proto
 	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
-		--persist_out=$$GOPATH/src examples/spanner/bob_example/*.proto
-	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	# 	--plugin=./protoc-gen-persist \
-	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	# 	--plugin=./protoc-gen-persist \
-	# 	--persist_out=$$GOPATH/src  examples/test_issue_32/*.proto
-	# DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	# 	-I./examples/spanner/import_tests -I./examples/test \
-	# 	--plugin=./protoc-gen-persist \
-	# 	--persist_out=$$GOPATH/src  examples/spanner/import_tests/persist_and_go.proto
-	cd ./examples/sql/basic && go build
-	cd ./examples/spanner/basic && go build
-	cd ./examples/spanner/bob_example && go build
+		--persist_out=$$GOPATH/src tests/spanner/bob_example/*.proto
+	cd ./tests/sql/little_of_everything && go build
+	cd ./tests/sql/basic && go build
+	cd ./tests/spanner/basic && go build
+	cd ./tests/spanner/bob_example && go build
 
 
 deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/dep
@@ -116,8 +105,8 @@ $(GOPATH)/bin/dep:
 	go get -u github.com/golang/dep/cmd/dep
 
 clean:
-	rm -f examples/*.pb.go examples/*.persist.go examples/test/*.pb.go
-	rm -f examples/spanner/bob_example/*.pb.go examples/spanner/bob_example/*.persist.go
-	rm -f examples/spanner/basic/*.pb.go examples/spanner/basic/*.persist.go
-	rm -rf examples/spanner/bob_example/persist_lib
-	rm -rf examples/spanner/basic/persist_lib
+	rm -f tests/*.pb.go tests/*.persist.go tests/test/*.pb.go
+	rm -f tests/spanner/bob_example/*.pb.go tests/spanner/bob_example/*.persist.go
+	rm -f tests/spanner/basic/*.pb.go tests/spanner/basic/*.persist.go
+	rm -rf tests/spanner/bob_example/persist_lib
+	rm -rf tests/spanner/basic/persist_lib

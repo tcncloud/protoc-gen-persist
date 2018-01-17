@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package examples;
+
+
+message Row {
+	string id = 1;
+	string first_name = 2;
+	string last_name = 3;
+	int64 number = 4;
+}
+
+message GetNameRequest {
+	string id = 1;
+}
+message GetNameResponse {
+	string first_name = 1;
+	string last_name = 2;
+}
+
+service TestService {
+	option (persist.service_type) = SPANNER;
+	option (persist.queries) = {
+		[{
+				name: "get_name",
+				query: ["select * from table"],
+				columns: "examples.Row"
+			}, {
+				name: "set_name",
+				query: ["...."],
+				columns: "example.Row"
+			}];
+	};
+	rpc GetName(GetNameRequest) returns (GetNameResponse) {
+		option(perists.ql) = {
+			query: "query_name",
+		};
+	};
+}

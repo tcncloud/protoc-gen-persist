@@ -46,24 +46,9 @@ type Service struct {
 	AllStructs *StructList
 }
 
-func (s *Service) String() string {
-	var ms string
-	if s.Methods != nil {
-		//ms = fmt.Sprintf("%s", s.Methods)
-		ms = s.Methods.String()
-	} else {
-		ms = "<nil>"
-	}
-	sname := s.Desc.GetName()
-	fname := s.File.Desc.GetName()
-	return fmt.Sprintf("\nSERVICE:\n\tPackage: %s\n\tServiceName: %s\n\tFileName: %s\n\tService Methods: %+v\n\n",
-		s.Package, sname, fname, ms)
-}
-
 func (s *Service) ProcessMethods() error {
 	for _, m := range s.Desc.GetMethod() {
-		err := s.Methods.AddMethod(m, s)
-		if err != nil {
+		if err := s.Methods.AddMethod(m, s); err != nil {
 			return err
 		}
 	}
@@ -111,15 +96,6 @@ func (s *Service) IsSQL() bool {
 	return false
 }
 
-// func (s *Service) IsMongo() bool {
-// 	for _, m := range *s.Methods {
-// 		if m.IsMongo() {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-//
 func (s *Service) IsSpanner() bool {
 	if p := s.GetServiceType(); p != nil {
 		if *p == persist.PersistenceOptions_SPANNER {
@@ -129,45 +105,9 @@ func (s *Service) IsSpanner() bool {
 	return false
 }
 
-func (s *Service) IsServiceEnabled() bool {
-	if s.GetServiceOption() != nil {
-		return true
-	}
-	if s.IsSQL() || s.IsSpanner() {
-		return true
-	}
-	return false
-}
-
 func (s *Service) PrintBuilder() string {
 	p := PersistStringer{}
 	return p.PersistImplBuilder(s)
-}
-
-func (s *Service) ProcessImports() {
-	logrus.Debug("PROCESS IMPORTS FOR SERVICE CALLED")
-	s.File.ImportList.GetOrAddImport("io", "io")
-	s.File.ImportList.GetOrAddImport("strings", "strings")
-	s.File.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
-	s.File.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
-	s.File.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
-	s.File.ImportList.GetOrAddImport("gstatus", "google.golang.org/grpc/status")
-	s.File.ImportList.GetOrAddImport("spanner", "cloud.google.com/go/spanner")
-	if s.File.DifferentImpl() {
-		s.File.ImportList.GetOrAddImport("pb", s.File.GetFullGoPackage())
-	}
-	if s.IsSpanner() {
-		s.File.ImportList.GetOrAddImport("iterator", "google.golang.org/api/iterator")
-	}
-	if opt := s.GetServiceOption(); opt != nil {
-		for _, m := range opt.GetTypes() {
-			logrus.Warnf("adding import: %+v  for type: %s", GetGoPackage(m.GetGoPackage()), m)
-			s.File.ImportList.GetOrAddImport(GetGoPackage(m.GetGoPackage()), GetGoPath(m.GetGoPackage()))
-		}
-	}
-	for _, met := range *s.Methods {
-		met.ProcessImports()
-	}
 }
 
 type Services []*Service

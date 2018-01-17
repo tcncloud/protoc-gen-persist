@@ -27,12 +27,12 @@ func (s *UnaryStringer) String() string {
 		s.method.GetInputType(),
 		s.method.GetOutputType(),
 	)
-	s.printer.P("var err error\nvar res = %s{}\n _ = err\n_ = res\n", s.method.GetOutputType())
+	s.printer.P("var err error\nvar res = &%s{}\n _ = err\n_ = res\n", s.method.GetOutputType())
 	s.BeforeHook()
 	s.Params()
 	s.PersistCall()
 	s.AfterHook()
-	s.printer.P("return &res, nil\n}\n")
+	s.printer.P("return res, nil\n}\n")
 
 	return s.printer.String()
 }
@@ -58,7 +58,7 @@ func (s *UnaryStringer) BeforeHook() {
 	if before == nil {
 		return
 	}
-	hookName := GetHookName(s.method, before)
+	hookName := GetHookName(before)
 
 	s.printer.PA([]string{
 		"beforeRes, err := %s(req)\n",
@@ -71,10 +71,8 @@ func (s *UnaryStringer) BeforeHook() {
 }
 
 func (s *UnaryStringer) Params() {
-	s.printer.P("params := &persist_lib.%s{}\n", NewPLInputName(s.method))
-	s.printer.P("err = %s\n", s.backend.MapRequestToParams())
+	s.printer.P("params, err := %s(req)\n", ToParamsFuncName(s.method))
 	s.printer.P("if err != nil {\n return nil, err\n}\n")
-
 }
 
 func (s *UnaryStringer) PersistCall() {
@@ -99,15 +97,8 @@ func (s *UnaryStringer) HandleRow() {
 }
 
 func (s *UnaryStringer) ResultFromRow() {
-	s.printer.P("res = %s{}\n", s.method.GetOutputType())
-	if len(s.method.GetTypeDescForFieldsInStruct(s.method.GetOutputTypeStruct())) > 0 {
-		s.printer.PA([]string{
-			"err = %s\n",
-			"if err != nil {\n iterErr = err\n return\n}\n",
-		},
-			s.backend.TranslateRowToResult(),
-		)
-	}
+	s.printer.P("res, err = %s(row)\n", FromScanableFuncName(s.method))
+	s.printer.P("if err != nil {\n iterErr = err\n return\n}\n")
 }
 
 func (s *UnaryStringer) AfterHook() {
@@ -116,10 +107,10 @@ func (s *UnaryStringer) AfterHook() {
 		return
 	}
 	s.printer.PA([]string{
-		"if err := %s(req, &res); err != nil {\n",
+		"if err := %s(req, res); err != nil {\n",
 		"return nil, gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 	},
-		GetHookName(s.method, after),
+		GetHookName(after),
 		"error in after hook: %v",
 	)
 }
@@ -198,7 +189,7 @@ func (s *BidiStreamStringer) BeforeHook() {
 	if before == nil {
 		return
 	}
-	hookName := GetHookName(s.method, before)
+	hookName := GetHookName(before)
 	s.printer.PA([]string{
 		"beforeRes, err := %s(req)\n",
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n} ",
@@ -209,8 +200,9 @@ func (s *BidiStreamStringer) BeforeHook() {
 	)
 }
 func (s *BidiStreamStringer) Params() {
-	s.printer.P("params := &persist_lib.%s{}\n", NewPLInputName(s.method))
-	s.printer.P("err = %s", s.backend.MapRequestToParams())
+	s.printer.P("params, err := %s(req)\n", ToParamsFuncName(s.method))
+	// s.printer.P("params := &persist_lib.%s{}\n", NewPLInputName(s.method))
+	// s.printer.P("err = %s", s.backend.MapRequestToParams())
 	s.printer.P("if err != nil {\n return err\n}\n")
 }
 func (s *BidiStreamStringer) HandleRow() {
@@ -218,15 +210,13 @@ func (s *BidiStreamStringer) HandleRow() {
 		"row, err := feed(params)\n",
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 		"if row != nil {\n",
-		"res := %s{}\n",
 	},
 		"error receiving result row: %v",
-		s.method.GetOutputType(),
 	)
-	if len(s.method.GetTypeDescForFieldsInStruct(s.method.GetOutputTypeStruct())) > 0 {
-		s.printer.P("err = %s\n if err != nil {\n return err\n}\n", s.backend.TranslateRowToResult())
-	}
+	s.printer.P("res, err := %s(row)\n", FromScanableFuncName(s.method))
+	s.printer.P("if err != nil {\n return err \n}\n")
 	s.AfterHook()
+	s.printer.P("if err := stream.Send(res); err != nil {\n return err\n}\n")
 	s.printer.P("}\n")
 }
 func (s *BidiStreamStringer) AfterHook() {
@@ -239,10 +229,10 @@ func (s *BidiStreamStringer) AfterHook() {
 		return
 	}
 	s.printer.PA([]string{
-		"if err := %s(req, &res); err != nil {\n",
+		"if err := %s(req, res); err != nil {\n",
 		"return gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 	},
-		GetHookName(s.method, after),
+		GetHookName(after),
 		"error in after hook: %v",
 	)
 }
@@ -273,7 +263,7 @@ func (s *ClientStreamStringer) String() string {
 		NewStreamType(s.method),
 	)
 	s.printer.P("var err error\n _ = err\n")
-	s.printer.P("res := %s{}\n", s.method.GetOutputType())
+	s.printer.P("res := &%s{}\n", s.method.GetOutputType())
 
 	s.PersistCall()
 
@@ -293,7 +283,7 @@ func (s *ClientStreamStringer) String() string {
 	s.HandleRow()
 	s.AfterHook()
 	s.printer.PA([]string{
-		"if err := stream.SendAndClose(&res); err != nil {\n",
+		"if err := stream.SendAndClose(res); err != nil {\n",
 		"return gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 		"return nil\n}\n",
 	},
@@ -330,7 +320,7 @@ func (s *ClientStreamStringer) BeforeHook() {
 	if before == nil {
 		return
 	}
-	hookName := GetHookName(s.method, before)
+	hookName := GetHookName(before)
 	s.printer.PA([]string{
 		"beforeRes, err := %s(req)\n",
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n} ",
@@ -341,8 +331,7 @@ func (s *ClientStreamStringer) BeforeHook() {
 	)
 }
 func (s *ClientStreamStringer) Params() {
-	s.printer.P("params := &persist_lib.%s{}\n", NewPLInputName(s.method))
-	s.printer.P("err = %s", s.backend.MapRequestToParams())
+	s.printer.P("params, err := %s(req)\n", ToParamsFuncName(s.method))
 	s.printer.P("if err != nil {\n return err\n}\n")
 }
 func (s *ClientStreamStringer) HandleRow() {
@@ -350,11 +339,11 @@ func (s *ClientStreamStringer) HandleRow() {
 		"row, err := stop()\n",
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 		"if row != nil {\n",
-		"err = %s\n",
+		"res, err = %s(row)\n if err != nil {\nreturn err\n}\n",
 		"}\n",
 	},
 		"error receiving result row: %v",
-		s.backend.TranslateRowToResult(),
+		FromScanableFuncName(s.method),
 	)
 }
 func (s *ClientStreamStringer) AfterHook() {
@@ -367,11 +356,11 @@ func (s *ClientStreamStringer) AfterHook() {
 		"// so the after hook for client streaming calls\n",
 		"// is called with an empty request struct\n",
 		"fakeReq := &%s{}\n",
-		"if err := %s(fakeReq, &res); err != nil {\n",
+		"if err := %s(fakeReq, res); err != nil {\n",
 		"return gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 	},
 		s.method.GetInputType(),
-		GetHookName(s.method, after),
+		GetHookName(after),
 		"error in after hook: %v",
 	)
 }
@@ -436,7 +425,7 @@ func (s *ServerStreamStringer) BeforeHook() {
 	if before == nil {
 		return
 	}
-	hookName := GetHookName(s.method, before)
+	hookName := GetHookName(before)
 	s.printer.PA([]string{
 		"beforeRes, err := %s(req)\n",
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n} ",
@@ -452,8 +441,7 @@ func (s *ServerStreamStringer) BeforeHook() {
 }
 
 func (s *ServerStreamStringer) Params() {
-	s.printer.P("params := &persist_lib.%s{}\n", NewPLInputName(s.method))
-	s.printer.P("err = %s", s.backend.MapRequestToParams())
+	s.printer.P("params, err := %s(req)\n", ToParamsFuncName(s.method))
 	s.printer.P("if err != nil {\n return err\n}\n")
 }
 
@@ -476,7 +464,7 @@ func (s *ServerStreamStringer) HandleRow() {
 	s.ResultFromRow()
 	s.AfterHook()
 	s.printer.PA([]string{
-		"if err := stream.Send(&res); err != nil {\n",
+		"if err := stream.Send(res); err != nil {\n",
 		"iterErr = gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 	},
 		"error during iteration: %v",
@@ -486,11 +474,10 @@ func (s *ServerStreamStringer) HandleRow() {
 }
 
 func (s *ServerStreamStringer) ResultFromRow() {
-	s.printer.P("res := %s{}\n", s.method.GetOutputType())
 	if len(s.method.GetTypeDescForFieldsInStruct(s.method.GetOutputTypeStruct())) > 0 {
 		s.printer.P(
-			"err = %s\n if err != nil {\n iterErr = err\n return\n}\n",
-			s.backend.TranslateRowToResult(),
+			"res, err := %s(row)\n if err != nil {\n iterErr = err\n return\n}\n",
+			FromScanableFuncName(s.method),
 		)
 	}
 }
@@ -505,10 +492,10 @@ func (s *ServerStreamStringer) AfterHook() {
 		return
 	}
 	s.printer.PA([]string{
-		"if err := %s(req, &res); err != nil {\n",
+		"if err := %s(req, res); err != nil {\n",
 		"iterErr = gstatus.Errorf(codes.Unknown, \"%s\", err)\n return\n}\n",
 	},
-		GetHookName(s.method, after),
+		GetHookName(after),
 		"error in after hook: %v",
 	)
 }

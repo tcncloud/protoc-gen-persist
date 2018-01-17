@@ -58,6 +58,18 @@ func (s StreamType) String() string {
 	return p.String()
 }
 
+type PLOutputName struct {
+	m *Method
+}
+
+func NewPLOutputName(m *Method) PLOutputName {
+	return PLOutputName{m: m}
+}
+
+func (p PLOutputName) String() string {
+	return PersistLibTypeString(p.m, p.m.GetOutputType())
+}
+
 type PLInputName struct {
 	m *Method
 }
@@ -70,16 +82,18 @@ type PLInputName struct {
 func NewPLInputName(m *Method) PLInputName {
 	return PLInputName{m: m}
 }
-
 func (p PLInputName) String() string {
+	return PersistLibTypeString(p.m, p.m.GetInputType())
+}
+func PersistLibTypeString(m *Method, typ string) string {
 	pr := &Printer{}
-	spl := strings.Split(p.m.GetInputType(), ".")
+	spl := strings.Split(typ, ".")
 	name := strings.Title(spl[0])
 	spl = spl[1:]
 	for _, s := range spl {
 		name += "_" + strings.Title(s)
 	}
-	pr.P("%sFor%s", name, p.m.Service.GetName())
+	pr.P("%sFor%s", name, m.Service.GetName())
 	return pr.String()
 }
 
@@ -94,7 +108,8 @@ func NewPLQueryMethodName(m *Method) PLQueryMethodName {
 
 func (pl PLQueryMethodName) String() string {
 	p := &Printer{}
-	p.P("%sFrom%sQuery", pl.m.GetInputTypeName(), pl.m.Desc.GetName())
+
+	p.P("%s%sQuery", pl.m.Service.GetName(), pl.m.Desc.GetName())
 	return p.String()
 }
 
@@ -125,12 +140,31 @@ func (p PersistHandlerName) String() string {
 	return p.m.GetName() + "Handler"
 }
 
-func GetHookName(method *Method, hook *persist.QLImpl_CallbackFunction) string {
+func GetHookName(hook *persist.QLImpl_CallbackFunction) string {
 	var name string
-	pkg := method.GetGoPackage(hook.GetPackage())
+	pkg := GetGoPackage(hook.GetPackage())
 	if pkg != "" {
 		name = pkg + "."
 	}
 	name += hook.GetName()
 	return name
+}
+
+func ToParamsFuncName(m *Method) string {
+	printer := &Printer{}
+	printer.P("%sTo%sPersistType", m.GetInputTypeMinusPackage(), m.Service.GetName())
+	return printer.String()
+}
+
+func FromScanableFuncName(m *Method) string {
+	printer := &Printer{}
+	printer.P("%sFrom%sDatabaseRow", m.GetOutputTypeMinusPackage(), m.Service.GetName())
+	return printer.String()
+}
+
+func IterProtoName(m *Method) string {
+	return fmt.Sprintf("Iter%s%sProto", m.Service.GetName(), m.GetOutputTypeMinusPackage())
+}
+func IterPersistName(m *Method) string {
+	return fmt.Sprintf("Iter%s%sPersist", m.Service.GetName(), m.GetOutputTypeMinusPackage())
 }

@@ -29,10 +29,6 @@
 
 package generator
 
-import (
-	"github.com/Sirupsen/logrus"
-)
-
 type Import struct {
 	GoPackageName string
 	GoImportPath  string
@@ -89,9 +85,7 @@ func (il *Imports) GetGoNameByStruct(str *Struct) *Import {
 }
 
 func (il *Imports) GetImportPkgForPath(path string) string {
-	logrus.Debugf("import path %s", path)
 	for _, i := range *il {
-		logrus.Debugf("check with import path %s", i.GoImportPath)
 		if i.GoImportPath == path {
 			return i.GoPackageName
 		}

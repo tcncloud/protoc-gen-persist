@@ -93,7 +93,6 @@ func (f *FileStruct) GetPersistPackageOption() string {
 			logrus.WithError(err).Debug("Error")
 			return ""
 		}
-		//logrus.WithField("pkg", *pkg.(*string)).Info("Package")
 		return *pkg.(*string)
 	}
 	logrus.WithField("File Options", f.Desc.GetOptions()).Debug("file options")
@@ -112,16 +111,14 @@ func (f *FileStruct) GetImplFileName() string {
 func (f *FileStruct) GetImplDir() string {
 	pkg := f.GetPersistPackageOption()
 	if pkg == "" {
-		// if the persist.package option is not present we will use
-		// go_pacakge
-		if f.Desc.GetOptions().GetGoPackage() == "" {
+		// if the persist.package option is not present we will use go_package
+		if f.Desc.GetOptions().GetGoPackage() != "" {
 			pkg = f.Desc.GetOptions().GetGoPackage()
 		} else {
 			// last resort
 			pkg = f.Desc.GetPackage()
 		}
 	}
-	// process pkg
 	if strings.Contains(pkg, ";") {
 		// we need to split by ";"
 		p := strings.Split(pkg, ";")
@@ -138,7 +135,7 @@ func (f *FileStruct) GetImplPackage() string {
 	if pkg == "" {
 		// if the persist.package option is not present we will use
 		// go_pacakge
-		if f.Desc.GetOptions().GetGoPackage() == "" {
+		if f.Desc.GetOptions().GetGoPackage() != "" {
 			pkg = f.Desc.GetOptions().GetGoPackage()
 		} else {
 			// last resort
@@ -245,14 +242,74 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 }
 
 func (f *FileStruct) ProcessImports() {
-	logrus.Debug("processing imports for file")
+	importsForStructName := func(name string, m *Method) {
+		// first get imports for this struct
+		f.ProcessImportsForType(name)
+
+		// make sure every field is check if it needs an import as well
+		str := f.AllStructures.GetStructByProtoName(name)
+		for _, mp := range str.MsgDesc.GetField() {
+			if mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE ||
+				mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM {
+
+				// if the type is mapped, we do not need this struct imported
+				// instead we need the mapped type to be imported
+				if m.GetMapping(mp) == nil {
+					f.ProcessImportsForType(mp.GetTypeName())
+				}
+			}
+		}
+	}
+	needServiceImports := func() bool {
+		for _, s := range *f.ServiceList {
+			if s.IsSQL() || s.IsSpanner() {
+				return true
+			}
+		}
+		return false
+	}
+	if needServiceImports() {
+		f.ImportList.GetOrAddImport("io", "io")
+		f.ImportList.GetOrAddImport("strings", "strings")
+		f.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
+		f.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
+		f.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
+		f.ImportList.GetOrAddImport("gstatus", "google.golang.org/grpc/status")
+
+	}
 	for _, srv := range *f.ServiceList {
-		logrus.Debug("is service enabled? %t", srv.IsServiceEnabled())
-		if srv.IsServiceEnabled() {
-			srv.ProcessImports()
-			for _, m := range *srv.Methods {
-				f.ProcessImportsForType(m.Desc.GetInputType())
-				f.ProcessImportsForType(m.Desc.GetOutputType())
+		if !srv.IsSQL() && !srv.IsSpanner() {
+			continue
+		}
+		if srv.IsSpanner() {
+			f.ImportList.GetOrAddImport("spanner", "cloud.google.com/go/spanner")
+			f.ImportList.GetOrAddImport("iterator", "google.golang.org/api/iterator")
+		}
+		if opt := srv.GetServiceOption(); opt != nil {
+			for _, m := range opt.GetTypes() {
+				f.ImportList.GetOrAddImport(GetGoPackage(m.GetGoPackage()), GetGoPath(m.GetGoPackage()))
+			}
+		}
+		for _, m := range *srv.Methods {
+			importsForStructName(m.Desc.GetInputType(), m)
+			importsForStructName(m.Desc.GetOutputType(), m)
+			opts := m.GetMethodOption()
+			if opts == nil {
+				continue
+			}
+			if beforeOpt := opts.GetBefore(); beforeOpt != nil {
+				pkg := beforeOpt.GetPackage()
+				f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
+			}
+			if afterOpt := opts.GetAfter(); afterOpt != nil {
+				pkg := afterOpt.GetPackage()
+				f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
+			}
+			if mappingOpt := opts.GetMapping(); mappingOpt != nil {
+				for _, typMap := range mappingOpt.GetTypes() {
+					pkg := typMap.GetGoPackage()
+					f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
+				}
 			}
 		}
 	}
@@ -301,7 +358,6 @@ func (f *FileStruct) Process() error {
 			logrus.Debugf("IMPORT LIST: %+v, %#v\n", i.GoPackageName, i.GoImportPath)
 		}
 	}
-	//return f.ServiceList.Process()
 	return nil
 
 }
@@ -321,8 +377,48 @@ func (f *FileStruct) Generate() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	logrus.WithField("imports", f.ImportList).Debug("import list")
-	return ExecuteFileTemplate(f), nil
+	printer := &Printer{}
+	printer.P(")\n")
+	for _, s := range *f.ServiceList {
+		processed := make(map[string]bool)
+		if s.IsSpanner() || s.IsSQL() {
+			printer.P("%s\n", s.PrintBuilder())
+		}
+		for _, m := range *s.Methods {
+			if !processed[ToParamsFuncName(m)] {
+				printer.P("%s\n", m.backend.MapRequestToParams())
+				processed[ToParamsFuncName(m)] = true
+			}
+			if !processed[FromScanableFuncName(m)] {
+				printer.P("%s\n", m.backend.TranslateRowToResult())
+				processed[FromScanableFuncName(m)] = true
+			}
+			if !processed[IterProtoName(m)] {
+				printer.P("%s\n", IteratorHelper(m))
+				processed[IterProtoName(m)] = true
+			}
+		}
+		for _, m := range *s.Methods {
+			printer.P("%s\n", m)
+		}
+	}
+	// prin the imports last, because the above code might have added to our files imports
+	importPrinter := &Printer{}
+	importPrinter.PA([]string{
+		"// This file is generated by protoc-gen-persist\n",
+		"// Source File: %s\n",
+		"// DO NOT EDIT !\n",
+		"package %s\n",
+	}, f.GetOrigName(), f.GetImplPackage())
+	importPrinter.P("import(\n")
+	for _, i := range *f.ImportList {
+		if f.NotSameAsMyPackage(i.GoImportPath) {
+			importPrinter.P("%s \"%s\"\n", i.GoPackageName, i.GoImportPath)
+		}
+	}
+	importPrinter.P("%s", printer.String())
+
+	return []byte(importPrinter.String()), nil
 }
 
 // FileList ----------------
