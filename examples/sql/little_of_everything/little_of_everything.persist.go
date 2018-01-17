@@ -5,6 +5,7 @@ package little_of_everything
 
 import (
 	sql "database/sql"
+	fmt "fmt"
 	io "io"
 
 	proto "github.com/golang/protobuf/proto"
@@ -132,7 +133,7 @@ func ExampleTable1ToExampleService1PersistType(req *ExampleTable1) (*persist_lib
 	params.Mappedenum = (MyMappedEnum{}).ToSql(req.Mappedenum)
 	return params, nil
 }
-func ExampleTable1FromExampleService1Row(row persist_lib.Scanable) (*ExampleTable1, error) {
+func ExampleTable1FromExampleService1DatabaseRow(row persist_lib.Scanable) (*ExampleTable1, error) {
 	res := &ExampleTable1{}
 	var TableId_ int32
 	var Key_ string
@@ -188,13 +189,22 @@ func ExampleTable1FromExampleService1Row(row persist_lib.Scanable) (*ExampleTabl
 	res.Mappedenum = Mappedenum_.ToProto()
 	return res, nil
 }
+func IterExampleService1ExampleTable1Proto(iter *persist_lib.Result, next func(i *ExampleTable1) error) error {
+	return iter.Do(func(r persist_lib.Scanable) error {
+		item, err := ExampleTable1FromExampleService1DatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting ExampleTable1 row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
 func TestToExampleService1PersistType(req *test.Test) (*persist_lib.Test_TestForExampleService1, error) {
 	params := &persist_lib.Test_TestForExampleService1{}
 	params.Id = req.Id
 	params.Name = req.Name
 	return params, nil
 }
-func CountRowsFromExampleService1Row(row persist_lib.Scanable) (*CountRows, error) {
+func CountRowsFromExampleService1DatabaseRow(row persist_lib.Scanable) (*CountRows, error) {
 	res := &CountRows{}
 	var Count_ int64
 	if err := row.Scan(
@@ -204,6 +214,15 @@ func CountRowsFromExampleService1Row(row persist_lib.Scanable) (*CountRows, erro
 	}
 	res.Count = Count_
 	return res, nil
+}
+func IterExampleService1CountRowsProto(iter *persist_lib.Result, next func(i *CountRows) error) error {
+	return iter.Do(func(r persist_lib.Scanable) error {
+		item, err := CountRowsFromExampleService1DatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting CountRows row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
 }
 func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTable1) (*ExampleTable1, error) {
 	var err error
@@ -219,7 +238,7 @@ func (s *ExampleService1Impl) UnaryExample1(ctx context.Context, req *ExampleTab
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTable1FromExampleService1Row(row)
+		res, err = ExampleTable1FromExampleService1DatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -246,7 +265,7 @@ func (s *ExampleService1Impl) UnaryExample2(ctx context.Context, req *test.Test)
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTable1FromExampleService1Row(row)
+		res, err = ExampleTable1FromExampleService1DatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -271,7 +290,7 @@ func (s *ExampleService1Impl) ServerStreamSelect(req *ExampleTable1, stream Exam
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := ExampleTable1FromExampleService1Row(row)
+		res, err := ExampleTable1FromExampleService1DatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -310,7 +329,7 @@ func (s *ExampleService1Impl) ClientStreamingExample(stream ExampleService1_Clie
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = CountRowsFromExampleService1Row(row)
+		res, err = CountRowsFromExampleService1DatabaseRow(row)
 		if err != nil {
 			return err
 		}

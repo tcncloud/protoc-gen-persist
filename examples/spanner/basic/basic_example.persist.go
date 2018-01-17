@@ -4,6 +4,7 @@
 package basic
 
 import (
+	fmt "fmt"
 	io "io"
 
 	spanner "cloud.google.com/go/spanner"
@@ -97,7 +98,7 @@ func NumRowsToExtraSrvPersistType(req *test.NumRows) (*persist_lib.Test_NumRowsF
 	params.Count = req.Count
 	return params, nil
 }
-func ExampleTableFromExtraSrvRow(row *spanner.Row) (*test.ExampleTable, error) {
+func ExampleTableFromExtraSrvDatabaseRow(row *spanner.Row) (*test.ExampleTable, error) {
 	res := &test.ExampleTable{}
 	var Id_ int64
 	{
@@ -134,6 +135,15 @@ func ExampleTableFromExtraSrvRow(row *spanner.Row) (*test.ExampleTable, error) {
 	}
 	return res, nil
 }
+func IterExtraSrvExampleTableProto(iter *spanner.RowIterator, next func(i *test.ExampleTable) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := ExampleTableFromExtraSrvDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting test.ExampleTable row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
 func ExampleTableToExtraSrvPersistType(req *test.ExampleTable) (*persist_lib.Test_ExampleTableForExtraSrv, error) {
 	var err error
 	_ = err
@@ -169,7 +179,7 @@ func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromExtraSrvRow(row)
+		res, err = ExampleTableFromExtraSrvDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -342,7 +352,7 @@ func ExampleTableToMySpannerPersistType(req *test.ExampleTable) (*persist_lib.Te
 	params.Name = req.Name
 	return params, nil
 }
-func ExampleTableFromMySpannerRow(row *spanner.Row) (*test.ExampleTable, error) {
+func ExampleTableFromMySpannerDatabaseRow(row *spanner.Row) (*test.ExampleTable, error) {
 	res := &test.ExampleTable{}
 	var Id_ int64
 	{
@@ -379,6 +389,15 @@ func ExampleTableFromMySpannerRow(row *spanner.Row) (*test.ExampleTable, error) 
 	}
 	return res, nil
 }
+func IterMySpannerExampleTableProto(iter *spanner.RowIterator, next func(i *test.ExampleTable) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := ExampleTableFromMySpannerDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting test.ExampleTable row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
 func SomethingToMySpannerPersistType(req *Something) (*persist_lib.SomethingForMySpanner, error) {
 	var err error
 	_ = err
@@ -400,7 +419,7 @@ func SomethingToMySpannerPersistType(req *Something) (*persist_lib.SomethingForM
 	params.Mappedenum = int32(req.Mappedenum)
 	return params, nil
 }
-func SomethingFromMySpannerRow(row *spanner.Row) (*Something, error) {
+func SomethingFromMySpannerDatabaseRow(row *spanner.Row) (*Something, error) {
 	res := &Something{}
 	var Thing_ []byte
 	if err := row.ColumnByName("thing", &Thing_); err != nil {
@@ -424,6 +443,15 @@ func SomethingFromMySpannerRow(row *spanner.Row) (*Something, error) {
 	}
 	res.Mappedenum = MappedEnum(Mappedenum_)
 	return res, nil
+}
+func IterMySpannerSomethingProto(iter *spanner.RowIterator, next func(i *Something) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := SomethingFromMySpannerDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting Something row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
 }
 func HasTimestampToMySpannerPersistType(req *HasTimestamp) (*persist_lib.HasTimestampForMySpanner, error) {
 	var err error
@@ -497,7 +525,7 @@ func HasTimestampToMySpannerPersistType(req *HasTimestamp) (*persist_lib.HasTime
 	}
 	return params, nil
 }
-func HasTimestampFromMySpannerRow(row *spanner.Row) (*HasTimestamp, error) {
+func HasTimestampFromMySpannerDatabaseRow(row *spanner.Row) (*HasTimestamp, error) {
 	res := &HasTimestamp{}
 	var Time_ = new(spanner.GenericColumnValue)
 	if err := row.ColumnByName("time", Time_); err != nil {
@@ -600,7 +628,16 @@ func HasTimestampFromMySpannerRow(row *spanner.Row) (*HasTimestamp, error) {
 	}
 	return res, nil
 }
-func PartialTableFromMySpannerRow(row *spanner.Row) (*test.PartialTable, error) {
+func IterMySpannerHasTimestampProto(iter *spanner.RowIterator, next func(i *HasTimestamp) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := HasTimestampFromMySpannerDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting HasTimestamp row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
+func PartialTableFromMySpannerDatabaseRow(row *spanner.Row) (*test.PartialTable, error) {
 	res := &test.PartialTable{}
 	var Id_ int64
 	{
@@ -626,6 +663,15 @@ func PartialTableFromMySpannerRow(row *spanner.Row) (*test.PartialTable, error) 
 	}
 	return res, nil
 }
+func IterMySpannerPartialTableProto(iter *spanner.RowIterator, next func(i *test.PartialTable) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := PartialTableFromMySpannerDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting test.PartialTable row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
 func ExampleTableRangeToMySpannerPersistType(req *test.ExampleTableRange) (*persist_lib.Test_ExampleTableRangeForMySpanner, error) {
 	var err error
 	_ = err
@@ -644,7 +690,7 @@ func NameToMySpannerPersistType(req *test.Name) (*persist_lib.Test_NameForMySpan
 	params.Name = req.Name
 	return params, nil
 }
-func NumRowsFromMySpannerRow(row *spanner.Row) (*test.NumRows, error) {
+func NumRowsFromMySpannerDatabaseRow(row *spanner.Row) (*test.NumRows, error) {
 	res := &test.NumRows{}
 	var Count_ int64
 	{
@@ -658,6 +704,15 @@ func NumRowsFromMySpannerRow(row *spanner.Row) (*test.NumRows, error) {
 		res.Count = Count_
 	}
 	return res, nil
+}
+func IterMySpannerNumRowsProto(iter *spanner.RowIterator, next func(i *test.NumRows) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := NumRowsFromMySpannerDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting test.NumRows row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
 }
 func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	var err error
@@ -673,7 +728,7 @@ func (s *MySpannerImpl) UniaryInsert(ctx context.Context, req *test.ExampleTable
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromMySpannerRow(row)
+		res, err = ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -700,7 +755,7 @@ func (s *MySpannerImpl) UniarySelect(ctx context.Context, req *test.ExampleTable
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromMySpannerRow(row)
+		res, err = ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -727,7 +782,7 @@ func (s *MySpannerImpl) TestNest(ctx context.Context, req *Something) (*Somethin
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = SomethingFromMySpannerRow(row)
+		res, err = SomethingFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -754,7 +809,7 @@ func (s *MySpannerImpl) TestEverything(ctx context.Context, req *HasTimestamp) (
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = HasTimestampFromMySpannerRow(row)
+		res, err = HasTimestampFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -781,7 +836,7 @@ func (s *MySpannerImpl) UniarySelectWithDirectives(ctx context.Context, req *tes
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromMySpannerRow(row)
+		res, err = ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -808,7 +863,7 @@ func (s *MySpannerImpl) UniaryUpdate(ctx context.Context, req *test.ExampleTable
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = PartialTableFromMySpannerRow(row)
+		res, err = PartialTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -835,7 +890,7 @@ func (s *MySpannerImpl) UniaryDeleteRange(ctx context.Context, req *test.Example
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromMySpannerRow(row)
+		res, err = ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -862,7 +917,7 @@ func (s *MySpannerImpl) UniaryDeleteSingle(ctx context.Context, req *test.Exampl
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromMySpannerRow(row)
+		res, err = ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -889,7 +944,7 @@ func (s *MySpannerImpl) NoArgs(ctx context.Context, req *test.ExampleTable) (*te
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromMySpannerRow(row)
+		res, err = ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -914,7 +969,7 @@ func (s *MySpannerImpl) ServerStream(req *test.Name, stream MySpanner_ServerStre
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := ExampleTableFromMySpannerRow(row)
+		res, err := ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -953,7 +1008,7 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = NumRowsFromMySpannerRow(row)
+		res, err = NumRowsFromMySpannerDatabaseRow(row)
 		if err != nil {
 			return err
 		}
@@ -986,7 +1041,7 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = NumRowsFromMySpannerRow(row)
+		res, err = NumRowsFromMySpannerDatabaseRow(row)
 		if err != nil {
 			return err
 		}
@@ -1019,7 +1074,7 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = NumRowsFromMySpannerRow(row)
+		res, err = NumRowsFromMySpannerDatabaseRow(row)
 		if err != nil {
 			return err
 		}
@@ -1049,7 +1104,7 @@ func (s *MySpannerImpl) UniaryInsertWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromMySpannerRow(row)
+		res, err = ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1085,7 +1140,7 @@ func (s *MySpannerImpl) UniarySelectWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromMySpannerRow(row)
+		res, err = ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1121,7 +1176,7 @@ func (s *MySpannerImpl) UniaryUpdateWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = PartialTableFromMySpannerRow(row)
+		res, err = PartialTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1157,7 +1212,7 @@ func (s *MySpannerImpl) UniaryDeleteWithHooks(ctx context.Context, req *test.Exa
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromMySpannerRow(row)
+		res, err = ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1195,7 +1250,7 @@ func (s *MySpannerImpl) ServerStreamWithHooks(req *test.Name, stream MySpanner_S
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := ExampleTableFromMySpannerRow(row)
+		res, err := ExampleTableFromMySpannerDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -1244,7 +1299,7 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = NumRowsFromMySpannerRow(row)
+		res, err = NumRowsFromMySpannerDatabaseRow(row)
 		if err != nil {
 			return err
 		}

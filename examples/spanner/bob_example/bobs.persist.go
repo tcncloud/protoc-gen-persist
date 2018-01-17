@@ -4,6 +4,7 @@
 package bob_example
 
 import (
+	fmt "fmt"
 	io "io"
 
 	spanner "cloud.google.com/go/spanner"
@@ -110,11 +111,20 @@ func BobToBobsPersistType(req *Bob) (*persist_lib.BobForBobs, error) {
 	params.Name = req.Name
 	return params, nil
 }
-func EmptyFromBobsRow(row *spanner.Row) (*Empty, error) {
+func EmptyFromBobsDatabaseRow(row *spanner.Row) (*Empty, error) {
 	res := &Empty{}
 	return res, nil
 }
-func NumRowsFromBobsRow(row *spanner.Row) (*NumRows, error) {
+func IterBobsEmptyProto(iter *spanner.RowIterator, next func(i *Empty) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := EmptyFromBobsDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting Empty row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
+func NumRowsFromBobsDatabaseRow(row *spanner.Row) (*NumRows, error) {
 	res := &NumRows{}
 	var Count_ int64
 	{
@@ -129,13 +139,22 @@ func NumRowsFromBobsRow(row *spanner.Row) (*NumRows, error) {
 	}
 	return res, nil
 }
+func IterBobsNumRowsProto(iter *spanner.RowIterator, next func(i *NumRows) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := NumRowsFromBobsDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting NumRows row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
 func EmptyToBobsPersistType(req *Empty) (*persist_lib.EmptyForBobs, error) {
 	var err error
 	_ = err
 	params := &persist_lib.EmptyForBobs{}
 	return params, nil
 }
-func BobFromBobsRow(row *spanner.Row) (*Bob, error) {
+func BobFromBobsDatabaseRow(row *spanner.Row) (*Bob, error) {
 	res := &Bob{}
 	var Id_ int64
 	{
@@ -172,6 +191,15 @@ func BobFromBobsRow(row *spanner.Row) (*Bob, error) {
 	}
 	return res, nil
 }
+func IterBobsBobProto(iter *spanner.RowIterator, next func(i *Bob) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := BobFromBobsDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting Bob row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
 func NamesToBobsPersistType(req *Names) (*persist_lib.NamesForBobs, error) {
 	var err error
 	_ = err
@@ -194,7 +222,7 @@ func (s *BobsImpl) DeleteBobs(ctx context.Context, req *Bob) (*Empty, error) {
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = EmptyFromBobsRow(row)
+		res, err = EmptyFromBobsDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -230,7 +258,7 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = NumRowsFromBobsRow(row)
+		res, err = NumRowsFromBobsDatabaseRow(row)
 		if err != nil {
 			return err
 		}
@@ -252,7 +280,7 @@ func (s *BobsImpl) GetBobs(req *Empty, stream Bobs_GetBobsServer) error {
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := BobFromBobsRow(row)
+		res, err := BobFromBobsDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -280,7 +308,7 @@ func (s *BobsImpl) GetPeopleFromNames(req *Names, stream Bobs_GetPeopleFromNames
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := BobFromBobsRow(row)
+		res, err := BobFromBobsDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return

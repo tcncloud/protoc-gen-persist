@@ -5,6 +5,7 @@ package basic
 
 import (
 	sql "database/sql"
+	fmt "fmt"
 	io "io"
 
 	hooks "github.com/tcncloud/protoc-gen-persist/examples/hooks"
@@ -121,7 +122,7 @@ func PartialTableToAmazingPersistType(req *test.PartialTable) (*persist_lib.Test
 	params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
 	return params, nil
 }
-func ExampleTableFromAmazingRow(row persist_lib.Scanable) (*test.ExampleTable, error) {
+func ExampleTableFromAmazingDatabaseRow(row persist_lib.Scanable) (*test.ExampleTable, error) {
 	res := &test.ExampleTable{}
 	var Id_ int64
 	var StartTime_ mytime.MyTime
@@ -138,6 +139,15 @@ func ExampleTableFromAmazingRow(row persist_lib.Scanable) (*test.ExampleTable, e
 	res.Name = Name_
 	return res, nil
 }
+func IterAmazingExampleTableProto(iter *persist_lib.Result, next func(i *test.ExampleTable) error) error {
+	return iter.Do(func(r persist_lib.Scanable) error {
+		item, err := ExampleTableFromAmazingDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting test.ExampleTable row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
 func NameToAmazingPersistType(req *test.Name) (*persist_lib.Test_NameForAmazing, error) {
 	params := &persist_lib.Test_NameForAmazing{}
 	params.Name = req.Name
@@ -150,7 +160,7 @@ func ExampleTableToAmazingPersistType(req *test.ExampleTable) (*persist_lib.Test
 	params.Name = req.Name
 	return params, nil
 }
-func NumRowsFromAmazingRow(row persist_lib.Scanable) (*test.NumRows, error) {
+func NumRowsFromAmazingDatabaseRow(row persist_lib.Scanable) (*test.NumRows, error) {
 	res := &test.NumRows{}
 	var Count_ int64
 	if err := row.Scan(
@@ -161,7 +171,16 @@ func NumRowsFromAmazingRow(row persist_lib.Scanable) (*test.NumRows, error) {
 	res.Count = Count_
 	return res, nil
 }
-func IdsFromAmazingRow(row persist_lib.Scanable) (*test.Ids, error) {
+func IterAmazingNumRowsProto(iter *persist_lib.Result, next func(i *test.NumRows) error) error {
+	return iter.Do(func(r persist_lib.Scanable) error {
+		item, err := NumRowsFromAmazingDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting test.NumRows row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
+func IdsFromAmazingDatabaseRow(row persist_lib.Scanable) (*test.Ids, error) {
 	res := &test.Ids{}
 	var Ids_ []int64
 	if err := row.Scan(
@@ -171,6 +190,15 @@ func IdsFromAmazingRow(row persist_lib.Scanable) (*test.Ids, error) {
 	}
 	res.Ids = Ids_
 	return res, nil
+}
+func IterAmazingIdsProto(iter *persist_lib.Result, next func(i *test.Ids) error) error {
+	return iter.Do(func(r persist_lib.Scanable) error {
+		item, err := IdsFromAmazingDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting test.Ids row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
 }
 func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	var err error
@@ -186,7 +214,7 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) 
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromAmazingRow(row)
+		res, err = ExampleTableFromAmazingDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -219,7 +247,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromAmazingRow(row)
+		res, err = ExampleTableFromAmazingDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -247,7 +275,7 @@ func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamSe
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := ExampleTableFromAmazingRow(row)
+		res, err := ExampleTableFromAmazingDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -285,7 +313,7 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := ExampleTableFromAmazingRow(row)
+		res, err := ExampleTableFromAmazingDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -325,7 +353,7 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 		}
 		if row != nil {
-			res, err := ExampleTableFromAmazingRow(row)
+			res, err := ExampleTableFromAmazingDatabaseRow(row)
 			if err != nil {
 				return err
 			}
@@ -362,7 +390,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 		}
 		if row != nil {
-			res, err := ExampleTableFromAmazingRow(row)
+			res, err := ExampleTableFromAmazingDatabaseRow(row)
 			if err != nil {
 				return err
 			}
@@ -399,7 +427,7 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = NumRowsFromAmazingRow(row)
+		res, err = NumRowsFromAmazingDatabaseRow(row)
 		if err != nil {
 			return err
 		}
@@ -438,7 +466,7 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = IdsFromAmazingRow(row)
+		res, err = IdsFromAmazingDatabaseRow(row)
 		if err != nil {
 			return err
 		}
