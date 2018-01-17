@@ -12,10 +12,6 @@ func NewSpannerClientGetter(cli *spanner.Client) SpannerClientGetter {
 	}
 }
 
-type EmptyForUServ struct {
-}
-
-// this could be used in a query, so generate the getters/setters
 type UserForUServ struct {
 	Id              int64
 	Name            string
@@ -36,6 +32,10 @@ func (p *UserForUServ) SetCreatedOn(param interface{})   { p.CreatedOn = param }
 func (p *UserForUServ) GetFavoriteNumbers() []int64      { return p.FavoriteNumbers }
 func (p *UserForUServ) SetFavoriteNumbers(param []int64) { p.FavoriteNumbers = param }
 
+type EmptyForUServ struct {
+}
+
+// this could be used in a query, so generate the getters/setters
 type FriendsForUServ struct {
 	Names []string
 }

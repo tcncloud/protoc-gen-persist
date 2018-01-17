@@ -90,8 +90,8 @@ type UServSelectUserByIdQueryParams interface {
 	GetId() int64
 }
 type UServUpdateUserNamesQueryParams interface {
-	GetName() string
 	GetId() int64
+	GetName() string
 }
 type UServUpdateNameToFooQueryParams interface {
 	GetId() int64

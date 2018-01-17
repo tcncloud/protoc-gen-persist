@@ -4,6 +4,7 @@
 package pb
 
 import (
+	fmt "fmt"
 	io "io"
 
 	spanner "cloud.google.com/go/spanner"
@@ -19,9 +20,7 @@ type UServImpl struct {
 	FORWARDED RestOfUServHandlers
 }
 type RestOfUServHandlers interface {
-	CreateTable(ctx context.Context, req *Empty) (*Empty, error)
 	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
-	DropTable(ctx context.Context, req *Empty) (*Empty, error)
 }
 type UServImplBuilder struct {
 	err           error
@@ -107,16 +106,6 @@ func (b *UServImplBuilder) MustBuild() *UServImpl {
 	}
 	return s
 }
-func EmptyToUServPersistType(req *Empty) (*persist_lib.EmptyForUServ, error) {
-	var err error
-	_ = err
-	params := &persist_lib.EmptyForUServ{}
-	return params, nil
-}
-func EmptyFromUServRow(row *spanner.Row) (*Empty, error) {
-	res := &Empty{}
-	return res, nil
-}
 func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
 	var err error
 	_ = err
@@ -144,7 +133,26 @@ func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
 	params.FavoriteNumbers = req.FavoriteNumbers
 	return params, nil
 }
-func UserFromUServRow(row *spanner.Row) (*User, error) {
+func EmptyFromUServDatabaseRow(row *spanner.Row) (*Empty, error) {
+	res := &Empty{}
+	return res, nil
+}
+func IterUServEmptyProto(iter *spanner.RowIterator, next func(i *Empty) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := EmptyFromUServDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting Empty row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
+func EmptyToUServPersistType(req *Empty) (*persist_lib.EmptyForUServ, error) {
+	var err error
+	_ = err
+	params := &persist_lib.EmptyForUServ{}
+	return params, nil
+}
+func UserFromUServDatabaseRow(row *spanner.Row) (*User, error) {
 	res := &User{}
 	var Id_ int64
 	{
@@ -205,6 +213,15 @@ func UserFromUServRow(row *spanner.Row) (*User, error) {
 	}
 	return res, nil
 }
+func IterUServUserProto(iter *spanner.RowIterator, next func(i *User) error) error {
+	return iter.Do(func(r *spanner.Row) error {
+		item, err := UserFromUServDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting User row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
 func FriendsToUServPersistType(req *Friends) (*persist_lib.FriendsForUServ, error) {
 	var err error
 	_ = err
@@ -212,9 +229,6 @@ func FriendsToUServPersistType(req *Friends) (*persist_lib.FriendsForUServ, erro
 	// set 'Friends.names' in params
 	params.Names = req.Names
 	return params, nil
-}
-func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
-	return s.FORWARDED.CreateTable(ctx, req)
 }
 func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	var err error
@@ -245,7 +259,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = EmptyFromUServRow(row)
+		res, err = EmptyFromUServDatabaseRow(row)
 		if err != nil {
 			return err
 		}
@@ -267,7 +281,7 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := UserFromUServRow(row)
+		res, err := UserFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -297,7 +311,7 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = UserFromUServRow(row)
+		res, err = UserFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -333,7 +347,7 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = EmptyFromUServRow(row)
+		res, err = EmptyFromUServDatabaseRow(row)
 		if err != nil {
 			return err
 		}
@@ -357,7 +371,7 @@ func (s *UServImpl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, err
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = EmptyFromUServRow(row)
+		res, err = EmptyFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -385,7 +399,7 @@ func (s *UServImpl) GetFriends(req *Friends, stream UServ_GetFriendsServer) erro
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := UserFromUServRow(row)
+		res, err := UserFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -400,7 +414,4 @@ func (s *UServImpl) GetFriends(req *Friends, stream UServ_GetFriendsServer) erro
 		return iterErr
 	}
 	return nil
-}
-func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
-	return s.FORWARDED.DropTable(ctx, req)
 }

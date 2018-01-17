@@ -62,8 +62,6 @@ service UServ {
 		}
 		]
 	};
-	rpc CreateTable(Empty) returns (Empty) {
-	};
 	rpc InsertUsers(stream User) returns (Empty) {
 		option (persist.ql) = {
 			query: ["INSERT INTO users (id, name, friends, created_on, favorite_numbers) ",
@@ -103,5 +101,4 @@ service UServ {
 							"FROM users WHERE name IN UNNEST(@names)"],
 		};
 	};
-	rpc DropTable(Empty) returns (Empty) {};
 }

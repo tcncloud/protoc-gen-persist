@@ -5,12 +5,14 @@ import (
 	. "github.com/onsi/gomega"
 	"testing"
 
+	admin "cloud.google.com/go/spanner/admin/database/apiv1"
 	"fmt"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	main "github.com/tcncloud/protoc-gen-persist/test_service/user_spanner"
 	"github.com/tcncloud/protoc-gen-persist/test_service/user_spanner/pb"
 	"golang.org/x/net/context"
+	db "google.golang.org/genproto/googleapis/spanner/admin/database/v1"
 	"google.golang.org/grpc"
 	"io"
 	"net"
@@ -28,7 +30,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	main.Serve(func(s *grpc.Server) {
+	Serve(func(s *grpc.Server) {
 		lis, err := net.Listen("tcp", "0.0.0.0:50051")
 		if err != nil {
 			Fail("could not register listener: " + err.Error())
@@ -46,18 +48,22 @@ var _ = BeforeSuite(func() {
 		}
 		client = pb.NewUServClient(conn)
 	})
+	err := CreateTable(context.Background(), main.ReadSpannerParams())
+	Expect(err).ToNot(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
 	if testServer != nil {
 		testServer.Stop()
+
+		err := DropTable(context.Background(), main.ReadSpannerParams())
+		Expect(err).ToNot(HaveOccurred())
 	}
 })
 
 var _ = Describe("persist", func() {
 	It("can create a table", func() {
-		_, err := client.CreateTable(context.Background(), &pb.Empty{})
-		Expect(err).ToNot(HaveOccurred())
+
 	})
 
 	It("can insert a lot of users and set their ids with before hook", func() {
@@ -145,11 +151,6 @@ var _ = Describe("persist", func() {
 			Expect(u.Name).To(Equal("zed"))
 		}
 	})
-
-	It("can drop a table", func() {
-		_, err := client.DropTable(context.Background(), &pb.Empty{})
-		Expect(err).ToNot(HaveOccurred())
-	})
 })
 
 func mustTimestamp(now time.Time) *timestamp.Timestamp {
@@ -187,4 +188,60 @@ var users = []*pb.User{
 		FavoriteNumbers: []int64{1, 4, 7},
 		CreatedOn:       mustNow(),
 	},
+}
+
+func Serve(servFunc func(s *grpc.Server)) {
+	params := main.ReadSpannerParams()
+	service := pb.NewUServBuilder().
+		WithDefaultQueryHandlers().
+		WithSpannerURI(context.Background(), params.URI()).
+		WithRestOfGrpcHandlers(&main.RestOfImpl{Params: params}).
+		MustBuild()
+	server := grpc.NewServer()
+
+	pb.RegisterUServServer(server, service)
+
+	servFunc(server)
+}
+
+func CreateTable(ctx context.Context, params main.SpannerParams) error {
+	adminClient, err := admin.NewDatabaseAdminClient(ctx)
+	if err != nil {
+		return err
+	}
+	op, err := adminClient.CreateDatabase(ctx, &db.CreateDatabaseRequest{
+		Parent:          params.Parent(),
+		CreateStatement: fmt.Sprintf("CREATE DATABASE %s", params.DatabaseId),
+		ExtraStatements: []string{
+			`CREATE TABLE users (
+				id INT64 NOT NULL,
+				name STRING(MAX) NOT NULL,
+				friends BYTES(MAX) NOT NULL,
+				created_on STRING(MAX) NOT NULL,
+				favorite_numbers ARRAY<INT64> NOT NULL,
+			) PRIMARY KEY (id)`,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if _, err := op.Wait(ctx); err != nil {
+		return err
+	}
+	adminClient.Close()
+
+	return nil
+}
+func DropTable(ctx context.Context, params main.SpannerParams) error {
+	adminClient, err := admin.NewDatabaseAdminClient(ctx)
+	if err != nil {
+		return err
+	}
+	err = adminClient.DropDatabase(ctx, &db.DropDatabaseRequest{Database: params.URI()})
+	if err != nil {
+		return err
+	}
+	adminClient.Close()
+
+	return nil
 }

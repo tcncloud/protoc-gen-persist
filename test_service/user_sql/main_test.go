@@ -28,7 +28,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	main.Serve(func(s *grpc.Server) {
+	Serve(func(s *grpc.Server) {
 		lis, err := net.Listen("tcp", "0.0.0.0:50051")
 		if err != nil {
 			Fail("could not register listener: " + err.Error())
@@ -102,7 +102,6 @@ var _ = Describe("persist", func() {
 	It("can select all friends of foo", func() {
 		foo, err := client.SelectUserById(context.Background(), &pb.User{Id: 0}) // foo
 		Expect(err).ToNot(HaveOccurred())
-		fmt.Printf("%+v\n", foo.Friends.Names)
 		stream, err := client.GetFriends(context.Background(), &pb.FriendsQuery{
 			Names: &pb.SliceStringParam{Slice: foo.Friends.Names},
 		})
@@ -197,4 +196,17 @@ var users = []*pb.User{
 		Friends:   &pb.Friends{},
 		CreatedOn: mustNow(),
 	},
+}
+
+func Serve(servFunc func(s *grpc.Server)) {
+	service := pb.NewUServBuilder().
+		WithDefaultQueryHandlers().
+		WithNewSqlDb("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable").
+		WithRestOfGrpcHandlers(&main.RestOfImpl{}).
+		MustBuild()
+	server := grpc.NewServer()
+
+	pb.RegisterUServServer(server, service)
+
+	servFunc(server)
 }

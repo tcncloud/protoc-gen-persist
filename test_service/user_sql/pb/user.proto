@@ -126,5 +126,4 @@ service UServ {
 			query: ["drop table users"]
 		};
 	};
-	rpc Shutdown(Empty) returns (Empty){};
 }

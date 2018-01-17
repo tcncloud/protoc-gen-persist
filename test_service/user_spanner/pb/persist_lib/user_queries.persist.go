@@ -63,8 +63,8 @@ type UServUpdateUserNamesQueryParams interface {
 	GetId() int64
 }
 type UServUpdateNameToFooQueryParams interface {
-	GetName() string
 	GetId() int64
+	GetName() string
 }
 type UServGetFriendsQueryParams interface {
 	GetNames() []string

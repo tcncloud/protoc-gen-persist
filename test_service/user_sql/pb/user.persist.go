@@ -5,6 +5,7 @@ package pb
 
 import (
 	sql "database/sql"
+	fmt "fmt"
 	io "io"
 
 	proto "github.com/golang/protobuf/proto"
@@ -20,7 +21,6 @@ type UServImpl struct {
 }
 type RestOfUServHandlers interface {
 	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
-	Shutdown(ctx context.Context, req *Empty) (*Empty, error)
 }
 type UServImplBuilder struct {
 	err           error
@@ -118,12 +118,21 @@ func EmptyToUServPersistType(req *Empty) (*persist_lib.EmptyForUServ, error) {
 	params := &persist_lib.EmptyForUServ{}
 	return params, nil
 }
-func EmptyFromUServRow(row persist_lib.Scanable) (*Empty, error) {
+func EmptyFromUServDatabaseRow(row persist_lib.Scanable) (*Empty, error) {
 	res := &Empty{}
 	if err := row.Scan(); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 	return res, nil
+}
+func IterUServEmptyProto(iter *persist_lib.Result, next func(i *Empty) error) error {
+	return iter.Do(func(r persist_lib.Scanable) error {
+		item, err := EmptyFromUServDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting Empty row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
 }
 func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
 	params := &persist_lib.UserForUServ{}
@@ -142,7 +151,7 @@ func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
 	params.CreatedOn = (TimeString{}).ToSql(req.CreatedOn)
 	return params, nil
 }
-func UserFromUServRow(row persist_lib.Scanable) (*User, error) {
+func UserFromUServDatabaseRow(row persist_lib.Scanable) (*User, error) {
 	res := &User{}
 	var Id_ int64
 	var Name_ string
@@ -168,6 +177,15 @@ func UserFromUServRow(row persist_lib.Scanable) (*User, error) {
 	res.CreatedOn = CreatedOn_.ToProto()
 	return res, nil
 }
+func IterUServUserProto(iter *persist_lib.Result, next func(i *User) error) error {
+	return iter.Do(func(r persist_lib.Scanable) error {
+		item, err := UserFromUServDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting User row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
 func FriendsQueryToUServPersistType(req *FriendsQuery) (*persist_lib.FriendsQueryForUServ, error) {
 	params := &persist_lib.FriendsQueryForUServ{}
 	params.Names = (SliceStringConverter{}).ToSql(req.Names)
@@ -187,7 +205,7 @@ func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error)
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = EmptyFromUServRow(row)
+		res, err = EmptyFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -229,7 +247,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = EmptyFromUServRow(row)
+		res, err = EmptyFromUServDatabaseRow(row)
 		if err != nil {
 			return err
 		}
@@ -251,7 +269,7 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := UserFromUServRow(row)
+		res, err := UserFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -281,7 +299,7 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = UserFromUServRow(row)
+		res, err = UserFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -314,7 +332,7 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 		}
 		if row != nil {
-			res, err := UserFromUServRow(row)
+			res, err := UserFromUServDatabaseRow(row)
 			if err != nil {
 				return err
 			}
@@ -339,7 +357,7 @@ func (s *UServImpl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, err
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = EmptyFromUServRow(row)
+		res, err = EmptyFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -367,7 +385,7 @@ func (s *UServImpl) GetFriends(req *FriendsQuery, stream UServ_GetFriendsServer)
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := UserFromUServRow(row)
+		res, err := UserFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -397,7 +415,7 @@ func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = EmptyFromUServRow(row)
+		res, err = EmptyFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
 			return
@@ -409,7 +427,4 @@ func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 		return nil, iterErr
 	}
 	return res, nil
-}
-func (s *UServImpl) Shutdown(ctx context.Context, req *Empty) (*Empty, error) {
-	return s.FORWARDED.Shutdown(ctx, req)
 }
