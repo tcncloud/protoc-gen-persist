@@ -31,7 +31,6 @@ syntax = "proto3";
 package pb;
 
 option go_package="github.com/tcncloud/protoc-gen-persist/examples/user_spanner/pb;pb";
-option (persist.package)="github.com/tcncloud/protoc-gen-persist/examples/user_spanner/pb;pb";
 
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";

@@ -173,23 +173,23 @@ type MySpannerTestNestQueryParams interface {
 	GetThing() []byte
 }
 type MySpannerTestEverythingQueryParams interface {
-	GetTable() []byte
-	GetTimes() [][]byte
-	GetSomes() [][]byte
 	GetStrs() []string
 	GetTables() [][]byte
 	GetTime() interface{}
 	GetSome() []byte
 	GetStr() string
+	GetTable() []byte
+	GetTimes() [][]byte
+	GetSomes() [][]byte
 }
 type MySpannerUniarySelectWithDirectivesQueryParams interface {
-	GetId() int64
 	GetName() string
+	GetId() int64
 }
 type MySpannerUniaryUpdateQueryParams interface {
-	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
+	GetId() int64
 }
 type MySpannerUniaryDeleteRangeQueryParams interface {
 	GetStartId() int64
@@ -235,6 +235,6 @@ type MySpannerUniaryDeleteWithHooksQueryParams interface {
 type MySpannerServerStreamWithHooksQueryParams interface {
 }
 type MySpannerClientStreamUpdateWithHooksQueryParams interface {
-	GetName() string
 	GetId() int64
+	GetName() string
 }

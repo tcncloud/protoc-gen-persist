@@ -47,11 +47,11 @@ func UServGetFriendsQuery(req UServGetFriendsQueryParams) spanner.Statement {
 }
 
 type UServInsertUsersQueryParams interface {
-	GetId() int64
-	GetName() string
 	GetFriends() []byte
 	GetCreatedOn() interface{}
 	GetFavoriteNumbers() []int64
+	GetId() int64
+	GetName() string
 }
 type UServGetAllUsersQueryParams interface {
 }
@@ -63,8 +63,8 @@ type UServUpdateUserNamesQueryParams interface {
 	GetId() int64
 }
 type UServUpdateNameToFooQueryParams interface {
-	GetId() int64
 	GetName() string
+	GetId() int64
 }
 type UServGetFriendsQueryParams interface {
 	GetNames() []string

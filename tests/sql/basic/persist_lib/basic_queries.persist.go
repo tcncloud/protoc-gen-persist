@@ -80,8 +80,8 @@ func AmazingClientStreamWithHookQuery(tx Runable, req AmazingClientStreamWithHoo
 }
 
 type AmazingUniarySelectQueryParams interface {
-	GetStartTime() interface{}
 	GetId() int64
+	GetStartTime() interface{}
 }
 type AmazingUniarySelectWithHooksQueryParams interface {
 	GetId() int64
@@ -94,9 +94,9 @@ type AmazingServerStreamWithHooksQueryParams interface {
 	GetName() string
 }
 type AmazingBidirectionalQueryParams interface {
+	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
-	GetName() string
 }
 type AmazingBidirectionalWithHooksQueryParams interface {
 	GetId() int64
@@ -104,12 +104,12 @@ type AmazingBidirectionalWithHooksQueryParams interface {
 	GetName() string
 }
 type AmazingClientStreamQueryParams interface {
-	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
+	GetName() string
 }
 type AmazingClientStreamWithHookQueryParams interface {
+	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
-	GetId() int64
 }

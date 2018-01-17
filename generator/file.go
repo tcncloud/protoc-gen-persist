@@ -135,7 +135,7 @@ func (f *FileStruct) GetImplPackage() string {
 	if pkg == "" {
 		// if the persist.package option is not present we will use
 		// go_pacakge
-		if f.Desc.GetOptions().GetGoPackage() == "" {
+		if f.Desc.GetOptions().GetGoPackage() != "" {
 			pkg = f.Desc.GetOptions().GetGoPackage()
 		} else {
 			// last resort
