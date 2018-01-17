@@ -673,6 +673,35 @@ func (per *PersistStringer) DeclareSqlPackageDefs() string {
 	})
 	return printer.String()
 }
+
+func IteratorHelper(m *Method) string {
+	var iterType string
+	if m.Service.IsSpanner() {
+		iterType = "spanner.RowIterator"
+	} else if m.Service.IsSQL() {
+		iterType = "persist_lib.Result"
+	}
+	p := &Printer{}
+	p.P(
+		"func %s(iter *%s, next func(i *%s) error) error {\n",
+		IterProtoName(m),
+		iterType,
+		m.GetOutputType(),
+	)
+	p.PA([]string{
+		"return iter.Do(func(r %s) error {\n",
+		"item, err := %s(r)\n",
+		"if err != nil {\n",
+		"return fmt.Errorf(\"error converting %s row to protobuf message: %s\", err)\n",
+		"}\n",
+		"return next(item)\n})\n}\n",
+	},
+		m.backend.RowType(),
+		FromScanableFuncName(m),
+		m.GetOutputType(), "%s", // so our printer doesnt freak out
+	)
+	return p.String()
+}
 func GetSqlPersistLibTypeName(t TypeDesc) string {
 	if t.IsMapped {
 		return "interface{}"

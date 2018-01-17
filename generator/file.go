@@ -393,6 +393,10 @@ func (f *FileStruct) Generate() ([]byte, error) {
 				printer.P("%s\n", m.backend.TranslateRowToResult())
 				processed[FromScanableFuncName(m)] = true
 			}
+			if !processed[IterProtoName(m)] {
+				printer.P("%s\n", IteratorHelper(m))
+				processed[IterProtoName(m)] = true
+			}
 		}
 		for _, m := range *s.Methods {
 			printer.P("%s\n", m)
