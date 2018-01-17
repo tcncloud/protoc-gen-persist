@@ -102,7 +102,7 @@ var _ = Describe("persist", func() {
 	It("can select all friends of foo", func() {
 		foo, err := client.SelectUserById(context.Background(), &pb.User{Id: 0}) // foo
 		Expect(err).ToNot(HaveOccurred())
-		stream, err := client.GetFriends(context.Background(), &pb.FriendsQuery{
+		stream, err := client.GetFriends(context.Background(), &pb.FriendsReq{
 			Names: &pb.SliceStringParam{Slice: foo.Friends.Names},
 		})
 		Expect(err).ToNot(HaveOccurred())

@@ -99,10 +99,10 @@ func (p *UserForUServ) SetFriends(param []byte)        { p.Friends = param }
 func (p *UserForUServ) GetCreatedOn() interface{}      { return p.CreatedOn }
 func (p *UserForUServ) SetCreatedOn(param interface{}) { p.CreatedOn = param }
 
-type FriendsQueryForUServ struct {
+type FriendsReqForUServ struct {
 	Names interface{}
 }
 
 // this could be used in a query, so generate the getters/setters
-func (p *FriendsQueryForUServ) GetNames() interface{}      { return p.Names }
-func (p *FriendsQueryForUServ) SetNames(param interface{}) { p.Names = param }
+func (p *FriendsReqForUServ) GetNames() interface{}      { return p.Names }
+func (p *FriendsReqForUServ) SetNames(param interface{}) { p.Names = param }

@@ -12,7 +12,7 @@ type UServQueryHandlers struct {
 	SelectUserByIdHandler  func(context.Context, *UserForUServ, func(Scanable)) error
 	UpdateUserNamesHandler func(context.Context) (func(*UserForUServ) (Scanable, error), func() error)
 	UpdateNameToFooHandler func(context.Context, *UserForUServ, func(Scanable)) error
-	GetFriendsHandler      func(context.Context, *FriendsQueryForUServ, func(Scanable)) error
+	GetFriendsHandler      func(context.Context, *FriendsReqForUServ, func(Scanable)) error
 	DropTableHandler       func(context.Context, *EmptyForUServ, func(Scanable)) error
 }
 
@@ -52,7 +52,7 @@ func (p *UServMethodReceiver) UpdateNameToFoo(ctx context.Context, params *UserF
 }
 
 // next must be called on each result row
-func (p *UServMethodReceiver) GetFriends(ctx context.Context, params *FriendsQueryForUServ, next func(Scanable)) error {
+func (p *UServMethodReceiver) GetFriends(ctx context.Context, params *FriendsReqForUServ, next func(Scanable)) error {
 	return p.Handlers.GetFriendsHandler(ctx, params, next)
 }
 
@@ -182,8 +182,8 @@ func DefaultUpdateNameToFooHandler(accessor SqlClientGetter) func(context.Contex
 		return nil
 	}
 }
-func DefaultGetFriendsHandler(accessor SqlClientGetter) func(context.Context, *FriendsQueryForUServ, func(Scanable)) error {
-	return func(ctx context.Context, req *FriendsQueryForUServ, next func(Scanable)) error {
+func DefaultGetFriendsHandler(accessor SqlClientGetter) func(context.Context, *FriendsReqForUServ, func(Scanable)) error {
+	return func(ctx context.Context, req *FriendsReqForUServ, next func(Scanable)) error {
 		sqlDB, err := accessor()
 		if err != nil {
 			return err

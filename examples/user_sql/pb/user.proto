@@ -31,6 +31,8 @@ syntax = "proto3";
 package pb;
 
 option go_package="github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb;pb";
+// if we wanted to generate persist implementation in a different package than our go
+// implementation.  we would need to put (persist.package) = "path/for/my/impl;impl_package";
 
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
@@ -49,7 +51,7 @@ message Friends {
 message SliceStringParam {
 	repeated string slice = 1;
 }
-message FriendsQuery {
+message FriendsReq {
 	SliceStringParam names = 2;
 }
 
@@ -114,7 +116,7 @@ service UServ {
 	};
 	rpc UpdateAllNames(Empty) returns (stream User) {};
 
-	rpc GetFriends(FriendsQuery) returns(stream User) {
+	rpc GetFriends(FriendsReq) returns(stream User) {
 		option (persist.ql) = {
 			query: ["SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)"],
 			arguments: ["names"],

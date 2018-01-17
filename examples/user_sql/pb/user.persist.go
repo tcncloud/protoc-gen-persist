@@ -186,8 +186,8 @@ func IterUServUserProto(iter *persist_lib.Result, next func(i *User) error) erro
 		return next(item)
 	})
 }
-func FriendsQueryToUServPersistType(req *FriendsQuery) (*persist_lib.FriendsQueryForUServ, error) {
-	params := &persist_lib.FriendsQueryForUServ{}
+func FriendsReqToUServPersistType(req *FriendsReq) (*persist_lib.FriendsReqForUServ, error) {
+	params := &persist_lib.FriendsReqForUServ{}
 	params.Names = (SliceStringConverter{}).ToSql(req.Names)
 	return params, nil
 }
@@ -373,10 +373,10 @@ func (s *UServImpl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, err
 func (s *UServImpl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
 	return s.FORWARDED.UpdateAllNames(req, stream)
 }
-func (s *UServImpl) GetFriends(req *FriendsQuery, stream UServ_GetFriendsServer) error {
+func (s *UServImpl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
 	var err error
 	_ = err
-	params, err := FriendsQueryToUServPersistType(req)
+	params, err := FriendsReqToUServPersistType(req)
 	if err != nil {
 		return err
 	}

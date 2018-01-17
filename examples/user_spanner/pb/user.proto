@@ -31,6 +31,8 @@ syntax = "proto3";
 package pb;
 
 option go_package="github.com/tcncloud/protoc-gen-persist/examples/user_spanner/pb;pb";
+// if we wanted to generate persist implementation in a different package than our go
+// implementation.  we would need to put (persist.package) = "path/for/my/impl;impl_package";
 
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
@@ -48,6 +50,16 @@ message Friends {
 }
 
 message Empty{}
+
+// the queries in this service contact a table that looks like this
+
+// CREATE TABLE users (
+// 	id INT64 NOT NULL,
+// 	name STRING(MAX) NOT NULL,
+// 	friends BYTES(MAX) NOT NULL,
+// 	created_on STRING(MAX) NOT NULL,
+// 	favorite_numbers ARRAY<INT64> NOT NULL,
+// ) PRIMARY KEY (id)
 
 service UServ {
 	option (persist.service_type) = SPANNER;
