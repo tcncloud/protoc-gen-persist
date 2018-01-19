@@ -60,7 +60,5 @@ func (d *RestOfImpl) UpdateAllNames(r *pb.Empty, stream pb.UServ_UpdateAllNamesS
 	if res.Err() != nil {
 		return res.Err()
 	}
-	return pb.IterUServUserProto(res, func(user *pb.User) error {
-		return stream.Send(user)
-	})
+	return pb.IterUServUserProto(res, stream.Send)
 }

@@ -30,7 +30,7 @@ syntax = "proto3";
 
 package pb;
 
-option go_package="github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb;pb";
+//option go_package="github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb;pb";
 // if we wanted to generate persist implementation in a different package than our go
 // implementation.  we would need to put (persist.package) = "path/for/my/impl;impl_package";
 
@@ -86,7 +86,7 @@ service UServ {
 			arguments: ["id", "name", "friends", "created_on"],
 			before: {
 				name: "IncId",
-				package: "github.com/tcncloud/protoc-gen-persist/examples/user_sql/",
+				package: "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb",
 			}
 		};
 	};
