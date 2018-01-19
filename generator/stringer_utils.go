@@ -3,7 +3,6 @@ package generator
 import (
 	"bytes"
 	"fmt"
-	"github.com/tcncloud/protoc-gen-persist/persist"
 	"strings"
 	"text/template"
 )
@@ -138,16 +137,6 @@ func NewPersistHandlerName(m *Method) PersistHandlerName {
 
 func (p PersistHandlerName) String() string {
 	return p.m.GetName() + "Handler"
-}
-
-func GetHookName(hook *persist.QLImpl_CallbackFunction) string {
-	var name string
-	pkg := GetGoPackage(hook.GetPackage())
-	if pkg != "" {
-		name = pkg + "."
-	}
-	name += hook.GetName()
-	return name
 }
 
 func ToParamsFuncName(m *Method) string {

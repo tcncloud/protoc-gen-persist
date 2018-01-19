@@ -290,7 +290,9 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
 	if mapping := m.GetMapping(typ); mapping != nil {
 		p := m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapping.GetGoPackage()))
-		if p != "" && m.Service.File.NotSameAsMyPackage(GetGoPath(mapping.GetGoPackage())) {
+		if p != "" &&
+			m.Service.File.NotSameAsMyPackage(GetGoPath(mapping.GetGoPackage())) &&
+			m.Service.File.Opts.PersistLibRoot != GetGoPath(mapping.GetGoPackage()) {
 			return p + "." + mapping.GetGoType()
 		} else {
 			return mapping.GetGoType()
@@ -478,6 +480,16 @@ func (m *Method) IsServerStreaming() bool {
 
 func (m *Method) IsBidiStreaming() bool {
 	return m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming()
+}
+
+func (m *Method) GetHookName(hook *persist.QLImpl_CallbackFunction) string {
+	var name string
+	pkg := GetGoPackage(hook.GetPackage())
+	if m.Service.File.NeedImport(pkg) {
+		name = pkg + "."
+	}
+	name += hook.GetName()
+	return name
 }
 
 func (m *Method) Process() error {

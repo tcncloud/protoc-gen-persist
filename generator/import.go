@@ -39,7 +39,6 @@ type Imports []*Import
 func EmptyImportList() *Imports {
 	return &Imports{
 		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
-		&Import{GoImportPath: "database/sql", GoPackageName: "sql"},
 	}
 }
 func (il *Imports) Exist(pkg string) bool {
