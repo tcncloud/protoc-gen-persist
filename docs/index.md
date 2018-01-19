@@ -1,840 +1,562 @@
----
-layout: home
----
-# Documentation
+## protoc-gen-persist
 
-## About protoc-gen-persist
-protoc-gen-persist was created to allow services to abstract away their persistence layer.
-Instead of setting up postgres, or mysql and using it in your service directly,  you can now
-just make a grpc client that can talk to a generated service that knows how to talk to the database
-based on the proto file you generate it from.
+protoc-gen-persist is a protoc plugin.
+Its goal is to help write your persistence layer for simple GRPC calls that mostly deal with
+talking to a database.
 
-Having this generated persistence layer makes changing databases less of a headache, allows horizontal scaling of
-your persistence layer, and gets rid of error prone code for simple database calls.
+protoc-gen-persist will look at a protobuf service's options and generate implementation for
+the service's methods.
 
-## (Brief) Description
-You create the generated code by running protoc, giving it the ```--persist_out``` option.
+you activate the plugin using protoc's CLI.
+```bash
+protoc -I. -I$GOPATH/src --persist_out=plugins=protoc-gen-persist:$GOPATH/src ./*.proto
+```
 
-What is generated is a when running protoc with the ```persist_out``` option is grpc handler functions (written in go)
-that parse your grpc requests, and perform the provided query on the database, using the protobuf request struct as parameters.
-The result of the query is then marshaled into your grpc response struct and returned. So as a simple example, if you had
-the proto file "simple_service.proto":
+if you do not have fully qualified go_package options in your proto files while running protoc
+from your $GOPATH/src,  you will need to specify the persist_root option. Which is the
+go package base that the persist_lib will extend from.
 
-```protobuf
-// we only support proto3 syntax
-syntax = "proto3";
+The generated persist file needs to import persist_lib, so specify the root of the package
+to do that.
+```bash
+protoc -I. -I$GOPATH/src --persist_out=plugins=protoc-gen-persist,persist_root=github.com/protoc-gen-persist/examples/user_sql/pb:. ./pb/*.proto
+```
 
-package simple_example;
+the persist plugin will generate service handlers that implement a grpc service.
+It looks at a method's stream type, input message, output message, and a few user
+specified options, and decides how the database must be structured.
 
-import "github.com/tcncloud/protoc-gen-persist/persist/options.proto";
 
-// a User is row our database's user table
+It then writes function to marshal a protobuf message to, and from the database row,
+perform iterations over a protobuf from a database's iterator, and functions that
+run the protobuf option's query on the backend.
+for example, given this [snippet from our sql examples](https://github.com/tcncloud/protoc-gen-persist/blob/master/examples/user_sql/main.go)
+```proto
+message Friends {
+	repeated string names = 1;
+}
+
 message User {
-  int64 id = 1;
-  string first_name = 2;
-  string last_name = 3;
+	int64 id = 1;
+	string name = 2;
+	Friends friends = 3;
+	google.protobuf.Timestamp created_on = 4;
 }
 
-message Id {
-  int64 id = 1;
+service UServ {
+	option (persist.service_type) = SQL;
+	rpc SelectUserById(User) returns (User) {
+		option (persist.ql) = {
+			query: ["SELECT id, name, friends, created_on FROM users WHERE id = $1"],
+			arguments: ["id"],
+		};
+	};
 }
+```
 
-service UsersTalker {
-  // for this example we will be using a SQL back end instead of a SPANNER back end
-  option (persist.service_type) = SQL;
+you get the following go code:
 
-  // we will provide through grpc an Id, and expect back a User
-  rpc SelectById(Id) returns (User) {
-    option (persist.ql) = {
-      // the query to run,  and the arguments to use. ?  will be replaced with the "id" field of the request
-      // the query is an array, to allow you to split it on multiple lines if it gets too long
-      // it will be joined at generation time into a single string with each item that was in the
-      // array separated by a space
-      query: ["SELECT * from users WHERE id=? LIMIT 1"]
-      arguments: ["id"]
-    };
-  };
+in [the pb package](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples/user_sql/pb):
+- function that marshals from protobuf message to a database row
+```go
+func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
+	params := &persist_lib.UserForUServ{}
+	params.Id = req.Id
+	params.Name = req.Name
+	if req.Friends == nil {
+		req.Friends = new(Friends)
+	}
+	{
+		raw, err := proto.Marshal(req.Friends)
+		if err != nil {
+			return nil, err
+		}
+		params.Friends = raw
+	}
+	params.CreatedOn = (TimeString{}).ToSql(req.CreatedOn)
+	return params, nil
 }
 
 ```
-run the protoc commands (in the directory with the proto file):
-- ```protoc -I/usr/local/include -I. -I$GOPATH/src --go_out=plugins=grpc:. ./simple_service.proto```
-- ```protoc -I/usr/local/include -I. -I$GOPATH/src --persist_out=plugins=protoc-gen-persist:. ./simple_service.proto```
-
-two new files (per proto file)  will be generated:
-- simple_service.pb.go (from your --go_out command)
-- simple_service.persist.go (from --persist_out command)
-
-the .pb.go file will have your grpc service definition, and all the go types for your proto message definitions.
-the .persist.go wil have your database handlers, and service implementation for talking with your persistence layer.
-This example would generate a simple_service.persist.go file that looks like this:
+- function that marshals from database row to protobuf message
 ```go
-// This file is generated by protoc-gen-persist
-// Source File: simple_service.proto
-// DO NOT EDIT !
-package simple_example
-
-import (
-	sql "database/sql"
-	strings "strings"
-
-	context "golang.org/x/net/context"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-)
-
-type UsersTalkerImpl struct {
-	SqlDB *sql.DB
+func UserFromUServDatabaseRow(row persist_lib.Scanable) (*User, error) {
+	res := &User{}
+	var Id_ int64
+	var Name_ string
+	var Friends_ []byte
+	var CreatedOn_ TimeString
+	if err := row.Scan(
+		&Id_,
+		&Name_,
+		&Friends_,
+		&CreatedOn_,
+	); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	res.Id = Id_
+	res.Name = Name_
+	{
+		var converted = new(Friends)
+		if err := proto.Unmarshal(Friends_, converted); err != nil {
+			return nil, err
+		}
+		res.Friends = converted
+	}
+	res.CreatedOn = CreatedOn_.ToProto()
+	return res, nil
 }
 
-func NewUsersTalkerImpl(driver, connString string) (*UsersTalkerImpl, error) {
-	db, err := sql.Open(driver, connString)
+```
+- function that iterates over a database iterator returning protobuf
+messages
+```go
+func IterUServUserProto(iter *persist_lib.Result, next func(i *User) error) error {
+	return iter.Do(func(r persist_lib.Scanable) error {
+		item, err := UserFromUServDatabaseRow(r)
+		if err != nil {
+			return fmt.Errorf("error converting User row to protobuf message: %s", err)
+		}
+		return next(item)
+	})
+}
+
+```
+- struct implements the service for the protobuf method
+```go
+type UServImpl struct {
+	PERSIST   *persist_lib.UServMethodReceiver
+	FORWARDED RestOfUServHandlers
+}
+// ...
+func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error) {
+	var err error
+	var res = &User{}
+	_ = err
+	_ = res
+	params, err := UserToUServPersistType(req)
 	if err != nil {
 		return nil, err
 	}
-	return &UsersTalkerImpl{SqlDB: db}, nil
-}
-
-// sql unary SelectById
-func (s *UsersTalkerImpl) SelectById(ctx context.Context, req *Id) (*User, error) {
-	var (
-		FirstName string
-		Id        int64
-		LastName  string
-	)
-	err := s.SqlDB.QueryRow("SELECT * from users WHERE id=? LIMIT 1", req.Id).
-		Scan(&Id, &FirstName, &LastName)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-		} else if strings.Contains(err.Error(), "duplicate key") {
-			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists")
+	var iterErr error
+	err = s.PERSIST.SelectUserById(ctx, params, func(row persist_lib.Scanable) {
+		if row == nil { // there was no return data
+			return
 		}
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	res := &User{
-
-		FirstName: FirstName,
-		Id:        Id,
-		LastName:  LastName,
+		res, err = UserFromUServDatabaseRow(row)
+		if err != nil {
+			iterErr = err
+			return
+		}
+	})
+	if err != nil {
+		return nil, gstatus.Errorf(codes.Unknown, "error calling persist service: %v", err)
+	} else if iterErr != nil {
+		return nil, iterErr
 	}
 	return res, nil
 }
 ```
-
-All that is left to do is to attach a "UsersTalkerImpl" to a grpc service and run it.
-Here is a simple example of one way you could do that:
-``` go
-package main
-
-import (
-	"fmt"
-	"net"
-	_"github.com/go-sql-driver/mysql"
-	pb "simple_service" // wherever we put the proto generated code
-	"google.golang.org/grpc"
-)
-
-
-func main() {
-	lis, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		panic(err)
-	}
-	grpcServer := grpc.NewServer()
-	s, err := pb.NewUsersTalkerImpl("mysql", "user:password@/dbname")
-	if err != nil {
-		panic(err)
-	}
-	pb.RegisterUsersTalkerServer(grpcServer, s)
-	fmt.Printf("server listening on 50051\n")
-	grpcServer.Serve(lis)
-}
-```
-
-All that is left to do is build, and run your server. Then you will be able to make a grpc client
-that can talk to your grpc server, and get users from the database when sent their id as a grpc call.
-
-Full code examples can be found in the [examples directory](../examples/README.md)
-
-## Constructing Your Proto File
-protoc-gen-persist generates code based on how you construct your .proto file.  It generates code
-by looking at 4 things on your grpc service:
-- request/response message types of the rpc call
-- the streaming catagory of the rpc call (none, client streaming, server streaming, bidirectional)
-- service level options (type mapping definitions, and sevice type)
-- method level options (the query string, and arguments array)
-
-The service/method options will be gone over in more detail in the next section. This section will cover what gets generated
-based on the streaming type of your rpc call, and the request/response message types of the rpc call
-
-### non streaming calls
-ex: ```rpc SelectById(Id) returns (User)```
-
-protoc-gen-persist generates code that assumes the query returns at most one row.
-- For sql backends the handler uses database/sql QueryRow method.
-- For spanner additional rows are ignored.
-
-### server streaming call
-ex: ```rpc SelectByName(Name) returns (stream User)```
-
-protoc gen-persist generates a handler that runs the provided query, and streams
-back each result one by one.
-- For sql backends  the handler uses database/sql's Query method
-- Spanner does a single() read transaction.
-
-
-Do not use non streaming, or server streaming calls if your query does not return rows.  In the future,
-We might try to identify if the query returns rows or not,  and generate code based on that,  but this
-is not yet supported.
-
-### client streaming calls
-ex: ```rpc InsertUsers(stream User) returns (NumRowsInserted)```
-
-protoc-gen-persist generates a handler begins a transaction,  makes a prepared statement
-and executes that statement for every received request over the stream. If an error is encountered,
-the transaction is rolled back.  After all requests have been executed on the statment successfully
-the transaction is committed, and an empty instance of your proto response type is returned.
-An empty response is returned because protoc-gen-persist does not make assumptions on what the return
-type should be.  You can use an after hook to aggregate the data from the requests, and stream and populate
-the response with whatever you want.  Before and After hooks are explained in a later section.
-
-
-- For sql service types the streamed reqeusts are executed on the transaction right away, and the error is
-checked right away.  It is safe to stream any number of requests over before closing the stream.
-- For spanner service types the streamed requests are stored in a slice of mutations.  The mutations are
-not applied to the database till the stream is closed by the client.  This is done because there is no rollback
-feature for spanner. All mutations given to an apply method are done only if they all succeed. Till there is a
-way to have a transaction that can be rolled back in spanner,  be aware that each request is stored as a mutation in
-memory on the server.
-
-### bidirectional streaming calls
-ex: ```rpc UpdateUser(stream User) returns (stream User)```
-
-**bidirectional stream methods are only supported for sql service types**
-
-protoc-gen-persist generates a handler that prepares a statement.  For every  request streamed to the server,
-a QueryRow is performed on that statement, the resulting row is marshelled into the result message type, and streamed back
-Bidirectional stream methods are not really useful for many things yet.  One area they can be used is if you worked with
-a driver that supports returning rows after being updated.  for example:
-```proto
-message User {
-  int64 id = 1;
-  string first_name = 2;
-  string last_name = 3;
-}
-service UserTalker {
-  rpc UpdateUserLastName(stream User) returns (stream User) {
-    option (persist.ql) = {
-      // using the lib/pq driver you could do a query like this
-      query: ["UPDATE users SET(last_name) = ($1) Where id=$2 RETURNING *"]
-      arguments: ["last_name", "id"]
-    };
-  };
-}
-```
-This will let you stream users over to be updated, and get the updated user back
-
-bidirectional streams will get heavier work done in future releases,  for now it would be best to use server, client, and
-non stream calls.
-
-## Persistance Options
-### Method options
-the options you can put on a method are currently the query,  and the arguments.  In the future method type mapping
-and before and after hooks will put here as well.  rpc methods that do not have a persist.ql options object will not
-have a server handler generated.
-```proto
-message User {
-  int64 id = 1;
-  string first_name = 2;
-  string last_name = 3;
-  float64 money = 4;
-}
-service UserTalker {
-  rpc GetRichPeople(User) returns (stream User) {
-    option (persist.ql) = {
-      query: ["SELECT last_name from users WHERE firstName=? AND money=?]
-      arguments: ["first_name", "money"]
-    };
-  };
-}
-```
-The ```query``` option is the query that will be executed on the database. It is an array to allow
-the query to span multiple lines in the proto.  The array will be joined into a single string at generation
-time, separated by a space character for each item in the array.
-
-parameter placeholders ex: (?, $1, :col)
-are replaced in order  with with the the field on the request that matches the argument in the arguments array. So using
-the above example,  sent a request to the server with a user that looked like this (go syntax):
+- builder for the  struct that implements the service
 ```go
-import (
-  pb "usertalker" // wherever the generated code is for the User talker service
-  fmt
-  "context"
-  "google.golang.org/grpc"
-  "google.golang.org/grpc/codes"
-)
 
-// purposely ignoring errors here, but you shouldn't
-func main() {
-  // setup a client and connection to the server as normal
-  // for this example we assume there is a UserTalker server on
-  // localhost:50051
-  con, _ := grpc.Dial("localhost:50051", grpc.WithInsecure())
-  client = pb.NewUserTalkerClient(con)
-
-  // we dont need the Id, or the LastName to be filled out on the user
-  // because our query does not have those used in the arguments.
-  stream, _ := client.GetRichPeople(context.Background(), &pb.User{
-    FirstName: "billy",
-    Money: float64(9000.01),
-  })
-  for {
-    // if stream does not return an error, each resp will be a User object
-    // with only the LastName filled out.  This is becuase we specifically
-    // returned the last name,  and not *
-    resp, err := stream.Recv()
-    // io.EOF will be returned when there is no more rows found in the database
-    if err == io.EOF {
-      break
-    }
-    // if we get no rows from the query we will get a grpc error code of NotFound.
-    if err != nil && c := grpc.Code(err); c == codes.NotFound {
-      fmt.Println("no users with this last name and money")
-      break
-    }
-    if err != nil {
-      fmt.Printf("problem with the rpc call: %s\n", err)
-      break
-    }
-    fmt.Printf("a last name of a user with money: %s", resp.LastName)
-  }
-}
-```
-### * queries
-if you have a query that uses the * in any way, it is important to make sure your response message
-has the exact rows, in the exact order that the database recieves the rows. fields are scanned out of the
-row in the database in the order that they are read. If your proto message definition  does not have rows that match
-the table in the exact order, you can get an error at runtime.  Here is an example:
-
-Lets say I had a table that had this definition:
-```sql
-`CREATE TABLE example_table(
-  id          bigserial,
-  phone       integer      NOT NULL,
-  name        varchar(255) NOT NULL,
-  primary key(id)
-)`
-```
-and I wanted to perform a simple query that looks like this: (this is the failing example)
-```proto
-message Empty{}
-message Person {
-  int64 id = 1;
-  string name = 2;
-  int32 phone = 3;
+type UServImplBuilder struct {
+	err           error
+	rest          RestOfUServHandlers
+	queryHandlers *persist_lib.UServQueryHandlers
+	i             *UServImpl
+	db            sql.DB
 }
 
-service Person {
-  rpc FindOnePerson(Empty) returns (Person) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table Limit 1"]
-      arguments: []
-    };
-  };
+func NewUServBuilder() *UServImplBuilder {
+	return &UServImplBuilder{i: &UServImpl{}}
 }
-```
-**This above example will fail at runtime**
-
-The reason this does not work is because we defined the example_table's phone field before the name field,
-but on the Person message in the proto, we defined the name field before the phone field.  This will generate
-code that scans name out of the database before phone,  and we will get a mismatched type.
-
-To Fix the above example  simply swap the phone field to be above the name field on the Person
-message definition in the proto like this: (this is the working example)
-```proto
-message Empty{}
-// notice the name field is above the phone field now
-message Person {
-  int64 id = 1;
-  int32 phone = 3;
-  string name = 2;
+func (b *UServImplBuilder) WithRestOfGrpcHandlers(r RestOfUServHandlers) *UServImplBuilder {
+	b.rest = r
+	return b
 }
-
-service Person {
-  rpc FindOnePerson(Empty) returns (Person) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table Limit 1"]
-      arguments: []
-    };
-  };
+func (b *UServImplBuilder) WithPersistQueryHandlers(p *persist_lib.UServQueryHandlers) *UServImplBuilder {
+	b.queryHandlers = p
+	return b
 }
-```
-This code above would work correctly.  The plugin would read the phone field before the name field,
-and this will scan the phone field out of the received row first.  Notice how on the Person message,
-the field numbers go in order of 1, 3, 2  now instead of 1, 2, 3  as in the failing example?  This is
-not a typo,  all protoc-gen-persist cares about is the ORDER it reads the fields in,  it does not care
-about the field's number.  Your protobuf messages do not have to update their numbers,  just their position
-in the message definition.
-
-If You really do not want to switch your Message definition field positions, you can still use select
-statements,  but select the exact field order that matches your response messages field order.
-So if you changed the query in the failing example to this,  it would work
-```proto
-message Empty{}
-message Person {
-  int64 id = 1;
-  string name = 2;
-  int32 phone = 3;
-}
-
-service Person {
-  rpc FindOnePerson(Empty) returns (Person) {
-    option (persist.ql) = {
-      query: ["SELECT id, name, phone from example_table Limit 1"]
-      arguments: []
-    };
-  };
-}
-```
-this works without having to change the field order in the Person message definition
-
-### Custom Types
-Protobuf message types, and database types do not line up one to one unfortunately.
-However protoc-gen-persist supports mapping your custom proto types to types that will
-fit into the database you are using. Here is how to do it:
-
-First we have our proto file.  For this simple example, we have 3 fields on an Appointment message.
-An id, a  name field, both of which are not mapped. We want to store a time.  We want to pass our
-time around as a google protobuf timestamp struct.
-```proto
-syntax = "proto3";
-
-// import google's timestamp proto
-import "google/protobuf/timestamp.proto";
-
-// our message we want to store into the database.
-// the timestamp we are referencing is found here: https://github.com/google/protobuf/blob/master/src/google/protobuf/timestamp.proto
-// and it looks like this:
-//message Timestamp {
-//  int64 seconds = 1;
-//  int32 nanos = 2;
-//}
-message Appointment {
-  int64 id = 1;
-  string name = 2;
-  google.protobuf.Timestamp time = 3;
-}
-```
-If our postgres table looked like this:
-```sql
-CREATE TABLE appointments(
-  id     bigserial,
-  name   varchar(255)  NOT NULL,
-  time   varchar(255)  NOT NULL,
-  primary key(id)
-);
-```
-A google protobuf timestamp struct will not fit into our Postgres database, because we have
-defined our table to store a time as a string. We can however create a type that can convert
-to/from a string from the database, to a Timestamp proto type.  Here is the code that does that:
-```go
-// this MUST not be in the same package in order to ensure no cyclical dependencies
-package mytime
-
-import (
-	"strings"
-	"strconv"
-  // if you have a SQL service type, you will need to return a driver.Value
-	"database/sql/driver"
-  // if you have a Spanner sql type, you will need to accept a GenericColumnValue
-	"cloud.google.com/go/spanner"
-  // our protobuf's timestamp
-	"github.com/golang/protobuf/ptypes/timestamp"
-)
-
-// create a type that can handle conversion between
-// a google protobuf time stamp.  This is the struct
-// that will be created and used in the generated code
-type MyTime struct {
-	Seconds int64
-	Nanos   int32
-}
-
-// to use our type with sql code, we need to suport this ToSql method
-// it needs to take the source type we will use in the proto file (the *timestamp.Timestamp)
-// and it needs to return a pointer to our type.  We initialize our type with
-// the data that will be required to put our type into the database
-func (s MyTime) ToSql(src *timestamp.Timestamp) *MyTime {
-	s.Seconds = src.Seconds
-	s.Nanos = src.Nanos
-	return &s
-}
-
-// This is jsut like the ToSql method,  except it is called if your service_type
-// option is SPANNER.  It is okay to use the same type for both sql and spanner services
-func (s MyTime) ToSpanner(src *timestamp.Timestamp) *MyTime {
-	s.Seconds = src.Seconds
-	s.Nanos = src.Nanos
-	return &s
-}
-
-// This is called on a populated instance of our type, setup by the generated code in the handler
-// The code will be populated with Scan, or SpannerScan, and it needs to return us a pointer
-// to the proto type to be returned.  Since our proto for this example uses googles Timestamp,
-// we return construct a new google timestamp and return its address
-func (s MyTime) ToProto() *timestamp.Timestamp {
-	return &timestamp.Timestamp{
-		Nanos:   s.Nanos,
-		Seconds: s.Seconds,
+func (b *UServImplBuilder) WithDefaultQueryHandlers() *UServImplBuilder {
+	accessor := persist_lib.NewSqlClientGetter(&b.db)
+	queryHandlers := &persist_lib.UServQueryHandlers{
+		SelectUserByIdHandler:  persist_lib.DefaultSelectUserByIdHandler(accessor),
 	}
-
+	b.queryHandlers = queryHandlers
+	return b
 }
 
-// protoc-gen-persist uses the go database/sql package. We get types out of the database
-// by having your custom type implement the database/sql Scanner interface. We pass an
-// instance of MyTime to row.Scan(),  this will populate the MyTime instance for the response
-func (t *MyTime) Scan(src interface{}) error {
-	ti, ok := src.(string)
+// set the custom handlers you want to use in the handlers
+// this method will make sure to use a default handler if
+// the handler is nil.
+func (b *UServImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.UServQueryHandlers) *UServImplBuilder {
+	accessor := persist_lib.NewSqlClientGetter(&b.db)
+	if p.SelectUserByIdHandler == nil {
+		p.SelectUserByIdHandler = persist_lib.DefaultSelectUserByIdHandler(accessor)
+	}
+	b.queryHandlers = p
+	return b
+}
+func (b *UServImplBuilder) WithSqlClient(c *sql.DB) *UServImplBuilder {
+	b.db = *c
+	return b
+}
+func (b *UServImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *UServImplBuilder {
+	db, err := sql.Open(driverName, dataSourceName)
+	b.err = err
+	b.db = *db
+	return b
+}
+func (b *UServImplBuilder) Build() (*UServImpl, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
+	b.i.PERSIST = &persist_lib.UServMethodReceiver{Handlers: *b.queryHandlers}
+	b.i.FORWARDED = b.rest
+	return b.i, nil
+}
+func (b *UServImplBuilder) MustBuild() *UServImpl {
+	s, err := b.Build()
+	if err != nil {
+		panic("error in builder: " + err.Error())
+	}
+	return s
+}
+```
+
+in [the persist_lib package](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples/user_sql/pb/persist_lib):
+-  struct that matches protobuf type with getters and setters
+```go
+type UserForUServ struct {
+	Id        int64
+	Name      string
+	Friends   []byte
+	CreatedOn interface{}
+}
+
+// this could be used in a query, so generate the getters/setters
+func (p *UserForUServ) GetId() int64                   { return p.Id }
+func (p *UserForUServ) SetId(param int64)              { p.Id = param }
+func (p *UserForUServ) GetName() string                { return p.Name }
+func (p *UserForUServ) SetName(param string)           { p.Name = param }
+func (p *UserForUServ) GetFriends() []byte             { return p.Friends }
+func (p *UserForUServ) SetFriends(param []byte)        { p.Friends = param }
+func (p *UserForUServ) GetCreatedOn() interface{}      { return p.CreatedOn }
+func (p *UserForUServ) SetCreatedOn(param interface{}) { p.CreatedOn = param }
+```
+- iterface for the query consisting of getters for the query parameters
+```go
+type UServSelectUserByIdQueryParams interface {
+	GetId() int64
+}
+```
+- function that performs the database query on the iterface matched by the
+protobuf method's mapped input message type
+```go
+func UServSelectUserByIdQuery(tx Runable, req UServSelectUserByIdQueryParams) *Result {
+	row := tx.QueryRow(
+		"SELECT id, name, friends, created_on FROM users WHERE id = $1 ",
+		req.GetId(),
+	)
+	return newResultFromRow(row)
+}
+```
+- default implemented query handler used by the builder
+```go
+type UServMethodReceiver struct {
+	Handlers UServQueryHandlers
+}
+type UServQueryHandlers struct {
+	SelectUserByIdHandler  func(context.Context, *UserForUServ, func(Scanable)) error
+}
+// next must be called on each result row
+func (p *UServMethodReceiver) SelectUserById(ctx context.Context, params *UserForUServ, next func(Scanable)) error {
+	return p.Handlers.SelectUserByIdHandler(ctx, params, next)
+}
+
+func DefaultSelectUserByIdHandler(accessor SqlClientGetter) func(context.Context, *UserForUServ, func(Scanable)) error {
+	return func(ctx context.Context, req *UserForUServ, next func(Scanable)) error {
+		sqlDB, err := accessor()
+		if err != nil {
+			return err
+		}
+		res := UServSelectUserByIdQuery(sqlDB, req)
+		err = res.Do(func(row Scanable) error {
+			next(row)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+```
+
+How all this fits together can be understood better by looking at the examples
+
+
+protoc-gen-persist can generate code for sql, and spanner backends.
+
+- for sql it uses go's [database/sql package](https://golang.org/pkg/database/sql/).
+It is not driver specific.
+- for spanner it uses [google's golang spanner sdk](https://godoc.org/cloud.google.com/go/spanner)
+
+
+Persist is opinionated.  It decides how to fit a protobuf message into the database, based on
+the types of the fields in the request/response message.  If a type does not fit in the
+database, it either converts the code to something it knows will fit,  or generates
+incorrect code.
+
+
+If the default mappings for protobuf type do not work for your database row type, you
+can provide a custom mapping, but filling out a our type mapping option on the service.
+
+### default mappings for types are
+
+
+#### for spanner
+- enums are transformed into an int64
+- message types are transformed into []byte
+- repeated message types are transformed into [][]byte
+- repeated string is transformed to []spanner.NullString and finally into []string
+- repeated int64 is transformed to []spanner.NullInt64 and finally into []int64
+- repeated bool  is transformed to []spanner.NullBool and finally into []bool
+- repeated float64 is transformed into []spanner.NullFloat64[] and finally into float64
+- float64, string, and int64 types are left unconverted (because they fit)
+
+repeated enums are not supported, and will require a custom type mapping
+all other types are not supported and will require a custom type mapping
+
+
+#### for sql
+- enums are transformed into an int32
+- message types are stored as []byte
+- int32, int64, bool, float32, float64, and string are left unconverted (because they fit)
+
+
+any repeated type will not be satisfied automatically by the driver.Value interface
+so it does not have a supported default mapping.
+(Even if your database driver can fit that type)
+
+
+driver.Value types are:
+- int64
+- float64
+- bool
+- []byte
+- string
+- time.Time
+
+
+custom type mappings can be defined on a service to map encountered protobuf fields to
+database types and back.
+
+an example of one:
+```proto
+service UServ {
+	option (persist.service_type) = SQL;
+	option (persist.mapping) = {
+		types: [
+		{
+			// '.' prefix is optional will also work with ".google.protobuf.Timestamp"
+			proto_type_name: "google.protobuf.Timestamp",
+			proto_type: TYPE_MESSAGE,
+			go_type: "TimeString",
+			// if the custom mapping is in the same directory as the protobuf implemenation,
+			//  it is optional to leave the go_package option as the empty string ""
+			// persist is smart enough to know that "" = no import
+			go_package: "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb",
+		},
+		{ proto_type_name: "pb.SliceStringParam",
+			proto_type: TYPE_MESSAGE,
+			go_type: "SliceStringConverter",
+			go_package: "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb",
+		}
+		]
+	};
+}
+```
+
+the protobuf description of the type mapping option:
+```proto
+message TypeMapping {
+    message TypeDescriptor {
+        // if this is not setup the proto_type must be one of the built-in types
+        optional string proto_type_name =1;
+        // If proto_type_name is set, this need not be set.  If both this and proto_type_name
+        // are set, this must be one of TYPE_ENUM, TYPE_MESSAGE
+        // TYPE_GROUP is not supported
+        optional google.protobuf.FieldDescriptorProto.Type proto_type= 2;
+        // if proto_label is not setup we consider any option except LABAEL_REPEATED
+        optional google.protobuf.FieldDescriptorProto.Label proto_label = 3;
+        // go type name that will be used in the method implementation
+        required string go_type = 4;
+        // go package path
+        required string go_package = 5;
+    }
+    repeated TypeDescriptor types = 1;
+}
+```
+
+to map a type from protobuf to the database, you need to implement a type with 4 methods
+a type [in our examples](https://github.com/tcncloud/protoc-gen-persist/blob/master/examples/user_sql/pb/time_converter.go)
+for converting google protobuf typestamps looks like this:
+```go
+type TimeString struct {
+	t *timestamp.Timestamp
+}
+```
+- ToSql/ToSpanner  intializes  our type from a protobuf message
+```go
+func (ts TimeString) ToSql(t *timestamp.Timestamp) *TimeString {
+	ts.t = t
+	return &ts
+}
+```
+- ToProto  transforms our custom type back into the protobuf message type
+```go
+func (ts TimeString) ToProto() *timestamp.Timestamp {
+	return ts.t
+}
+```
+- (Scan, Value) (if using a SQL backend)  Scan will populate our type from the database
+value will convert our type into something that fits in the driver's backend
+```go
+func (t *TimeString) Scan(src interface{}) error {
+	tStr, ok := src.(string)
 	if !ok {
-		t.Seconds = int64(0)
-		t.Nanos = 0
+		return fmt.Errorf("cannot scan out timestamp from not a string")
 	}
-	tis := strings.Split(ti, ",")
-	secs, err := strconv.ParseInt(tis[0], 10, 64)
+	ti, err := time.Parse(time.RFC3339, tStr)
 	if err != nil {
 		return err
 	}
-	nans, err := strconv.ParseInt(tis[1], 10, 32)
+	stamp, err := ptypes.TimestampProto(ti)
 	if err != nil {
 		return err
 	}
-	t.Seconds = secs
-	t.Nanos = int32(nans)
-
+	t.t = stamp
 	return nil
 }
 
-// we get your custom type into a database by having it implement go's database/sql
-// Valuer interface.  We pass MyTime instance to your query, that has been populated with
-// By calling the ToSql()  method on a MyTime instance.
-func (t *MyTime) Value() (driver.Value, error) {
-	ti := strconv.FormatInt(t.Seconds, 10) + "," + strconv.FormatInt(int64(t.Nanos), 10)
-	return ti, nil
+func (t *TimeString) Value() (driver.Value, error) {
+	return ptypes.TimestampString(t.t), nil
 }
-
-// Similar to Scan, This is how we get the database stored type, into your custom type
-// You are expected to implement SpannerScan, and take a spanner GenericColumnValue, and
-// decode it to an instance of your type.  In this example we just decode src that will be a
-// string of the time,  and call can on it, but you do not have to do it this way. You just
-// need to populate the MyTime t
-func (t *MyTime) SpannerScan(src *spanner.GenericColumnValue) error {
-	var strTime string
-	err := src.Decode(&strTime)
+```
+- (SpannerScan, SpannerValue)  (if using a SPANNER backend)  SpannerScan will need to
+convert from a spanner.GenericColumnValue, and SpannerValue will need to convert the message
+into a value that fits in spanner
+```go
+func (t *TimeString) SpannerScan(src *spanner.GenericColumnValue) error {
+	var tStr string
+	if err := src.Decode(&tStr); err != nil {
+		return err
+	}
+	ti, err := time.Parse(time.RFC3339, tStr)
 	if err != nil {
 		return err
 	}
-	return t.Scan(strTime)
-}
-
-// Similar to Value(),  we expect you to return an interface that will fit into spanner.
-// It does not have to be a driver.Value as it is in this example,  but it needs to be a type
-// that matches the column type in spanner.
-func (t *MyTime) SpannerValue() (interface{}, error) {
-	return t.Value()
-}
-```
-As noted before, this type must be put in a different package than both the service, and the
-package that contains the generated code. If you put this type in the same package,  you could
-introduce a dependency cycle
-
-
-Now that we have a type that implements the required functions we need to create a service, and tell
-it to map google protobuf Timestamp message type to our new MyTime type.  The MyTime package needs
-to be somewhere in your go path (or in your vendor directory of the project)
-We define an appointment service,  that will be talking to a SQL database (for this example).
-```proto
-service Appointments {
-  option (persist.service_type) = SQL;
-  option (persist.mapping) = {
-    types: [
-      {
-        proto_type_name: ".google.protobuf.Timestamp"
-        proto_type:  TYPE_MESSAGE
-        go_type: "MyTime"
-        go_package: "path/to/your/package/mytime"
-      }
-    ]
-  rpc GetAppointmentsAfterTime(Appointment) returns(stream Appointment){
-    option (persist.ql) = {
-      query: ["SELECT * FROM appointments WHERE time > ?"]
-      arguments["time"]
-    };
-  }
-}
-```
-The persist mapping object above will make it so any type that is encountered that is a Timestamp,
-will be converted to a MyTime.  And since Mytime has Scan and Value methods,  MyTime types can fit
-in the database. The full options available for converting protobuf types to database types is in the
-[persist proto](../persist/options.proto)
-
-## Spanner
-Most of this tutorial has given sql examples instead examples using spanner.
-Most of the things you can do with sql, you can also do when using spanner, the things
-that are different will be gone over in more detail here.
-### making a new server implementation
-
-### Query differences
-we use [this package](https://godoc.org/cloud.google.com/go/spanner) in our generated code  to talk to spanner.
-It is possible to perform any sql SELECT query on your spanner database,  but there is no way to perform
-update,  delete, or insert queries  using just this library.  Those queries have to be parsed using a
-sql parser before we can generate the code that uses them. Spanner doesn't allow as expressive queries as
-regular sql would allow for INSERT DELETE and UPDATE, so neither can protoc-gen-persist when talking to a
-spanner database.
-
-
-You will notice that most examples return an Empty message,  You do not have to, but
-spanner does not return anything from a write request, so the responses will always be empty, except for
-client streaming rpc calls,  which will expect a response with a 'count' field.
-
-Here are the Things to look out for for each query
-
-
-#### UPDATE
-Spanner handles updates to rows by having you create a mutation providing the rows
-primary key(s)  it will find that particular row, and update that row only. Because of this,
-it is not possible to update the primary key in spanner with an update query. Nor is it possible
-to update more than one row at a time, and you must have the primary key(s)  of the row you
-are trying to update. Lets break down an example query that will work in spanner:
-
-```proto
-message Empty {}
-message Person {
-  int64 id = 1;
-  string ssn = 2;
-  string name = 3;
-  string fav_fruit = 4;
-  string fav_veggie = 5;
-}
-service Test {
-  rpc UpdateMyFood(Person) returns (Empty) {
-    option(persist.ql) {
-      query: [
-        "UPDATE example_table",
-          "SET fav_fruit=?,",
-          "fav_veggie=\"peas\"",
-        "WHERE id=? AND ssn=?"
-      ]
-      arguments: ["fav_fruit" "id", "ssn"]
-    };
-  };
-}
-```
-This query would break down into an update mutation, where **Both** id, and ssn were primary keys.
-Put the row values you want to change in the SET list,  and in the WHERE clause,  lists the primary keys,
-and what they are equal to. The only operator is '=' in a WHERE clause for updates.
-
-#### INSERT
-spanner insert queries allow basic inserts into the table only.  for example:
-```INSERT INTO example_table (col1, col2)  VALUES (?, 2)```
-You cannot create any cross table references, or use AS  in your queries.
-Spanner insert queries do not support INSERT INTO SELECT ... style queries.
-
-#### DELETE
-Delete sql queries are the most complicated to transform into spanner delete mutations.
-Spanner only allows you to delete by a key in the table, or a range of keys in the table.
-
-Because of this, We do not allow sql queries for Delete calls.  Instead we support a simple
-KeyRange syntax for deleteion. Example:
-
-```"DELETE FROM my_table START('Bob') END('Bob', '01/01/2001') KIND(CO)"```
-
-Rules:
-- Start the definition with the keyword  DELETE (in all caps), all other definitions can come in any order.
-- START() and END() are comma seperated lists that translate to the start and end keyranges.  You can put in
-floats, ints strings, or ?  like sql.
-- KIND()  refers to the spanner.Kind definition. Its options are:
-  - CC  ClosedClosed
-  - CO  ClosedOpen
-  - OC  OpenClosed
-  - OO  OpenOpen
--  FROM  expects an identifier as next non-whitespace token refering to the table in spanner
-that the deletion will take place.
--  Strings are represented with single quotes: 'example_string'
--  ? in a START() or END()  definition will put your arguments at that position, just
-like the other query examples
-
-Examples of spanner delete queries are in the exapmles folder,  for more help with knowing what a
-spanner KeyRange is,  [Look Here](https://godoc.org/cloud.google.com/go/spanner#KeyRange)
-
-
-## Before/After Hooks
-protoc-gen-persist supports before and after hooks on proto method definitions. Before hooks are called before query
-execution, and if a proto response is returned with no error, the method returns early without running the query.
-After hooks are called after the query is executed, and given the request, and the address of the response recieved.
-It is safe to dereference the response in your hook, so data aggregation is possible in client stream hooks.
-
-__Before Hook Notes__
-
-All before hooks share the same signature: ```func(*protoReq) (*protoRes, error)```
-
-but server streaming before hooks have the signature of: ```func(*protoReq) ([]*protoRes, error)```
-
-the responses are looped through and streamed back to the client for server streaming calls if the array is not nil
-or empty, and then the function early returns without querying the database
-
-
-
-__After Hook Notes__
-- Client streaming calls create an instance of the response message, and pass the same response to the after hook
-for each request in the transaction
-- Server streaming methods call the after hook with one response for each row returned from the database
-- Other grpc method types call the after hook once
-- after hooks only support one function signature: ```func(*protoReq, *protoRes) error```
-
-### Example
-
-Here is an example of a proto service definition with hooks defined
-```proto
-// "basic" proto package with our service
-option go_package="github.com/tcncloud/protoc-gen-persist/examples/sql/basic;basic";
-
-// our message definitions stored here
-import "examples/test/test.proto";
-
-service Amazing {
-  // (the start_time field is mapped to a custom type for this example, but is not shown)
-
-  rpc UniarySelectWithHooks(test.PartialTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table Where id=$1 AND start_time>$2"]
-      arguments: ["id", "start_time"]
-      before: {
-        name: "UniarySelectBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
-      }
-      after: {
-        name: "UniarySelectAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/examples/hooks"
-      }
-    };
-  };
-}
-```
-
- This is our hooks package (github.com/tcncloud/protoc-gen-persist/examples/hooks)
- Notice we import the package where our messages are defined, NOT the package that
- defines our grpc service.
-```go
-// Simple cache example. Database queries are only performed on
-// results that are not in the cache.
-package hooks
-
-import (
-	"fmt"
-	pb "github.com/tcncloud/protoc-gen-persist/examples/test"
-)
-
-var cache map[int64]*pb.ExampleTable
-
-func init() {
-	cache = make(map[int64]*pb.ExampleTable)
-}
-
-
-// our before hook,  takes a our proto request as a parameter and returns
-// the item in the cache.  If the item in the cache is nil, the database
-// is queried, because nil is returned as the proto response, and as the error
-func UniarySelectBeforeHook(req *pb.PartialTable) (*pb.ExampleTable, error) {
-	fmt.Printf("UniarySelectBeforeHook: cache: %#v\n", cache)
-	if req != nil {
-		res := cache[req.Id]
-		fmt.Printf("UniarySelectBeforeHook: req:%+v , cache: %+v\n", *req, res)
-		return res, nil
-	} else {
-		fmt.Println("UniarySelectBeforeHook: req was nil...")
+	stamp, err := ptypes.TimestampProto(ti)
+	if err != nil {
+		return err
 	}
+	t.t = stamp
+	return nil
+}
+
+func (t *TimeString) SpannerValue() (interface{}, error) {
+	return ptypes.TimestampString(t.t), nil
+}
+```
+
+
+### before/after hooks
+you can specify optional functions that will hook into your generated service handler
+for a method.  One runs before the query  (the before hook)  another runs after
+the query, and before results are sent back to the user.  (the after hook)
+
+before hooks need to take the protbuf message used as the input for the method as a parameter
+and return the (protobuf message output, error) as a response. (unless the method
+is server streaming,  then it needs to return ([]protobuf message output, error))
+
+- if a before hook returns a non nil result, and a nil error, the query will NOT be ran,
+and the results will be returned to the client.  This is most useful for caching.
+- a pointer to the actual request is given to the before hook.  So any changes made
+to the request object will persist over to the handler.  This could be useful for a
+number of reasons.  (auto incrementing ids stored on the server for example)
+```go
+// example hooks where *pb.Name is a input to the protobuf services method,
+// and pb.ExampleTable is the output message for the method
+
+// server streaming before hook looks like this
+func ServerStreamBeforeHook(req *pb.Name) ([]*pb.ExampleTable, error) {
+	fmt.Printf("ServerStreamBeforeHook: %+v\n", req)
 	return nil, nil
 }
 
-// our after hook is given our request, and the address to our response
-// This example stores  the address in the cache, but you can manipulate
-// the response, and it will be returned with your changes applied.
-// ClientStreaming after hooks get the same proto response given to the after
-// hook for every request streamed over
-func UniarySelectAfterHook(req *pb.PartialTable, res *pb.ExampleTable) error {
-	if req != nil {
-		fmt.Printf("uniarySelectAfterHook: req:%+v , res:%+v\n", *req, *res)
-		cache[req.Id] = res
-	}
-	fmt.Printf("UniarySelectAfterHook: cache now: %#v\n", cache)
+// every other before hook looks like this
+func GenericBeforeHook(req *pb.Name) (*pb.ExampleTable, error) {
+	fmt.Printf("GenericBeforeHook: %+v\n", req)
+	return nil, nil
+}
+```
+
+after hooks need to take the protobuf message, and protobuf response as parameters and
+return error as a response
+
+
+after hooks are ran on each row recieved from the database. Unlike before hooks,
+after hooks are not guaranteed to get the pointer to the request or response message used
+in the method.  After hooks main purpose is for their side effects.
+```go
+// an after hook for the above example's method would look like this
+func GenericAfterHook(req *pb.Name, res *pb.ExampleTable) error {
+	fmt.Printf("GenericAfterHook: %+v\n", res)
 	return nil
 }
-
 ```
-
-This is an example of what is generated when using hooks
-```go
-import (
-  ...
-	"github.com/tcncloud/protoc-gen-persist/examples/hooks"
-	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
-	test "github.com/tcncloud/protoc-gen-persist/examples/test"
-)
-
-...
-
-func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
-	var (
-		Id        int64
-		Name      string
-		StartTime mytime.MyTime
-		err       error
-	)
-
-	// our before hook
-	beforeRes, err := hooks.UniarySelectBeforeHook(req)
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-
-	}
-	// return early with response
-	if beforeRes != nil {
-		return beforeRes, nil
-	}
-
-	err = s.SqlDB.QueryRow("SELECT * from example_table Where id=$1 AND start_time>$2", req.Id, mytime.MyTime{}.ToSql(req.StartTime)).
-		Scan(&Id, &StartTime, &Name)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, grpc.Errorf(codes.NotFound, "%+v doesn't exist", req)
-		} else if strings.Contains(err.Error(), "duplicate key") {
-			return nil, grpc.Errorf(codes.AlreadyExists, "%+v already exists", req)
-		}
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-	// res is created as an instance of the proto response
-	res := test.ExampleTable{
-		Id:        Id,
-		Name:      Name,
-		StartTime: StartTime.ToProto(),
-	}
-	// our after hook is called with an instance of req, and the address of res
-	err = hooks.UniarySelectAfterHook(req, &res)
-	if err != nil {
-		return nil, grpc.Errorf(codes.Unknown, err.Error())
-	}
-
-	return &res, nil
+example of protobuf hooks on a method:
+```proto
+service Test {
+  rpc UniaryInsertWithHooks(test.ExampleTable) returns (test.ExampleTable) {
+    option (persist.ql) = {
+      query: ["insert into example_table (id, start_time, name)  Values (@id, @start_time, \"bananas\")"]
+      arguments: ["id", "start_time"]
+      before: {
+        name: "UniaryInsertBeforeHook"
+        package: "github.com/tcncloud/protoc-gen-persist/tests/spanner/hooks"
+      }
+      after: {
+        name: "UniaryInsertAfterHook"
+        package: "github.com/tcncloud/protoc-gen-persist/tests/spanner/hooks"
+      }
+    };
+  };
+}
+```
+the actual option definitions for before/after hook:
+```proto
+message QLImpl {
+    // Callback definition function
+    // define the name and the package of a function with the signature
+    // func CallbackFunction(message pb.Message) (pb.Message, error)
+    message CallbackFunction {
+        // function name
+        required string name = 1;
+        // function go package name in the following formats
+        // github.com/repo;package
+        // github.com/package
+        // dir/package
+        // package
+        required string package = 2;
+    }
 }
 ```
 
-The examples folder has examples of before hooks and after hooks in use.
 
-
-## More Help
-This will walk you through step by step creating a project that talks to a users table stored in postgres. (Not finished yet)
-
-[Tutorial](tutorial.md)
-
-
+most other questions can be answered by looking at our
+[options](https://github.com/tcncloud/protoc-gen-persist/blob/master/persist/options.proto)
+or looking at the examples

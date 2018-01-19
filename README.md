@@ -21,17 +21,18 @@ custom type mapping to/from the database, and spanner query parsing
 ## NOTE: This project is under development, use it at your own risk!
 
 
-## Version 0.2.0
- - multiline query strings 
- - Removed type struct code generation in order to add more flexibility
- - bug fixes 
-
+## Version 1.0.0
+- new persist_lib generated package for custom handlers
+- generated service handlers and custom handlers can be on different types,
+in different packages
+- expanded default type mapping
+- lots of bug fixes
 
 ## Roadmap
  1. ~~type mapping~~
  1. ~~before & after callback function~~
  1. add tests, lots of tests
- 1. mongo
+ 1. rewrite hooks/type mappings system to be more import safe
 
 
 ## Authors
