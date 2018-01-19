@@ -31,8 +31,8 @@ examples/*.go
 examples/test/*.go
 *.cover*
 
-test_service/user_spanner/user_spanner
-test_service/user_sql/user_sql
+examples/user_spanner/user_spanner
+examples/user_sql/user_sql
 
 # docs
 docs/_site
