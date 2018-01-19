@@ -102,9 +102,9 @@ func (g *Generator) Process() error {
 			"fileName":    file.GetName(),
 			"dependency?": dep,
 		}).Debug("about to get or create this file")
-		f := g.Files.GetOrCreateFile(file, g.AllStructures, dep)
-		err := f.Process()
-		if err != nil {
+		params := ParseCommandLine(g.OriginalRequest.GetParameter())
+		f := g.Files.GetOrCreateFile(file, g.AllStructures, dep, params)
+		if err := f.Process(); err != nil {
 			return err
 		}
 	}

@@ -29,65 +29,28 @@
 
 package generator
 
-type Import struct {
-	GoPackageName string
-	GoImportPath  string
-}
+import (
+	"strings"
+)
 
-type Imports []*Import
+func ParseCommandLine(str string) PersistOpts {
+	commas := strings.Split(str, ",")
+	mp := make(map[string]string)
 
-func EmptyImportList() *Imports {
-	return &Imports{
-		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
-	}
-}
-func (il *Imports) Exist(pkg string) bool {
-	for _, i := range *il {
-		if i.GoPackageName == pkg {
-			return true
+	for _, opt := range commas {
+		i := strings.Index(opt, "=")
+		if i > 0 {
+			mp[opt[:i]] = opt[i+1:]
 		}
 	}
-	return false
+
+	return PersistOpts{
+		Raw:            mp,
+		PersistLibRoot: mp["persist_root"],
+	}
 }
 
-func (il Imports) String() string {
-	printer := &Printer{}
-	printer.PTemplate(
-		"import({{range $imp := .}}\n\t{{$imp.GoPackageName}} \"{{$imp.GoImportPath}}\"{{end}}\n)\n",
-		il,
-	)
-	return printer.String()
-}
-
-func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
-	for _, i := range *il {
-		if i.GoImportPath == goPath {
-			return i.GoPackageName
-		}
-	}
-	for il.Exist(goPkg) {
-		goPkg = "_" + goPkg
-	}
-	if goPath != "" {
-		*il = append(*il, &Import{GoPackageName: goPkg, GoImportPath: goPath})
-	}
-	return goPkg
-}
-
-func (il *Imports) GetGoNameByStruct(str *Struct) *Import {
-	for _, i := range *il {
-		if i.GoImportPath == str.GetGoPath() {
-			return i
-		}
-	}
-	return nil
-}
-
-func (il *Imports) GetImportPkgForPath(path string) string {
-	for _, i := range *il {
-		if i.GoImportPath == path {
-			return i.GoPackageName
-		}
-	}
-	return "__invalid__import__"
+type PersistOpts struct {
+	Raw            map[string]string
+	PersistLibRoot string
 }

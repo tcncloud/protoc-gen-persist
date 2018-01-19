@@ -58,11 +58,9 @@ func main() {
 	if err != nil {
 		logrus.Fatal("Can't read the stdin!")
 	}
-
 	if err := proto.Unmarshal(data, &req); err != nil {
 		logrus.Fatal("Error parsing data!")
 	}
-	// DO processing
 	g := generator.NewGenerator(&req)
 	err = g.Process()
 	if err != nil {

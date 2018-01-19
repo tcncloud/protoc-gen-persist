@@ -35,7 +35,6 @@ import (
 
 	"os"
 
-	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -51,9 +50,12 @@ type FileStruct struct {
 	AllStructures   *StructList // all structures in all the files
 	ServiceList     *Services
 	PersistStringer *PersistStringer // print our persist file
+	Opts            PersistOpts      // options passed in via parameter
 }
 
-func NewFileStruct(desc *descriptor.FileDescriptorProto, allStructs *StructList, dependency bool) *FileStruct {
+func NewFileStruct(
+	desc *descriptor.FileDescriptorProto, allStructs *StructList,
+	dependency bool, opts PersistOpts) *FileStruct {
 	ret := &FileStruct{
 		Desc:          desc,
 		ImportList:    EmptyImportList(),
@@ -61,6 +63,7 @@ func NewFileStruct(desc *descriptor.FileDescriptorProto, allStructs *StructList,
 		ServiceList:   &Services{},
 		AllStructures: allStructs,
 		Dependency:    dependency,
+		Opts:          opts,
 	}
 	ret.PersistStringer = &PersistStringer{}
 
@@ -183,7 +186,6 @@ func (f *FileStruct) GetFullGoPackage() string {
 		default:
 			return f.Desc.GetOptions().GetGoPackage()
 		}
-
 	} else {
 		return strings.Replace(f.Desc.GetPackage(), ".", "_", -1)
 	}
@@ -205,7 +207,6 @@ func (f *FileStruct) GetGoPackage() string {
 		default:
 			return f.Desc.GetOptions().GetGoPackage()
 		}
-
 	} else {
 		return strings.Replace(f.Desc.GetPackage(), ".", "_", -1)
 	}
@@ -222,7 +223,6 @@ func (f *FileStruct) GetGoPath() string {
 		default:
 			return f.Desc.GetOptions().GetGoPackage()
 		}
-
 	} else {
 		return strings.Replace(f.Desc.GetPackage(), ".", "_", -1)
 	}
@@ -270,9 +270,7 @@ func (f *FileStruct) ProcessImports() {
 	}
 	if needServiceImports() {
 		f.ImportList.GetOrAddImport("io", "io")
-		f.ImportList.GetOrAddImport("strings", "strings")
 		f.ImportList.GetOrAddImport("context", "golang.org/x/net/context")
-		f.ImportList.GetOrAddImport("grpc", "google.golang.org/grpc")
 		f.ImportList.GetOrAddImport("codes", "google.golang.org/grpc/codes")
 		f.ImportList.GetOrAddImport("gstatus", "google.golang.org/grpc/status")
 
@@ -283,11 +281,14 @@ func (f *FileStruct) ProcessImports() {
 		}
 		if srv.IsSpanner() {
 			f.ImportList.GetOrAddImport("spanner", "cloud.google.com/go/spanner")
-			f.ImportList.GetOrAddImport("iterator", "google.golang.org/api/iterator")
+		}
+		if srv.IsSQL() {
+			f.ImportList.GetOrAddImport("sql", "database/sql")
 		}
 		if opt := srv.GetServiceOption(); opt != nil {
 			for _, m := range opt.GetTypes() {
-				f.ImportList.GetOrAddImport(GetGoPackage(m.GetGoPackage()), GetGoPath(m.GetGoPackage()))
+				pkg := m.GetGoPackage()
+				f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
 			}
 		}
 		for _, m := range *srv.Methods {
@@ -316,8 +317,9 @@ func (f *FileStruct) ProcessImports() {
 }
 
 type persistFile struct {
-	filename string
-	path     string
+	filename  string
+	path      string
+	importStr string
 }
 
 func (f *FileStruct) GetPersistLibFullFilepath() persistFile {
@@ -328,10 +330,16 @@ func (f *FileStruct) GetPersistLibFullFilepath() persistFile {
 	if beforeDot == "" {
 		beforeDot = "_"
 	}
-	path := fmt.Sprintf("%s/persist_lib", f.GetImplDir())
+	imp := func() string {
+		if f.Opts.PersistLibRoot == "" {
+			return f.GetImplDir()
+		}
+		return f.Opts.PersistLibRoot
+	}()
 	return persistFile{
-		filename: beforeDot,
-		path:     path,
+		filename:  beforeDot,
+		path:      path.Join(f.GetImplDir(), "/persist_lib"),
+		importStr: path.Join(imp, "/persist_lib"),
 	}
 }
 func (f *FileStruct) Process() error {
@@ -353,13 +361,30 @@ func (f *FileStruct) Process() error {
 		f.ServiceList.AddService(f.GetPackageName(), s, f.AllStructures, f)
 	}
 	if f.NeedsPersistLibDir() {
-		f.ImportList.GetOrAddImport("persist_lib", f.GetPersistLibFullFilepath().path)
+		f.ImportList.GetOrAddImport("persist_lib", f.GetPersistLibFullFilepath().importStr)
 		for _, i := range *f.ImportList {
 			logrus.Debugf("IMPORT LIST: %+v, %#v\n", i.GoPackageName, i.GoImportPath)
 		}
 	}
 	return nil
+}
+func (f *FileStruct) NeedImport(pkg string) bool {
+	if f.NotSameAsMyPackage(pkg) &&
+		(f.Opts.PersistLibRoot != pkg) &&
+		pkg != "" {
+		return true
+	}
+	return false
+}
 
+func (f *FileStruct) SanatizeImports() {
+	imports := Imports(make([]*Import, 0))
+	for _, i := range *f.ImportList {
+		if f.NeedImport(i.GoImportPath) {
+			imports.GetOrAddImport(i.GoPackageName, i.GoImportPath)
+		}
+	}
+	f.ImportList = &imports
 }
 
 // the generator may need to make an extra package in the directory beneath ours
@@ -410,6 +435,7 @@ func (f *FileStruct) Generate() ([]byte, error) {
 		"// DO NOT EDIT !\n",
 		"package %s\n",
 	}, f.GetOrigName(), f.GetImplPackage())
+	f.SanatizeImports()
 	importPrinter.P("import(\n")
 	for _, i := range *f.ImportList {
 		if f.NotSameAsMyPackage(i.GoImportPath) {
@@ -438,11 +464,11 @@ func (fl *FileList) FindFile(desc *descriptor.FileDescriptorProto) *FileStruct {
 	return nil
 }
 
-func (fl *FileList) GetOrCreateFile(desc *descriptor.FileDescriptorProto, allStructs *StructList, dependency bool) *FileStruct {
+func (fl *FileList) GetOrCreateFile(desc *descriptor.FileDescriptorProto, allStructs *StructList, dependency bool, params PersistOpts) *FileStruct {
 	if f := fl.FindFile(desc); f != nil {
 		return f
 	}
-	f := NewFileStruct(desc, allStructs, dependency)
+	f := NewFileStruct(desc, allStructs, dependency, params)
 	*fl = append(*fl, f)
 	return f
 }

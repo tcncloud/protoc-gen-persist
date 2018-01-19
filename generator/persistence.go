@@ -61,15 +61,12 @@ func GenerateFileQueryContent(pkg PackagePath, file *FileStruct) PersistContent 
 	stringer := PersistStringer{}
 	p := file.GetPersistLibFullFilepath()
 
-	var needsSpannerImport, needsSqlImport bool
+	var needsSpannerImport bool
 
 	for _, s := range *file.ServiceList {
 		for _, m := range *s.Methods {
 			if m.IsSpanner() {
 				needsSpannerImport = true
-			}
-			if m.IsSQL() {
-				needsSqlImport = true
 			}
 		}
 	}
@@ -79,9 +76,6 @@ func GenerateFileQueryContent(pkg PackagePath, file *FileStruct) PersistContent 
 	}
 	if needsSpannerImport {
 		content.Content += "import \"cloud.google.com/go/spanner\"\n"
-	}
-	if needsSqlImport {
-		content.Content += "import \"database/sql\"\n"
 	}
 	for _, s := range *file.ServiceList {
 		for _, m := range *s.Methods {
@@ -103,14 +97,11 @@ func GenerateFilePersistHandlerContent(pkg PackagePath, file *FileStruct) Persis
 	stringer := PersistStringer{}
 	p := file.GetPersistLibFullFilepath()
 
-	var needsSpannerImport, needsSqlImport bool
+	var needsSpannerImport bool
 	for _, s := range *file.ServiceList {
 		for _, m := range *s.Methods {
 			if m.IsSpanner() {
 				needsSpannerImport = true
-			}
-			if m.IsSQL() {
-				needsSqlImport = true
 			}
 		}
 	}
@@ -120,9 +111,6 @@ func GenerateFilePersistHandlerContent(pkg PackagePath, file *FileStruct) Persis
 	}
 	if needsSpannerImport {
 		content.Content += "import \"cloud.google.com/go/spanner\"\n"
-	}
-	if needsSqlImport {
-		content.Content += "import \"database/sql\"\n"
 	}
 
 	for _, s := range *file.ServiceList {

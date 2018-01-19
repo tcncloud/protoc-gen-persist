@@ -29,65 +29,15 @@
 
 package generator
 
-type Import struct {
-	GoPackageName string
-	GoImportPath  string
-}
+import (
+	"github.com/tcncloud/protoc-gen-persist/persist"
+	// "go/ast"
+	// "go/parser"
+)
 
-type Imports []*Import
-
-func EmptyImportList() *Imports {
-	return &Imports{
-		&Import{GoImportPath: "fmt", GoPackageName: "fmt"},
-	}
+func GetHookAndImports(*persist.QLImpl_CallbackFunction) (string, []*Import) {
+	return "", nil
 }
-func (il *Imports) Exist(pkg string) bool {
-	for _, i := range *il {
-		if i.GoPackageName == pkg {
-			return true
-		}
-	}
-	return false
-}
-
-func (il Imports) String() string {
-	printer := &Printer{}
-	printer.PTemplate(
-		"import({{range $imp := .}}\n\t{{$imp.GoPackageName}} \"{{$imp.GoImportPath}}\"{{end}}\n)\n",
-		il,
-	)
-	return printer.String()
-}
-
-func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
-	for _, i := range *il {
-		if i.GoImportPath == goPath {
-			return i.GoPackageName
-		}
-	}
-	for il.Exist(goPkg) {
-		goPkg = "_" + goPkg
-	}
-	if goPath != "" {
-		*il = append(*il, &Import{GoPackageName: goPkg, GoImportPath: goPath})
-	}
-	return goPkg
-}
-
-func (il *Imports) GetGoNameByStruct(str *Struct) *Import {
-	for _, i := range *il {
-		if i.GoImportPath == str.GetGoPath() {
-			return i
-		}
-	}
-	return nil
-}
-
-func (il *Imports) GetImportPkgForPath(path string) string {
-	for _, i := range *il {
-		if i.GoImportPath == path {
-			return i.GoPackageName
-		}
-	}
-	return "__invalid__import__"
+func GetTypeMappingsAndImports(*persist.TypeMapping) (string, []*Import) {
+	return "", nil
 }
