@@ -42,3 +42,6 @@ docs/Gemfile.lock
 
 protoc-gen-persist*
 *~
+
+
+bazel*
