@@ -67,7 +67,5 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 	params, _ = pb.EmptyToUServPersistType(req)
 	iter = client.Single().Query(stream.Context(), pl.UServGetAllUsersQuery(params))
 
-	return pb.IterUServUserProto(iter, func(user *pb.User) error {
-		return stream.Send(user)
-	})
+	return pb.IterUServUserProto(iter, stream.Send)
 }
