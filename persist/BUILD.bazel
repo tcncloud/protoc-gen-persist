@@ -8,9 +8,23 @@ filegroup(
     ],
 )
 
+proto_library(
+    name = "persist_proto",
+    srcs = [
+        "options.proto",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        #"@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
+        "@com_google_protobuf//:timestamp_proto",
+        "@com_google_protobuf//:descriptor_proto",
+    ],
+)
+
 go_proto_library(
     name = "persist_go_proto",
     with_grpc = True,
+    visibility = ["//visibility:public"],
     importmap = {
         "google/protobuf/descriptor.proto": "github.com/golang/protobuf/protoc-gen-go/descriptor",
     },
@@ -21,7 +35,7 @@ go_proto_library(
         "@com_google_protobuf//:well_known_protos",
     ],
     protos = [":protos"],
-    verbose = 3,
+    #verbose = 3,
     deps = [
         "@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
     ],

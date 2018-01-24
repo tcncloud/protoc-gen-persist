@@ -4,10 +4,10 @@ git_repository(
     commit = "04fd61bfa1625593762a412f218ab9f3f816ae87",
 )
 
-http_archive(
+git_repository(
     name = "bazel_gazelle",
-    url = "https://github.com/bazelbuild/bazel-gazelle/releases/download/0.8/bazel-gazelle-0.8.tar.gz",
-    sha256 = "e3dadf036c769d1f40603b86ae1f0f90d11837116022d9b06e4cd88cae786676",
+    remote = "https://github.com/bazelbuild/bazel-gazelle",
+    commit = "2f186389e2d9a91ee64007914f9b9d0ecae1d8e9",
 )
 
 git_repository(
