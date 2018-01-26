@@ -2,6 +2,7 @@ package(default_visibility = ["//visibility:public"])
 
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@org_pubref_rules_protobuf//go:rules.bzl", "go_proto_library")
+load("@org_pubref_rules_protobuf//protobuf:rules.bzl", "proto_compile")
 
 filegroup(
     name = "protos",
@@ -49,4 +50,20 @@ go_library(
     embed = [":persist_go_proto"],
     importpath = "github.com/tcncloud/protoc-gen-persist/persist",
     visibility = ["//visibility:public"],
+)
+
+proto_compile(
+    name = "persist_pb_protos",
+    # Pass in a list of proto_language rules
+    langs = [
+        "@org_pubref_rules_protobuf//go",
+    ],
+    protos = [":protos"],
+    inputs = [
+        "@com_google_protobuf//:well_known_protos",
+    ],
+    imports = [
+        "external/com_google_protobuf/src",
+    ],
+    verbose = 1,
 )
