@@ -32,7 +32,7 @@ syntax = "proto3";
 package examples.test_issue_32;
 
 option go_package = "github.com/tcncloud/protoc-gen-persist/examples/test_issue_32;test";
-option (persist.package) = "github.com/tcncloud/persist;persist";
+option (persist.pkg) = "github.com/tcncloud/persist;persist";
 
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";

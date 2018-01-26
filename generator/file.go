@@ -35,11 +35,12 @@ import (
 
 	"os"
 
+	"path"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/tcncloud/protoc-gen-persist/persist"
-	"path"
 )
 
 type FileStruct struct {
@@ -90,8 +91,8 @@ func (f *FileStruct) GetPersistPackageOption() string {
 	if f.Desc == nil || f.Desc.GetOptions() == nil {
 		return ""
 	}
-	if proto.HasExtension(f.Desc.GetOptions(), persist.E_Package) {
-		pkg, err := proto.GetExtension(f.Desc.GetOptions(), persist.E_Package)
+	if proto.HasExtension(f.Desc.GetOptions(), persist.E_Pkg) {
+		pkg, err := proto.GetExtension(f.Desc.GetOptions(), persist.E_Pkg)
 		if err != nil {
 			logrus.WithError(err).Debug("Error")
 			return ""
