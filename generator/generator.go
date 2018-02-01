@@ -30,9 +30,9 @@
 package generator
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	"github.com/sirupsen/logrus"
 )
 
 type GeneratorStruct interface {

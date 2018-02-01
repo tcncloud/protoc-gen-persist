@@ -35,11 +35,12 @@ import (
 
 	"os"
 
-	"github.com/Sirupsen/logrus"
+	"path"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/persist"
-	"path"
 )
 
 type FileStruct struct {
@@ -340,6 +341,8 @@ func (f *FileStruct) GetPersistLibFullFilepath() persistFile {
 		filename:  beforeDot,
 		path:      path.Join(f.GetImplDir(), "/persist_lib"),
 		importStr: path.Join(imp, "/persist_lib"),
+		//path:      f.GetImplDir(),
+		//importStr: imp,
 	}
 }
 func (f *FileStruct) Process() error {

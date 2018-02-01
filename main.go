@@ -35,9 +35,9 @@ import (
 
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	"github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/generator"
 )
 

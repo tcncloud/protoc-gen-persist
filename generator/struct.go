@@ -32,9 +32,9 @@ package generator
 import (
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	gen "github.com/golang/protobuf/protoc-gen-go/generator"
+	"github.com/sirupsen/logrus"
 )
 
 type GenericDescriptor interface {

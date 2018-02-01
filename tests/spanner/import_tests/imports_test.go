@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	//"github.com/Sirupsen/logrus"
+	//"github.com/sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	google_protobuf "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"

@@ -37,6 +37,7 @@ proto_compile(
         "external/com_google_protobuf/src",
     ],
     verbose = 1,
+    with_grpc = True,
 )
 
 go_library(
