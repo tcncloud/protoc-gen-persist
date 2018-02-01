@@ -30,12 +30,10 @@
 package generator
 
 import (
+	"os"
+	"path"
 	"path/filepath"
 	"strings"
-
-	"os"
-
-	"path"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -341,8 +339,6 @@ func (f *FileStruct) GetPersistLibFullFilepath() persistFile {
 		filename:  beforeDot,
 		path:      path.Join(f.GetImplDir(), "/persist_lib"),
 		importStr: path.Join(imp, "/persist_lib"),
-		//path:      f.GetImplDir(),
-		//importStr: imp,
 	}
 }
 func (f *FileStruct) Process() error {
