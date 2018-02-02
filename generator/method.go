@@ -383,7 +383,7 @@ func SpannerTypeFieldName(t TypeDesc) string {
 
 func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 	ret := make([]TypeDesc, 0)
-	if str == nil && !str.IsMessage {
+	if str == nil || !str.IsMessage {
 		return ret
 	}
 	for _, mp := range str.MsgDesc.GetField() {
