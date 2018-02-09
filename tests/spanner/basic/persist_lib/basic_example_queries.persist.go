@@ -10,9 +10,9 @@ func ExtraSrvExtraUnaryQuery(req ExtraSrvExtraUnaryQueryParams) spanner.Statemen
 }
 func MySpannerUniaryInsertQuery(req MySpannerUniaryInsertQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"start_time": req.GetStartTime(),
 		"name":       "bananas",
 		"id":         req.GetId(),
+		"start_time": req.GetStartTime(),
 	})
 }
 func MySpannerUniarySelectQuery(req MySpannerUniarySelectQueryParams) spanner.Statement {
@@ -114,9 +114,9 @@ func MySpannerClientStreamUpdateQuery(req MySpannerClientStreamUpdateQueryParams
 }
 func MySpannerUniaryInsertWithHooksQuery(req MySpannerUniaryInsertWithHooksQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
+		"name":       "bananas",
 		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
-		"name":       "bananas",
 	})
 }
 func MySpannerUniarySelectWithHooksQuery(req MySpannerUniarySelectWithHooksQueryParams) spanner.Statement {
@@ -173,14 +173,14 @@ type MySpannerTestNestQueryParams interface {
 	GetThing() []byte
 }
 type MySpannerTestEverythingQueryParams interface {
-	GetTables() [][]byte
-	GetTime() interface{}
 	GetSome() []byte
 	GetStr() string
 	GetTable() []byte
 	GetTimes() [][]byte
 	GetSomes() [][]byte
 	GetStrs() []string
+	GetTables() [][]byte
+	GetTime() interface{}
 }
 type MySpannerUniarySelectWithDirectivesQueryParams interface {
 	GetId() int64
@@ -192,8 +192,8 @@ type MySpannerUniaryUpdateQueryParams interface {
 	GetId() int64
 }
 type MySpannerUniaryDeleteRangeQueryParams interface {
-	GetStartId() int64
 	GetEndId() int64
+	GetStartId() int64
 }
 type MySpannerUniaryDeleteSingleQueryParams interface {
 	GetId() int64
@@ -203,17 +203,17 @@ type MySpannerNoArgsQueryParams interface {
 type MySpannerServerStreamQueryParams interface {
 }
 type MySpannerClientStreamInsertQueryParams interface {
+	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
-	GetName() string
 }
 type MySpannerClientStreamDeleteQueryParams interface {
 	GetId() int64
 }
 type MySpannerClientStreamUpdateQueryParams interface {
+	GetStartTime() interface{}
 	GetName() string
 	GetId() int64
-	GetStartTime() interface{}
 }
 type MySpannerUniaryInsertWithHooksQueryParams interface {
 	GetId() int64

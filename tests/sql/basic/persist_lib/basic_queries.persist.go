@@ -84,8 +84,8 @@ type AmazingUniarySelectQueryParams interface {
 	GetStartTime() interface{}
 }
 type AmazingUniarySelectWithHooksQueryParams interface {
-	GetStartTime() interface{}
 	GetId() int64
+	GetStartTime() interface{}
 }
 type AmazingServerStreamQueryParams interface {
 	GetName() string
@@ -94,14 +94,14 @@ type AmazingServerStreamWithHooksQueryParams interface {
 	GetName() string
 }
 type AmazingBidirectionalQueryParams interface {
+	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
-	GetName() string
 }
 type AmazingBidirectionalWithHooksQueryParams interface {
-	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
+	GetId() int64
 }
 type AmazingClientStreamQueryParams interface {
 	GetId() int64

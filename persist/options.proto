@@ -36,7 +36,7 @@ import "google/protobuf/descriptor.proto";
 option go_package="persist";
 
 extend google.protobuf.FileOptions {
-    optional string package = 560003;
+    optional string pkg = 560003;
 }
 
 extend google.protobuf.MethodOptions {
