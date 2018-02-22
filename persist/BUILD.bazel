@@ -1,7 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
-load("@org_pubref_rules_protobuf//go:rules.bzl", "go_proto_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@org_pubref_rules_protobuf//protobuf:rules.bzl", "proto_compile")
 
 filegroup(
@@ -24,29 +24,14 @@ proto_library(
     ],
 )
 
-proto_compile(
-    name = "persist_pb_protos",
-    langs = [
-        "@org_pubref_rules_protobuf//go",
-    ],
-    protos = [":protos"],
-    inputs = [
-        "@com_google_protobuf//:well_known_protos",
-    ],
-    imports = [
-        "external/com_google_protobuf/src",
-    ],
-    verbose = 1,
-    with_grpc = True,
-)
-
-go_library(
-    name = "go_default_library",
-    srcs = [":persist_pb_protos"],
-    deps = [
-        "@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
-        "@com_github_golang_protobuf//proto:go_default_library",
-    ],
+go_proto_library(
+    name = "persist_go_proto",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
     importpath = "github.com/tcncloud/protoc-gen-persist/persist",
+    proto = ":persist_proto",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
+    ],
 )
