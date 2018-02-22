@@ -20,15 +20,15 @@ filegroup(
 
 go_proto_library(
     name = "bob_example_go_proto",
-    with_grpc = True,
     importpath = "github.com/tcncloud/protoc-gen-persist/tests/spanner/bob_example",
-    protos = [":protos"],
-    visibility = ["//visibility:public"],
     proto_deps = [
         "//persist:persist_go_proto",
     ],
+    protos = [":protos"],
+    visibility = ["//visibility:public"],
+    with_grpc = True,
     deps = [
-        "//persist:go_default_library",
+        "//persist:persist_go_proto",
         "@com_github_golang_protobuf//ptypes/timestamp:go_default_library",
     ],
 )
