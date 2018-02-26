@@ -10,7 +10,7 @@ go_library(
     name = "go_default_library",
     srcs = ["main.go"],
     importpath = "github.com/tcncloud/protoc-gen-persist",
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     deps = [
         "//generator:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
