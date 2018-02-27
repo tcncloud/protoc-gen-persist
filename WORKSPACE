@@ -10,12 +10,6 @@ git_repository(
     remote = "https://github.com/bazelbuild/bazel-gazelle",
 )
 
-git_repository(
-    name = "org_pubref_rules_protobuf",
-    commit = "023cd8ddf51d8a52fadcb46883025d9bd190750a",
-    remote = "https://github.com/pubref/rules_protobuf",
-)
-
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
@@ -25,10 +19,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_too
 go_rules_dependencies()
 
 go_register_toolchains()
-
-load("@org_pubref_rules_protobuf//go:rules.bzl", "go_proto_repositories")
-
-go_proto_repositories()
 
 go_repository(
     name = "com_github_golang_protobuf",

@@ -5,5 +5,5 @@ go_library(
     srcs = ["hooks.go"],
     importpath = "github.com/tcncloud/protoc-gen-persist/tests/hooks",
     visibility = ["//visibility:public"],
-    deps = ["//tests/test:go_default_library"],
+    deps = ["//tests/test:test_go_proto"],
 )
