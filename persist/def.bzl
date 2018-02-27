@@ -25,10 +25,11 @@ def get_outputs(ctx, direct_sources, file_names):
     for src in direct_sources:
         base = src.basename[:-len(".proto")]
 
-        for file_name in file_names:
-            new_file_name = "%s~/%s/%s" % (ctx.attr.name, ctx.attr.importpath, file_name)
-            new_file_name = new_file_name.format(basename = base)
-            outputs += [ctx.actions.declare_file(new_file_name)]
+        if ( base.endswith("_p") == True ):
+            for file_name in file_names:
+                new_file_name = "%s~/%s/%s" % (ctx.attr.name, ctx.attr.importpath, file_name)
+                new_file_name = new_file_name.format(basename = base)
+                outputs += [ctx.actions.declare_file(new_file_name)]
 
     return outputs    
 
