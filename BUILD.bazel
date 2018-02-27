@@ -22,7 +22,6 @@ go_library(
 go_binary(
     name = "protoc-gen-persist",
     embed = [":go_default_library"],
-    importpath = "github.com/tcncloud/protoc-gen-persist",
     visibility = ["//visibility:public"],
 )
 

@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+filegroup(
+    name = "main_files",
+    srcs = [
+        "main.go",
+        "read_spanner.go",
+    ],
+)
+
+go_library(
+    name = "user_spanner_bazel_go",
+    srcs = [":main_files"],
+    importpath = "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel",
+    deps = [
+        "//examples/user_spanner_bazel/pb:persist_lib_go_proto",
+        "//examples/user_spanner_bazel/pb:user_go_proto",
+        "@com_google_cloud_go//spanner:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_x_net//context:go_default_library",
+    ],
+)

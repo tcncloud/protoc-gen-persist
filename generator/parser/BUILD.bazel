@@ -16,6 +16,5 @@ go_library(
 go_test(
     name = "go_default_xtest",
     srcs = ["parser_test.go"],
-    importpath = "github.com/tcncloud/protoc-gen-persist/generator/parser_test",
     deps = [":go_default_library"],
 )

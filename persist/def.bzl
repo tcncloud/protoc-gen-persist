@@ -342,7 +342,7 @@ def persist_go_library(
     go_library(
         name = name,
         srcs = [":" + persist_files] + [":" + pb_go_files] + go_srcs,
+        importpath = importpath,
         visibility = visibility,
         deps = go_lib_deps,
-        importpath = importpath,
     )

@@ -1,29 +1,33 @@
 git_repository(
     name = "io_bazel_rules_go",
+    commit = "246acf25abdb0c16ae61e4dfe17050e32f701178",
     remote = "https://github.com/bazelbuild/rules_go.git",
-    commit = "04fd61bfa1625593762a412f218ab9f3f816ae87",
 )
 
 git_repository(
     name = "bazel_gazelle",
+    commit = "a85b63b06c2e0c75931e57c4a1a18d4e566bb6f4",
     remote = "https://github.com/bazelbuild/bazel-gazelle",
-    commit = "2f186389e2d9a91ee64007914f9b9d0ecae1d8e9",
 )
 
 git_repository(
-  name = "org_pubref_rules_protobuf",
-  remote = "https://github.com/pubref/rules_protobuf",
-  commit = "023cd8ddf51d8a52fadcb46883025d9bd190750a",
+    name = "org_pubref_rules_protobuf",
+    commit = "023cd8ddf51d8a52fadcb46883025d9bd190750a",
+    remote = "https://github.com/pubref/rules_protobuf",
 )
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
 gazelle_dependencies()
 
 load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains", "go_repository")
+
 go_rules_dependencies()
+
 go_register_toolchains()
 
 load("@org_pubref_rules_protobuf//go:rules.bzl", "go_proto_repositories")
+
 go_proto_repositories()
 
 go_repository(
