@@ -48,33 +48,32 @@ def combine_inputs(*inputs):
 
 def _persist_lib_proto_compile_impl(ctx):
     importpath = ctx.attr.importpath
+    if (importpath.endswith("persist_lib") == False):
+        fail("The importpath for persist_lib_go_library must end with persist_lib")
+
     proto = ctx.attr.proto.proto
 
     # Declare files and add to go_srcs
     file_names = [
-        "persist_lib/{basename}_query_handlers.persist.go",
-        "persist_lib/{basename}_queries.persist.go",
+        "{basename}_query_handlers.persist.go",
+        "{basename}_queries.persist.go",
     ]
     outputs = get_outputs(ctx, proto.direct_sources, file_names)
-    file_name = "%s~/%s/persist_lib/pkg_level_definitions.persist.go" % (ctx.attr.name, importpath)
+    if (len(outputs) == 0):
+        fail("Only filenames suffixed with _p will generate persist.go files. Please check your proto filenames.")
+    file_name = "%s~/%s/pkg_level_definitions.persist.go" % (ctx.attr.name, importpath)
     outputs += [ctx.actions.declare_file(file_name)]
 
     # Determine the outpath
-    outpath = outputs[0].dirname[:-len(importpath + "/persist_lib")]
+    outpath = outputs[0].dirname[:-len(importpath)]
 
     # Add arguments
     args = ctx.actions.args()
     args.add([
         "--protoc", ctx.file._protoc,
-        "--importpath", importpath,
         "--out_path", outpath,
         "--plugin", ctx.file._persist_plugin,
     ])
-
-    # Set options and add to args
-    options = ["import_path={}".format(importpath)]
-    options += ["persist_root={}".format(importpath)]
-    args.add(options, before_each = "--option")
 
     # Add descriptor set
     descriptor_sets = proto.transitive_descriptor_sets
@@ -113,7 +112,8 @@ persist_lib_proto_compile = rule(
         "proto": attr.label(
             mandatory = True,
             allow_files = True,
-            single_file = True,  #TODO: should this be single?
+            single_file = True,
+            providers = ["proto"],
         ),
         "_persist_plugin": attr.label(
             default = Label("//:protoc-gen-persist"),
@@ -170,7 +170,7 @@ def persist_lib_go_library(
         srcs = [":" + persist_lib],
         visibility = visibility,
         deps = go_lib_deps,
-        importpath = importpath + "/persist_lib",
+        importpath = importpath,
     )
 
 #TODO: DRY
@@ -182,6 +182,9 @@ def _lib_proto_compile_impl(ctx):
     file_names = ["{basename}.persist.go"]
     outputs = get_outputs(ctx, proto.direct_sources, file_names)
 
+    if (len(outputs) == 0):
+        fail("Only filenames suffixed with _p will generate persist.go files. Please check your proto filenames.")
+
     # Determine the outpath
     outpath = outputs[0].dirname[:-len(importpath)]
 
@@ -189,15 +192,9 @@ def _lib_proto_compile_impl(ctx):
     args = ctx.actions.args()
     args.add([
         "--protoc", ctx.file._protoc,
-        "--importpath", importpath,
         "--out_path", outpath,
         "--plugin", ctx.file._persist_plugin,
     ])
-
-    # Set options and add to args
-    options = ["import_path={}".format(importpath)]
-    options += ["persist_root={}".format(importpath)]
-    args.add(options, before_each = "--option")
 
     # Add descriptor set
     descriptor_sets = proto.transitive_descriptor_sets
@@ -236,7 +233,8 @@ lib_proto_compile = rule(
         "proto": attr.label(
             mandatory = True,
             allow_files = True,
-            single_file = True,  #TODO: should this be single?
+            single_file = True,
+            providers = ["proto"],
         ),
         "_persist_plugin": attr.label(
             default = Label("//:protoc-gen-persist"),
@@ -299,12 +297,12 @@ pb_go_compile = go_rule(
         ),
         "deps": attr.label_list(
             providers = [GoLibrary],
-            # aspects = [_go_proto_aspect],
         ),
         "proto": attr.label(
             mandatory = True,
             allow_files = True,
             single_file = True,
+            providers = ["proto"],
         ),
         "compilers": attr.label_list(
             providers = [GoProtoCompiler],
