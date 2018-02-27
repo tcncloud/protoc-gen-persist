@@ -22,13 +22,13 @@ go_proto_library(
     name = "basic_go_proto",
     importpath = "github.com/tcncloud/protoc-gen-persist/tests/sql/basic",
     proto_deps = [
-        "//persist:persist_go_proto",
+        "//:persist_go_proto",
     ],
     protos = [":protos"],
     visibility = ["//visibility:public"],
     with_grpc = True,
     deps = [
-        "//persist:persist_go_proto",
+        "//:persist_go_proto",
         "//tests/test:go_default_library",
         "@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
         "@com_github_golang_protobuf//ptypes/timestamp:go_default_library",
