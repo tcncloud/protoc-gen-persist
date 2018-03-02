@@ -7,6 +7,10 @@ load(
     "@io_bazel_rules_go//proto:def.bzl",
     "go_proto_library",
 )
+load(
+    "@io_bazel_rules_go//proto:compiler.bzl",
+    "proto_path",
+)
 
 def get_outputs(ctx, dynamic_file_names, static_file_names):
     outputs = []
@@ -29,7 +33,7 @@ def get_outputs(ctx, dynamic_file_names, static_file_names):
 def get_proto_file_paths(proto_files):
     proto_paths = []
     for f in proto_files:
-        proto_paths.append(f.path)
+        proto_paths.append(proto_path(f))
     
     return proto_paths
 
@@ -42,7 +46,14 @@ def combine_inputs(*inputs):
 def prepare_args(ctx, outputs):
     proto = ctx.attr.proto.proto
     outpath = outputs[0].dirname[:-len(ctx.attr.importpath)]
+
+    if (ctx.attr.importpath.endswith("/persist_lib") == True):
+        base_importpath = ctx.attr.importpath[:-len("/persist_lib")]
+    else:
+        base_importpath = ctx.attr.importpath
+
     args = ctx.actions.args()
+
     args.add([
         "--protoc", ctx.file._protoc,
         "--out_path", outpath,
@@ -51,11 +62,16 @@ def prepare_args(ctx, outputs):
 
     # Add descriptor set
     args.add(proto.transitive_descriptor_sets, before_each = "--descriptor_set")
-
+    
     # Add outputs
     args.add(outputs, before_each = "--expected")
 
-    # Add proto paths
+    # Add imports
+    imports = []
+    imports.append(["{}={}".format(proto_path(src), base_importpath) for src in ctx.attr.proto.proto.direct_sources])
+    args.add(combine_inputs(*imports), before_each = "--import")
+
+    # Add proto paths (the path to the proto that was seen when the descriptor file was generated)
     proto_paths = get_proto_file_paths(proto.direct_sources)
     args.add(proto_paths)
 
