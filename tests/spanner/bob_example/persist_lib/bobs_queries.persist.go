@@ -16,9 +16,9 @@ func BobsDeleteBobsQuery(req BobsDeleteBobsQueryParams) *spanner.Mutation {
 }
 func BobsPutBobsQuery(req BobsPutBobsQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("bob_table", map[string]interface{}{
-		"id":         req.GetId(),
 		"name":       req.GetName(),
 		"start_time": req.GetStartTime(),
+		"id":         req.GetId(),
 	})
 }
 func BobsGetBobsQuery(req BobsGetBobsQueryParams) spanner.Statement {
@@ -40,9 +40,9 @@ type BobsDeleteBobsQueryParams interface {
 	GetStartTime() interface{}
 }
 type BobsPutBobsQueryParams interface {
-	GetId() int64
 	GetName() string
 	GetStartTime() interface{}
+	GetId() int64
 }
 type BobsGetBobsQueryParams interface {
 }
