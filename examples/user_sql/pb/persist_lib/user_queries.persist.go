@@ -79,10 +79,10 @@ func UServDropTableQuery(tx Runable, req UServDropTableQueryParams) *Result {
 type UServCreateTableQueryParams interface {
 }
 type UServInsertUsersQueryParams interface {
-	GetCreatedOn() interface{}
 	GetId() int64
 	GetName() string
 	GetFriends() []byte
+	GetCreatedOn() interface{}
 }
 type UServGetAllUsersQueryParams interface {
 }
@@ -90,8 +90,8 @@ type UServSelectUserByIdQueryParams interface {
 	GetId() int64
 }
 type UServUpdateUserNamesQueryParams interface {
-	GetName() string
 	GetId() int64
+	GetName() string
 }
 type UServUpdateNameToFooQueryParams interface {
 	GetId() int64

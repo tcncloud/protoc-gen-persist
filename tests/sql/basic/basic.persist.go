@@ -23,6 +23,7 @@ type AmazingImpl struct {
 }
 type RestOfAmazingHandlers interface {
 	UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error)
+	NoGenerationForBadReturnTypes(ctx context.Context, req *test.ExampleTable) (*BadReturn, error)
 }
 type AmazingImplBuilder struct {
 	err           error
@@ -485,4 +486,7 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 }
 func (s *AmazingImpl) UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	return s.FORWARDED.UnImplementedPersistMethod(ctx, req)
+}
+func (s *AmazingImpl) NoGenerationForBadReturnTypes(ctx context.Context, req *test.ExampleTable) (*BadReturn, error) {
+	return s.FORWARDED.NoGenerationForBadReturnTypes(ctx, req)
 }

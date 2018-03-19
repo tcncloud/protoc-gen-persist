@@ -19,12 +19,6 @@
   revision = "d3a4b58ba5b65453c14062db6a651131a89f0f6e"
 
 [[projects]]
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
-  version = "v1.0.4"
-
-[[projects]]
   branch = "master"
   name = "github.com/golang/protobuf"
   packages = [
@@ -82,6 +76,7 @@
   revision = "6c46eb8334b30dc55b42f1a1c725d5ce97375390"
 
 [[projects]]
+  branch = "master"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
@@ -97,8 +92,13 @@
     "matchers/support/goraph/util",
     "types"
   ]
-  revision = "003f63b7f4cff3fc95357005358af2de0f5fe152"
-  version = "v1.3.0"
+  revision = "de89e61d40b75aa971a9fc3eae7f4fefabd6e0ee"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
 
 [[projects]]
   name = "go.opencensus.io"
@@ -288,6 +288,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ea3a74a56c91a7f992afbe247373bb34930790926f5d3ba078f6402e8bd26fe6"
+  inputs-digest = "fb28738e2e662e40cfccc36fc06cd2ff6c3ba0e55865869305ae408d5f655b3b"
   solver-name = "gps-cdcl"
   solver-version = 1

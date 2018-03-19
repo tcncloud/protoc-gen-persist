@@ -144,27 +144,6 @@ func IterExtraSrvExampleTableProto(iter *spanner.RowIterator, next func(i *test.
 		return next(item)
 	})
 }
-func ExampleTableToExtraSrvPersistType(req *test.ExampleTable) (*persist_lib.Test_ExampleTableForExtraSrv, error) {
-	var err error
-	_ = err
-	params := &persist_lib.Test_ExampleTableForExtraSrv{}
-	// set 'ExampleTable.id' in params
-	params.Id = req.Id
-	// set 'ExampleTable.start_time' in params
-	if req.StartTime == nil {
-		req.StartTime = new(timestamp.Timestamp)
-	}
-	{
-		raw, err := proto.Marshal(req.StartTime)
-		if err != nil {
-			return nil, err
-		}
-		params.StartTime = raw
-	}
-	// set 'ExampleTable.name' in params
-	params.Name = req.Name
-	return params, nil
-}
 func (s *ExtraSrvImpl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test.ExampleTable, error) {
 	var err error
 	var res = &test.ExampleTable{}
