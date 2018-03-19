@@ -140,4 +140,11 @@ service Amazing {
     };
   };
   rpc UnImplementedPersistMethod(test.ExampleTable) returns (test.ExampleTable) {}
+  rpc NoGenerationForBadReturnTypes(test.ExampleTable) returns (BadReturn){}
+}
+message IntVal {
+  int64 val = 1;
+}
+message BadReturn {
+  repeated IntVal no = 1;
 }

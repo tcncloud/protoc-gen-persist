@@ -40,9 +40,9 @@ type BobsDeleteBobsQueryParams interface {
 	GetStartTime() interface{}
 }
 type BobsPutBobsQueryParams interface {
+	GetId() int64
 	GetName() string
 	GetStartTime() interface{}
-	GetId() int64
 }
 type BobsGetBobsQueryParams interface {
 }

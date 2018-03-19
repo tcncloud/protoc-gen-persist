@@ -411,17 +411,19 @@ func (f *FileStruct) Generate() ([]byte, error) {
 			printer.P("%s\n", s.PrintBuilder())
 		}
 		for _, m := range *s.Methods {
-			if !processed[ToParamsFuncName(m)] {
-				printer.P("%s\n", m.backend.MapRequestToParams())
-				processed[ToParamsFuncName(m)] = true
-			}
-			if !processed[FromScanableFuncName(m)] {
-				printer.P("%s\n", m.backend.TranslateRowToResult())
-				processed[FromScanableFuncName(m)] = true
-			}
-			if !processed[IterProtoName(m)] {
-				printer.P("%s\n", IteratorHelper(m))
-				processed[IterProtoName(m)] = true
+			if m.IsSQL() || m.IsSpanner() {
+				if !processed[ToParamsFuncName(m)] {
+					printer.P("%s\n", m.backend.MapRequestToParams())
+					processed[ToParamsFuncName(m)] = true
+				}
+				if !processed[FromScanableFuncName(m)] {
+					printer.P("%s\n", m.backend.TranslateRowToResult())
+					processed[FromScanableFuncName(m)] = true
+				}
+				if !processed[IterProtoName(m)] {
+					printer.P("%s\n", IteratorHelper(m))
+					processed[IterProtoName(m)] = true
+				}
 			}
 		}
 		for _, m := range *s.Methods {
