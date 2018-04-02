@@ -182,7 +182,11 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		printer.PA([]string{
 			"func (b *%sImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *%sImplBuilder {\n",
 			"db, err := sql.Open(driverName, dataSourceName)\n",
-			"b.err = err\n b.db = *db\n return b\n}\n",
+			"b.err = err\n",
+			"if b.err == nil {\n",
+			"\tb.db = *db\n",
+			"}\n",
+			"return b\n}\n",
 		},
 			service.GetName(), service.GetName(),
 		)

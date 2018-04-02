@@ -81,7 +81,9 @@ func (b *Testservice1ImplBuilder) WithSqlClient(c *sql.DB) *Testservice1ImplBuil
 func (b *Testservice1ImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *Testservice1ImplBuilder {
 	db, err := sql.Open(driverName, dataSourceName)
 	b.err = err
-	b.db = *db
+	if b.err == nil {
+		b.db = *db
+	}
 	return b
 }
 func (b *Testservice1ImplBuilder) Build() (*Testservice1Impl, error) {

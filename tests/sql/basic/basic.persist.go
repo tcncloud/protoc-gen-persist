@@ -99,7 +99,9 @@ func (b *AmazingImplBuilder) WithSqlClient(c *sql.DB) *AmazingImplBuilder {
 func (b *AmazingImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *AmazingImplBuilder {
 	db, err := sql.Open(driverName, dataSourceName)
 	b.err = err
-	b.db = *db
+	if b.err == nil {
+		b.db = *db
+	}
 	return b
 }
 func (b *AmazingImplBuilder) Build() (*AmazingImpl, error) {

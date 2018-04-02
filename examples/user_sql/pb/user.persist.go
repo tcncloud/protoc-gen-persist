@@ -96,7 +96,9 @@ func (b *UServImplBuilder) WithSqlClient(c *sql.DB) *UServImplBuilder {
 func (b *UServImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *UServImplBuilder {
 	db, err := sql.Open(driverName, dataSourceName)
 	b.err = err
-	b.db = *db
+	if b.err == nil {
+		b.db = *db
+	}
 	return b
 }
 func (b *UServImplBuilder) Build() (*UServImpl, error) {

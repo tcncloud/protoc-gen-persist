@@ -114,9 +114,9 @@ func MySpannerClientStreamUpdateQuery(req MySpannerClientStreamUpdateQueryParams
 }
 func MySpannerUniaryInsertWithHooksQuery(req MySpannerUniaryInsertWithHooksQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("example_table", map[string]interface{}{
-		"id":         req.GetId(),
 		"start_time": req.GetStartTime(),
 		"name":       "bananas",
+		"id":         req.GetId(),
 	})
 }
 func MySpannerUniarySelectWithHooksQuery(req MySpannerUniarySelectWithHooksQueryParams) spanner.Statement {
@@ -161,9 +161,9 @@ func MySpannerClientStreamUpdateWithHooksQuery(req MySpannerClientStreamUpdateWi
 type ExtraSrvExtraUnaryQueryParams interface {
 }
 type MySpannerUniaryInsertQueryParams interface {
-	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
+	GetId() int64
 }
 type MySpannerUniarySelectQueryParams interface {
 	GetId() int64
@@ -183,17 +183,17 @@ type MySpannerTestEverythingQueryParams interface {
 	GetTimes() [][]byte
 }
 type MySpannerUniarySelectWithDirectivesQueryParams interface {
-	GetName() string
 	GetId() int64
+	GetName() string
 }
 type MySpannerUniaryUpdateQueryParams interface {
-	GetStartTime() interface{}
 	GetName() string
 	GetId() int64
+	GetStartTime() interface{}
 }
 type MySpannerUniaryDeleteRangeQueryParams interface {
-	GetEndId() int64
 	GetStartId() int64
+	GetEndId() int64
 }
 type MySpannerUniaryDeleteSingleQueryParams interface {
 	GetId() int64
@@ -203,9 +203,9 @@ type MySpannerNoArgsQueryParams interface {
 type MySpannerServerStreamQueryParams interface {
 }
 type MySpannerClientStreamInsertQueryParams interface {
-	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
+	GetId() int64
 }
 type MySpannerClientStreamDeleteQueryParams interface {
 	GetId() int64
@@ -216,9 +216,9 @@ type MySpannerClientStreamUpdateQueryParams interface {
 	GetName() string
 }
 type MySpannerUniaryInsertWithHooksQueryParams interface {
-	GetId() int64
 	GetStartTime() interface{}
 	GetName() string
+	GetId() int64
 }
 type MySpannerUniarySelectWithHooksQueryParams interface {
 	GetId() int64
@@ -235,6 +235,6 @@ type MySpannerUniaryDeleteWithHooksQueryParams interface {
 type MySpannerServerStreamWithHooksQueryParams interface {
 }
 type MySpannerClientStreamUpdateWithHooksQueryParams interface {
-	GetId() int64
 	GetName() string
+	GetId() int64
 }
