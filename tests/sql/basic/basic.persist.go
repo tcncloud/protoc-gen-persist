@@ -411,7 +411,10 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 	var err error
 	_ = err
 	res := &test.NumRows{}
-	feed, stop := s.PERSIST.ClientStream(stream.Context())
+	feed, stop, err := s.PERSIST.ClientStream(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -423,7 +426,9 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {
@@ -444,7 +449,10 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 	var err error
 	_ = err
 	res := &test.Ids{}
-	feed, stop := s.PERSIST.ClientStreamWithHook(stream.Context())
+	feed, stop, err := s.PERSIST.ClientStreamWithHook(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -462,7 +470,9 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {

@@ -239,7 +239,10 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 	var err error
 	_ = err
 	res := &NumRows{}
-	feed, stop := s.PERSIST.PutBobs(stream.Context())
+	feed, stop, err := s.PERSIST.PutBobs(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -251,7 +254,9 @@ func (s *BobsImpl) PutBobs(stream Bobs_PutBobsServer) error {
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {

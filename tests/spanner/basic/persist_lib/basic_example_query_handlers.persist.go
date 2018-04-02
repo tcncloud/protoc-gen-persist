@@ -45,15 +45,15 @@ type MySpannerQueryHandlers struct {
 	UniaryDeleteSingleHandler          func(context.Context, *Test_ExampleTableForMySpanner, func(*spanner.Row)) error
 	NoArgsHandler                      func(context.Context, *Test_ExampleTableForMySpanner, func(*spanner.Row)) error
 	ServerStreamHandler                func(context.Context, *Test_NameForMySpanner, func(*spanner.Row)) error
-	ClientStreamInsertHandler          func(context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error))
-	ClientStreamDeleteHandler          func(context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error))
-	ClientStreamUpdateHandler          func(context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error))
+	ClientStreamInsertHandler          func(context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error)
+	ClientStreamDeleteHandler          func(context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error)
+	ClientStreamUpdateHandler          func(context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error)
 	UniaryInsertWithHooksHandler       func(context.Context, *Test_ExampleTableForMySpanner, func(*spanner.Row)) error
 	UniarySelectWithHooksHandler       func(context.Context, *Test_ExampleTableForMySpanner, func(*spanner.Row)) error
 	UniaryUpdateWithHooksHandler       func(context.Context, *Test_ExampleTableForMySpanner, func(*spanner.Row)) error
 	UniaryDeleteWithHooksHandler       func(context.Context, *Test_ExampleTableRangeForMySpanner, func(*spanner.Row)) error
 	ServerStreamWithHooksHandler       func(context.Context, *Test_NameForMySpanner, func(*spanner.Row)) error
-	ClientStreamUpdateWithHooksHandler func(context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error))
+	ClientStreamUpdateWithHooksHandler func(context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error)
 }
 
 // next must be called on each result row
@@ -110,7 +110,7 @@ func (p *MySpannerMethodReceiver) ServerStream(ctx context.Context, params *Test
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *MySpannerMethodReceiver) ClientStreamInsert(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
+func (p *MySpannerMethodReceiver) ClientStreamInsert(ctx context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
 	return p.Handlers.ClientStreamInsertHandler(ctx)
 }
 
@@ -118,7 +118,7 @@ func (p *MySpannerMethodReceiver) ClientStreamInsert(ctx context.Context) (func(
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *MySpannerMethodReceiver) ClientStreamDelete(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
+func (p *MySpannerMethodReceiver) ClientStreamDelete(ctx context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
 	return p.Handlers.ClientStreamDeleteHandler(ctx)
 }
 
@@ -126,7 +126,7 @@ func (p *MySpannerMethodReceiver) ClientStreamDelete(ctx context.Context) (func(
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *MySpannerMethodReceiver) ClientStreamUpdate(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
+func (p *MySpannerMethodReceiver) ClientStreamUpdate(ctx context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
 	return p.Handlers.ClientStreamUpdateHandler(ctx)
 }
 
@@ -159,7 +159,7 @@ func (p *MySpannerMethodReceiver) ServerStreamWithHooks(ctx context.Context, par
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *MySpannerMethodReceiver) ClientStreamUpdateWithHooks(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
+func (p *MySpannerMethodReceiver) ClientStreamUpdateWithHooks(ctx context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
 	return p.Handlers.ClientStreamUpdateWithHooksHandler(ctx)
 }
 func DefaultUniaryInsertHandler(accessor SpannerClientGetter) func(context.Context, *Test_ExampleTableForMySpanner, func(*spanner.Row)) error {
@@ -310,11 +310,12 @@ func DefaultServerStreamHandler(accessor SpannerClientGetter) func(context.Conte
 		return nil
 	}
 }
-func DefaultClientStreamInsertHandler(accessor SpannerClientGetter) func(context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
+func DefaultClientStreamInsertHandler(accessor SpannerClientGetter) func(context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
+	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
 		var muts []*spanner.Mutation
-		feed := func(req *Test_ExampleTableForMySpanner) {
+		feed := func(req *Test_ExampleTableForMySpanner) error {
 			muts = append(muts, MySpannerClientStreamInsertQuery(req))
+			return nil
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -326,14 +327,15 @@ func DefaultClientStreamInsertHandler(accessor SpannerClientGetter) func(context
 			}
 			return nil, nil // we dont have a row, because we are an apply
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }
-func DefaultClientStreamDeleteHandler(accessor SpannerClientGetter) func(context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
+func DefaultClientStreamDeleteHandler(accessor SpannerClientGetter) func(context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
+	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
 		var muts []*spanner.Mutation
-		feed := func(req *Test_ExampleTableForMySpanner) {
+		feed := func(req *Test_ExampleTableForMySpanner) error {
 			muts = append(muts, MySpannerClientStreamDeleteQuery(req))
+			return nil
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -345,14 +347,15 @@ func DefaultClientStreamDeleteHandler(accessor SpannerClientGetter) func(context
 			}
 			return nil, nil // we dont have a row, because we are an apply
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }
-func DefaultClientStreamUpdateHandler(accessor SpannerClientGetter) func(context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
+func DefaultClientStreamUpdateHandler(accessor SpannerClientGetter) func(context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
+	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
 		var muts []*spanner.Mutation
-		feed := func(req *Test_ExampleTableForMySpanner) {
+		feed := func(req *Test_ExampleTableForMySpanner) error {
 			muts = append(muts, MySpannerClientStreamUpdateQuery(req))
+			return nil
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -364,7 +367,7 @@ func DefaultClientStreamUpdateHandler(accessor SpannerClientGetter) func(context
 			}
 			return nil, nil // we dont have a row, because we are an apply
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }
 func DefaultUniaryInsertWithHooksHandler(accessor SpannerClientGetter) func(context.Context, *Test_ExampleTableForMySpanner, func(*spanner.Row)) error {
@@ -438,11 +441,12 @@ func DefaultServerStreamWithHooksHandler(accessor SpannerClientGetter) func(cont
 		return nil
 	}
 }
-func DefaultClientStreamUpdateWithHooksHandler(accessor SpannerClientGetter) func(context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner), func() (*spanner.Row, error)) {
+func DefaultClientStreamUpdateWithHooksHandler(accessor SpannerClientGetter) func(context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
+	return func(ctx context.Context) (func(*Test_ExampleTableForMySpanner) error, func() (*spanner.Row, error), error) {
 		var muts []*spanner.Mutation
-		feed := func(req *Test_ExampleTableForMySpanner) {
+		feed := func(req *Test_ExampleTableForMySpanner) error {
 			muts = append(muts, MySpannerClientStreamUpdateWithHooksQuery(req))
+			return nil
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -454,6 +458,6 @@ func DefaultClientStreamUpdateWithHooksHandler(accessor SpannerClientGetter) fun
 			}
 			return nil, nil // we dont have a row, because we are an apply
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }

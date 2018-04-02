@@ -312,7 +312,10 @@ func (s *Testservice1Impl) ClientStreamingExample(stream Testservice1_ClientStre
 	var err error
 	_ = err
 	res := &CountRows{}
-	feed, stop := s.PERSIST.ClientStreamingExample(stream.Context())
+	feed, stop, err := s.PERSIST.ClientStreamingExample(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -324,7 +327,9 @@ func (s *Testservice1Impl) ClientStreamingExample(stream Testservice1_ClientStre
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {

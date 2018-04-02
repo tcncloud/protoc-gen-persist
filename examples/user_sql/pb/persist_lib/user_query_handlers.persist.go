@@ -1,13 +1,17 @@
 package persist_lib
 
-import "golang.org/x/net/context"
+import (
+	"fmt"
+
+	"golang.org/x/net/context"
+)
 
 type UServMethodReceiver struct {
 	Handlers UServQueryHandlers
 }
 type UServQueryHandlers struct {
 	CreateTableHandler     func(context.Context, *EmptyForUServ, func(Scanable)) error
-	InsertUsersHandler     func(context.Context) (func(*UserForUServ), func() (Scanable, error))
+	InsertUsersHandler     func(context.Context) (func(*UserForUServ) error, func() (Scanable, error), error)
 	GetAllUsersHandler     func(context.Context, *EmptyForUServ, func(Scanable)) error
 	SelectUserByIdHandler  func(context.Context, *UserForUServ, func(Scanable)) error
 	UpdateUserNamesHandler func(context.Context) (func(*UserForUServ) (Scanable, error), func() error)
@@ -25,7 +29,7 @@ func (p *UServMethodReceiver) CreateTable(ctx context.Context, params *EmptyForU
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *UServMethodReceiver) InsertUsers(ctx context.Context) (func(*UserForUServ), func() (Scanable, error)) {
+func (p *UServMethodReceiver) InsertUsers(ctx context.Context) (func(*UserForUServ) error, func() (Scanable, error), error) {
 	return p.Handlers.InsertUsersHandler(ctx)
 }
 
@@ -72,32 +76,32 @@ func DefaultCreateTableHandler(accessor SqlClientGetter) func(context.Context, *
 		return nil
 	}
 }
-func DefaultInsertUsersHandler(accessor SqlClientGetter) func(context.Context) (func(*UserForUServ), func() (Scanable, error)) {
-	return func(ctx context.Context) (func(*UserForUServ), func() (Scanable, error)) {
-		var feedErr error
+func DefaultInsertUsersHandler(accessor SqlClientGetter) func(context.Context) (func(*UserForUServ) error, func() (Scanable, error), error) {
+	return func(ctx context.Context) (func(*UserForUServ) error, func() (Scanable, error), error) {
 		sqlDb, err := accessor()
 		if err != nil {
-			feedErr = err
+			return nil, nil, err
 		}
 		tx, err := sqlDb.Begin()
 		if err != nil {
-			feedErr = err
+			return nil, nil, err
 		}
-		feed := func(req *UserForUServ) {
-			if feedErr != nil {
-				return
-			}
+		feed := func(req *UserForUServ) error {
 			if res := UServInsertUsersQuery(tx, req); res.Err() != nil {
-				feedErr = err
+				if err := tx.Rollback(); err != nil {
+					return fmt.Errorf("%v, %v", err, res.Err())
+				}
+				return res.Err()
 			}
+			return nil
 		}
 		done := func() (Scanable, error) {
 			if err := tx.Commit(); err != nil {
 				return nil, err
 			}
-			return nil, feedErr
+			return nil, nil
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }
 func DefaultGetAllUsersHandler(accessor SqlClientGetter) func(context.Context, *EmptyForUServ, func(Scanable)) error {

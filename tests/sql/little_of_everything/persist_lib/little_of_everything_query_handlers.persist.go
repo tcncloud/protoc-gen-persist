@@ -1,6 +1,10 @@
 package persist_lib
 
-import "golang.org/x/net/context"
+import (
+	"fmt"
+
+	"golang.org/x/net/context"
+)
 
 type Testservice1MethodReceiver struct {
 	Handlers Testservice1QueryHandlers
@@ -9,7 +13,7 @@ type Testservice1QueryHandlers struct {
 	UnaryExample1Handler          func(context.Context, *ExampleTable1ForTestservice1, func(Scanable)) error
 	UnaryExample2Handler          func(context.Context, *Test_TestForTestservice1, func(Scanable)) error
 	ServerStreamSelectHandler     func(context.Context, *ExampleTable1ForTestservice1, func(Scanable)) error
-	ClientStreamingExampleHandler func(context.Context) (func(*ExampleTable1ForTestservice1), func() (Scanable, error))
+	ClientStreamingExampleHandler func(context.Context) (func(*ExampleTable1ForTestservice1) error, func() (Scanable, error), error)
 }
 
 // next must be called on each result row
@@ -31,7 +35,7 @@ func (p *Testservice1MethodReceiver) ServerStreamSelect(ctx context.Context, par
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *Testservice1MethodReceiver) ClientStreamingExample(ctx context.Context) (func(*ExampleTable1ForTestservice1), func() (Scanable, error)) {
+func (p *Testservice1MethodReceiver) ClientStreamingExample(ctx context.Context) (func(*ExampleTable1ForTestservice1) error, func() (Scanable, error), error) {
 	return p.Handlers.ClientStreamingExampleHandler(ctx)
 }
 func DefaultUnaryExample1Handler(accessor SqlClientGetter) func(context.Context, *ExampleTable1ForTestservice1, func(Scanable)) error {
@@ -92,32 +96,32 @@ func DefaultServerStreamSelectHandler(accessor SqlClientGetter) func(context.Con
 		return res.Err()
 	}
 }
-func DefaultClientStreamingExampleHandler(accessor SqlClientGetter) func(context.Context) (func(*ExampleTable1ForTestservice1), func() (Scanable, error)) {
-	return func(ctx context.Context) (func(*ExampleTable1ForTestservice1), func() (Scanable, error)) {
-		var feedErr error
+func DefaultClientStreamingExampleHandler(accessor SqlClientGetter) func(context.Context) (func(*ExampleTable1ForTestservice1) error, func() (Scanable, error), error) {
+	return func(ctx context.Context) (func(*ExampleTable1ForTestservice1) error, func() (Scanable, error), error) {
 		sqlDb, err := accessor()
 		if err != nil {
-			feedErr = err
+			return nil, nil, err
 		}
 		tx, err := sqlDb.Begin()
 		if err != nil {
-			feedErr = err
+			return nil, nil, err
 		}
-		feed := func(req *ExampleTable1ForTestservice1) {
-			if feedErr != nil {
-				return
-			}
+		feed := func(req *ExampleTable1ForTestservice1) error {
 			if res := Testservice1ClientStreamingExampleQuery(tx, req); res.Err() != nil {
-				feedErr = err
+				if err := tx.Rollback(); err != nil {
+					return fmt.Errorf("%v, %v", err, res.Err())
+				}
+				return res.Err()
 			}
+			return nil
 		}
 		done := func() (Scanable, error) {
 			if err := tx.Commit(); err != nil {
 				return nil, err
 			}
-			return nil, feedErr
+			return nil, nil
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }
 

@@ -224,7 +224,10 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	var err error
 	_ = err
 	res := &Empty{}
-	feed, stop := s.PERSIST.InsertUsers(stream.Context())
+	feed, stop, err := s.PERSIST.InsertUsers(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -242,7 +245,9 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {

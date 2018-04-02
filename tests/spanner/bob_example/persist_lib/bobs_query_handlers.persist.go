@@ -8,7 +8,7 @@ type BobsMethodReceiver struct {
 }
 type BobsQueryHandlers struct {
 	DeleteBobsHandler         func(context.Context, *BobForBobs, func(*spanner.Row)) error
-	PutBobsHandler            func(context.Context) (func(*BobForBobs), func() (*spanner.Row, error))
+	PutBobsHandler            func(context.Context) (func(*BobForBobs) error, func() (*spanner.Row, error), error)
 	GetBobsHandler            func(context.Context, *EmptyForBobs, func(*spanner.Row)) error
 	GetPeopleFromNamesHandler func(context.Context, *NamesForBobs, func(*spanner.Row)) error
 }
@@ -22,7 +22,7 @@ func (p *BobsMethodReceiver) DeleteBobs(ctx context.Context, params *BobForBobs,
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *BobsMethodReceiver) PutBobs(ctx context.Context) (func(*BobForBobs), func() (*spanner.Row, error)) {
+func (p *BobsMethodReceiver) PutBobs(ctx context.Context) (func(*BobForBobs) error, func() (*spanner.Row, error), error) {
 	return p.Handlers.PutBobsHandler(ctx)
 }
 
@@ -48,11 +48,12 @@ func DefaultDeleteBobsHandler(accessor SpannerClientGetter) func(context.Context
 		return nil
 	}
 }
-func DefaultPutBobsHandler(accessor SpannerClientGetter) func(context.Context) (func(*BobForBobs), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (func(*BobForBobs), func() (*spanner.Row, error)) {
+func DefaultPutBobsHandler(accessor SpannerClientGetter) func(context.Context) (func(*BobForBobs) error, func() (*spanner.Row, error), error) {
+	return func(ctx context.Context) (func(*BobForBobs) error, func() (*spanner.Row, error), error) {
 		var muts []*spanner.Mutation
-		feed := func(req *BobForBobs) {
+		feed := func(req *BobForBobs) error {
 			muts = append(muts, BobsPutBobsQuery(req))
+			return nil
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -64,7 +65,7 @@ func DefaultPutBobsHandler(accessor SpannerClientGetter) func(context.Context) (
 			}
 			return nil, nil // we dont have a row, because we are an apply
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }
 func DefaultGetBobsHandler(accessor SpannerClientGetter) func(context.Context, *EmptyForBobs, func(*spanner.Row)) error {

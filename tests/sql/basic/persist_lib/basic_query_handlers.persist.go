@@ -1,6 +1,10 @@
 package persist_lib
 
-import "golang.org/x/net/context"
+import (
+	"fmt"
+
+	"golang.org/x/net/context"
+)
 
 type AmazingMethodReceiver struct {
 	Handlers AmazingQueryHandlers
@@ -12,8 +16,8 @@ type AmazingQueryHandlers struct {
 	ServerStreamWithHooksHandler  func(context.Context, *Test_NameForAmazing, func(Scanable)) error
 	BidirectionalHandler          func(context.Context) (func(*Test_ExampleTableForAmazing) (Scanable, error), func() error)
 	BidirectionalWithHooksHandler func(context.Context) (func(*Test_ExampleTableForAmazing) (Scanable, error), func() error)
-	ClientStreamHandler           func(context.Context) (func(*Test_ExampleTableForAmazing), func() (Scanable, error))
-	ClientStreamWithHookHandler   func(context.Context) (func(*Test_ExampleTableForAmazing), func() (Scanable, error))
+	ClientStreamHandler           func(context.Context) (func(*Test_ExampleTableForAmazing) error, func() (Scanable, error), error)
+	ClientStreamWithHookHandler   func(context.Context) (func(*Test_ExampleTableForAmazing) error, func() (Scanable, error), error)
 }
 
 // next must be called on each result row
@@ -54,7 +58,7 @@ func (p *AmazingMethodReceiver) BidirectionalWithHooks(ctx context.Context) (fun
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *AmazingMethodReceiver) ClientStream(ctx context.Context) (func(*Test_ExampleTableForAmazing), func() (Scanable, error)) {
+func (p *AmazingMethodReceiver) ClientStream(ctx context.Context) (func(*Test_ExampleTableForAmazing) error, func() (Scanable, error), error) {
 	return p.Handlers.ClientStreamHandler(ctx)
 }
 
@@ -62,7 +66,7 @@ func (p *AmazingMethodReceiver) ClientStream(ctx context.Context) (func(*Test_Ex
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *AmazingMethodReceiver) ClientStreamWithHook(ctx context.Context) (func(*Test_ExampleTableForAmazing), func() (Scanable, error)) {
+func (p *AmazingMethodReceiver) ClientStreamWithHook(ctx context.Context) (func(*Test_ExampleTableForAmazing) error, func() (Scanable, error), error) {
 	return p.Handlers.ClientStreamWithHookHandler(ctx)
 }
 func DefaultUniarySelectHandler(accessor SqlClientGetter) func(context.Context, *Test_PartialTableForAmazing, func(Scanable)) error {
@@ -205,59 +209,59 @@ func DefaultBidirectionalWithHooksHandler(accessor SqlClientGetter) func(context
 		return feed, done
 	}
 }
-func DefaultClientStreamHandler(accessor SqlClientGetter) func(context.Context) (func(*Test_ExampleTableForAmazing), func() (Scanable, error)) {
-	return func(ctx context.Context) (func(*Test_ExampleTableForAmazing), func() (Scanable, error)) {
-		var feedErr error
+func DefaultClientStreamHandler(accessor SqlClientGetter) func(context.Context) (func(*Test_ExampleTableForAmazing) error, func() (Scanable, error), error) {
+	return func(ctx context.Context) (func(*Test_ExampleTableForAmazing) error, func() (Scanable, error), error) {
 		sqlDb, err := accessor()
 		if err != nil {
-			feedErr = err
+			return nil, nil, err
 		}
 		tx, err := sqlDb.Begin()
 		if err != nil {
-			feedErr = err
+			return nil, nil, err
 		}
-		feed := func(req *Test_ExampleTableForAmazing) {
-			if feedErr != nil {
-				return
-			}
+		feed := func(req *Test_ExampleTableForAmazing) error {
 			if res := AmazingClientStreamQuery(tx, req); res.Err() != nil {
-				feedErr = err
+				if err := tx.Rollback(); err != nil {
+					return fmt.Errorf("%v, %v", err, res.Err())
+				}
+				return res.Err()
 			}
+			return nil
 		}
 		done := func() (Scanable, error) {
 			if err := tx.Commit(); err != nil {
 				return nil, err
 			}
-			return nil, feedErr
+			return nil, nil
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }
-func DefaultClientStreamWithHookHandler(accessor SqlClientGetter) func(context.Context) (func(*Test_ExampleTableForAmazing), func() (Scanable, error)) {
-	return func(ctx context.Context) (func(*Test_ExampleTableForAmazing), func() (Scanable, error)) {
-		var feedErr error
+func DefaultClientStreamWithHookHandler(accessor SqlClientGetter) func(context.Context) (func(*Test_ExampleTableForAmazing) error, func() (Scanable, error), error) {
+	return func(ctx context.Context) (func(*Test_ExampleTableForAmazing) error, func() (Scanable, error), error) {
 		sqlDb, err := accessor()
 		if err != nil {
-			feedErr = err
+			return nil, nil, err
 		}
 		tx, err := sqlDb.Begin()
 		if err != nil {
-			feedErr = err
+			return nil, nil, err
 		}
-		feed := func(req *Test_ExampleTableForAmazing) {
-			if feedErr != nil {
-				return
-			}
+		feed := func(req *Test_ExampleTableForAmazing) error {
 			if res := AmazingClientStreamWithHookQuery(tx, req); res.Err() != nil {
-				feedErr = err
+				if err := tx.Rollback(); err != nil {
+					return fmt.Errorf("%v, %v", err, res.Err())
+				}
+				return res.Err()
 			}
+			return nil
 		}
 		done := func() (Scanable, error) {
 			if err := tx.Commit(); err != nil {
 				return nil, err
 			}
-			return nil, feedErr
+			return nil, nil
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }

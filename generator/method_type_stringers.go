@@ -277,7 +277,7 @@ func (s *ClientStreamStringer) String() string {
 	s.BeforeHook()
 	s.Params()
 
-	s.printer.P("feed(params)\n")
+	s.printer.P("if err := feed(params); err != nil {\nreturn err\n}\n")
 	s.printer.P("}\n")
 
 	s.HandleRow()
@@ -307,7 +307,7 @@ func (s *ClientStreamStringer) Unimplemented() string {
 
 func (s *ClientStreamStringer) PersistCall() {
 	s.printer.P(
-		"feed, stop := s.PERSIST.%s(stream.Context())\n",
+		"feed, stop, err := s.PERSIST.%s(stream.Context())\nif err != nil {\nreturn err\n}\n",
 		s.method.GetName(),
 	)
 }

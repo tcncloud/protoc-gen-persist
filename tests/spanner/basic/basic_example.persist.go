@@ -968,7 +968,10 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 	var err error
 	_ = err
 	res := &test.NumRows{}
-	feed, stop := s.PERSIST.ClientStreamInsert(stream.Context())
+	feed, stop, err := s.PERSIST.ClientStreamInsert(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -980,7 +983,9 @@ func (s *MySpannerImpl) ClientStreamInsert(stream MySpanner_ClientStreamInsertSe
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {
@@ -1001,7 +1006,10 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 	var err error
 	_ = err
 	res := &test.NumRows{}
-	feed, stop := s.PERSIST.ClientStreamDelete(stream.Context())
+	feed, stop, err := s.PERSIST.ClientStreamDelete(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -1013,7 +1021,9 @@ func (s *MySpannerImpl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteSe
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {
@@ -1034,7 +1044,10 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 	var err error
 	_ = err
 	res := &test.NumRows{}
-	feed, stop := s.PERSIST.ClientStreamUpdate(stream.Context())
+	feed, stop, err := s.PERSIST.ClientStreamUpdate(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -1046,7 +1059,9 @@ func (s *MySpannerImpl) ClientStreamUpdate(stream MySpanner_ClientStreamUpdateSe
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {
@@ -1253,7 +1268,10 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 	var err error
 	_ = err
 	res := &test.NumRows{}
-	feed, stop := s.PERSIST.ClientStreamUpdateWithHooks(stream.Context())
+	feed, stop, err := s.PERSIST.ClientStreamUpdateWithHooks(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -1271,7 +1289,9 @@ func (s *MySpannerImpl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStrea
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {

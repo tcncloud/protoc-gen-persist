@@ -37,8 +37,8 @@ func Testservice1ClientStreamingExampleQuery(tx Runable, req Testservice1ClientS
 }
 
 type Testservice1UnaryExample1QueryParams interface {
-	GetStartTime() interface{}
 	GetTableId() int32
+	GetStartTime() interface{}
 }
 type Testservice1UnaryExample2QueryParams interface {
 	GetId() int32
