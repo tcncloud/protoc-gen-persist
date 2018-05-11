@@ -6,9 +6,9 @@ import (
 
 type SqlClientGetter func() (*sql.DB, error)
 
-func NewSqlClientGetter(cli *sql.DB) SqlClientGetter {
+func NewSqlClientGetter(cli **sql.DB) SqlClientGetter {
 	return func() (*sql.DB, error) {
-		return cli, nil
+		return *cli, nil
 	}
 }
 

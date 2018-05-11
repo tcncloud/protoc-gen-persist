@@ -6,9 +6,9 @@ import (
 
 type SpannerClientGetter func() (*spanner.Client, error)
 
-func NewSpannerClientGetter(cli *spanner.Client) SpannerClientGetter {
+func NewSpannerClientGetter(cli **spanner.Client) SpannerClientGetter {
 	return func() (*spanner.Client, error) {
-		return cli, nil
+		return *cli, nil
 	}
 }
 

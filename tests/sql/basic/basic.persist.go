@@ -30,7 +30,7 @@ type AmazingImplBuilder struct {
 	rest          RestOfAmazingHandlers
 	queryHandlers *persist_lib.AmazingQueryHandlers
 	i             *AmazingImpl
-	db            sql.DB
+	db            *sql.DB
 }
 
 func NewAmazingBuilder() *AmazingImplBuilder {
@@ -93,14 +93,14 @@ func (b *AmazingImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.Amazin
 	return b
 }
 func (b *AmazingImplBuilder) WithSqlClient(c *sql.DB) *AmazingImplBuilder {
-	b.db = *c
+	b.db = c
 	return b
 }
 func (b *AmazingImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *AmazingImplBuilder {
 	db, err := sql.Open(driverName, dataSourceName)
 	b.err = err
 	if b.err == nil {
-		b.db = *db
+		b.db = db
 	}
 	return b
 }

@@ -1,20 +1,22 @@
 package main_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"fmt"
+	"io"
+	"net"
+	"time"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	main "github.com/tcncloud/protoc-gen-persist/examples/user_sql"
 	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"io"
-	"net"
-	"time"
 )
 
 func TestMain(t *testing.T) {
@@ -201,7 +203,7 @@ var users = []*pb.User{
 func Serve(servFunc func(s *grpc.Server)) {
 	service := pb.NewUServBuilder().
 		WithDefaultQueryHandlers().
-		WithNewSqlDb("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable").
+		WithNewSqlDb("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable host=localhost").
 		WithRestOfGrpcHandlers(&main.RestOfImpl{}).
 		MustBuild()
 	server := grpc.NewServer()

@@ -4,11 +4,11 @@ import "cloud.google.com/go/spanner"
 
 func UServInsertUsersQuery(req UServInsertUsersQueryParams) *spanner.Mutation {
 	return spanner.InsertMap("users", map[string]interface{}{
+		"favorite_numbers": req.GetFavoriteNumbers(),
 		"id":               req.GetId(),
 		"name":             req.GetName(),
 		"friends":          req.GetFriends(),
 		"created_on":       req.GetCreatedOn(),
-		"favorite_numbers": req.GetFavoriteNumbers(),
 	})
 }
 func UServGetAllUsersQuery(req UServGetAllUsersQueryParams) spanner.Statement {
@@ -59,8 +59,8 @@ type UServSelectUserByIdQueryParams interface {
 	GetId() int64
 }
 type UServUpdateUserNamesQueryParams interface {
-	GetName() string
 	GetId() int64
+	GetName() string
 }
 type UServUpdateNameToFooQueryParams interface {
 	GetName() string

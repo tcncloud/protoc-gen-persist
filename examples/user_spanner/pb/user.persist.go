@@ -27,7 +27,7 @@ type UServImplBuilder struct {
 	rest          RestOfUServHandlers
 	queryHandlers *persist_lib.UServQueryHandlers
 	i             *UServImpl
-	db            spanner.Client
+	db            *spanner.Client
 }
 
 func NewUServBuilder() *UServImplBuilder {
@@ -82,13 +82,13 @@ func (b *UServImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.UServQue
 	return b
 }
 func (b *UServImplBuilder) WithSpannerClient(c *spanner.Client) *UServImplBuilder {
-	b.db = *c
+	b.db = c
 	return b
 }
 func (b *UServImplBuilder) WithSpannerURI(ctx context.Context, uri string) *UServImplBuilder {
 	cli, err := spanner.NewClient(ctx, uri)
 	b.err = err
-	b.db = *cli
+	b.db = cli
 	return b
 }
 func (b *UServImplBuilder) Build() (*UServImpl, error) {
@@ -234,7 +234,10 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	var err error
 	_ = err
 	res := &Empty{}
-	feed, stop := s.PERSIST.InsertUsers(stream.Context())
+	feed, stop, err := s.PERSIST.InsertUsers(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -252,7 +255,9 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {
@@ -328,7 +333,10 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 	var err error
 	_ = err
 	res := &Empty{}
-	feed, stop := s.PERSIST.UpdateUserNames(stream.Context())
+	feed, stop, err := s.PERSIST.UpdateUserNames(stream.Context())
+	if err != nil {
+		return err
+	}
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -340,7 +348,9 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 		if err != nil {
 			return err
 		}
-		feed(params)
+		if err := feed(params); err != nil {
+			return err
+		}
 	}
 	row, err := stop()
 	if err != nil {

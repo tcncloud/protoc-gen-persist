@@ -26,7 +26,7 @@ type BobsImplBuilder struct {
 	rest          RestOfBobsHandlers
 	queryHandlers *persist_lib.BobsQueryHandlers
 	i             *BobsImpl
-	db            spanner.Client
+	db            *spanner.Client
 }
 
 func NewBobsBuilder() *BobsImplBuilder {
@@ -73,13 +73,13 @@ func (b *BobsImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.BobsQuery
 	return b
 }
 func (b *BobsImplBuilder) WithSpannerClient(c *spanner.Client) *BobsImplBuilder {
-	b.db = *c
+	b.db = c
 	return b
 }
 func (b *BobsImplBuilder) WithSpannerURI(ctx context.Context, uri string) *BobsImplBuilder {
 	cli, err := spanner.NewClient(ctx, uri)
 	b.err = err
-	b.db = *cli
+	b.db = cli
 	return b
 }
 func (b *BobsImplBuilder) Build() (*BobsImpl, error) {

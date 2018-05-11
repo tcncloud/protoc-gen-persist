@@ -27,7 +27,7 @@ type UServImplBuilder struct {
 	rest          RestOfUServHandlers
 	queryHandlers *persist_lib.UServQueryHandlers
 	i             *UServImpl
-	db            sql.DB
+	db            *sql.DB
 }
 
 func NewUServBuilder() *UServImplBuilder {
@@ -90,14 +90,14 @@ func (b *UServImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.UServQue
 	return b
 }
 func (b *UServImplBuilder) WithSqlClient(c *sql.DB) *UServImplBuilder {
-	b.db = *c
+	b.db = c
 	return b
 }
 func (b *UServImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *UServImplBuilder {
 	db, err := sql.Open(driverName, dataSourceName)
 	b.err = err
 	if b.err == nil {
-		b.db = *db
+		b.db = db
 	}
 	return b
 }

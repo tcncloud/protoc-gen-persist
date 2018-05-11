@@ -3,11 +3,12 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"net"
+
 	_ "github.com/lib/pq"
 	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
 	pl "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb/persist_lib"
 	"google.golang.org/grpc"
-	"net"
 )
 
 func main() {

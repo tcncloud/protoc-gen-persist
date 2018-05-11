@@ -31,7 +31,7 @@ type ExtraSrvImplBuilder struct {
 	rest          RestOfExtraSrvHandlers
 	queryHandlers *persist_lib.ExtraSrvQueryHandlers
 	i             *ExtraSrvImpl
-	db            spanner.Client
+	db            *spanner.Client
 }
 
 func NewExtraSrvBuilder() *ExtraSrvImplBuilder {
@@ -66,13 +66,13 @@ func (b *ExtraSrvImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.Extra
 	return b
 }
 func (b *ExtraSrvImplBuilder) WithSpannerClient(c *spanner.Client) *ExtraSrvImplBuilder {
-	b.db = *c
+	b.db = c
 	return b
 }
 func (b *ExtraSrvImplBuilder) WithSpannerURI(ctx context.Context, uri string) *ExtraSrvImplBuilder {
 	cli, err := spanner.NewClient(ctx, uri)
 	b.err = err
-	b.db = *cli
+	b.db = cli
 	return b
 }
 func (b *ExtraSrvImplBuilder) Build() (*ExtraSrvImpl, error) {
@@ -186,7 +186,7 @@ type MySpannerImplBuilder struct {
 	rest          RestOfMySpannerHandlers
 	queryHandlers *persist_lib.MySpannerQueryHandlers
 	i             *MySpannerImpl
-	db            spanner.Client
+	db            *spanner.Client
 }
 
 func NewMySpannerBuilder() *MySpannerImplBuilder {
@@ -293,13 +293,13 @@ func (b *MySpannerImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.MySp
 	return b
 }
 func (b *MySpannerImplBuilder) WithSpannerClient(c *spanner.Client) *MySpannerImplBuilder {
-	b.db = *c
+	b.db = c
 	return b
 }
 func (b *MySpannerImplBuilder) WithSpannerURI(ctx context.Context, uri string) *MySpannerImplBuilder {
 	cli, err := spanner.NewClient(ctx, uri)
 	b.err = err
-	b.db = *cli
+	b.db = cli
 	return b
 }
 func (b *MySpannerImplBuilder) Build() (*MySpannerImpl, error) {

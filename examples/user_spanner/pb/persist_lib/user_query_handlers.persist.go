@@ -7,10 +7,10 @@ type UServMethodReceiver struct {
 	Handlers UServQueryHandlers
 }
 type UServQueryHandlers struct {
-	InsertUsersHandler     func(context.Context) (func(*UserForUServ), func() (*spanner.Row, error))
+	InsertUsersHandler     func(context.Context) (func(*UserForUServ) error, func() (*spanner.Row, error), error)
 	GetAllUsersHandler     func(context.Context, *EmptyForUServ, func(*spanner.Row)) error
 	SelectUserByIdHandler  func(context.Context, *UserForUServ, func(*spanner.Row)) error
-	UpdateUserNamesHandler func(context.Context) (func(*UserForUServ), func() (*spanner.Row, error))
+	UpdateUserNamesHandler func(context.Context) (func(*UserForUServ) error, func() (*spanner.Row, error), error)
 	UpdateNameToFooHandler func(context.Context, *UserForUServ, func(*spanner.Row)) error
 	GetFriendsHandler      func(context.Context, *FriendsForUServ, func(*spanner.Row)) error
 }
@@ -19,7 +19,7 @@ type UServQueryHandlers struct {
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *UServMethodReceiver) InsertUsers(ctx context.Context) (func(*UserForUServ), func() (*spanner.Row, error)) {
+func (p *UServMethodReceiver) InsertUsers(ctx context.Context) (func(*UserForUServ) error, func() (*spanner.Row, error), error) {
 	return p.Handlers.InsertUsersHandler(ctx)
 }
 
@@ -37,7 +37,7 @@ func (p *UServMethodReceiver) SelectUserById(ctx context.Context, params *UserFo
 // feed will be called once for every row recieved by the handler
 // stop will be called when the client is done streaming. it expects
 //a  row to be returned, or nil.
-func (p *UServMethodReceiver) UpdateUserNames(ctx context.Context) (func(*UserForUServ), func() (*spanner.Row, error)) {
+func (p *UServMethodReceiver) UpdateUserNames(ctx context.Context) (func(*UserForUServ) error, func() (*spanner.Row, error), error) {
 	return p.Handlers.UpdateUserNamesHandler(ctx)
 }
 
@@ -50,11 +50,12 @@ func (p *UServMethodReceiver) UpdateNameToFoo(ctx context.Context, params *UserF
 func (p *UServMethodReceiver) GetFriends(ctx context.Context, params *FriendsForUServ, next func(*spanner.Row)) error {
 	return p.Handlers.GetFriendsHandler(ctx, params, next)
 }
-func DefaultInsertUsersHandler(accessor SpannerClientGetter) func(context.Context) (func(*UserForUServ), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (func(*UserForUServ), func() (*spanner.Row, error)) {
+func DefaultInsertUsersHandler(accessor SpannerClientGetter) func(context.Context) (func(*UserForUServ) error, func() (*spanner.Row, error), error) {
+	return func(ctx context.Context) (func(*UserForUServ) error, func() (*spanner.Row, error), error) {
 		var muts []*spanner.Mutation
-		feed := func(req *UserForUServ) {
+		feed := func(req *UserForUServ) error {
 			muts = append(muts, UServInsertUsersQuery(req))
+			return nil
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -66,7 +67,7 @@ func DefaultInsertUsersHandler(accessor SpannerClientGetter) func(context.Contex
 			}
 			return nil, nil // we dont have a row, because we are an apply
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }
 func DefaultGetAllUsersHandler(accessor SpannerClientGetter) func(context.Context, *EmptyForUServ, func(*spanner.Row)) error {
@@ -101,11 +102,12 @@ func DefaultSelectUserByIdHandler(accessor SpannerClientGetter) func(context.Con
 		return nil
 	}
 }
-func DefaultUpdateUserNamesHandler(accessor SpannerClientGetter) func(context.Context) (func(*UserForUServ), func() (*spanner.Row, error)) {
-	return func(ctx context.Context) (func(*UserForUServ), func() (*spanner.Row, error)) {
+func DefaultUpdateUserNamesHandler(accessor SpannerClientGetter) func(context.Context) (func(*UserForUServ) error, func() (*spanner.Row, error), error) {
+	return func(ctx context.Context) (func(*UserForUServ) error, func() (*spanner.Row, error), error) {
 		var muts []*spanner.Mutation
-		feed := func(req *UserForUServ) {
+		feed := func(req *UserForUServ) error {
 			muts = append(muts, UServUpdateUserNamesQuery(req))
+			return nil
 		}
 		done := func() (*spanner.Row, error) {
 			cli, err := accessor()
@@ -117,7 +119,7 @@ func DefaultUpdateUserNamesHandler(accessor SpannerClientGetter) func(context.Co
 			}
 			return nil, nil // we dont have a row, because we are an apply
 		}
-		return feed, done
+		return feed, done, nil
 	}
 }
 func DefaultUpdateNameToFooHandler(accessor SpannerClientGetter) func(context.Context, *UserForUServ, func(*spanner.Row)) error {

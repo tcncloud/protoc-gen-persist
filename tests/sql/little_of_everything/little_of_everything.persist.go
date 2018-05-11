@@ -28,7 +28,7 @@ type Testservice1ImplBuilder struct {
 	rest          RestOfTestservice1Handlers
 	queryHandlers *persist_lib.Testservice1QueryHandlers
 	i             *Testservice1Impl
-	db            sql.DB
+	db            *sql.DB
 }
 
 func NewTestservice1Builder() *Testservice1ImplBuilder {
@@ -75,14 +75,14 @@ func (b *Testservice1ImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.T
 	return b
 }
 func (b *Testservice1ImplBuilder) WithSqlClient(c *sql.DB) *Testservice1ImplBuilder {
-	b.db = *c
+	b.db = c
 	return b
 }
 func (b *Testservice1ImplBuilder) WithNewSqlDb(driverName, dataSourceName string) *Testservice1ImplBuilder {
 	db, err := sql.Open(driverName, dataSourceName)
 	b.err = err
 	if b.err == nil {
-		b.db = *db
+		b.db = db
 	}
 	return b
 }

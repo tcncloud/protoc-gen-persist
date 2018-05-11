@@ -104,12 +104,12 @@ type AmazingBidirectionalWithHooksQueryParams interface {
 	GetName() string
 }
 type AmazingClientStreamQueryParams interface {
+	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
-	GetName() string
 }
 type AmazingClientStreamWithHookQueryParams interface {
+	GetName() string
 	GetId() int64
 	GetStartTime() interface{}
-	GetName() string
 }
