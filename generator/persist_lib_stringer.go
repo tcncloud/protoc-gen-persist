@@ -90,7 +90,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		"rest RestOf%sHandlers\n",
 		"queryHandlers *persist_lib.%sQueryHandlers\n",
 		"i *%sImpl\n",
-		"db %s\n}\n",
+		"db *%s\n}\n",
 		"func New%sBuilder() *%sImplBuilder {\nreturn &%sImplBuilder{i: &%sImpl{}}\n}\n",
 	},
 		service.GetName(),
@@ -166,7 +166,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	// provide the builder with a client
 	printer.PA([]string{
 		"func (b *%sImplBuilder) With%sClient(c *%s) *%sImplBuilder {\n",
-		"b.db = *c\n return b\n}\n",
+		"b.db = c\n return b\n}\n",
 	},
 		service.GetName(), backend, dbType, service.GetName(),
 	)
@@ -174,7 +174,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	if service.IsSpanner() {
 		printer.PA([]string{
 			"func (b *%sImplBuilder) WithSpannerURI(ctx context.Context, uri string) *%sImplBuilder {\n",
-			"cli, err := spanner.NewClient(ctx, uri)\n b.err = err\n b.db = *cli\n return b\n}\n",
+			"cli, err := spanner.NewClient(ctx, uri)\n b.err = err\n b.db = cli\n return b\n}\n",
 		},
 			service.GetName(), service.GetName(),
 		)
@@ -184,7 +184,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 			"db, err := sql.Open(driverName, dataSourceName)\n",
 			"b.err = err\n",
 			"if b.err == nil {\n",
-			"\tb.db = *db\n",
+			"\tb.db = db\n",
 			"}\n",
 			"return b\n}\n",
 		},
@@ -598,8 +598,8 @@ func (per *PersistStringer) DeclareSpannerGetter() string {
 	printer := &Printer{}
 	printer.P("type SpannerClientGetter func() (*spanner.Client, error)\n")
 	printer.PA([]string{
-		"func NewSpannerClientGetter(cli *spanner.Client) SpannerClientGetter {\n",
-		"return func() (*spanner.Client, error) {\n return cli, nil \n}\n}\n",
+		"func NewSpannerClientGetter(cli **spanner.Client) SpannerClientGetter {\n",
+		"return func() (*spanner.Client, error) {\n return *cli, nil \n}\n}\n",
 	})
 
 	return printer.String()
@@ -614,8 +614,8 @@ func (per *PersistStringer) DeclareSqlPackageDefs() string {
 	printer := &Printer{}
 	printer.P("type SqlClientGetter func() (*sql.DB, error)\n")
 	printer.PA([]string{
-		"func NewSqlClientGetter(cli *sql.DB) SqlClientGetter {\n",
-		"return func() (*sql.DB, error) {\n return cli, nil \n}\n}\n",
+		"func NewSqlClientGetter(cli **sql.DB) SqlClientGetter {\n",
+		"return func() (*sql.DB, error) {\n return *cli, nil \n}\n}\n",
 	})
 	printer.P("type Scanable interface{\nScan(dest ...interface{}) error\n}\n")
 	printer.PA([]string{
