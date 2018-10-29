@@ -16,6 +16,7 @@ func main() {
 		WithDefaultQueryHandlers().
 		WithNewSqlDb("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable").
 		WithRestOfGrpcHandlers(&RestOfImpl{}).
+		WithHooks(&HooksImpl{}).
 		MustBuild()
 	server := grpc.NewServer()
 
@@ -28,6 +29,22 @@ func main() {
 	if err := server.Serve(lis); err != nil {
 		fmt.Printf("error serving: %v\n", err)
 	}
+}
+
+type HooksImpl struct{}
+
+func (h *HooksImpl) UServInsertUsersBeforeHook(req *pb.User) (*pb.Empty, error) {
+	pb.IncId(req)
+	return nil, nil
+}
+func (h *HooksImpl) UServInsertUsersAfterHook(*pb.User, *pb.Empty) error {
+	return nil
+}
+func (h *HooksImpl) UServGetAllUsersBeforeHook(*pb.Empty) ([]*pb.User, error) {
+	return nil, nil
+}
+func (h *HooksImpl) UServGetAllUsersAfterHook(*pb.Empty, *pb.User) error {
+	return nil
 }
 
 type RestOfImpl struct{}

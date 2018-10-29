@@ -205,6 +205,7 @@ func Serve(servFunc func(s *grpc.Server)) {
 		WithDefaultQueryHandlers().
 		WithNewSqlDb("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable host=localhost").
 		WithRestOfGrpcHandlers(&main.RestOfImpl{}).
+		WithHooks(&main.HooksImpl{}).
 		MustBuild()
 	server := grpc.NewServer()
 

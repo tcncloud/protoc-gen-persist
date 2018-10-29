@@ -18,9 +18,16 @@ import (
 type UServImpl struct {
 	PERSIST   *persist_lib.UServMethodReceiver
 	FORWARDED RestOfUServHandlers
+	HOOKS     UServHooks
 }
 type RestOfUServHandlers interface {
 	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
+}
+type UServHooks interface {
+	UServInsertUsersBeforeHook(*User) (*Empty, error)
+	UServInsertUsersAfterHook(*User, *Empty) error
+	UServGetAllUsersBeforeHook(*Empty) ([]*User, error)
+	UServGetAllUsersAfterHook(*Empty, *User) error
 }
 type UServImplBuilder struct {
 	err           error
@@ -28,10 +35,15 @@ type UServImplBuilder struct {
 	queryHandlers *persist_lib.UServQueryHandlers
 	i             *UServImpl
 	db            *sql.DB
+	hooks         UServHooks
 }
 
 func NewUServBuilder() *UServImplBuilder {
 	return &UServImplBuilder{i: &UServImpl{}}
+}
+func (b *UServImplBuilder) WithHooks(hs UServHooks) *UServImplBuilder {
+	b.hooks = hs
+	return b
 }
 func (b *UServImplBuilder) WithRestOfGrpcHandlers(r RestOfUServHandlers) *UServImplBuilder {
 	b.rest = r
@@ -56,10 +68,6 @@ func (b *UServImplBuilder) WithDefaultQueryHandlers() *UServImplBuilder {
 	b.queryHandlers = queryHandlers
 	return b
 }
-
-// set the custom handlers you want to use in the handlers
-// this method will make sure to use a default handler if
-// the handler is nil.
 func (b *UServImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.UServQueryHandlers) *UServImplBuilder {
 	accessor := persist_lib.NewSqlClientGetter(&b.db)
 	if p.CreateTableHandler == nil {
@@ -107,6 +115,7 @@ func (b *UServImplBuilder) Build() (*UServImpl, error) {
 	}
 	b.i.PERSIST = &persist_lib.UServMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
+	b.i.HOOKS = b.hooks
 	return b.i, nil
 }
 func (b *UServImplBuilder) MustBuild() *UServImpl {
@@ -235,7 +244,10 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		beforeRes, err := IncId(req)
+		fmt.Printf("s %#v", s)
+		fmt.Printf("s.HOOKS %#v\n", s.HOOKS)
+		fmt.Printf("req: %#v, %+v\n", req, req)
+		beforeRes, err := s.HOOKS.UServInsertUsersBeforeHook(req)
 		if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 		} else if beforeRes != nil {
@@ -259,6 +271,13 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 			return err
 		}
 	}
+	// NOTE: I dont want to store your requests in memory
+	// so the after hook for client streaming calls
+	// is called with an empty request struct
+	fakeReq := &User{}
+	if err := s.HOOKS.UServInsertUsersAfterHook(fakeReq, res); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+	}
 	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
@@ -267,6 +286,16 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
 	var err error
 	_ = err
+	beforeRes, err := s.HOOKS.UServGetAllUsersBeforeHook(req)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+	} else if beforeRes != nil {
+		for _, res := range beforeRes {
+			if err := stream.Send(res); err != nil {
+				return gstatus.Errorf(codes.Unknown, "error sending back before hook result: %v", err)
+			}
+		}
+	}
 	params, err := EmptyToUServPersistType(req)
 	if err != nil {
 		return err
@@ -279,6 +308,10 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 		res, err := UserFromUServDatabaseRow(row)
 		if err != nil {
 			iterErr = err
+			return
+		}
+		if err := s.HOOKS.UServGetAllUsersAfterHook(req, res); err != nil {
+			iterErr = gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			return
 		}
 		if err := stream.Send(res); err != nil {
