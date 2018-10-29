@@ -195,15 +195,15 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		)
 	}
 	// Build method, returns impl, err
-	printer.PA([]string{
-		"func (b *%sImplBuilder) Build() (*%sImpl, error) {\n",
-		"if b.err != nil {\n return nil, b.err\n}\n",
-		"b.i.PERSIST = &persist_lib.%s{Handlers: *b.queryHandlers}\n",
+	printer.Q(
+		"func (b *", sName, "ImplBuilder) Build() (*", sName, "Impl, error) {\n",
+		"if b.err != nil {\n return nil, b.err\n",
+		"}\n",
+		"b.i.PERSIST = &persist_lib.", NewPersistHelperName(service), "{Handlers: *b.queryHandlers}\n",
 		"b.i.FORWARDED = b.rest\n",
-		"return b.i, nil\n}\n",
-	},
-		service.GetName(), service.GetName(),
-		NewPersistHelperName(service),
+		"b.i.HOOKS = b.hooks\n",
+		"return b.i, nil\n",
+		"}\n",
 	)
 	// MustBuild method, returns impl.  Can panic.
 	printer.PA([]string{
