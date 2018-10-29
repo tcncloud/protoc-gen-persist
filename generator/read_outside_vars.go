@@ -35,7 +35,7 @@ import (
 	// "go/parser"
 )
 
-func GetHookAndImports(*persist.QLImpl_CallbackFunction) (string, []*Import) {
+func GetHookAndImports() (string, []*Import) {
 	return "", nil
 }
 func GetTypeMappingsAndImports(*persist.TypeMapping) (string, []*Import) {

@@ -11,8 +11,21 @@ type Printer struct {
 	str string
 }
 
+func P(args ...interface{}) string {
+	printer := &Printer{}
+	printer.Q(args...)
+
+	return printer.String()
+}
+
 func (p *Printer) P(formatString string, args ...interface{}) {
 	p.str += fmt.Sprintf(formatString, args...)
+}
+
+func (p *Printer) Q(args ...interface{}) {
+	for _, arg := range args {
+		p.str += fmt.Sprintf("%v", arg)
+	}
 }
 func (p *Printer) PA(formatStrings []string, args ...interface{}) {
 	s := strings.Join(formatStrings, "")

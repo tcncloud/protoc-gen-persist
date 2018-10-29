@@ -38,6 +38,7 @@ func (per *PersistStringer) MessageInputDeclaration(method *Method) string {
 	return printer.String()
 }
 
+//HOOKCHANGE
 // merges custom defined handlers with our own
 func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	var dbType string
@@ -49,12 +50,14 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		dbType = "sql.DB"
 		backend = "Sql"
 	}
+	sName := service.GetName()
 	printer := &Printer{}
-	printer.P(
-		"type %sImpl struct{\nPERSIST *persist_lib.%s\nFORWARDED RestOf%sHandlers\n}\n",
-		service.GetName(),
-		NewPersistHelperName(service),
-		service.GetName(),
+	printer.Q(
+		"type ", sName, "Impl struct{\n",
+		"PERSIST *persist_lib.", NewPersistHelperName(service), "\n",
+		"FORWARDED RestOf", sName, "Handlers\n",
+		"HOOKS ", sName, "Hooks\n",
+		"}\n",
 	)
 	printer.P("type RestOf%sHandlers interface{\n", service.GetName())
 	for _, m := range *service.Methods {
@@ -84,21 +87,24 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		}
 	}
 	printer.P("}\n")
-	printer.PA([]string{
-		"type %sImplBuilder struct {\n",
+
+	WriteBuilderHookInterfaceAndFunc(printer, service)
+	printer.Q(
+		"type ", sName, "ImplBuilder struct {\n",
 		"err error\n ",
-		"rest RestOf%sHandlers\n",
-		"queryHandlers *persist_lib.%sQueryHandlers\n",
-		"i *%sImpl\n",
-		"db *%s\n}\n",
-		"func New%sBuilder() *%sImplBuilder {\nreturn &%sImplBuilder{i: &%sImpl{}}\n}\n",
-	},
-		service.GetName(),
-		service.GetName(),
-		service.GetName(),
-		service.GetName(), dbType,
-		service.GetName(), service.GetName(), service.GetName(), service.GetName(),
+		"rest RestOf", sName, "Handlers\n",
+		"queryHandlers *persist_lib.", sName, "QueryHandlers\n",
+		"i *", sName, "Impl\n",
+		"db *", dbType, "\n",
+		"hooks ", sName, "Hooks\n",
+		"}\n",
+		"func New", sName, "Builder() *", sName, "ImplBuilder {\n",
+		"return &", sName, "ImplBuilder{i: &", sName, "Impl{}}\n",
+		"}\n",
 	)
+
+	WriteBuilderHooksAcceptingFunc(printer, service)
+
 	printer.PA([]string{
 		"func (b *%sImplBuilder) WithRestOfGrpcHandlers(r RestOf%sHandlers) *%sImplBuilder {\n",
 		"b.rest = r\n return b\n}\n",
@@ -212,6 +218,37 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		service.GetName(), service.GetName(),
 	)
 	return printer.String()
+}
+
+func WriteBuilderHookInterfaceAndFunc(p *Printer, s *Service) {
+	p.Q("type ", s.GetName(), "Hooks interface{\n")
+	for _, m := range *s.Methods {
+		opt := m.GetMethodOption()
+		if opt == nil {
+			continue
+		}
+		if opt.GetBefore() {
+			sliceStarOrStar := "*"
+			if m.IsServerStreaming() {
+				sliceStarOrStar = "[]*"
+			}
+
+			p.Q("\t", m.GetBeforeHookName(), "(*", m.GetInputType(), ") (", sliceStarOrStar, m.GetOutputType(), ", error)\n")
+		}
+		if opt.GetAfter() {
+			p.Q("\t", m.GetAfterHookName(), "(*", m.GetInputType(), ", *", m.GetOutputType(), ") error\n")
+		}
+	}
+	p.Q("}\n")
+}
+func WriteBuilderHooksAcceptingFunc(p *Printer, serv *Service) {
+	s := serv.GetName()
+	p.Q(
+		"func(b *", s, "ImplBuilder) WithHooks(hs ", s, "Hooks) *", s, "ImplBuilder {\n",
+		"b.hooks = hs\n",
+		"return b\n",
+		"}\n",
+	)
 }
 
 func (per *PersistStringer) HandlersStructDeclaration(service *Service) string {

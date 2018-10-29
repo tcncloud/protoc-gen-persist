@@ -297,14 +297,6 @@ func (f *FileStruct) ProcessImports() {
 			if opts == nil {
 				continue
 			}
-			if beforeOpt := opts.GetBefore(); beforeOpt != nil {
-				pkg := beforeOpt.GetPackage()
-				f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
-			}
-			if afterOpt := opts.GetAfter(); afterOpt != nil {
-				pkg := afterOpt.GetPackage()
-				f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
-			}
 			if mappingOpt := opts.GetMapping(); mappingOpt != nil {
 				for _, typMap := range mappingOpt.GetTypes() {
 					pkg := typMap.GetGoPackage()

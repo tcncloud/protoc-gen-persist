@@ -77,10 +77,8 @@ service UServ {
 		option (persist.ql) = {
 			query: ["INSERT INTO users (id, name, friends, created_on, favorite_numbers) ",
 							"VALUES (@id, @name, @friends, @created_on, @favorite_numbers)"],
-			before: {
-				name: "IncId",
-				package: "github.com/tcncloud/protoc-gen-persist/examples/user_spanner/",
-			}
+			before: true
+			after: true
 		};
 	};
 	rpc GetAllUsers(Empty) returns (stream User) {
@@ -92,6 +90,8 @@ service UServ {
 		option (persist.ql) = {
 			query: ["SELECT id, name, friends, created_on, favorite_numbers ",
 							"FROM users WHERE id = @id"],
+			before: true
+			after: true
 		};
 	};
 	rpc UpdateUserNames(stream User) returns (Empty) {
@@ -110,6 +110,8 @@ service UServ {
 		option (persist.ql) = {
 			query: ["SELECT id, name, friends, created_on, favorite_numbers ",
 							"FROM users WHERE name IN UNNEST(@names)"],
+			before: true
+			after: true
 		};
 	};
 }

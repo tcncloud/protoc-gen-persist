@@ -63,14 +63,8 @@ service Amazing {
     option (persist.ql) = {
       query: ["SELECT * from example_table Where id=$1 AND start_time>$2"]
       arguments: ["id", "start_time"]
-      before: {
-        name: "UniarySelectBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/hooks"
-      }
-      after: {
-        name: "UniarySelectAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/hooks"
-      }
+      before: true,
+      after: true
     };
   };
   rpc ServerStream(test.Name) returns (stream test.ExampleTable) {
@@ -83,14 +77,8 @@ service Amazing {
     option (persist.ql) = {
       query: ["SELECT * FROM example_table WHERE name=$1"]
       arguments: ["name"]
-      before: {
-        name: "ServerStreamBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/hooks"
-      }
-      after: {
-        name: "ServerStreamAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/hooks"
-      }
+      before: true,
+      after: true
     };
   };
   rpc Bidirectional(stream test.ExampleTable) returns (stream test.ExampleTable) {
@@ -109,14 +97,8 @@ service Amazing {
         "*"
       ]
       arguments: ["id", "start_time", "name"]
-      before: {
-        name: "BidirectionalBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/hooks"
-      }
-      after: {
-        name: "BidirectionalAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/hooks"
-      }
+      before: true,
+      after: true
     };
   };
   rpc ClientStream(stream test.ExampleTable) returns (test.NumRows) {
@@ -129,14 +111,8 @@ service Amazing {
     option (persist.ql) = {
       query: ["INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)"]
       arguments: ["id", "start_time", "name"]
-      before: {
-        name: "ClientStreamBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/hooks"
-      }
-      after: {
-        name: "ClientStreamAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/hooks"
-      }
+      before: true,
+      after: true
     };
   };
   rpc UnImplementedPersistMethod(test.ExampleTable) returns (test.ExampleTable) {}
