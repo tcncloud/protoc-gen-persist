@@ -146,9 +146,6 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	printer.P("}\n b.queryHandlers = queryHandlers\n return b\n}\n")
 	// fill in holes with defaults
 	printer.PA([]string{
-		"// set the custom handlers you want to use in the handlers\n",
-		"// this method will make sure to use a default handler if\n",
-		"// the handler is nil.\n",
 		"func (b *%sImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.%sQueryHandlers)",
 		"*%sImplBuilder {\n",
 		"accessor := persist_lib.New%sClientGetter(&b.db)\n",
