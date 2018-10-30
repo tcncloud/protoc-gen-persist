@@ -20,6 +20,8 @@ custom type mapping to/from the database, and spanner query parsing
 
 ## NOTE: This project is under development, use it at your own risk!
 
+## Version 2.0.0
+- new method for generating before and after hooks. See #82 (@iamneal)
 
 ## Version 1.0.0
 - new persist_lib generated package for custom handlers
@@ -32,7 +34,7 @@ in different packages
  1. ~~type mapping~~
  1. ~~before & after callback function~~
  1. add tests, lots of tests
- 1. rewrite hooks/type mappings system to be more import safe
+ 1. ~~rewrite hooks/type mappings system to be more import safe~~
 
 
 ## Authors
