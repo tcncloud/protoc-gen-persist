@@ -34,10 +34,11 @@ import (
 	"strings"
 
 	"bytes"
-	"github.com/sirupsen/logrus"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
+	"github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/generator/parser"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
@@ -482,14 +483,12 @@ func (m *Method) IsBidiStreaming() bool {
 	return m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming()
 }
 
-func (m *Method) GetHookName(hook *persist.QLImpl_CallbackFunction) string {
-	var name string
-	pkg := GetGoPackage(hook.GetPackage())
-	if m.Service.File.NeedImport(pkg) {
-		name = pkg + "."
-	}
-	name += hook.GetName()
-	return name
+// HOOKCHANGE
+func (m *Method) GetBeforeHookName() string {
+	return P(m.Service.GetName(), m.GetName(), "BeforeHook")
+}
+func (m *Method) GetAfterHookName() string {
+	return P(m.Service.GetName(), m.GetName(), "AfterHook")
 }
 
 func (m *Method) Process() error {

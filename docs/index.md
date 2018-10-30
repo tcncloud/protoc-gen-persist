@@ -127,6 +127,7 @@ func IterUServUserProto(iter *persist_lib.Result, next func(i *User) error) erro
 type UServImpl struct {
 	PERSIST   *persist_lib.UServMethodReceiver
 	FORWARDED RestOfUServHandlers
+	HOOKS     UServHooks
 }
 // ...
 func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error) {
@@ -166,10 +167,15 @@ type UServImplBuilder struct {
 	queryHandlers *persist_lib.UServQueryHandlers
 	i             *UServImpl
 	db            sql.DB
+	hooks         UServHooks
 }
 
 func NewUServBuilder() *UServImplBuilder {
 	return &UServImplBuilder{i: &UServImpl{}}
+}
+func (b *UServImplBuilder) WithHooks(hs UServHooks) *UServImplBuilder {
+	b.hooks = hs
+	return b
 }
 func (b *UServImplBuilder) WithRestOfGrpcHandlers(r RestOfUServHandlers) *UServImplBuilder {
 	b.rest = r
@@ -215,6 +221,7 @@ func (b *UServImplBuilder) Build() (*UServImpl, error) {
 	}
 	b.i.PERSIST = &persist_lib.UServMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
+	b.i.HOOKS = b.hooks
 	return b.i, nil
 }
 func (b *UServImplBuilder) MustBuild() *UServImpl {
@@ -246,7 +253,7 @@ func (p *UserForUServ) SetFriends(param []byte)        { p.Friends = param }
 func (p *UserForUServ) GetCreatedOn() interface{}      { return p.CreatedOn }
 func (p *UserForUServ) SetCreatedOn(param interface{}) { p.CreatedOn = param }
 ```
-- iterface for the query consisting of getters for the query parameters
+- interface for the query consisting of getters for the query parameters
 ```go
 type UServSelectUserByIdQueryParams interface {
 	GetId() int64
@@ -525,34 +532,10 @@ service Test {
     option (persist.ql) = {
       query: ["insert into example_table (id, start_time, name)  Values (@id, @start_time, \"bananas\")"]
       arguments: ["id", "start_time"]
-      before: {
-        name: "UniaryInsertBeforeHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/spanner/hooks"
-      }
-      after: {
-        name: "UniaryInsertAfterHook"
-        package: "github.com/tcncloud/protoc-gen-persist/tests/spanner/hooks"
-      }
+      before: true
+      after: true
     };
   };
-}
-```
-the actual option definitions for before/after hook:
-```proto
-message QLImpl {
-    // Callback definition function
-    // define the name and the package of a function with the signature
-    // func CallbackFunction(message pb.Message) (pb.Message, error)
-    message CallbackFunction {
-        // function name
-        required string name = 1;
-        // function go package name in the following formats
-        // github.com/repo;package
-        // github.com/package
-        // dir/package
-        // package
-        required string package = 2;
-    }
 }
 ```
 

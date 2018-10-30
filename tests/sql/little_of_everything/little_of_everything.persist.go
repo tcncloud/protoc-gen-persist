@@ -20,8 +20,11 @@ import (
 type Testservice1Impl struct {
 	PERSIST   *persist_lib.Testservice1MethodReceiver
 	FORWARDED RestOfTestservice1Handlers
+	HOOKS     Testservice1Hooks
 }
 type RestOfTestservice1Handlers interface {
+}
+type Testservice1Hooks interface {
 }
 type Testservice1ImplBuilder struct {
 	err           error
@@ -29,10 +32,15 @@ type Testservice1ImplBuilder struct {
 	queryHandlers *persist_lib.Testservice1QueryHandlers
 	i             *Testservice1Impl
 	db            *sql.DB
+	hooks         Testservice1Hooks
 }
 
 func NewTestservice1Builder() *Testservice1ImplBuilder {
 	return &Testservice1ImplBuilder{i: &Testservice1Impl{}}
+}
+func (b *Testservice1ImplBuilder) WithHooks(hs Testservice1Hooks) *Testservice1ImplBuilder {
+	b.hooks = hs
+	return b
 }
 func (b *Testservice1ImplBuilder) WithRestOfGrpcHandlers(r RestOfTestservice1Handlers) *Testservice1ImplBuilder {
 	b.rest = r
@@ -53,10 +61,6 @@ func (b *Testservice1ImplBuilder) WithDefaultQueryHandlers() *Testservice1ImplBu
 	b.queryHandlers = queryHandlers
 	return b
 }
-
-// set the custom handlers you want to use in the handlers
-// this method will make sure to use a default handler if
-// the handler is nil.
 func (b *Testservice1ImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.Testservice1QueryHandlers) *Testservice1ImplBuilder {
 	accessor := persist_lib.NewSqlClientGetter(&b.db)
 	if p.UnaryExample1Handler == nil {
@@ -92,6 +96,7 @@ func (b *Testservice1ImplBuilder) Build() (*Testservice1Impl, error) {
 	}
 	b.i.PERSIST = &persist_lib.Testservice1MethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
+	b.i.HOOKS = b.hooks
 	return b.i, nil
 }
 func (b *Testservice1ImplBuilder) MustBuild() *Testservice1Impl {

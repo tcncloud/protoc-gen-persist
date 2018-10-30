@@ -8,7 +8,6 @@ import (
 	fmt "fmt"
 	io "io"
 
-	hooks "github.com/tcncloud/protoc-gen-persist/tests/hooks"
 	mytime "github.com/tcncloud/protoc-gen-persist/tests/mytime"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/tests/sql/basic/persist_lib"
 	test "github.com/tcncloud/protoc-gen-persist/tests/test"
@@ -20,10 +19,21 @@ import (
 type AmazingImpl struct {
 	PERSIST   *persist_lib.AmazingMethodReceiver
 	FORWARDED RestOfAmazingHandlers
+	HOOKS     AmazingHooks
 }
 type RestOfAmazingHandlers interface {
 	UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error)
 	NoGenerationForBadReturnTypes(ctx context.Context, req *test.ExampleTable) (*BadReturn, error)
+}
+type AmazingHooks interface {
+	AmazingUniarySelectWithHooksBeforeHook(*test.PartialTable) (*test.ExampleTable, error)
+	AmazingUniarySelectWithHooksAfterHook(*test.PartialTable, *test.ExampleTable) error
+	AmazingServerStreamWithHooksBeforeHook(*test.Name) ([]*test.ExampleTable, error)
+	AmazingServerStreamWithHooksAfterHook(*test.Name, *test.ExampleTable) error
+	AmazingBidirectionalWithHooksBeforeHook(*test.ExampleTable) (*test.ExampleTable, error)
+	AmazingBidirectionalWithHooksAfterHook(*test.ExampleTable, *test.ExampleTable) error
+	AmazingClientStreamWithHookBeforeHook(*test.ExampleTable) (*test.Ids, error)
+	AmazingClientStreamWithHookAfterHook(*test.ExampleTable, *test.Ids) error
 }
 type AmazingImplBuilder struct {
 	err           error
@@ -31,10 +41,15 @@ type AmazingImplBuilder struct {
 	queryHandlers *persist_lib.AmazingQueryHandlers
 	i             *AmazingImpl
 	db            *sql.DB
+	hooks         AmazingHooks
 }
 
 func NewAmazingBuilder() *AmazingImplBuilder {
 	return &AmazingImplBuilder{i: &AmazingImpl{}}
+}
+func (b *AmazingImplBuilder) WithHooks(hs AmazingHooks) *AmazingImplBuilder {
+	b.hooks = hs
+	return b
 }
 func (b *AmazingImplBuilder) WithRestOfGrpcHandlers(r RestOfAmazingHandlers) *AmazingImplBuilder {
 	b.rest = r
@@ -59,10 +74,6 @@ func (b *AmazingImplBuilder) WithDefaultQueryHandlers() *AmazingImplBuilder {
 	b.queryHandlers = queryHandlers
 	return b
 }
-
-// set the custom handlers you want to use in the handlers
-// this method will make sure to use a default handler if
-// the handler is nil.
 func (b *AmazingImplBuilder) WithNilAsDefaultQueryHandlers(p *persist_lib.AmazingQueryHandlers) *AmazingImplBuilder {
 	accessor := persist_lib.NewSqlClientGetter(&b.db)
 	if p.UniarySelectHandler == nil {
@@ -110,6 +121,7 @@ func (b *AmazingImplBuilder) Build() (*AmazingImpl, error) {
 	}
 	b.i.PERSIST = &persist_lib.AmazingMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
+	b.i.HOOKS = b.hooks
 	return b.i, nil
 }
 func (b *AmazingImplBuilder) MustBuild() *AmazingImpl {
@@ -235,7 +247,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	beforeRes, err := hooks.UniarySelectBeforeHook(req)
+	beforeRes, err := s.HOOKS.AmazingUniarySelectWithHooksBeforeHook(req)
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 	} else if beforeRes != nil {
@@ -261,7 +273,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	if err := hooks.UniarySelectAfterHook(req, res); err != nil {
+	if err := s.HOOKS.AmazingUniarySelectWithHooksAfterHook(req, res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
 	return res, nil
@@ -297,7 +309,7 @@ func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamSe
 func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
 	var err error
 	_ = err
-	beforeRes, err := hooks.ServerStreamBeforeHook(req)
+	beforeRes, err := s.HOOKS.AmazingServerStreamWithHooksBeforeHook(req)
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 	} else if beforeRes != nil {
@@ -321,7 +333,7 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 			iterErr = err
 			return
 		}
-		if err := hooks.ServerStreamAfterHook(req, res); err != nil {
+		if err := s.HOOKS.AmazingServerStreamWithHooksAfterHook(req, res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			return
 		}
@@ -378,7 +390,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		beforeRes, err := hooks.BidirectionalBeforeHook(req)
+		beforeRes, err := s.HOOKS.AmazingBidirectionalWithHooksBeforeHook(req)
 		if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 		} else if beforeRes != nil {
@@ -397,7 +409,7 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 			if err != nil {
 				return err
 			}
-			if err := hooks.BidirectionalAfterHook(req, res); err != nil {
+			if err := s.HOOKS.AmazingBidirectionalWithHooksAfterHook(req, res); err != nil {
 				return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			}
 			if err := stream.Send(res); err != nil {
@@ -460,7 +472,7 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		beforeRes, err := hooks.ClientStreamBeforeHook(req)
+		beforeRes, err := s.HOOKS.AmazingClientStreamWithHookBeforeHook(req)
 		if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 		} else if beforeRes != nil {
@@ -488,7 +500,7 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 	// so the after hook for client streaming calls
 	// is called with an empty request struct
 	fakeReq := &test.ExampleTable{}
-	if err := hooks.ClientStreamAfterHook(fakeReq, res); err != nil {
+	if err := s.HOOKS.AmazingClientStreamWithHookAfterHook(fakeReq, res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
 	if err := stream.SendAndClose(res); err != nil {

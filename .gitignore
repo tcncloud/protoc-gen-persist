@@ -45,3 +45,4 @@ protoc-gen-persist*
 
 
 bazel*
+.vscode

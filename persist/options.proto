@@ -74,27 +74,14 @@ message QLImpl {
     // generator/service.go function GetSafeType()
     optional TypeMapping mapping = 4;
 
-    // Callback definition function
-    // define the name and the package of a function with the signature
-    // func CallbackFunction(message pb.Message) (pb.Message, error)
-    message CallbackFunction {
-        // function name
-        required string name = 1;
-        // function go package name in the following formats
-        // github.com/repo;package
-        // github.com/package
-        // dir/package
-        // package
-        required string package = 2;
-    }
     // the before function will be called before running any sql code for
     // every input data element and if the return will be not empty/nil and
     // the error will be nil the data returned by this function will be
     // returned by the function skipping the code execution
-    optional CallbackFunction before = 10;
+    optional bool before = 10;
     // the after function will be called after running any sql code for
     // every output data element, the return data of this function will be ignored
-    optional CallbackFunction after = 11;
+    optional bool after = 11;
 }
 
 message TypeMapping {

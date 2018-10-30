@@ -73,7 +73,7 @@ test: deps build
 
 test-compile:
 	go build
-	 DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--plugin=./protoc-gen-persist \
 	 	--persist_out=$$GOPATH/src  tests/sql/little_of_everything/*.proto
 	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \

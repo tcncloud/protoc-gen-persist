@@ -84,15 +84,15 @@ service UServ {
 		option (persist.ql) = {
 			query: ["INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)"],
 			arguments: ["id", "name", "friends", "created_on"],
-			before: {
-				name: "IncId",
-				package: "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb",
-			}
+			before: true
+			after: true
 		};
 	};
 	rpc GetAllUsers(Empty) returns (stream User) {
 		option (persist.ql) = {
 			query: ["SELECT id, name, friends, created_on FROM users"]
+			after: true
+			before: true
 		};
 	};
 	rpc SelectUserById(User) returns (User) {
