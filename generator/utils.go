@@ -34,6 +34,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"github.com/tcncloud/protoc-gen-persist/persist"
 
 	"golang.org/x/tools/imports"
 )
@@ -90,4 +91,13 @@ func FormatCode(filename string, buffer []byte) []byte {
 		return tmp
 	}
 	return buf
+}
+func getGoNamesForTypeMapping(tm *persist.TypeMapping_TypeDescriptor, file *FileStruct) (string, string) {
+	name := file.GetGoTypeName(tm.GetProtoTypeName())
+	nameParts := strings.Split(name, ".")
+	for i, v := range nameParts {
+		nameParts[i] = strings.Title(v)
+	}
+	titled := strings.Join(nameParts, "")
+	return name, titled
 }

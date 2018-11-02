@@ -125,16 +125,7 @@ func (m *Method) GetFilePackage() string {
 }
 
 func (m *Method) GetGoTypeName(typ string) string {
-	str := m.Service.File.AllStructures.GetStructByProtoName(typ)
-	if str == nil {
-		return ""
-	}
-	if imp := m.Service.File.ImportList.GetGoNameByStruct(str); imp != nil {
-		if m.Service.File.NotSameAsMyPackage(imp.GoImportPath) {
-			return imp.GoPackageName + "." + str.GetGoName()
-		}
-	}
-	return str.GetGoName()
+	return m.Service.File.GetGoTypeName(typ)
 }
 func (m *Method) GetGoTypeNameByFieldDesc(ty *descriptor.FieldDescriptorProto) string {
 	return m.GetGoTypeName(ty.GetTypeName())
@@ -164,11 +155,6 @@ func (m *Method) GetOutputType() string {
 
 // returns the type mapping option on either the method, or the service.
 func (m *Method) GetTypeMappingOpts() *persist.TypeMapping {
-	if opt := m.GetMethodOption(); opt != nil {
-		if opt.GetMapping() != nil {
-			return opt.GetMapping()
-		}
-	}
 	if opt := m.Service.GetServiceOption(); opt != nil {
 		return opt
 	}
@@ -286,22 +272,6 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 	//default mapping
 }
 
-// GetMappedType return mapped type's package + type for a mapped proto, otherwise
-// it returns the default type data
-func (m *Method) GetMappedType(typ *descriptor.FieldDescriptorProto) string {
-	if mapping := m.GetMapping(typ); mapping != nil {
-		p := m.Service.File.ImportList.GetImportPkgForPath(GetGoPath(mapping.GetGoPackage()))
-		if p != "" &&
-			m.Service.File.NotSameAsMyPackage(GetGoPath(mapping.GetGoPackage())) &&
-			m.Service.File.Opts.PersistLibRoot != GetGoPath(mapping.GetGoPackage()) {
-			return p + "." + mapping.GetGoType()
-		} else {
-			return mapping.GetGoType()
-		}
-	}
-	return m.DefaultMapping(typ)
-}
-
 func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeMapping_TypeDescriptor {
 	if mapping := m.GetTypeMappingOpts(); mapping != nil {
 		// if we have a mapping we are going to process it first
@@ -320,9 +290,10 @@ func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeM
 type TypeDesc struct {
 	Name      string // ex. StartTime
 	ProtoName string // start_time
-	// mytime.MyTime (if it is mapped) otherwise is defaultMapping  ex: string, []float64
-	// if is a message type, then *pb.TestMessage  []*TestMessage
-	GoName          string
+	// Is default Mapping  ex: string, []float64
+	// or, if is a message type, then *pb.TestMessage  []*TestMessage
+	GoName string
+	// just the Name part of the type no [], or *
 	GoTypeName      string
 	OrigGoName      string // Timestamp
 	Struct          *Struct
@@ -392,10 +363,16 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 			continue
 		}
 		typeDesc := TypeDesc{
-			Name:            _gen.CamelCase(mp.GetName()),
-			Struct:          m.Service.AllStructs.GetStructByFieldDesc(mp),
+			Name:   _gen.CamelCase(mp.GetName()),
+			Struct: m.Service.AllStructs.GetStructByFieldDesc(mp),
+			GoName: func() string {
+				if m.GetMapping(mp) != nil {
+					typName, _ := getGoNamesForTypeMapping(m.GetMapping(mp), m.Service.File)
+					return typName
+				}
+				return m.DefaultMapping(mp)
+			}(),
 			ProtoName:       mp.GetName(),
-			GoName:          m.GetMappedType(mp),
 			GoTypeName:      m.GetGoTypeNameByFieldDesc(mp),
 			OrigGoName:      m.DefaultMapping(mp),
 			Mapping:         m.GetMapping(mp),
@@ -411,6 +388,9 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 		typeDesc.SpannerType = SpannerType(typeDesc)
 		typeDesc.SpannerTypeFieldName = SpannerTypeFieldName(typeDesc)
 		typeDesc.NeedsSpannerConversion = (typeDesc.SpannerType != typeDesc.GoName)
+
+		if typeDesc.IsMapped {
+		}
 
 		ret = append(ret, typeDesc)
 	}

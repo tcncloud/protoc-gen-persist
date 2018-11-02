@@ -10,35 +10,32 @@ type SpannerStringer struct {
 	method *Method
 }
 
+//TYPECHANGE
 func (s *SpannerStringer) MapRequestToParams() string {
+	sName := s.method.Service.GetName()
 	p := &Printer{}
 	typeDescs := s.method.GetTypeDescArrayForStruct(s.method.GetInputTypeStruct())
 	// if value is mapped, always use the mapped value
 	// if value is primitive or repeated primitive, use it
 	// else convert to []byte, or [][]byte for spanner
-	p.P(
-		"func %s(req *%s) (*persist_lib.%s, error) {\n",
-		ToParamsFuncName(s.method),
-		s.method.GetInputType(),
-		NewPLInputName(s.method),
+	p.Q(
+		"func ", ToParamsFuncName(s.method), "(serv ", sName, "TypeMapping, req *", s.method.GetInputType(),
+		") (*persist_lib.", NewPLInputName(s.method), ", error) {\n",
 	)
 	p.P("var err error\n _ = err\n")
 	p.P("params := &persist_lib.%s{}\n", NewPLInputName(s.method))
+
 	for _, td := range typeDescs {
-		p.P(
-			"// set '%s.%s' in params\n",
-			s.method.GetInputTypeMinusPackage(),
-			td.ProtoName,
-		)
+		_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
+
+		p.P("// set '%s.%s' in params\n", s.method.GetInputTypeMinusPackage(), td.ProtoName)
+
 		if td.IsMapped {
-			p.PA([]string{
-				"if params.%s, err = (%s{}).ToSpanner(req.%s).SpannerValue(); err != nil {\n",
-				"return nil, err\n}\n",
-			},
-				td.Name,
-				td.GoName,
-				td.Name,
-			)
+
+			mappingString := P("serv.", sName, titleCased, "()")
+			p.Q("if params.", td.Name, ", err = ", mappingString, ".ToSpanner(req.", td.Name, ").SpannerValue(); err != nil {\n")
+			p.Q("return nil, err\n")
+			p.Q("}\n")
 		} else if td.IsMessage {
 			if td.IsRepeated {
 				p.PA([]string{
@@ -80,28 +77,29 @@ func (s *SpannerStringer) RowType() string {
 }
 func (s *SpannerStringer) TranslateRowToResult() string {
 	p := &Printer{}
+	sName := s.method.Service.GetName()
 	p.P(
-		"func %s(row *spanner.Row) (*%s, error) {\n",
+		"func %s(serv %sTypeMapping, row *spanner.Row) (*%s, error) {\n",
 		FromScanableFuncName(s.method),
+		sName,
 		s.method.GetOutputType(),
 	)
 	p.P("res := &%s{}\n", s.method.GetOutputType())
 	for _, td := range s.method.GetTypeDescArrayForStruct(s.method.GetOutputTypeStruct()) {
+		_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
 		if td.IsMapped {
-			p.PA([]string{
-				"var %s_ = new(spanner.GenericColumnValue)\n",
-				"if err := row.ColumnByName(\"%s\", %s_); err != nil {\nreturn nil, err\n}\n{\n",
-				"local := &%s{}\n",
-				"if err := local.SpannerScan(%s_); err != nil {\n return nil, err\n}\n",
-				"res.%s = local.ToProto()\n}\n",
-			},
-				td.Name,
-				td.ProtoName,
-				td.Name,
-				td.GoName,
-				td.Name,
-				td.Name,
-			)
+			p.Q("var ", td.Name, "_ = new(spanner.GenericColumnValue)\n")
+			p.Q("if err := row.ColumnByName(\"", td.ProtoName, "\", ", td.Name, "_); err != nil {\n")
+			p.Q("\treturn nil, err\n")
+			p.Q("}\n{\n")
+			// TYPECHAGE
+			p.Q("mapper := serv.", sName, titleCased, "()\n")
+			p.Q("local := mapper.Empty()\n")
+			p.Q("if err := local.SpannerScan(", td.Name, "_); err != nil {\n")
+			p.Q("\treturn nil, err\n")
+			p.Q("}\n")
+			p.Q("res.", td.Name, " = mapper.ToProto(local)\n")
+			p.Q("}\n")
 		} else if td.IsMessage {
 			// this is super tacky.  But I can be sure I need this import at this point
 			s.method.
@@ -204,18 +202,21 @@ type SqlStringer struct {
 
 func (s *SqlStringer) MapRequestToParams() string {
 	p := &Printer{}
-	p.P(
-		"func %s(req *%s) (*persist_lib.%s, error) {\n",
-		ToParamsFuncName(s.method),
-		s.method.GetInputType(),
-		NewPLInputName(s.method),
+	sName := s.method.Service.GetName()
+	p.Q(
+		"func ", ToParamsFuncName(s.method), "(serv ", sName, "TypeMapping, req *", s.method.GetInputType(),
+		") (*persist_lib.", NewPLInputName(s.method), ", error) {\n",
 	)
 	p.P("params := &persist_lib.%s{}\n", NewPLInputName(s.method))
 
 	typeDescs := s.method.GetTypeDescArrayForStruct(s.method.GetInputTypeStruct())
 	for _, td := range typeDescs {
+		_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
 		if td.IsMapped {
-			p.P("params.%s = (%s{}).ToSql(req.%s)\n", td.Name, td.GoName, td.Name)
+			p.Q("mapper := serv.", sName, titleCased, "()\n")
+			p.Q("params.", td.Name, " = mapper.ToSql(req.", td.Name, ")\n")
+			// p.Q("params.", td.Name, " = s.", sName, titleCased, "(req.", td.Name, ")\n")
+			// p.P("params.%s = (%s{}).ToSql(req.%s)\n", td.Name, td.GoName, td.Name)
 		} else if td.IsMessage {
 			p.PA([]string{
 				"if req.%s == nil {\n req.%s = new(%s) \n}\n",
@@ -241,20 +242,24 @@ func (s *SqlStringer) RowType() string {
 }
 
 func (s *SqlStringer) TranslateRowToResult() string {
+	sName := s.method.Service.GetName()
 	p := &Printer{}
 	outputFields := s.method.GetTypeDescArrayForStruct(s.method.GetOutputTypeStruct())
 	p.P(
-		"func %s(row persist_lib.Scanable) (*%s, error) {\n",
+		"func %s(serv %sTypeMapping, row persist_lib.Scanable) (*%s, error) {\n",
 		FromScanableFuncName(s.method),
+		sName,
 		s.method.GetOutputType(),
 	)
 	p.P("res := &%s{}\n", s.method.GetOutputType())
-
 	for _, td := range outputFields {
 		if td.IsMessage {
 			p.P("var %s_ []byte\n", td.Name)
 		} else if td.IsEnum {
 			p.P("var %s_ int32\n", td.Name)
+		} else if td.IsMapped {
+			_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
+			p.Q(td.Name, "_ := serv.", sName, titleCased, "().Empty()\n")
 		} else {
 			p.P("var %s_ %s\n", td.Name, td.GoName)
 		}
@@ -265,8 +270,11 @@ func (s *SqlStringer) TranslateRowToResult() string {
 	}
 	p.P("); (err != nil && err != sql.ErrNoRows) {\n return nil, err \n}\n")
 	for _, td := range outputFields {
+		_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
 		if td.IsMapped {
-			p.P("res.%s = %s_.ToProto()\n", td.Name, td.Name)
+			mappingString := P("serv.", sName, titleCased, "()")
+			p.Q("res.", td.Name, " = ", mappingString, ".ToProto(", td.Name, "_)\n")
+			// p.P("res.%s = %s_.ToProto()\n", td.Name, td.Name)
 		} else if td.IsMessage {
 			// this is super tacky.  But I can be sure I need this import at this point
 			s.method.

@@ -33,6 +33,7 @@ func main() {
 type RestOfImpl struct {
 	Params SpannerParams
 }
+type Mappings struct{}
 
 // using the persist lib queries to implement your own handlers.
 func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {

@@ -6,6 +6,7 @@ import (
 
 type PersistStringer struct{}
 
+// TYPECHANGE
 func (per *PersistStringer) MessageInputDeclaration(method *Method) string {
 	printer := &Printer{}
 	printer.P("type %s struct{\n", NewPLInputName(method))
@@ -34,11 +35,9 @@ func (per *PersistStringer) MessageInputDeclaration(method *Method) string {
 			plInputName, qf.Name, typeName, qf.Name,
 		)
 	}
-
 	return printer.String()
 }
 
-//HOOKCHANGE
 // merges custom defined handlers with our own
 func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	var dbType string
@@ -57,6 +56,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		"PERSIST *persist_lib.", NewPersistHelperName(service), "\n",
 		"FORWARDED RestOf", sName, "Handlers\n",
 		"HOOKS ", sName, "Hooks\n",
+		"MAPPINGS ", sName, "TypeMapping\n",
 		"}\n",
 	)
 	printer.P("type RestOf%sHandlers interface{\n", service.GetName())
@@ -87,7 +87,8 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		}
 	}
 	printer.P("}\n")
-
+	WriteBuilderTypeMappingsInterface(printer, service)
+	WriteTypeMappingsContractInterfaces(printer, service)
 	WriteBuilderHookInterfaceAndFunc(printer, service)
 	printer.Q(
 		"type ", sName, "ImplBuilder struct {\n",
@@ -97,6 +98,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		"i *", sName, "Impl\n",
 		"db *", dbType, "\n",
 		"hooks ", sName, "Hooks\n",
+		"mappings ", sName, "TypeMapping\n",
 		"}\n",
 		"func New", sName, "Builder() *", sName, "ImplBuilder {\n",
 		"return &", sName, "ImplBuilder{i: &", sName, "Impl{}}\n",
@@ -202,6 +204,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 		"b.i.PERSIST = &persist_lib.", NewPersistHelperName(service), "{Handlers: *b.queryHandlers}\n",
 		"b.i.FORWARDED = b.rest\n",
 		"b.i.HOOKS = b.hooks\n",
+		"b.i.MAPPINGS = b.mappings\n",
 		"return b.i, nil\n",
 		"}\n",
 	)
@@ -246,6 +249,63 @@ func WriteBuilderHooksAcceptingFunc(p *Printer, serv *Service) {
 		"return b\n",
 		"}\n",
 	)
+}
+
+func WriteBuilderTypeMappingsAcceptingFunc(p *Printer, serv *Service) {
+	s := serv.GetName()
+	p.Q("func(b *", s, "ImplBuilder) WithTypeMapping(ts ", s, "TypeMapping) *", s, "ImplBuilder {\n")
+	p.Q("\tb.mappings = ts\n")
+	p.Q("\treturn b\n")
+	p.Q("}\n")
+}
+
+func WriteBuilderTypeMappingsInterface(p *Printer, s *Service) {
+	sName := s.GetName()
+	// TODO google's WKT protobufs probably don't need the package prefix
+	p.Q("type ", sName, "TypeMapping interface{\n")
+	tms := s.GetServiceOption().GetTypes()
+	for _, tm := range tms {
+		// TODO implement these interfaces
+		_, titled := getGoNamesForTypeMapping(tm, s.File)
+		p.Q(sName, titled, "() ", sName, titled, "MappingImpl\n")
+	}
+	p.Q("}\n")
+
+}
+func WriteScanValuerInterface(p *Printer, s *Service) {
+	if s.IsSQL() {
+		p.Q("type ScanValuer interface {\n")
+		p.Q("\tsql.Scanner\n")
+		p.Q("\tdriver.Valuer\n")
+		p.Q("}\n")
+	} else if s.IsSpanner() {
+		p.Q("type ScanValuer interface {\n")
+		p.Q("\tSpannerScan(src *spanner.GenericColumnValue) error\n")
+		p.Q("\tSpannerValue() (interface{}, error)\n")
+		p.Q("}\n")
+	}
+}
+func WriteTypeMappingsContractInterfaces(p *Printer, s *Service) {
+	sName := s.GetName()
+	if s.IsSQL() {
+		for _, tm := range s.GetServiceOption().GetTypes() {
+			name, titled := getGoNamesForTypeMapping(tm, s.File)
+			p.Q("type ", sName, titled, "MappingImpl interface{\n")
+			p.Q("ToProto(persist_lib.ScanValuer) *", name, "\n")
+			p.Q("ToSql(*", name, ") persist_lib.ScanValuer\n")
+			p.Q("Empty() persist_lib.ScanValuer\n")
+			p.Q("}\n")
+		}
+	} else if s.IsSpanner() {
+		for _, tm := range s.GetServiceOption().GetTypes() {
+			name, titled := getGoNamesForTypeMapping(tm, s.File)
+			p.Q("type ", sName, titled, "MappingImpl interface{\n")
+			p.Q("ToProto(persist_lib.ScanValuer) *", name, "\n")
+			p.Q("ToSpanner(*", name, ") persist_lib.ScanValuer\n")
+			p.Q("Empty() persist_lib.ScanValuer\n")
+			p.Q("}\n")
+		}
+	}
 }
 
 func (per *PersistStringer) HandlersStructDeclaration(service *Service) string {
@@ -378,11 +438,13 @@ func (per *PersistStringer) QueryInterfaceDefinition(method *Method) string {
 	return printer.String()
 }
 
+// TYPECHANGE
 func (per *PersistStringer) SqlQueryFunction(method *Method) string {
 	opts := method.GetMethodOption()
 	if opts == nil {
 		return ""
 	}
+	// Join query with space
 	query := func() (out string) {
 		for _, q := range opts.GetQuery() {
 			out += q + " "
@@ -716,21 +778,19 @@ func (per *PersistStringer) DeclareSqlPackageDefs() string {
 
 func IteratorHelper(m *Method) string {
 	var iterType string
+
 	if m.Service.IsSpanner() {
 		iterType = "spanner.RowIterator"
 	} else if m.Service.IsSQL() {
 		iterType = "persist_lib.Result"
 	}
 	p := &Printer{}
-	p.P(
-		"func %s(iter *%s, next func(i *%s) error) error {\n",
-		IterProtoName(m),
-		iterType,
-		m.GetOutputType(),
-	)
+	out := m.GetOutputType()
+	sName := m.Service.GetName()
+	p.Q("func ", IterProtoName(m), "(ms ", sName, "TypeMapping, iter *", iterType, ", next func(i *", out, ") error) error {\n")
 	p.PA([]string{
 		"return iter.Do(func(r %s) error {\n",
-		"item, err := %s(r)\n",
+		"item, err := %s(ms, r)\n",
 		"if err != nil {\n",
 		"return fmt.Errorf(\"error converting %s row to protobuf message: %s\", err)\n",
 		"}\n",
@@ -742,6 +802,8 @@ func IteratorHelper(m *Method) string {
 	)
 	return p.String()
 }
+
+// TYPECHANGE
 func GetSqlPersistLibTypeName(t TypeDesc) string {
 	if t.IsMapped {
 		return "interface{}"
@@ -751,6 +813,8 @@ func GetSqlPersistLibTypeName(t TypeDesc) string {
 		return t.GoName
 	}
 }
+
+// TYPECHANGE
 func GetSpannerPersistLibTypeName(t TypeDesc) string {
 	if t.IsMapped {
 		return "interface{}"

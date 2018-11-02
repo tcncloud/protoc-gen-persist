@@ -253,9 +253,7 @@ func (f *FileStruct) ProcessImports() {
 
 				// if the type is mapped, we do not need this struct imported
 				// instead we need the mapped type to be imported
-				if m.GetMapping(mp) == nil {
-					f.ProcessImportsForType(mp.GetTypeName())
-				}
+				f.ProcessImportsForType(mp.GetTypeName())
 			}
 		}
 	}
@@ -284,25 +282,25 @@ func (f *FileStruct) ProcessImports() {
 		if srv.IsSQL() {
 			f.ImportList.GetOrAddImport("sql", "database/sql")
 		}
-		if opt := srv.GetServiceOption(); opt != nil {
-			for _, m := range opt.GetTypes() {
-				pkg := m.GetGoPackage()
-				f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
-			}
-		}
+		// if opt := srv.GetServiceOption(); opt != nil {
+		// 	for _, m := range opt.GetTypes() {
+		// 		pkg := m.GetGoPackage()
+		// 		f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
+		// 	}
+		// }
 		for _, m := range *srv.Methods {
 			importsForStructName(m.Desc.GetInputType(), m)
 			importsForStructName(m.Desc.GetOutputType(), m)
-			opts := m.GetMethodOption()
-			if opts == nil {
-				continue
-			}
-			if mappingOpt := opts.GetMapping(); mappingOpt != nil {
-				for _, typMap := range mappingOpt.GetTypes() {
-					pkg := typMap.GetGoPackage()
-					f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
-				}
-			}
+			// opts := m.GetMethodOption()
+			// if opts == nil {
+			// 	continue
+			// }
+			// if mappingOpt := opts.GetMapping(); mappingOpt != nil {
+			// 	for _, typMap := range mappingOpt.GetTypes() {
+			// 		pkg := typMap.GetGoPackage()
+			// 		f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
+			// 	}
+			// }
 		}
 	}
 }
@@ -376,6 +374,19 @@ func (f *FileStruct) SanatizeImports() {
 		}
 	}
 	f.ImportList = &imports
+}
+
+func (f *FileStruct) GetGoTypeName(typ string) string {
+	str := f.AllStructures.GetStructByProtoName(typ)
+	if str == nil {
+		return ""
+	}
+	if imp := f.ImportList.GetGoNameByStruct(str); imp != nil {
+		if f.NotSameAsMyPackage(imp.GoImportPath) {
+			return imp.GoPackageName + "." + str.GetGoName()
+		}
+	}
+	return str.GetGoName()
 }
 
 // the generator may need to make an extra package in the directory beneath ours
