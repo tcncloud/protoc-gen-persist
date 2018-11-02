@@ -465,10 +465,10 @@ func (m *Method) IsBidiStreaming() bool {
 
 // HOOKCHANGE
 func (m *Method) GetBeforeHookName() string {
-	return P(m.Service.GetName(), m.GetName(), "BeforeHook")
+	return P(m.GetName(), "BeforeHook")
 }
 func (m *Method) GetAfterHookName() string {
-	return P(m.Service.GetName(), m.GetName(), "AfterHook")
+	return P(m.GetName(), "AfterHook")
 }
 
 func (m *Method) Process() error {

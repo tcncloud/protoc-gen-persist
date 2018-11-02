@@ -281,6 +281,7 @@ func (f *FileStruct) ProcessImports() {
 		}
 		if srv.IsSQL() {
 			f.ImportList.GetOrAddImport("sql", "database/sql")
+			f.ImportList.GetOrAddImport("driver", "database/sql/driver")
 		}
 		// if opt := srv.GetServiceOption(); opt != nil {
 		// 	for _, m := range opt.GetTypes() {

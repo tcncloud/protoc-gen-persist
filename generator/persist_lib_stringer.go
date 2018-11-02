@@ -90,6 +90,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	WriteBuilderTypeMappingsInterface(printer, service)
 	WriteTypeMappingsContractInterfaces(printer, service)
 	WriteBuilderHookInterfaceAndFunc(printer, service)
+
 	printer.Q(
 		"type ", sName, "ImplBuilder struct {\n",
 		"err error\n ",
@@ -106,6 +107,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	)
 
 	WriteBuilderHooksAcceptingFunc(printer, service)
+	WriteBuilderTypeMappingsAcceptingFunc(printer, service)
 
 	printer.PA([]string{
 		"func (b *%sImplBuilder) WithRestOfGrpcHandlers(r RestOf%sHandlers) *%sImplBuilder {\n",
@@ -267,7 +269,7 @@ func WriteBuilderTypeMappingsInterface(p *Printer, s *Service) {
 	for _, tm := range tms {
 		// TODO implement these interfaces
 		_, titled := getGoNamesForTypeMapping(tm, s.File)
-		p.Q(sName, titled, "() ", sName, titled, "MappingImpl\n")
+		p.Q(titled, "() ", sName, titled, "MappingImpl\n")
 	}
 	p.Q("}\n")
 
@@ -290,19 +292,25 @@ func WriteTypeMappingsContractInterfaces(p *Printer, s *Service) {
 	if s.IsSQL() {
 		for _, tm := range s.GetServiceOption().GetTypes() {
 			name, titled := getGoNamesForTypeMapping(tm, s.File)
+			_, maybeStar := needsExtraStar(tm)
 			p.Q("type ", sName, titled, "MappingImpl interface{\n")
-			p.Q("ToProto(persist_lib.ScanValuer) *", name, "\n")
-			p.Q("ToSql(*", name, ") persist_lib.ScanValuer\n")
-			p.Q("Empty() persist_lib.ScanValuer\n")
+			p.Q("ToProto(*", maybeStar, name, ") error\n")
+			p.Q("ToSql(", maybeStar, name, ") sql.Scanner\n")
+			p.Q("Empty() ", sName, titled, "MappingImpl\n")
+			p.Q("sql.Scanner\n")
+			p.Q("driver.Valuer\n")
 			p.Q("}\n")
 		}
 	} else if s.IsSpanner() {
 		for _, tm := range s.GetServiceOption().GetTypes() {
 			name, titled := getGoNamesForTypeMapping(tm, s.File)
+			_, maybeStar := needsExtraStar(tm)
 			p.Q("type ", sName, titled, "MappingImpl interface{\n")
-			p.Q("ToProto(persist_lib.ScanValuer) *", name, "\n")
-			p.Q("ToSpanner(*", name, ") persist_lib.ScanValuer\n")
-			p.Q("Empty() persist_lib.ScanValuer\n")
+			p.Q("ToProto(*", maybeStar, name, ") error\n")
+			p.Q("ToSpanner(", maybeStar, name, ") persist_lib.ScanValuer\n")
+			p.Q("Empty() ", sName, titled, "MappingImpl\n")
+			p.Q("SpannerScan(src *spanner.GenericColumnValue) error\n")
+			p.Q("SpannerValue() (interface{}, error)\n")
 			p.Q("}\n")
 		}
 	}

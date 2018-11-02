@@ -29,25 +29,28 @@
 package pb
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"time"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/lib/pq"
-	"time"
 )
 
 type TimeString struct {
 	t *timestamp.Timestamp
 }
 
-func (ts TimeString) ToSql(t *timestamp.Timestamp) *TimeString {
+func (ts TimeString) ToSql(t *timestamp.Timestamp) sql.Scanner {
 	ts.t = t
 	return &ts
 }
 
-func (ts TimeString) ToProto() *timestamp.Timestamp {
-	return ts.t
+func (ts TimeString) ToProto(req **timestamp.Timestamp) error {
+	*req = ts.t
+	return nil
 }
 
 func (t *TimeString) Scan(src interface{}) error {
@@ -70,17 +73,21 @@ func (t *TimeString) Scan(src interface{}) error {
 func (t *TimeString) Value() (driver.Value, error) {
 	return ptypes.TimestampString(t.t), nil
 }
+func (t TimeString) Empty() UServTimestampTimestampMappingImpl {
+	return new(TimeString)
+}
 
 type SliceStringConverter struct {
 	v *SliceStringParam
 }
 
-func (s SliceStringConverter) ToSql(v *SliceStringParam) *SliceStringConverter {
+func (s SliceStringConverter) ToSql(v *SliceStringParam) sql.Scanner {
 	s.v = v
 	return &s
 }
-func (s SliceStringConverter) ToProto() *SliceStringParam {
-	return s.v
+func (s SliceStringConverter) ToProto(req **SliceStringParam) error {
+	*req = s.v
+	return nil
 }
 
 func (s *SliceStringConverter) Scan(src interface{}) error {
@@ -94,6 +101,9 @@ func (s *SliceStringConverter) Scan(src interface{}) error {
 
 func (s *SliceStringConverter) Value() (driver.Value, error) {
 	return pq.StringArray(s.v.Slice).Value()
+}
+func (s SliceStringConverter) Empty() UServSliceStringParamMappingImpl {
+	return new(SliceStringConverter)
 }
 
 var inc int64

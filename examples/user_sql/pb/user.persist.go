@@ -5,6 +5,7 @@ package pb
 
 import (
 	sql "database/sql"
+	driver "database/sql/driver"
 	fmt "fmt"
 	io "io"
 
@@ -26,24 +27,28 @@ type RestOfUServHandlers interface {
 	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
 }
 type UServTypeMapping interface {
-	UServTimestampTimestamp() UServTimestampTimestampMappingImpl
-	UServSliceStringParam() UServSliceStringParamMappingImpl
+	TimestampTimestamp() UServTimestampTimestampMappingImpl
+	SliceStringParam() UServSliceStringParamMappingImpl
 }
 type UServTimestampTimestampMappingImpl interface {
-	ToProto(persist_lib.ScanValuer) *timestamp.Timestamp
-	ToSql(*timestamp.Timestamp) persist_lib.ScanValuer
-	Empty() persist_lib.ScanValuer
+	ToProto(**timestamp.Timestamp) error
+	ToSql(*timestamp.Timestamp) sql.Scanner
+	Empty() UServTimestampTimestampMappingImpl
+	sql.Scanner
+	driver.Valuer
 }
 type UServSliceStringParamMappingImpl interface {
-	ToProto(persist_lib.ScanValuer) *SliceStringParam
-	ToSql(*SliceStringParam) persist_lib.ScanValuer
-	Empty() persist_lib.ScanValuer
+	ToProto(**SliceStringParam) error
+	ToSql(*SliceStringParam) sql.Scanner
+	Empty() UServSliceStringParamMappingImpl
+	sql.Scanner
+	driver.Valuer
 }
 type UServHooks interface {
-	UServInsertUsersBeforeHook(*User) (*Empty, error)
-	UServInsertUsersAfterHook(*User, *Empty) error
-	UServGetAllUsersBeforeHook(*Empty) ([]*User, error)
-	UServGetAllUsersAfterHook(*Empty, *User) error
+	InsertUsersBeforeHook(*User) (*Empty, error)
+	InsertUsersAfterHook(*User, *Empty) error
+	GetAllUsersBeforeHook(*Empty) ([]*User, error)
+	GetAllUsersAfterHook(*Empty, *User) error
 }
 type UServImplBuilder struct {
 	err           error
@@ -60,6 +65,10 @@ func NewUServBuilder() *UServImplBuilder {
 }
 func (b *UServImplBuilder) WithHooks(hs UServHooks) *UServImplBuilder {
 	b.hooks = hs
+	return b
+}
+func (b *UServImplBuilder) WithTypeMapping(ts UServTypeMapping) *UServImplBuilder {
+	b.mappings = ts
 	return b
 }
 func (b *UServImplBuilder) WithRestOfGrpcHandlers(r RestOfUServHandlers) *UServImplBuilder {
@@ -177,7 +186,7 @@ func UserToUServPersistType(serv UServTypeMapping, req *User) (*persist_lib.User
 		}
 		params.Friends = raw
 	}
-	mapper := serv.UServTimestampTimestamp()
+	mapper := serv.TimestampTimestamp()
 	params.CreatedOn = mapper.ToSql(req.CreatedOn)
 	return params, nil
 }
@@ -186,12 +195,12 @@ func UserFromUServDatabaseRow(serv UServTypeMapping, row persist_lib.Scanable) (
 	var Id_ int64
 	var Name_ string
 	var Friends_ []byte
-	CreatedOn_ := serv.UServTimestampTimestamp().Empty()
+	CreatedOn_ := serv.TimestampTimestamp().Empty()
 	if err := row.Scan(
 		&Id_,
 		&Name_,
 		&Friends_,
-		&CreatedOn_,
+		CreatedOn_,
 	); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
@@ -204,7 +213,9 @@ func UserFromUServDatabaseRow(serv UServTypeMapping, row persist_lib.Scanable) (
 		}
 		res.Friends = converted
 	}
-	res.CreatedOn = serv.UServTimestampTimestamp().ToProto(CreatedOn_)
+	if err := CreatedOn_.ToProto(&res.CreatedOn); err != nil {
+		return nil, err
+	}
 	return res, nil
 }
 func IterUServUserProto(ms UServTypeMapping, iter *persist_lib.Result, next func(i *User) error) error {
@@ -218,7 +229,7 @@ func IterUServUserProto(ms UServTypeMapping, iter *persist_lib.Result, next func
 }
 func FriendsReqToUServPersistType(serv UServTypeMapping, req *FriendsReq) (*persist_lib.FriendsReqForUServ, error) {
 	params := &persist_lib.FriendsReqForUServ{}
-	mapper := serv.UServSliceStringParam()
+	mapper := serv.SliceStringParam()
 	params.Names = mapper.ToSql(req.Names)
 	return params, nil
 }
@@ -264,7 +275,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		beforeRes, err := s.HOOKS.UServInsertUsersBeforeHook(req)
+		beforeRes, err := s.HOOKS.InsertUsersBeforeHook(req)
 		if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 		} else if beforeRes != nil {
@@ -292,7 +303,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	// so the after hook for client streaming calls
 	// is called with an empty request struct
 	fakeReq := &User{}
-	if err := s.HOOKS.UServInsertUsersAfterHook(fakeReq, res); err != nil {
+	if err := s.HOOKS.InsertUsersAfterHook(fakeReq, res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
 	if err := stream.SendAndClose(res); err != nil {
@@ -303,7 +314,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
 	var err error
 	_ = err
-	beforeRes, err := s.HOOKS.UServGetAllUsersBeforeHook(req)
+	beforeRes, err := s.HOOKS.GetAllUsersBeforeHook(req)
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 	} else if beforeRes != nil {
@@ -327,7 +338,7 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 			iterErr = err
 			return
 		}
-		if err := s.HOOKS.UServGetAllUsersAfterHook(req, res); err != nil {
+		if err := s.HOOKS.GetAllUsersAfterHook(req, res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			return
 		}

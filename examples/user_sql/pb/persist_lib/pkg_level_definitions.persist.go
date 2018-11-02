@@ -2,7 +2,6 @@ package persist_lib
 
 import (
 	"database/sql"
-	driver "database/sql/driver"
 )
 
 type SqlClientGetter func() (*sql.DB, error)
@@ -79,10 +78,6 @@ func (r *Result) Err() error {
 	return r.err
 }
 
-type ScanValuer interface {
-	sql.Scanner
-	driver.Valuer
-}
 type EmptyForUServ struct {
 }
 

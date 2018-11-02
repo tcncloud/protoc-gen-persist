@@ -32,7 +32,7 @@ func (s *SpannerStringer) MapRequestToParams() string {
 
 		if td.IsMapped {
 
-			mappingString := P("serv.", sName, titleCased, "()")
+			mappingString := P("serv.", titleCased, "()")
 			p.Q("if params.", td.Name, ", err = ", mappingString, ".ToSpanner(req.", td.Name, ").SpannerValue(); err != nil {\n")
 			p.Q("return nil, err\n")
 			p.Q("}\n")
@@ -93,12 +93,16 @@ func (s *SpannerStringer) TranslateRowToResult() string {
 			p.Q("\treturn nil, err\n")
 			p.Q("}\n{\n")
 			// TYPECHAGE
-			p.Q("mapper := serv.", sName, titleCased, "()\n")
+
+			p.Q("mapper := serv.", titleCased, "()\n")
 			p.Q("local := mapper.Empty()\n")
 			p.Q("if err := local.SpannerScan(", td.Name, "_); err != nil {\n")
 			p.Q("\treturn nil, err\n")
 			p.Q("}\n")
-			p.Q("res.", td.Name, " = mapper.ToProto(local)\n")
+			p.Q("if err := ", td.Name, "_.ToProto(&res.", td.Name, "); err != nil {\n")
+			p.Q("\treturn nil, err\n")
+			p.Q("}\n")
+			// p.Q("res.", td.Name, " = mapper.ToProto(local)\n")
 			p.Q("}\n")
 		} else if td.IsMessage {
 			// this is super tacky.  But I can be sure I need this import at this point
@@ -213,7 +217,7 @@ func (s *SqlStringer) MapRequestToParams() string {
 	for _, td := range typeDescs {
 		_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
 		if td.IsMapped {
-			p.Q("mapper := serv.", sName, titleCased, "()\n")
+			p.Q("mapper := serv.", titleCased, "()\n")
 			p.Q("params.", td.Name, " = mapper.ToSql(req.", td.Name, ")\n")
 			// p.Q("params.", td.Name, " = s.", sName, titleCased, "(req.", td.Name, ")\n")
 			// p.P("params.%s = (%s{}).ToSql(req.%s)\n", td.Name, td.GoName, td.Name)
@@ -259,21 +263,27 @@ func (s *SqlStringer) TranslateRowToResult() string {
 			p.P("var %s_ int32\n", td.Name)
 		} else if td.IsMapped {
 			_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
-			p.Q(td.Name, "_ := serv.", sName, titleCased, "().Empty()\n")
+			p.Q(td.Name, "_ := serv.", titleCased, "().Empty()\n")
 		} else {
 			p.P("var %s_ %s\n", td.Name, td.GoName)
 		}
 	}
 	p.P("if err := row.Scan(\n")
 	for _, td := range outputFields {
-		p.P("&%s_,\n", td.Name)
+		if !td.IsMapped {
+			p.P("&")
+		}
+		p.P("%s_,\n", td.Name)
 	}
 	p.P("); (err != nil && err != sql.ErrNoRows) {\n return nil, err \n}\n")
 	for _, td := range outputFields {
-		_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
+		// _, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
 		if td.IsMapped {
-			mappingString := P("serv.", sName, titleCased, "()")
-			p.Q("res.", td.Name, " = ", mappingString, ".ToProto(", td.Name, "_)\n")
+			p.Q("if err := ", td.Name, "_.ToProto(&res.", td.Name, "); err != nil {\n")
+			p.Q("\treturn nil, err\n")
+			p.Q("}\n")
+			// mappingString := P("serv.", titleCased, "()")
+			// p.Q("res.", td.Name, " = ", mappingString, ".ToProto(", td.Name, "_)\n")
 			// p.P("res.%s = %s_.ToProto()\n", td.Name, td.Name)
 		} else if td.IsMessage {
 			// this is super tacky.  But I can be sure I need this import at this point

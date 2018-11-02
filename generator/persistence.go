@@ -145,8 +145,6 @@ func GeneratePkgLevelContent(pkg PackagePath, files []*FileStruct) PersistConten
 		for _, s := range *f.ServiceList {
 			p := &Printer{}
 
-			WriteScanValuerInterface(p, s)
-
 			content.Content += p.String()
 
 			for _, m := range *s.Methods {

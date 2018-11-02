@@ -201,11 +201,16 @@ var users = []*pb.User{
 }
 
 func Serve(servFunc func(s *grpc.Server)) {
+	restOfHandlers := &main.RestOfImpl{
+		Mappings: &main.MappingImpl{},
+		Hooks:    &main.HooksImpl{},
+	}
 	service := pb.NewUServBuilder().
 		WithDefaultQueryHandlers().
 		WithNewSqlDb("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable host=localhost").
-		WithRestOfGrpcHandlers(&main.RestOfImpl{}).
-		WithHooks(&main.HooksImpl{}).
+		WithRestOfGrpcHandlers(restOfHandlers).
+		WithHooks(restOfHandlers.Hooks).
+		WithTypeMapping(restOfHandlers.Mappings).
 		MustBuild()
 	server := grpc.NewServer()
 

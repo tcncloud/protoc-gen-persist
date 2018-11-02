@@ -33,6 +33,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 
@@ -100,4 +101,11 @@ func getGoNamesForTypeMapping(tm *persist.TypeMapping_TypeDescriptor, file *File
 	}
 	titled := strings.Join(nameParts, "")
 	return name, titled
+}
+
+func needsExtraStar(tm *persist.TypeMapping_TypeDescriptor) (bool, string) {
+	if tm.GetProtoType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
+		return true, "*"
+	}
+	return false, ""
 }
