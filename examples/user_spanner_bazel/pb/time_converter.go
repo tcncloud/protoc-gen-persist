@@ -29,23 +29,24 @@
 package pb
 
 import (
+	"time"
+
 	"cloud.google.com/go/spanner"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"time"
 )
 
 type TimeString struct {
 	t *timestamp.Timestamp
 }
 
-func (ts TimeString) ToSpanner(t *timestamp.Timestamp) *TimeString {
+func (ts TimeString) ToSpanner(t *timestamp.Timestamp) UServTimestampTimestampMappingImpl {
 	ts.t = t
 	return &ts
 }
-
-func (ts TimeString) ToProto() *timestamp.Timestamp {
-	return ts.t
+func (ts TimeString) ToProto(req **timestamp.Timestamp) error {
+	*req = ts.t
+	return nil
 }
 
 func (t *TimeString) SpannerScan(src *spanner.GenericColumnValue) error {
@@ -67,6 +68,9 @@ func (t *TimeString) SpannerScan(src *spanner.GenericColumnValue) error {
 
 func (t *TimeString) SpannerValue() (interface{}, error) {
 	return ptypes.TimestampString(t.t), nil
+}
+func (t TimeString) Empty() UServTimestampTimestampMappingImpl {
+	return new(TimeString)
 }
 
 var inc int64

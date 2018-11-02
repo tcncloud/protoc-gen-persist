@@ -60,19 +60,13 @@ message Empty{}
 service UServ {
 	option (persist.service_type) = SQL;
 	option (persist.mapping) = {
-		types: [
-		{
+		types: [{
 			proto_type_name: ".google.protobuf.Timestamp",
 			proto_type: TYPE_MESSAGE,
-			go_type: "TimeString",
-			go_package: "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb",
-		},
-		{ proto_type_name: ".pb.SliceStringParam",
+		},{
+			proto_type_name: ".pb.SliceStringParam",
 			proto_type: TYPE_MESSAGE,
-			go_type: "SliceStringConverter",
-			go_package: "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb",
-		}
-		]
+		}]
 	};
 	rpc CreateTable(Empty) returns (Empty) {
 		option (persist.ql) = {

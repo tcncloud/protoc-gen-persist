@@ -136,12 +136,17 @@ func GeneratePkgLevelContent(pkg PackagePath, files []*FileStruct) PersistConten
 			}
 			if m.IsSQL() {
 				imports.GetOrAddImport("", "database/sql")
+				imports.GetOrAddImport("driver", "database/sql/driver")
 				isSql = true
 			}
 		}
 	}
 	for _, f := range files {
 		for _, s := range *f.ServiceList {
+			p := &Printer{}
+
+			content.Content += p.String()
+
 			for _, m := range *s.Methods {
 				if !haveProcessed[NewPLInputName(m).String()] {
 					haveProcessed[NewPLInputName(m).String()] = true

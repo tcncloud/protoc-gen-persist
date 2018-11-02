@@ -5,10 +5,12 @@ package pb
 
 import (
 	sql "database/sql"
+	driver "database/sql/driver"
 	fmt "fmt"
 	io "io"
 
 	proto "github.com/golang/protobuf/proto"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb/persist_lib"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
@@ -19,15 +21,34 @@ type UServImpl struct {
 	PERSIST   *persist_lib.UServMethodReceiver
 	FORWARDED RestOfUServHandlers
 	HOOKS     UServHooks
+	MAPPINGS  UServTypeMapping
 }
 type RestOfUServHandlers interface {
 	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
 }
+type UServTypeMapping interface {
+	TimestampTimestamp() UServTimestampTimestampMappingImpl
+	SliceStringParam() UServSliceStringParamMappingImpl
+}
+type UServTimestampTimestampMappingImpl interface {
+	ToProto(**timestamp.Timestamp) error
+	ToSql(*timestamp.Timestamp) sql.Scanner
+	Empty() UServTimestampTimestampMappingImpl
+	sql.Scanner
+	driver.Valuer
+}
+type UServSliceStringParamMappingImpl interface {
+	ToProto(**SliceStringParam) error
+	ToSql(*SliceStringParam) sql.Scanner
+	Empty() UServSliceStringParamMappingImpl
+	sql.Scanner
+	driver.Valuer
+}
 type UServHooks interface {
-	UServInsertUsersBeforeHook(*User) (*Empty, error)
-	UServInsertUsersAfterHook(*User, *Empty) error
-	UServGetAllUsersBeforeHook(*Empty) ([]*User, error)
-	UServGetAllUsersAfterHook(*Empty, *User) error
+	InsertUsersBeforeHook(*User) (*Empty, error)
+	InsertUsersAfterHook(*User, *Empty) error
+	GetAllUsersBeforeHook(*Empty) ([]*User, error)
+	GetAllUsersAfterHook(*Empty, *User) error
 }
 type UServImplBuilder struct {
 	err           error
@@ -36,6 +57,7 @@ type UServImplBuilder struct {
 	i             *UServImpl
 	db            *sql.DB
 	hooks         UServHooks
+	mappings      UServTypeMapping
 }
 
 func NewUServBuilder() *UServImplBuilder {
@@ -43,6 +65,10 @@ func NewUServBuilder() *UServImplBuilder {
 }
 func (b *UServImplBuilder) WithHooks(hs UServHooks) *UServImplBuilder {
 	b.hooks = hs
+	return b
+}
+func (b *UServImplBuilder) WithTypeMapping(ts UServTypeMapping) *UServImplBuilder {
+	b.mappings = ts
 	return b
 }
 func (b *UServImplBuilder) WithRestOfGrpcHandlers(r RestOfUServHandlers) *UServImplBuilder {
@@ -116,6 +142,7 @@ func (b *UServImplBuilder) Build() (*UServImpl, error) {
 	b.i.PERSIST = &persist_lib.UServMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
 	b.i.HOOKS = b.hooks
+	b.i.MAPPINGS = b.mappings
 	return b.i, nil
 }
 func (b *UServImplBuilder) MustBuild() *UServImpl {
@@ -125,27 +152,27 @@ func (b *UServImplBuilder) MustBuild() *UServImpl {
 	}
 	return s
 }
-func EmptyToUServPersistType(req *Empty) (*persist_lib.EmptyForUServ, error) {
+func EmptyToUServPersistType(serv UServTypeMapping, req *Empty) (*persist_lib.EmptyForUServ, error) {
 	params := &persist_lib.EmptyForUServ{}
 	return params, nil
 }
-func EmptyFromUServDatabaseRow(row persist_lib.Scanable) (*Empty, error) {
+func EmptyFromUServDatabaseRow(serv UServTypeMapping, row persist_lib.Scanable) (*Empty, error) {
 	res := &Empty{}
 	if err := row.Scan(); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 	return res, nil
 }
-func IterUServEmptyProto(iter *persist_lib.Result, next func(i *Empty) error) error {
+func IterUServEmptyProto(ms UServTypeMapping, iter *persist_lib.Result, next func(i *Empty) error) error {
 	return iter.Do(func(r persist_lib.Scanable) error {
-		item, err := EmptyFromUServDatabaseRow(r)
+		item, err := EmptyFromUServDatabaseRow(ms, r)
 		if err != nil {
 			return fmt.Errorf("error converting Empty row to protobuf message: %s", err)
 		}
 		return next(item)
 	})
 }
-func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
+func UserToUServPersistType(serv UServTypeMapping, req *User) (*persist_lib.UserForUServ, error) {
 	params := &persist_lib.UserForUServ{}
 	params.Id = req.Id
 	params.Name = req.Name
@@ -159,20 +186,21 @@ func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
 		}
 		params.Friends = raw
 	}
-	params.CreatedOn = (TimeString{}).ToSql(req.CreatedOn)
+	mapper := serv.TimestampTimestamp()
+	params.CreatedOn = mapper.ToSql(req.CreatedOn)
 	return params, nil
 }
-func UserFromUServDatabaseRow(row persist_lib.Scanable) (*User, error) {
+func UserFromUServDatabaseRow(serv UServTypeMapping, row persist_lib.Scanable) (*User, error) {
 	res := &User{}
 	var Id_ int64
 	var Name_ string
 	var Friends_ []byte
-	var CreatedOn_ TimeString
+	CreatedOn_ := serv.TimestampTimestamp().Empty()
 	if err := row.Scan(
 		&Id_,
 		&Name_,
 		&Friends_,
-		&CreatedOn_,
+		CreatedOn_,
 	); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
@@ -185,21 +213,24 @@ func UserFromUServDatabaseRow(row persist_lib.Scanable) (*User, error) {
 		}
 		res.Friends = converted
 	}
-	res.CreatedOn = CreatedOn_.ToProto()
+	if err := CreatedOn_.ToProto(&res.CreatedOn); err != nil {
+		return nil, err
+	}
 	return res, nil
 }
-func IterUServUserProto(iter *persist_lib.Result, next func(i *User) error) error {
+func IterUServUserProto(ms UServTypeMapping, iter *persist_lib.Result, next func(i *User) error) error {
 	return iter.Do(func(r persist_lib.Scanable) error {
-		item, err := UserFromUServDatabaseRow(r)
+		item, err := UserFromUServDatabaseRow(ms, r)
 		if err != nil {
 			return fmt.Errorf("error converting User row to protobuf message: %s", err)
 		}
 		return next(item)
 	})
 }
-func FriendsReqToUServPersistType(req *FriendsReq) (*persist_lib.FriendsReqForUServ, error) {
+func FriendsReqToUServPersistType(serv UServTypeMapping, req *FriendsReq) (*persist_lib.FriendsReqForUServ, error) {
 	params := &persist_lib.FriendsReqForUServ{}
-	params.Names = (SliceStringConverter{}).ToSql(req.Names)
+	mapper := serv.SliceStringParam()
+	params.Names = mapper.ToSql(req.Names)
 	return params, nil
 }
 func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
@@ -207,7 +238,7 @@ func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error)
 	var res = &Empty{}
 	_ = err
 	_ = res
-	params, err := EmptyToUServPersistType(req)
+	params, err := EmptyToUServPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +247,7 @@ func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error)
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = EmptyFromUServDatabaseRow(row)
+		res, err = EmptyFromUServDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -244,16 +275,13 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		fmt.Printf("s %#v", s)
-		fmt.Printf("s.HOOKS %#v\n", s.HOOKS)
-		fmt.Printf("req: %#v, %+v\n", req, req)
-		beforeRes, err := s.HOOKS.UServInsertUsersBeforeHook(req)
+		beforeRes, err := s.HOOKS.InsertUsersBeforeHook(req)
 		if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 		} else if beforeRes != nil {
 			continue
 		}
-		params, err := UserToUServPersistType(req)
+		params, err := UserToUServPersistType(s.MAPPINGS, req)
 		if err != nil {
 			return err
 		}
@@ -266,7 +294,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = EmptyFromUServDatabaseRow(row)
+		res, err = EmptyFromUServDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			return err
 		}
@@ -275,7 +303,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 	// so the after hook for client streaming calls
 	// is called with an empty request struct
 	fakeReq := &User{}
-	if err := s.HOOKS.UServInsertUsersAfterHook(fakeReq, res); err != nil {
+	if err := s.HOOKS.InsertUsersAfterHook(fakeReq, res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
 	if err := stream.SendAndClose(res); err != nil {
@@ -286,7 +314,7 @@ func (s *UServImpl) InsertUsers(stream UServ_InsertUsersServer) error {
 func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
 	var err error
 	_ = err
-	beforeRes, err := s.HOOKS.UServGetAllUsersBeforeHook(req)
+	beforeRes, err := s.HOOKS.GetAllUsersBeforeHook(req)
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 	} else if beforeRes != nil {
@@ -296,7 +324,7 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 			}
 		}
 	}
-	params, err := EmptyToUServPersistType(req)
+	params, err := EmptyToUServPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return err
 	}
@@ -305,12 +333,12 @@ func (s *UServImpl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) erro
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := UserFromUServDatabaseRow(row)
+		res, err := UserFromUServDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := s.HOOKS.UServGetAllUsersAfterHook(req, res); err != nil {
+		if err := s.HOOKS.GetAllUsersAfterHook(req, res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			return
 		}
@@ -330,7 +358,7 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 	var res = &User{}
 	_ = err
 	_ = res
-	params, err := UserToUServPersistType(req)
+	params, err := UserToUServPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +367,7 @@ func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = UserFromUServDatabaseRow(row)
+		res, err = UserFromUServDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -363,7 +391,7 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params, err := UserToUServPersistType(req)
+		params, err := UserToUServPersistType(s.MAPPINGS, req)
 		if err != nil {
 			return err
 		}
@@ -372,7 +400,7 @@ func (s *UServImpl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 		}
 		if row != nil {
-			res, err := UserFromUServDatabaseRow(row)
+			res, err := UserFromUServDatabaseRow(s.MAPPINGS, row)
 			if err != nil {
 				return err
 			}
@@ -388,7 +416,7 @@ func (s *UServImpl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, err
 	var res = &Empty{}
 	_ = err
 	_ = res
-	params, err := UserToUServPersistType(req)
+	params, err := UserToUServPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +425,7 @@ func (s *UServImpl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, err
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = EmptyFromUServDatabaseRow(row)
+		res, err = EmptyFromUServDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -416,7 +444,7 @@ func (s *UServImpl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer
 func (s *UServImpl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
 	var err error
 	_ = err
-	params, err := FriendsReqToUServPersistType(req)
+	params, err := FriendsReqToUServPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return err
 	}
@@ -425,7 +453,7 @@ func (s *UServImpl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) e
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := UserFromUServDatabaseRow(row)
+		res, err := UserFromUServDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -446,7 +474,7 @@ func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 	var res = &Empty{}
 	_ = err
 	_ = res
-	params, err := EmptyToUServPersistType(req)
+	params, err := EmptyToUServPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +483,7 @@ func (s *UServImpl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = EmptyFromUServDatabaseRow(row)
+		res, err = EmptyFromUServDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return

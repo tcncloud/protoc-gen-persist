@@ -5,10 +5,11 @@ package basic
 
 import (
 	sql "database/sql"
+	driver "database/sql/driver"
 	fmt "fmt"
 	io "io"
 
-	mytime "github.com/tcncloud/protoc-gen-persist/tests/mytime"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/tests/sql/basic/persist_lib"
 	test "github.com/tcncloud/protoc-gen-persist/tests/test"
 	context "golang.org/x/net/context"
@@ -20,20 +21,31 @@ type AmazingImpl struct {
 	PERSIST   *persist_lib.AmazingMethodReceiver
 	FORWARDED RestOfAmazingHandlers
 	HOOKS     AmazingHooks
+	MAPPINGS  AmazingTypeMapping
 }
 type RestOfAmazingHandlers interface {
 	UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error)
 	NoGenerationForBadReturnTypes(ctx context.Context, req *test.ExampleTable) (*BadReturn, error)
 }
+type AmazingTypeMapping interface {
+	TimestampTimestamp() AmazingTimestampTimestampMappingImpl
+}
+type AmazingTimestampTimestampMappingImpl interface {
+	ToProto(**timestamp.Timestamp) error
+	ToSql(*timestamp.Timestamp) sql.Scanner
+	Empty() AmazingTimestampTimestampMappingImpl
+	sql.Scanner
+	driver.Valuer
+}
 type AmazingHooks interface {
-	AmazingUniarySelectWithHooksBeforeHook(*test.PartialTable) (*test.ExampleTable, error)
-	AmazingUniarySelectWithHooksAfterHook(*test.PartialTable, *test.ExampleTable) error
-	AmazingServerStreamWithHooksBeforeHook(*test.Name) ([]*test.ExampleTable, error)
-	AmazingServerStreamWithHooksAfterHook(*test.Name, *test.ExampleTable) error
-	AmazingBidirectionalWithHooksBeforeHook(*test.ExampleTable) (*test.ExampleTable, error)
-	AmazingBidirectionalWithHooksAfterHook(*test.ExampleTable, *test.ExampleTable) error
-	AmazingClientStreamWithHookBeforeHook(*test.ExampleTable) (*test.Ids, error)
-	AmazingClientStreamWithHookAfterHook(*test.ExampleTable, *test.Ids) error
+	UniarySelectWithHooksBeforeHook(*test.PartialTable) (*test.ExampleTable, error)
+	UniarySelectWithHooksAfterHook(*test.PartialTable, *test.ExampleTable) error
+	ServerStreamWithHooksBeforeHook(*test.Name) ([]*test.ExampleTable, error)
+	ServerStreamWithHooksAfterHook(*test.Name, *test.ExampleTable) error
+	BidirectionalWithHooksBeforeHook(*test.ExampleTable) (*test.ExampleTable, error)
+	BidirectionalWithHooksAfterHook(*test.ExampleTable, *test.ExampleTable) error
+	ClientStreamWithHookBeforeHook(*test.ExampleTable) (*test.Ids, error)
+	ClientStreamWithHookAfterHook(*test.ExampleTable, *test.Ids) error
 }
 type AmazingImplBuilder struct {
 	err           error
@@ -42,6 +54,7 @@ type AmazingImplBuilder struct {
 	i             *AmazingImpl
 	db            *sql.DB
 	hooks         AmazingHooks
+	mappings      AmazingTypeMapping
 }
 
 func NewAmazingBuilder() *AmazingImplBuilder {
@@ -49,6 +62,10 @@ func NewAmazingBuilder() *AmazingImplBuilder {
 }
 func (b *AmazingImplBuilder) WithHooks(hs AmazingHooks) *AmazingImplBuilder {
 	b.hooks = hs
+	return b
+}
+func (b *AmazingImplBuilder) WithTypeMapping(ts AmazingTypeMapping) *AmazingImplBuilder {
+	b.mappings = ts
 	return b
 }
 func (b *AmazingImplBuilder) WithRestOfGrpcHandlers(r RestOfAmazingHandlers) *AmazingImplBuilder {
@@ -122,6 +139,7 @@ func (b *AmazingImplBuilder) Build() (*AmazingImpl, error) {
 	b.i.PERSIST = &persist_lib.AmazingMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
 	b.i.HOOKS = b.hooks
+	b.i.MAPPINGS = b.mappings
 	return b.i, nil
 }
 func (b *AmazingImplBuilder) MustBuild() *AmazingImpl {
@@ -131,51 +149,59 @@ func (b *AmazingImplBuilder) MustBuild() *AmazingImpl {
 	}
 	return s
 }
-func PartialTableToAmazingPersistType(req *test.PartialTable) (*persist_lib.Test_PartialTableForAmazing, error) {
+func PartialTableToAmazingPersistType(serv AmazingTypeMapping, req *test.PartialTable) (*persist_lib.Test_PartialTableForAmazing, error) {
 	params := &persist_lib.Test_PartialTableForAmazing{}
 	params.Id = req.Id
-	params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+	{
+		mapper := serv.TimestampTimestamp()
+		params.StartTime = mapper.ToSql(req.StartTime)
+	}
 	return params, nil
 }
-func ExampleTableFromAmazingDatabaseRow(row persist_lib.Scanable) (*test.ExampleTable, error) {
+func ExampleTableFromAmazingDatabaseRow(serv AmazingTypeMapping, row persist_lib.Scanable) (*test.ExampleTable, error) {
 	res := &test.ExampleTable{}
 	var Id_ int64
-	var StartTime_ mytime.MyTime
+	StartTime_ := serv.TimestampTimestamp().Empty()
 	var Name_ string
 	if err := row.Scan(
 		&Id_,
-		&StartTime_,
+		StartTime_,
 		&Name_,
 	); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 	res.Id = Id_
-	res.StartTime = StartTime_.ToProto()
+	if err := StartTime_.ToProto(&res.StartTime); err != nil {
+		return nil, err
+	}
 	res.Name = Name_
 	return res, nil
 }
-func IterAmazingExampleTableProto(iter *persist_lib.Result, next func(i *test.ExampleTable) error) error {
+func IterAmazingExampleTableProto(ms AmazingTypeMapping, iter *persist_lib.Result, next func(i *test.ExampleTable) error) error {
 	return iter.Do(func(r persist_lib.Scanable) error {
-		item, err := ExampleTableFromAmazingDatabaseRow(r)
+		item, err := ExampleTableFromAmazingDatabaseRow(ms, r)
 		if err != nil {
 			return fmt.Errorf("error converting test.ExampleTable row to protobuf message: %s", err)
 		}
 		return next(item)
 	})
 }
-func NameToAmazingPersistType(req *test.Name) (*persist_lib.Test_NameForAmazing, error) {
+func NameToAmazingPersistType(serv AmazingTypeMapping, req *test.Name) (*persist_lib.Test_NameForAmazing, error) {
 	params := &persist_lib.Test_NameForAmazing{}
 	params.Name = req.Name
 	return params, nil
 }
-func ExampleTableToAmazingPersistType(req *test.ExampleTable) (*persist_lib.Test_ExampleTableForAmazing, error) {
+func ExampleTableToAmazingPersistType(serv AmazingTypeMapping, req *test.ExampleTable) (*persist_lib.Test_ExampleTableForAmazing, error) {
 	params := &persist_lib.Test_ExampleTableForAmazing{}
 	params.Id = req.Id
-	params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+	{
+		mapper := serv.TimestampTimestamp()
+		params.StartTime = mapper.ToSql(req.StartTime)
+	}
 	params.Name = req.Name
 	return params, nil
 }
-func NumRowsFromAmazingDatabaseRow(row persist_lib.Scanable) (*test.NumRows, error) {
+func NumRowsFromAmazingDatabaseRow(serv AmazingTypeMapping, row persist_lib.Scanable) (*test.NumRows, error) {
 	res := &test.NumRows{}
 	var Count_ int64
 	if err := row.Scan(
@@ -186,16 +212,16 @@ func NumRowsFromAmazingDatabaseRow(row persist_lib.Scanable) (*test.NumRows, err
 	res.Count = Count_
 	return res, nil
 }
-func IterAmazingNumRowsProto(iter *persist_lib.Result, next func(i *test.NumRows) error) error {
+func IterAmazingNumRowsProto(ms AmazingTypeMapping, iter *persist_lib.Result, next func(i *test.NumRows) error) error {
 	return iter.Do(func(r persist_lib.Scanable) error {
-		item, err := NumRowsFromAmazingDatabaseRow(r)
+		item, err := NumRowsFromAmazingDatabaseRow(ms, r)
 		if err != nil {
 			return fmt.Errorf("error converting test.NumRows row to protobuf message: %s", err)
 		}
 		return next(item)
 	})
 }
-func IdsFromAmazingDatabaseRow(row persist_lib.Scanable) (*test.Ids, error) {
+func IdsFromAmazingDatabaseRow(serv AmazingTypeMapping, row persist_lib.Scanable) (*test.Ids, error) {
 	res := &test.Ids{}
 	var Ids_ []int64
 	if err := row.Scan(
@@ -206,9 +232,9 @@ func IdsFromAmazingDatabaseRow(row persist_lib.Scanable) (*test.Ids, error) {
 	res.Ids = Ids_
 	return res, nil
 }
-func IterAmazingIdsProto(iter *persist_lib.Result, next func(i *test.Ids) error) error {
+func IterAmazingIdsProto(ms AmazingTypeMapping, iter *persist_lib.Result, next func(i *test.Ids) error) error {
 	return iter.Do(func(r persist_lib.Scanable) error {
-		item, err := IdsFromAmazingDatabaseRow(r)
+		item, err := IdsFromAmazingDatabaseRow(ms, r)
 		if err != nil {
 			return fmt.Errorf("error converting test.Ids row to protobuf message: %s", err)
 		}
@@ -220,7 +246,7 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) 
 	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	params, err := PartialTableToAmazingPersistType(req)
+	params, err := PartialTableToAmazingPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +255,7 @@ func (s *AmazingImpl) UniarySelect(ctx context.Context, req *test.PartialTable) 
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromAmazingDatabaseRow(row)
+		res, err = ExampleTableFromAmazingDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -247,13 +273,13 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 	var res = &test.ExampleTable{}
 	_ = err
 	_ = res
-	beforeRes, err := s.HOOKS.AmazingUniarySelectWithHooksBeforeHook(req)
+	beforeRes, err := s.HOOKS.UniarySelectWithHooksBeforeHook(req)
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 	} else if beforeRes != nil {
 		return beforeRes, nil
 	}
-	params, err := PartialTableToAmazingPersistType(req)
+	params, err := PartialTableToAmazingPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +288,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTableFromAmazingDatabaseRow(row)
+		res, err = ExampleTableFromAmazingDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -273,7 +299,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 	} else if iterErr != nil {
 		return nil, iterErr
 	}
-	if err := s.HOOKS.AmazingUniarySelectWithHooksAfterHook(req, res); err != nil {
+	if err := s.HOOKS.UniarySelectWithHooksAfterHook(req, res); err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
 	return res, nil
@@ -281,7 +307,7 @@ func (s *AmazingImpl) UniarySelectWithHooks(ctx context.Context, req *test.Parti
 func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
 	var err error
 	_ = err
-	params, err := NameToAmazingPersistType(req)
+	params, err := NameToAmazingPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return err
 	}
@@ -290,7 +316,7 @@ func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamSe
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := ExampleTableFromAmazingDatabaseRow(row)
+		res, err := ExampleTableFromAmazingDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -309,7 +335,7 @@ func (s *AmazingImpl) ServerStream(req *test.Name, stream Amazing_ServerStreamSe
 func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
 	var err error
 	_ = err
-	beforeRes, err := s.HOOKS.AmazingServerStreamWithHooksBeforeHook(req)
+	beforeRes, err := s.HOOKS.ServerStreamWithHooksBeforeHook(req)
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 	} else if beforeRes != nil {
@@ -319,7 +345,7 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 			}
 		}
 	}
-	params, err := NameToAmazingPersistType(req)
+	params, err := NameToAmazingPersistType(s.MAPPINGS, req)
 	if err != nil {
 		return err
 	}
@@ -328,12 +354,12 @@ func (s *AmazingImpl) ServerStreamWithHooks(req *test.Name, stream Amazing_Serve
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := ExampleTableFromAmazingDatabaseRow(row)
+		res, err := ExampleTableFromAmazingDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
 		}
-		if err := s.HOOKS.AmazingServerStreamWithHooksAfterHook(req, res); err != nil {
+		if err := s.HOOKS.ServerStreamWithHooksAfterHook(req, res); err != nil {
 			iterErr = gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			return
 		}
@@ -359,7 +385,7 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params, err := ExampleTableToAmazingPersistType(req)
+		params, err := ExampleTableToAmazingPersistType(s.MAPPINGS, req)
 		if err != nil {
 			return err
 		}
@@ -368,7 +394,7 @@ func (s *AmazingImpl) Bidirectional(stream Amazing_BidirectionalServer) error {
 			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 		}
 		if row != nil {
-			res, err := ExampleTableFromAmazingDatabaseRow(row)
+			res, err := ExampleTableFromAmazingDatabaseRow(s.MAPPINGS, row)
 			if err != nil {
 				return err
 			}
@@ -390,13 +416,13 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		beforeRes, err := s.HOOKS.AmazingBidirectionalWithHooksBeforeHook(req)
+		beforeRes, err := s.HOOKS.BidirectionalWithHooksBeforeHook(req)
 		if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 		} else if beforeRes != nil {
 			continue
 		}
-		params, err := ExampleTableToAmazingPersistType(req)
+		params, err := ExampleTableToAmazingPersistType(s.MAPPINGS, req)
 		if err != nil {
 			return err
 		}
@@ -405,11 +431,11 @@ func (s *AmazingImpl) BidirectionalWithHooks(stream Amazing_BidirectionalWithHoo
 			return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 		}
 		if row != nil {
-			res, err := ExampleTableFromAmazingDatabaseRow(row)
+			res, err := ExampleTableFromAmazingDatabaseRow(s.MAPPINGS, row)
 			if err != nil {
 				return err
 			}
-			if err := s.HOOKS.AmazingBidirectionalWithHooksAfterHook(req, res); err != nil {
+			if err := s.HOOKS.BidirectionalWithHooksAfterHook(req, res); err != nil {
 				return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 			}
 			if err := stream.Send(res); err != nil {
@@ -434,7 +460,7 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params, err := ExampleTableToAmazingPersistType(req)
+		params, err := ExampleTableToAmazingPersistType(s.MAPPINGS, req)
 		if err != nil {
 			return err
 		}
@@ -447,7 +473,7 @@ func (s *AmazingImpl) ClientStream(stream Amazing_ClientStreamServer) error {
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = NumRowsFromAmazingDatabaseRow(row)
+		res, err = NumRowsFromAmazingDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			return err
 		}
@@ -472,13 +498,13 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		beforeRes, err := s.HOOKS.AmazingClientStreamWithHookBeforeHook(req)
+		beforeRes, err := s.HOOKS.ClientStreamWithHookBeforeHook(req)
 		if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 		} else if beforeRes != nil {
 			continue
 		}
-		params, err := ExampleTableToAmazingPersistType(req)
+		params, err := ExampleTableToAmazingPersistType(s.MAPPINGS, req)
 		if err != nil {
 			return err
 		}
@@ -491,7 +517,7 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = IdsFromAmazingDatabaseRow(row)
+		res, err = IdsFromAmazingDatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			return err
 		}
@@ -500,7 +526,7 @@ func (s *AmazingImpl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookSe
 	// so the after hook for client streaming calls
 	// is called with an empty request struct
 	fakeReq := &test.ExampleTable{}
-	if err := s.HOOKS.AmazingClientStreamWithHookAfterHook(fakeReq, res); err != nil {
+	if err := s.HOOKS.ClientStreamWithHookAfterHook(fakeReq, res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
 	if err := stream.SendAndClose(res); err != nil {

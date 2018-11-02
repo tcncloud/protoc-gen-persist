@@ -71,7 +71,7 @@ func (s *UnaryStringer) BeforeHook() {
 }
 
 func (s *UnaryStringer) Params() {
-	s.printer.P("params, err := %s(req)\n", ToParamsFuncName(s.method))
+	s.printer.P("params, err := %s(s.MAPPINGS, req)\n", ToParamsFuncName(s.method))
 	s.printer.P("if err != nil {\n return nil, err\n}\n")
 }
 
@@ -97,7 +97,7 @@ func (s *UnaryStringer) HandleRow() {
 }
 
 func (s *UnaryStringer) ResultFromRow() {
-	s.printer.P("res, err = %s(row)\n", FromScanableFuncName(s.method))
+	s.printer.P("res, err = %s(s.MAPPINGS, row)\n", FromScanableFuncName(s.method))
 	s.printer.P("if err != nil {\n iterErr = err\n return\n}\n")
 }
 
@@ -200,7 +200,7 @@ func (s *BidiStreamStringer) BeforeHook() {
 	)
 }
 func (s *BidiStreamStringer) Params() {
-	s.printer.P("params, err := %s(req)\n", ToParamsFuncName(s.method))
+	s.printer.P("params, err := %s(s.MAPPINGS, req)\n", ToParamsFuncName(s.method))
 	// s.printer.P("params := &persist_lib.%s{}\n", NewPLInputName(s.method))
 	// s.printer.P("err = %s", s.backend.MapRequestToParams())
 	s.printer.P("if err != nil {\n return err\n}\n")
@@ -213,7 +213,7 @@ func (s *BidiStreamStringer) HandleRow() {
 	},
 		"error receiving result row: %v",
 	)
-	s.printer.P("res, err := %s(row)\n", FromScanableFuncName(s.method))
+	s.printer.P("res, err := %s(s.MAPPINGS, row)\n", FromScanableFuncName(s.method))
 	s.printer.P("if err != nil {\n return err \n}\n")
 	s.AfterHook()
 	s.printer.P("if err := stream.Send(res); err != nil {\n return err\n}\n")
@@ -331,7 +331,7 @@ func (s *ClientStreamStringer) BeforeHook() {
 	)
 }
 func (s *ClientStreamStringer) Params() {
-	s.printer.P("params, err := %s(req)\n", ToParamsFuncName(s.method))
+	s.printer.P("params, err := %s(s.MAPPINGS, req)\n", ToParamsFuncName(s.method))
 	s.printer.P("if err != nil {\n return err\n}\n")
 }
 func (s *ClientStreamStringer) HandleRow() {
@@ -339,7 +339,7 @@ func (s *ClientStreamStringer) HandleRow() {
 		"row, err := stop()\n",
 		"if err != nil {\n return gstatus.Errorf(codes.Unknown, \"%s\", err)\n}\n",
 		"if row != nil {\n",
-		"res, err = %s(row)\n if err != nil {\nreturn err\n}\n",
+		"res, err = %s(s.MAPPINGS, row)\n if err != nil {\nreturn err\n}\n",
 		"}\n",
 	},
 		"error receiving result row: %v",
@@ -441,7 +441,7 @@ func (s *ServerStreamStringer) BeforeHook() {
 }
 
 func (s *ServerStreamStringer) Params() {
-	s.printer.P("params, err := %s(req)\n", ToParamsFuncName(s.method))
+	s.printer.P("params, err := %s(s.MAPPINGS, req)\n", ToParamsFuncName(s.method))
 	s.printer.P("if err != nil {\n return err\n}\n")
 }
 
@@ -476,7 +476,7 @@ func (s *ServerStreamStringer) HandleRow() {
 func (s *ServerStreamStringer) ResultFromRow() {
 	if len(s.method.GetTypeDescForFieldsInStruct(s.method.GetOutputTypeStruct())) > 0 {
 		s.printer.P(
-			"res, err := %s(row)\n if err != nil {\n iterErr = err\n return\n}\n",
+			"res, err := %s(s.MAPPINGS, row)\n if err != nil {\n iterErr = err\n return\n}\n",
 			FromScanableFuncName(s.method),
 		)
 	}

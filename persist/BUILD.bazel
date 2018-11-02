@@ -1,5 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
 filegroup(
     name = "protos",
     srcs = [
@@ -17,4 +19,10 @@ proto_library(
         "@com_google_protobuf//:descriptor_proto",
         "@com_google_protobuf//:timestamp_proto",
     ],
+)
+
+go_proto_library(
+    name = "options_pb",
+    importpath = "github.com/tcncloud/protoc-gen-persist",
+    proto = ":persist_proto",
 )
