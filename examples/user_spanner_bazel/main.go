@@ -17,6 +17,8 @@ func main() {
 		WithDefaultQueryHandlers().
 		WithSpannerURI(context.Background(), params.URI()).
 		WithRestOfGrpcHandlers(&RestOfImpl{Params: params}).
+		WithHooks(&HooksImpl{}).
+		WithTypeMapping(&Mappings{}).
 		MustBuild()
 	server := grpc.NewServer()
 
@@ -35,6 +37,19 @@ type RestOfImpl struct {
 }
 type Mappings struct{}
 
+func (m *Mappings) TimestampTimestamp() pb.UServTimestampTimestampMappingImpl {
+	return &pb.TimeString{}
+}
+
+type HooksImpl struct{}
+
+func (h *HooksImpl) GetFriendsBeforeHook(*pb.Friends) ([]*pb.User, error) {
+	return nil, nil
+}
+func (h *HooksImpl) GetFriendsAfterHook(*pb.Friends, *pb.User) error {
+	return nil
+}
+
 // using the persist lib queries to implement your own handlers.
 func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {
 	client, err := spanner.NewClient(stream.Context(), d.Params.URI())
@@ -42,15 +57,15 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 		return err
 	}
 	// convert our request type to a persist's type to use it in the query.
-	params, err := pb.EmptyToUServPersistType(req)
+	params, err := pb.EmptyToUServPersistType(&Mappings{}, req)
 	if err != nil {
 		return err
 	}
 	// create the query using the persist type we got above (params)
 	iter := client.Single().Query(stream.Context(), pl.UServGetAllUsersQuery(params))
 	muts := make([]*spanner.Mutation, 0)
-	err = pb.IterUServUserProto(iter, func(user *pb.User) error {
-		params, err := pb.UserToUServPersistType(user)
+	err = pb.IterUServUserProto(&Mappings{}, iter, func(user *pb.User) error {
+		params, err := pb.UserToUServPersistType(&Mappings{}, user)
 		if err != nil {
 			return err
 		}
@@ -66,8 +81,8 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 		return err
 	}
 	// get all our updated users, and stream them back to the client.
-	params, _ = pb.EmptyToUServPersistType(req)
+	params, _ = pb.EmptyToUServPersistType(&Mappings{}, req)
 	iter = client.Single().Query(stream.Context(), pl.UServGetAllUsersQuery(params))
 
-	return pb.IterUServUserProto(iter, stream.Send)
+	return pb.IterUServUserProto(&Mappings{}, iter, stream.Send)
 }

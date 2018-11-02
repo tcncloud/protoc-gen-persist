@@ -40,7 +40,7 @@ type TimeString struct {
 	t *timestamp.Timestamp
 }
 
-func (ts TimeString) ToSpanner(t *timestamp.Timestamp) *TimeString {
+func (ts TimeString) ToSpanner(t *timestamp.Timestamp) UServTimestampTimestampMappingImpl {
 	ts.t = t
 	return &ts
 }

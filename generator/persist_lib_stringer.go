@@ -307,7 +307,7 @@ func WriteTypeMappingsContractInterfaces(p *Printer, s *Service) {
 			_, maybeStar := needsExtraStar(tm)
 			p.Q("type ", sName, titled, "MappingImpl interface{\n")
 			p.Q("ToProto(*", maybeStar, name, ") error\n")
-			p.Q("ToSpanner(", maybeStar, name, ") persist_lib.ScanValuer\n")
+			p.Q("ToSpanner(", maybeStar, name, ") ", sName, titled, "MappingImpl\n")
 			p.Q("Empty() ", sName, titled, "MappingImpl\n")
 			p.Q("SpannerScan(src *spanner.GenericColumnValue) error\n")
 			p.Q("SpannerValue() (interface{}, error)\n")
