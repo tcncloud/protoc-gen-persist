@@ -180,6 +180,10 @@ func (b *UServImplBuilder) WithHooks(hs UServHooks) *UServImplBuilder {
 	b.hooks = hs
 	return b
 }
+func (b *UServImplBuilder) WithTypeMapping(ts UServTypeMapping) *UServImplBuilder {
+	b.mappings = ts
+	return b
+}
 func (b *UServImplBuilder) WithRestOfGrpcHandlers(r RestOfUServHandlers) *UServImplBuilder {
 	b.rest = r
 	return b
@@ -397,6 +401,28 @@ message TypeMapping {
 }
 ```
 
+the code that is generated and needs to be implemented
+```go
+type UServTypeMapping interface {
+	TimestampTimestamp() UServTimestampTimestampMappingImpl
+	SliceStringParam() UServSliceStringParamMappingImpl
+}
+type UServTimestampTimestampMappingImpl interface {
+	ToProto(**timestamp.Timestamp) error
+	ToSql(*timestamp.Timestamp) sql.Scanner
+	Empty() UServTimestampTimestampMappingImpl
+	sql.Scanner
+	driver.Valuer
+}
+type UServSliceStringParamMappingImpl interface {
+	ToProto(**SliceStringParam) error
+	ToSql(*SliceStringParam) sql.Scanner
+	Empty() UServSliceStringParamMappingImpl
+	sql.Scanner
+	driver.Valuer
+}
+```
+
 to map a type from protobuf to the database, you need to implement a type with 4 methods
 a type [in our examples](https://github.com/tcncloud/protoc-gen-persist/blob/master/examples/user_sql/pb/time_converter.go)
 for converting google protobuf typestamps looks like this:
@@ -532,6 +558,16 @@ service Test {
       after: true
     };
   };
+}
+```
+
+the interface that is generated and needs to be implemented
+```go
+type UServHooks interface {
+	InsertUsersBeforeHook(*User) (*Empty, error)
+	InsertUsersAfterHook(*User, *Empty) error
+	GetAllUsersBeforeHook(*Empty) ([]*User, error)
+	GetAllUsersAfterHook(*Empty, *User) error
 }
 ```
 
