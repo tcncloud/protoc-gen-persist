@@ -59,7 +59,7 @@ you get the following go code:
 in [the pb package](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples/user_sql/pb):
 - function that marshals from protobuf message to a database row
 ```go
-func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
+func UserToUServPersistType(serv UServTypeMapping, req *User) (*persist_lib.UserForUServ, error) {
 	params := &persist_lib.UserForUServ{}
 	params.Id = req.Id
 	params.Name = req.Name
@@ -73,24 +73,24 @@ func UserToUServPersistType(req *User) (*persist_lib.UserForUServ, error) {
 		}
 		params.Friends = raw
 	}
-	params.CreatedOn = (TimeString{}).ToSql(req.CreatedOn)
+	mapper := serv.TimestampTimestamp()
+	params.CreatedOn = mapper.ToSql(req.CreatedOn)
 	return params, nil
 }
-
 ```
 - function that marshals from database row to protobuf message
 ```go
-func UserFromUServDatabaseRow(row persist_lib.Scanable) (*User, error) {
+func UserFromUServDatabaseRow(serv UServTypeMapping, row persist_lib.Scanable) (*User, error) {
 	res := &User{}
 	var Id_ int64
 	var Name_ string
 	var Friends_ []byte
-	var CreatedOn_ TimeString
+	CreatedOn_ := serv.TimestampTimestamp().Empty()
 	if err := row.Scan(
 		&Id_,
 		&Name_,
 		&Friends_,
-		&CreatedOn_,
+		CreatedOn_,
 	); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
@@ -103,17 +103,18 @@ func UserFromUServDatabaseRow(row persist_lib.Scanable) (*User, error) {
 		}
 		res.Friends = converted
 	}
-	res.CreatedOn = CreatedOn_.ToProto()
+	if err := CreatedOn_.ToProto(&res.CreatedOn); err != nil {
+		return nil, err
+	}
 	return res, nil
 }
-
 ```
 - function that iterates over a database iterator returning protobuf
 messages
 ```go
-func IterUServUserProto(iter *persist_lib.Result, next func(i *User) error) error {
+func IterUServUserProto(ms UServTypeMapping, iter *persist_lib.Result, next func(i *User) error) error {
 	return iter.Do(func(r persist_lib.Scanable) error {
-		item, err := UserFromUServDatabaseRow(r)
+		item, err := UserFromUServDatabaseRow(ms, r)
 		if err != nil {
 			return fmt.Errorf("error converting User row to protobuf message: %s", err)
 		}
@@ -128,6 +129,7 @@ type UServImpl struct {
 	PERSIST   *persist_lib.UServMethodReceiver
 	FORWARDED RestOfUServHandlers
 	HOOKS     UServHooks
+	MAPPINGS  UServTypeMapping
 }
 // ...
 func (s *UServImpl) SelectUserById(ctx context.Context, req *User) (*User, error) {
@@ -168,6 +170,7 @@ type UServImplBuilder struct {
 	i             *UServImpl
 	db            sql.DB
 	hooks         UServHooks
+	mappings      UServTypeMapping
 }
 
 func NewUServBuilder() *UServImplBuilder {
@@ -222,6 +225,7 @@ func (b *UServImplBuilder) Build() (*UServImpl, error) {
 	b.i.PERSIST = &persist_lib.UServMethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
 	b.i.HOOKS = b.hooks
+	b.i.MAPPINGS = b.mappings
 	return b.i, nil
 }
 func (b *UServImplBuilder) MustBuild() *UServImpl {
@@ -366,23 +370,12 @@ an example of one:
 service UServ {
 	option (persist.service_type) = SQL;
 	option (persist.mapping) = {
-		types: [
-		{
-			// '.' prefix is optional will also work with ".google.protobuf.Timestamp"
+		types: [{
 			proto_type_name: "google.protobuf.Timestamp",
 			proto_type: TYPE_MESSAGE,
-			go_type: "TimeString",
-			// if the custom mapping is in the same directory as the protobuf implemenation,
-			//  it is optional to leave the go_package option as the empty string ""
-			// persist is smart enough to know that "" = no import
-			go_package: "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb",
-		},
-		{ proto_type_name: "pb.SliceStringParam",
+		},{ proto_type_name: "pb.SliceStringParam",
 			proto_type: TYPE_MESSAGE,
-			go_type: "SliceStringConverter",
-			go_package: "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb",
-		}
-		]
+		}]
 	};
 }
 ```
@@ -399,10 +392,6 @@ message TypeMapping {
         optional google.protobuf.FieldDescriptorProto.Type proto_type= 2;
         // if proto_label is not setup we consider any option except LABAEL_REPEATED
         optional google.protobuf.FieldDescriptorProto.Label proto_label = 3;
-        // go type name that will be used in the method implementation
-        required string go_type = 4;
-        // go package path
-        required string go_package = 5;
     }
     repeated TypeDescriptor types = 1;
 }
@@ -423,10 +412,11 @@ func (ts TimeString) ToSql(t *timestamp.Timestamp) *TimeString {
 	return &ts
 }
 ```
-- ToProto  transforms our custom type back into the protobuf message type
+- ToProto must set a stored variable outside of the function 
 ```go
-func (ts TimeString) ToProto() *timestamp.Timestamp {
-	return ts.t
+func (ts TimeString) ToProto(req **timestamp.Timestamp) error {
+	*req = ts.t
+	return nil
 }
 ```
 - (Scan, Value) (if using a SQL backend)  Scan will populate our type from the database
@@ -451,6 +441,12 @@ func (t *TimeString) Scan(src interface{}) error {
 
 func (t *TimeString) Value() (driver.Value, error) {
 	return ptypes.TimestampString(t.t), nil
+}
+```
+- Empty must return a new, empty value of the underlying type that implements the type mapping interface
+```go
+func (t TimeString) Empty() UServTimestampTimestampMappingImpl {
+	return new(TimeString)
 }
 ```
 - (SpannerScan, SpannerValue)  (if using a SPANNER backend)  SpannerScan will need to
