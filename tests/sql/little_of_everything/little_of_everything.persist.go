@@ -5,11 +5,12 @@ package little_of_everything
 
 import (
 	sql "database/sql"
+	driver "database/sql/driver"
 	fmt "fmt"
 	io "io"
 
 	proto "github.com/golang/protobuf/proto"
-	mytime "github.com/tcncloud/protoc-gen-persist/tests/mytime"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	persist_lib "github.com/tcncloud/protoc-gen-persist/tests/sql/little_of_everything/persist_lib"
 	test "github.com/tcncloud/protoc-gen-persist/tests/test"
 	context "golang.org/x/net/context"
@@ -21,8 +22,27 @@ type Testservice1Impl struct {
 	PERSIST   *persist_lib.Testservice1MethodReceiver
 	FORWARDED RestOfTestservice1Handlers
 	HOOKS     Testservice1Hooks
+	MAPPINGS  Testservice1TypeMapping
 }
 type RestOfTestservice1Handlers interface {
+}
+type Testservice1TypeMapping interface {
+	TimestampTimestamp() Testservice1TimestampTimestampMappingImpl
+	MappedEnum() Testservice1MappedEnumMappingImpl
+}
+type Testservice1TimestampTimestampMappingImpl interface {
+	ToProto(**timestamp.Timestamp) error
+	ToSql(*timestamp.Timestamp) sql.Scanner
+	Empty() Testservice1TimestampTimestampMappingImpl
+	sql.Scanner
+	driver.Valuer
+}
+type Testservice1MappedEnumMappingImpl interface {
+	ToProto(*MappedEnum) error
+	ToSql(MappedEnum) sql.Scanner
+	Empty() Testservice1MappedEnumMappingImpl
+	sql.Scanner
+	driver.Valuer
 }
 type Testservice1Hooks interface {
 }
@@ -33,6 +53,7 @@ type Testservice1ImplBuilder struct {
 	i             *Testservice1Impl
 	db            *sql.DB
 	hooks         Testservice1Hooks
+	mappings      Testservice1TypeMapping
 }
 
 func NewTestservice1Builder() *Testservice1ImplBuilder {
@@ -40,6 +61,10 @@ func NewTestservice1Builder() *Testservice1ImplBuilder {
 }
 func (b *Testservice1ImplBuilder) WithHooks(hs Testservice1Hooks) *Testservice1ImplBuilder {
 	b.hooks = hs
+	return b
+}
+func (b *Testservice1ImplBuilder) WithTypeMapping(ts Testservice1TypeMapping) *Testservice1ImplBuilder {
+	b.mappings = ts
 	return b
 }
 func (b *Testservice1ImplBuilder) WithRestOfGrpcHandlers(r RestOfTestservice1Handlers) *Testservice1ImplBuilder {
@@ -97,6 +122,7 @@ func (b *Testservice1ImplBuilder) Build() (*Testservice1Impl, error) {
 	b.i.PERSIST = &persist_lib.Testservice1MethodReceiver{Handlers: *b.queryHandlers}
 	b.i.FORWARDED = b.rest
 	b.i.HOOKS = b.hooks
+	b.i.MAPPINGS = b.mappings
 	return b.i, nil
 }
 func (b *Testservice1ImplBuilder) MustBuild() *Testservice1Impl {
@@ -106,7 +132,7 @@ func (b *Testservice1ImplBuilder) MustBuild() *Testservice1Impl {
 	}
 	return s
 }
-func ExampleTable1ToTestservice1PersistType(req *ExampleTable1) (*persist_lib.ExampleTable1ForTestservice1, error) {
+func ExampleTable1ToTestservice1PersistType(serv Testservice1TypeMapping, req *ExampleTable1) (*persist_lib.ExampleTable1ForTestservice1, error) {
 	params := &persist_lib.ExampleTable1ForTestservice1{}
 	params.TableId = req.TableId
 	params.Key = req.Key
@@ -124,7 +150,10 @@ func ExampleTable1ToTestservice1PersistType(req *ExampleTable1) (*persist_lib.Ex
 	params.InnerEnum = int32(req.InnerEnum)
 	params.StringArray = req.StringArray
 	params.BytesField = req.BytesField
-	params.StartTime = (mytime.MyTime{}).ToSql(req.StartTime)
+	{
+		mapper := serv.TimestampTimestamp()
+		params.StartTime = mapper.ToSql(req.StartTime)
+	}
 	if req.TestField == nil {
 		req.TestField = new(test.Test)
 	}
@@ -137,10 +166,13 @@ func ExampleTable1ToTestservice1PersistType(req *ExampleTable1) (*persist_lib.Ex
 	}
 	params.Myyenum = int32(req.Myyenum)
 	params.Testsenum = int32(req.Testsenum)
-	params.Mappedenum = (MyMappedEnum{}).ToSql(req.Mappedenum)
+	{
+		mapper := serv.MappedEnum()
+		params.Mappedenum = mapper.ToSql(req.Mappedenum)
+	}
 	return params, nil
 }
-func ExampleTable1FromTestservice1DatabaseRow(row persist_lib.Scanable) (*ExampleTable1, error) {
+func ExampleTable1FromTestservice1DatabaseRow(serv Testservice1TypeMapping, row persist_lib.Scanable) (*ExampleTable1, error) {
 	res := &ExampleTable1{}
 	var TableId_ int32
 	var Key_ string
@@ -149,11 +181,11 @@ func ExampleTable1FromTestservice1DatabaseRow(row persist_lib.Scanable) (*Exampl
 	var InnerEnum_ int32
 	var StringArray_ []string
 	var BytesField_ []byte
-	var StartTime_ mytime.MyTime
+	StartTime_ := serv.TimestampTimestamp().Empty()
 	var TestField_ []byte
 	var Myyenum_ int32
 	var Testsenum_ int32
-	var Mappedenum_ MyMappedEnum
+	Mappedenum_ := serv.MappedEnum().Empty()
 	if err := row.Scan(
 		&TableId_,
 		&Key_,
@@ -162,11 +194,11 @@ func ExampleTable1FromTestservice1DatabaseRow(row persist_lib.Scanable) (*Exampl
 		&InnerEnum_,
 		&StringArray_,
 		&BytesField_,
-		&StartTime_,
+		StartTime_,
 		&TestField_,
 		&Myyenum_,
 		&Testsenum_,
-		&Mappedenum_,
+		Mappedenum_,
 	); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
@@ -183,7 +215,9 @@ func ExampleTable1FromTestservice1DatabaseRow(row persist_lib.Scanable) (*Exampl
 	res.InnerEnum = ExampleTable1_InnerEnum(InnerEnum_)
 	res.StringArray = StringArray_
 	res.BytesField = BytesField_
-	res.StartTime = StartTime_.ToProto()
+	if err := StartTime_.ToProto(&res.StartTime); err != nil {
+		return nil, err
+	}
 	{
 		var converted = new(test.Test)
 		if err := proto.Unmarshal(TestField_, converted); err != nil {
@@ -193,25 +227,27 @@ func ExampleTable1FromTestservice1DatabaseRow(row persist_lib.Scanable) (*Exampl
 	}
 	res.Myyenum = MyEnum(Myyenum_)
 	res.Testsenum = test.TestEnum(Testsenum_)
-	res.Mappedenum = Mappedenum_.ToProto()
+	if err := Mappedenum_.ToProto(&res.Mappedenum); err != nil {
+		return nil, err
+	}
 	return res, nil
 }
-func IterTestservice1ExampleTable1Proto(iter *persist_lib.Result, next func(i *ExampleTable1) error) error {
+func IterTestservice1ExampleTable1Proto(ms Testservice1TypeMapping, iter *persist_lib.Result, next func(i *ExampleTable1) error) error {
 	return iter.Do(func(r persist_lib.Scanable) error {
-		item, err := ExampleTable1FromTestservice1DatabaseRow(r)
+		item, err := ExampleTable1FromTestservice1DatabaseRow(ms, r)
 		if err != nil {
 			return fmt.Errorf("error converting ExampleTable1 row to protobuf message: %s", err)
 		}
 		return next(item)
 	})
 }
-func TestToTestservice1PersistType(req *test.Test) (*persist_lib.Test_TestForTestservice1, error) {
+func TestToTestservice1PersistType(serv Testservice1TypeMapping, req *test.Test) (*persist_lib.Test_TestForTestservice1, error) {
 	params := &persist_lib.Test_TestForTestservice1{}
 	params.Id = req.Id
 	params.Name = req.Name
 	return params, nil
 }
-func CountRowsFromTestservice1DatabaseRow(row persist_lib.Scanable) (*CountRows, error) {
+func CountRowsFromTestservice1DatabaseRow(serv Testservice1TypeMapping, row persist_lib.Scanable) (*CountRows, error) {
 	res := &CountRows{}
 	var Count_ int64
 	if err := row.Scan(
@@ -222,9 +258,9 @@ func CountRowsFromTestservice1DatabaseRow(row persist_lib.Scanable) (*CountRows,
 	res.Count = Count_
 	return res, nil
 }
-func IterTestservice1CountRowsProto(iter *persist_lib.Result, next func(i *CountRows) error) error {
+func IterTestservice1CountRowsProto(ms Testservice1TypeMapping, iter *persist_lib.Result, next func(i *CountRows) error) error {
 	return iter.Do(func(r persist_lib.Scanable) error {
-		item, err := CountRowsFromTestservice1DatabaseRow(r)
+		item, err := CountRowsFromTestservice1DatabaseRow(ms, r)
 		if err != nil {
 			return fmt.Errorf("error converting CountRows row to protobuf message: %s", err)
 		}
@@ -236,7 +272,7 @@ func (s *Testservice1Impl) UnaryExample1(ctx context.Context, req *ExampleTable1
 	var res = &ExampleTable1{}
 	_ = err
 	_ = res
-	params, err := ExampleTable1ToTestservice1PersistType(req)
+	params, err := ExampleTable1ToTestservice1PersistType(s.MAPPINGS, req)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +281,7 @@ func (s *Testservice1Impl) UnaryExample1(ctx context.Context, req *ExampleTable1
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTable1FromTestservice1DatabaseRow(row)
+		res, err = ExampleTable1FromTestservice1DatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -263,7 +299,7 @@ func (s *Testservice1Impl) UnaryExample2(ctx context.Context, req *test.Test) (*
 	var res = &ExampleTable1{}
 	_ = err
 	_ = res
-	params, err := TestToTestservice1PersistType(req)
+	params, err := TestToTestservice1PersistType(s.MAPPINGS, req)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +308,7 @@ func (s *Testservice1Impl) UnaryExample2(ctx context.Context, req *test.Test) (*
 		if row == nil { // there was no return data
 			return
 		}
-		res, err = ExampleTable1FromTestservice1DatabaseRow(row)
+		res, err = ExampleTable1FromTestservice1DatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -288,7 +324,7 @@ func (s *Testservice1Impl) UnaryExample2(ctx context.Context, req *test.Test) (*
 func (s *Testservice1Impl) ServerStreamSelect(req *ExampleTable1, stream Testservice1_ServerStreamSelectServer) error {
 	var err error
 	_ = err
-	params, err := ExampleTable1ToTestservice1PersistType(req)
+	params, err := ExampleTable1ToTestservice1PersistType(s.MAPPINGS, req)
 	if err != nil {
 		return err
 	}
@@ -297,7 +333,7 @@ func (s *Testservice1Impl) ServerStreamSelect(req *ExampleTable1, stream Testser
 		if row == nil { // there was no return data
 			return
 		}
-		res, err := ExampleTable1FromTestservice1DatabaseRow(row)
+		res, err := ExampleTable1FromTestservice1DatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			iterErr = err
 			return
@@ -328,7 +364,7 @@ func (s *Testservice1Impl) ClientStreamingExample(stream Testservice1_ClientStre
 		} else if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
 		}
-		params, err := ExampleTable1ToTestservice1PersistType(req)
+		params, err := ExampleTable1ToTestservice1PersistType(s.MAPPINGS, req)
 		if err != nil {
 			return err
 		}
@@ -341,7 +377,7 @@ func (s *Testservice1Impl) ClientStreamingExample(stream Testservice1_ClientStre
 		return gstatus.Errorf(codes.Unknown, "error receiving result row: %v", err)
 	}
 	if row != nil {
-		res, err = CountRowsFromTestservice1DatabaseRow(row)
+		res, err = CountRowsFromTestservice1DatabaseRow(s.MAPPINGS, row)
 		if err != nil {
 			return err
 		}

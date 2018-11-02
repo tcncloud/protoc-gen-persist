@@ -93,10 +93,10 @@ service Testservice1 {
     option (persist.mapping) = {
 			types:
 			[{
-                proto_type_name: "google.protobuf.Timestamp"
+                proto_type_name: ".google.protobuf.Timestamp"
                 proto_type:  TYPE_MESSAGE
             }, {
-                proto_type_name: "tests.MappedEnum"
+                proto_type_name: ".tests.MappedEnum"
                 proto_type: TYPE_ENUM
             }]
     };

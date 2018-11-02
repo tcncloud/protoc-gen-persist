@@ -99,7 +99,7 @@ func (s *SpannerStringer) TranslateRowToResult() string {
 			p.Q("if err := local.SpannerScan(", td.Name, "_); err != nil {\n")
 			p.Q("\treturn nil, err\n")
 			p.Q("}\n")
-			p.Q("if err := local.ToProto(&res.", td.Name, "); err != nil {\n")
+			p.Q("if err :=.ToProto(&res.", td.Name, "); err != nil {\n")
 			p.Q("\treturn nil, err\n")
 			p.Q("}\n")
 			// p.Q("res.", td.Name, " = mapper.ToProto(local)\n")
@@ -217,8 +217,10 @@ func (s *SqlStringer) MapRequestToParams() string {
 	for _, td := range typeDescs {
 		_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
 		if td.IsMapped {
+			p.Q("{\n")
 			p.Q("mapper := serv.", titleCased, "()\n")
 			p.Q("params.", td.Name, " = mapper.ToSql(req.", td.Name, ")\n")
+			p.Q("}\n")
 			// p.Q("params.", td.Name, " = s.", sName, titleCased, "(req.", td.Name, ")\n")
 			// p.P("params.%s = (%s{}).ToSql(req.%s)\n", td.Name, td.GoName, td.Name)
 		} else if td.IsMessage {
