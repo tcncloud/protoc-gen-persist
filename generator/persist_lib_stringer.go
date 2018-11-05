@@ -38,8 +38,8 @@ func (per *PersistStringer) MessageInputDeclaration(method *Method) string {
 	return printer.String()
 }
 
-// merges custom defined handlers with our own
-func (per *PersistStringer) PersistImplBuilder(service *Service) string {
+// a cache for the method types we have already written
+func (per *PersistStringer) PersistImplBuilder(service *Service, alreadyWrote map[string]bool) string {
 	var dbType string
 	var backend string
 	if service.IsSpanner() {
@@ -88,7 +88,7 @@ func (per *PersistStringer) PersistImplBuilder(service *Service) string {
 	}
 	printer.P("}\n")
 	WriteBuilderTypeMappingsInterface(printer, service)
-	WriteTypeMappingsContractInterfaces(printer, service)
+	WriteTypeMappingsContractInterfaces(printer, service, alreadyWrote)
 	WriteBuilderHookInterfaceAndFunc(printer, service)
 
 	printer.Q(
@@ -269,7 +269,8 @@ func WriteBuilderTypeMappingsInterface(p *Printer, s *Service) {
 	for _, tm := range tms {
 		// TODO implement these interfaces
 		_, titled := getGoNamesForTypeMapping(tm, s.File)
-		p.Q(titled, "() ", sName, titled, "MappingImpl\n")
+		// p.Q(titled, "() ", sName, titled, "MappingImpl\n")
+		p.Q(titled, "() ", titled, "MappingImpl\n")
 	}
 	p.Q("}\n")
 
@@ -287,32 +288,27 @@ func WriteScanValuerInterface(p *Printer, s *Service) {
 		p.Q("}\n")
 	}
 }
-func WriteTypeMappingsContractInterfaces(p *Printer, s *Service) {
-	sName := s.GetName()
-	if s.IsSQL() {
-		for _, tm := range s.GetServiceOption().GetTypes() {
-			name, titled := getGoNamesForTypeMapping(tm, s.File)
-			_, maybeStar := needsExtraStar(tm)
-			p.Q("type ", sName, titled, "MappingImpl interface{\n")
-			p.Q("ToProto(*", maybeStar, name, ") error\n")
+func WriteTypeMappingsContractInterfaces(p *Printer, s *Service, alreadyWrote map[string]bool) {
+	for _, tm := range s.GetServiceOption().GetTypes() {
+		name, titled := getGoNamesForTypeMapping(tm, s.File)
+		if alreadyWrote[titled] {
+			continue
+		}
+		_, maybeStar := needsExtraStar(tm)
+		p.Q("type ", titled, "MappingImpl interface{\n")
+		p.Q("ToProto(*", maybeStar, name, ") error\n")
+		p.Q("Empty() ", titled, "MappingImpl\n")
+		if s.IsSQL() {
 			p.Q("ToSql(", maybeStar, name, ") sql.Scanner\n")
-			p.Q("Empty() ", sName, titled, "MappingImpl\n")
 			p.Q("sql.Scanner\n")
 			p.Q("driver.Valuer\n")
-			p.Q("}\n")
-		}
-	} else if s.IsSpanner() {
-		for _, tm := range s.GetServiceOption().GetTypes() {
-			name, titled := getGoNamesForTypeMapping(tm, s.File)
-			_, maybeStar := needsExtraStar(tm)
-			p.Q("type ", sName, titled, "MappingImpl interface{\n")
-			p.Q("ToProto(*", maybeStar, name, ") error\n")
-			p.Q("ToSpanner(", maybeStar, name, ") ", sName, titled, "MappingImpl\n")
-			p.Q("Empty() ", sName, titled, "MappingImpl\n")
+		} else if s.IsSpanner() {
+			p.Q("ToSpanner(", maybeStar, name, ") ", titled, "MappingImpl\n")
 			p.Q("SpannerScan(src *spanner.GenericColumnValue) error\n")
 			p.Q("SpannerValue() (interface{}, error)\n")
-			p.Q("}\n")
 		}
+		p.Q("}\n")
+		alreadyWrote[titled] = true
 	}
 }
 

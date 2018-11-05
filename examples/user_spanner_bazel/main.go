@@ -37,7 +37,7 @@ type RestOfImpl struct {
 }
 type Mappings struct{}
 
-func (m *Mappings) TimestampTimestamp() pb.UServTimestampTimestampMappingImpl {
+func (m *Mappings) TimestampTimestamp() pb.TimestampTimestampMappingImpl {
 	return &pb.TimeString{}
 }
 

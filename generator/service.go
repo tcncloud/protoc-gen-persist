@@ -32,9 +32,9 @@ package generator
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
@@ -105,9 +105,9 @@ func (s *Service) IsSpanner() bool {
 	return false
 }
 
-func (s *Service) PrintBuilder() string {
+func (s *Service) PrintBuilder(cacheForTypeMappingNames map[string]bool) string {
 	p := PersistStringer{}
-	return p.PersistImplBuilder(s)
+	return p.PersistImplBuilder(s, cacheForTypeMappingNames)
 }
 
 type Services []*Service

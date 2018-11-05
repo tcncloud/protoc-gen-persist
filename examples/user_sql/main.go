@@ -56,10 +56,10 @@ type MyTimestampImpl struct{}
 
 type MappingImpl struct{}
 
-func (m *MappingImpl) TimestampTimestamp() pb.UServTimestampTimestampMappingImpl {
+func (m *MappingImpl) TimestampTimestamp() pb.TimestampTimestampMappingImpl {
 	return &pb.TimeString{}
 }
-func (m *MappingImpl) SliceStringParam() pb.UServSliceStringParamMappingImpl {
+func (m *MappingImpl) SliceStringParam() pb.SliceStringParamMappingImpl {
 	return &pb.SliceStringConverter{}
 }
 

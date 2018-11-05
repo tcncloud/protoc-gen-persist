@@ -27,20 +27,20 @@ type RestOfUServHandlers interface {
 	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
 }
 type UServTypeMapping interface {
-	TimestampTimestamp() UServTimestampTimestampMappingImpl
-	SliceStringParam() UServSliceStringParamMappingImpl
+	TimestampTimestamp() TimestampTimestampMappingImpl
+	SliceStringParam() SliceStringParamMappingImpl
 }
-type UServTimestampTimestampMappingImpl interface {
+type TimestampTimestampMappingImpl interface {
 	ToProto(**timestamp.Timestamp) error
+	Empty() TimestampTimestampMappingImpl
 	ToSql(*timestamp.Timestamp) sql.Scanner
-	Empty() UServTimestampTimestampMappingImpl
 	sql.Scanner
 	driver.Valuer
 }
-type UServSliceStringParamMappingImpl interface {
+type SliceStringParamMappingImpl interface {
 	ToProto(**SliceStringParam) error
+	Empty() SliceStringParamMappingImpl
 	ToSql(*SliceStringParam) sql.Scanner
-	Empty() UServSliceStringParamMappingImpl
 	sql.Scanner
 	driver.Valuer
 }
@@ -186,8 +186,10 @@ func UserToUServPersistType(serv UServTypeMapping, req *User) (*persist_lib.User
 		}
 		params.Friends = raw
 	}
-	mapper := serv.TimestampTimestamp()
-	params.CreatedOn = mapper.ToSql(req.CreatedOn)
+	{
+		mapper := serv.TimestampTimestamp()
+		params.CreatedOn = mapper.ToSql(req.CreatedOn)
+	}
 	return params, nil
 }
 func UserFromUServDatabaseRow(serv UServTypeMapping, row persist_lib.Scanable) (*User, error) {
@@ -229,8 +231,10 @@ func IterUServUserProto(ms UServTypeMapping, iter *persist_lib.Result, next func
 }
 func FriendsReqToUServPersistType(serv UServTypeMapping, req *FriendsReq) (*persist_lib.FriendsReqForUServ, error) {
 	params := &persist_lib.FriendsReqForUServ{}
-	mapper := serv.SliceStringParam()
-	params.Names = mapper.ToSql(req.Names)
+	{
+		mapper := serv.SliceStringParam()
+		params.Names = mapper.ToSql(req.Names)
+	}
 	return params, nil
 }
 func (s *UServImpl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {

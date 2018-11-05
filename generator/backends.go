@@ -99,7 +99,7 @@ func (s *SpannerStringer) TranslateRowToResult() string {
 			p.Q("if err := local.SpannerScan(", td.Name, "_); err != nil {\n")
 			p.Q("\treturn nil, err\n")
 			p.Q("}\n")
-			p.Q("if err :=.ToProto(&res.", td.Name, "); err != nil {\n")
+			p.Q("if err := local.ToProto(&res.", td.Name, "); err != nil {\n")
 			p.Q("\treturn nil, err\n")
 			p.Q("}\n")
 			// p.Q("res.", td.Name, " = mapper.ToProto(local)\n")

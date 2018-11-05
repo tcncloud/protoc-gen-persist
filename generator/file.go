@@ -407,10 +407,11 @@ func (f *FileStruct) Generate() ([]byte, error) {
 	}
 	printer := &Printer{}
 	printer.P(")\n")
+	cacheForTypeMappingNames := make(map[string]bool)
 	for _, s := range *f.ServiceList {
 		processed := make(map[string]bool)
 		if s.IsSpanner() || s.IsSQL() {
-			printer.P("%s\n", s.PrintBuilder())
+			printer.P("%s\n", s.PrintBuilder(cacheForTypeMappingNames))
 		}
 		for _, m := range *s.Methods {
 			if m.IsSQL() || m.IsSpanner() {

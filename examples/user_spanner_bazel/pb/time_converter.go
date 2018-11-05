@@ -40,7 +40,7 @@ type TimeString struct {
 	t *timestamp.Timestamp
 }
 
-func (ts TimeString) ToSpanner(t *timestamp.Timestamp) UServTimestampTimestampMappingImpl {
+func (ts TimeString) ToSpanner(t *timestamp.Timestamp) TimestampTimestampMappingImpl {
 	ts.t = t
 	return &ts
 }
@@ -69,7 +69,7 @@ func (t *TimeString) SpannerScan(src *spanner.GenericColumnValue) error {
 func (t *TimeString) SpannerValue() (interface{}, error) {
 	return ptypes.TimestampString(t.t), nil
 }
-func (t TimeString) Empty() UServTimestampTimestampMappingImpl {
+func (t TimeString) Empty() TimestampTimestampMappingImpl {
 	return new(TimeString)
 }
 
