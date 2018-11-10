@@ -15,7 +15,7 @@ before_deploy:
   - gox
   - rm protoc-gen-persist
   - export VER=`echo $TRAVIS_TAG|tr -d v`
-  - for i in protoc-gen-persist*; do zip $i-$VER.zip $i; done
+  - for i in protoc-gen-persist*; do zip $i-$VER.zip persist/options.proto $i; done
 deploy:
   skip_cleanup: true
   provider: releases
