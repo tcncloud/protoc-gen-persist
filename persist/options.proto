@@ -40,10 +40,11 @@ extend google.protobuf.FileOptions {
 }
 
 extend google.protobuf.MethodOptions {
-    optional QLImpl ql = 560000;
+    optional MOpts opts = 560004;
 }
 
 extend google.protobuf.ServiceOptions {
+    optional QLImpl ql = 560000;
     optional TypeMapping mapping = 560001;
 
     // persistence option, right now it has only one option, SQL
@@ -64,10 +65,16 @@ message QLImpl {
     // will be joined and used as a single sql query string at generation time
     repeated string query = 1;
 
-    // in order list of argument names that will be used as parameters for the query
-    // the list of arguments represents the field names of the input type message
-    repeated string arguments = 2;
-
+    // if provided, persist will rewrite the query string in the generated code
+    // replacing "@field_name" (no quotes) with "?" or "$<position>"
+    // if unprovided, persist will not rewrite the query string
+    optional string arguments = 2;
+    // name of this query.  must be unique to the service.
+    required string name = 3;
+}
+message MOpts {
+    // must match a name of a QLImpl query in the service.
+    required string query = 1;
     // the before function will be called before running any sql code for
     // every input data element and if the return will be not empty/nil and
     // the error will be nil the data returned by this function will be
