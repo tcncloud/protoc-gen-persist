@@ -26,6 +26,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 syntax = "proto3";
 
 package pb;
@@ -57,6 +58,7 @@ message FriendsReq {
 
 message Empty{}
 
+
 service UServ {
 	option (persist.service_type) = SQL;
 	option (persist.mapping) = {
@@ -68,57 +70,85 @@ service UServ {
 			proto_type: TYPE_MESSAGE,
 		}]
 	};
-	rpc CreateTable(Empty) returns (Empty) {
-		option (persist.ql) = {
+	option (persist.ql) = {
+		queries: [{
 			query: ["CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA,",
-							"created_on VARCHAR(50))"],
+					"created_on VARCHAR(50))"],
+			pm_strategy: "$",
+			name: "create_users_table",
+		}, {
+			query: ["INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)"],
+			pm_strategy: "$",
+			name: "insert_users",
+		}, {
+			query: ["SELECT id, name, friends, created_on FROM users"]
+			name: "get_all_users",
+		}, {
+			query: ["SELECT id, name, friends, created_on FROM users WHERE id = @id"],
+			pm_strategy: "$",
+			name: "select_user_by_id",
+		}, {
+			query: ["Update users set name = @name WHERE id = @id ",
+					"RETURNING id, name, friends, created_on"],
+			pm_strategy: "$",
+			name: "update_user_name",
+		}{
+			query: ["Update users set name = 'foo' WHERE id = @id"],
+			pm_strategy: "$",
+			name: "update_name_to_foo",
+		}{
+			query: ["SELECT id, name, friends, created_on FROM users WHERE name = ANY(@names)"],
+			pm_strategy: "$",
+			name: "get_friends",
+		},{
+			query: ["drop table users"],
+			name: "drop"
+		}]
+	};
+	rpc CreateTable(Empty) returns (Empty) {
+		option (persist.opts) = {
+			query: "create_user_table",
 		};
 	};
 	rpc InsertUsers(stream User) returns (Empty) {
-		option (persist.ql) = {
-			query: ["INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)"],
-			arguments: ["id", "name", "friends", "created_on"],
-			before: true
-			after: true
+		option (persist.opts) = {
+			query: "insert_users",
+			before: true,
+			after: true,
 		};
 	};
 	rpc GetAllUsers(Empty) returns (stream User) {
-		option (persist.ql) = {
-			query: ["SELECT id, name, friends, created_on FROM users"]
-			after: true
-			before: true
+		option (persist.opts) = {
+			query: "get_all_users",
+			after: true,
+			before: true,
 		};
 	};
 	rpc SelectUserById(User) returns (User) {
-		option (persist.ql) = {
-			query: ["SELECT id, name, friends, created_on FROM users WHERE id = $1"],
-			arguments: ["id"],
+		option (persist.opts) = {
+			query: "select_user_by_id",
 		};
 	};
 	rpc UpdateUserNames(stream User) returns (stream User) {
-		option (persist.ql) = {
-			query: ["Update users set name = $1 WHERE id = $2 ",
-							"RETURNING id, name, friends, created_on"],
-			arguments: ["name", "id"],
+		option (persist.opts) = {
+			query: "update_user_name",
 		};
 	};
 	rpc UpdateNameToFoo(User) returns (Empty) {
-		option (persist.ql) = {
-			query: ["Update users set name = 'foo' WHERE id = $1"],
-			arguments: ["id"]
+		option (persist.opts) = {
+			query: "update_name_to_foo",
 		};
 	};
 	rpc UpdateAllNames(Empty) returns (stream User) {};
 
 	rpc GetFriends(FriendsReq) returns(stream User) {
-		option (persist.ql) = {
-			query: ["SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)"],
-			arguments: ["names"],
+		option (persist.opts) = {
+			query: "get_friends",
 		};
 	};
 	rpc DropTable(Empty) returns (Empty) {
-		option (persist.ql) = {
-			query: ["drop table users"]
+		option (persist.opts) = {
+			query: "drop",
 		};
 	};
 }

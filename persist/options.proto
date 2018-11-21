@@ -44,7 +44,7 @@ extend google.protobuf.MethodOptions {
 }
 
 extend google.protobuf.ServiceOptions {
-    optional QLImpl ql = 560000;
+    optional QueryOpts ql = 560000;
     optional TypeMapping mapping = 560001;
 
     // persistence option, right now it has only one option, SQL
@@ -58,6 +58,9 @@ enum PersistenceOptions {
     SPANNER = 1;
 }
 
+message QueryOpts {
+    repeated QLImpl queries = 1;
+}
 
 message QLImpl {
     // the query string with numeric placeholders for parameters
@@ -68,7 +71,7 @@ message QLImpl {
     // if provided, persist will rewrite the query string in the generated code
     // replacing "@field_name" (no quotes) with "?" or "$<position>"
     // if unprovided, persist will not rewrite the query string
-    optional string arguments = 2;
+    optional string pm_strategy = 2;
     // name of this query.  must be unique to the service.
     required string name = 3;
 }
