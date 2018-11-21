@@ -92,11 +92,11 @@ service UServ {
 					"RETURNING id, name, friends, created_on"],
 			pm_strategy: "$",
 			name: "update_user_name",
-		}{
+		}, {
 			query: ["Update users set name = 'foo' WHERE id = @id"],
 			pm_strategy: "$",
 			name: "update_name_to_foo",
-		}{
+		}, {
 			query: ["SELECT id, name, friends, created_on FROM users WHERE name = ANY(@names)"],
 			pm_strategy: "$",
 			name: "get_friends",
