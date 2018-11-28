@@ -302,7 +302,6 @@ func (s *SqlStringer) TranslateRowToResult() string {
 			p.Q("return nil, fmt.Errorf(\"cant convert db column ", td.ProtoName, " to protobuf go type ", td.GoName, "\")\n")
 			p.Q("}\n")
 			p.Q("res.", td.Name, " = r\n")
-			// p.Q("res.", td.Name, " = ", td.GoName, "(*scanned[i].i)\n")
 		}
 	}
 	p.Q("default:\n")

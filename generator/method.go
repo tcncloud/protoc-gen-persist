@@ -142,17 +142,16 @@ func (m *Method) GetQuery() (string, []TypeDesc, error) {
 	}()
 
 	newQuery := ""
-	// split the string on "@"
-	r := regexp.MustCompile("@[a-zA-Z0-9]*")
+	r := regexp.MustCompile("@[a-zA-Z0-9_]*")
 	potentialFieldNames := r.FindAllString(orig, -1)
-	fieldsMap := m.GetTypeDescForFieldsInStruct(m.GetInputTypeStruct())
+	fieldsMap := m.GetTypeDescForFieldsInStructSnakeCase(m.GetInputTypeStruct())
 	params := make([]TypeDesc, 0)
 
 	for _, pf := range potentialFieldNames {
 		start := strings.Index(orig, pf)
 		stop := start + len(pf)
 		// index into the map (removing the "@")
-		td, exists := fieldsMap[pf[0:]]
+		td, exists := fieldsMap[pf[1:]]
 		// eat up to the field name
 		newQuery += orig[:start]
 		if !exists { // it was just part of the query, not a field on input

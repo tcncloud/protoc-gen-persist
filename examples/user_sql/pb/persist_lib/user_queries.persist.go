@@ -11,7 +11,11 @@ func UServCreateTableQuery(tx Runable, req UServCreateTableQueryParams) *Result 
 }
 func UServInsertUsersQuery(tx Runable, req UServInsertUsersQueryParams) *Result {
 	res, err := tx.Exec(
-		"INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)",
+		"INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)",
+		req.GetId(),
+		req.GetName(),
+		req.GetFriends(),
+		req.GetCreatedOn(),
 	)
 	if err != nil {
 		return newResultFromErr(err)
@@ -29,7 +33,8 @@ func UServGetAllUsersQuery(tx Runable, req UServGetAllUsersQueryParams) *Result 
 }
 func UServSelectUserByIdQuery(tx Runable, req UServSelectUserByIdQueryParams) *Result {
 	res, err := tx.Query(
-		"SELECT id, name, friends, created_on FROM users WHERE id = @id",
+		"SELECT id, name, friends, created_on FROM users WHERE id = $1",
+		req.GetId(),
 	)
 	if err != nil {
 		return newResultFromErr(err)
@@ -38,7 +43,9 @@ func UServSelectUserByIdQuery(tx Runable, req UServSelectUserByIdQueryParams) *R
 }
 func UServUpdateUserNamesQuery(tx Runable, req UServUpdateUserNamesQueryParams) *Result {
 	res, err := tx.Query(
-		"Update users set name = @name WHERE id = @id  RETURNING id, name, friends, created_on",
+		"Update users set name = $1 WHERE id = $2  RETURNING id, name, friends, created_on",
+		req.GetName(),
+		req.GetId(),
 	)
 	if err != nil {
 		return newResultFromErr(err)
@@ -47,7 +54,8 @@ func UServUpdateUserNamesQuery(tx Runable, req UServUpdateUserNamesQueryParams) 
 }
 func UServUpdateNameToFooQuery(tx Runable, req UServUpdateNameToFooQueryParams) *Result {
 	res, err := tx.Exec(
-		"Update users set name = 'foo' WHERE id = @id",
+		"Update users set name = 'foo' WHERE id = $1",
+		req.GetId(),
 	)
 	if err != nil {
 		return newResultFromErr(err)
@@ -56,7 +64,8 @@ func UServUpdateNameToFooQuery(tx Runable, req UServUpdateNameToFooQueryParams) 
 }
 func UServGetFriendsQuery(tx Runable, req UServGetFriendsQueryParams) *Result {
 	res, err := tx.Query(
-		"SELECT id, name, friends, created_on FROM users WHERE name = ANY(@names)",
+		"SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)",
+		req.GetNames(),
 	)
 	if err != nil {
 		return newResultFromErr(err)
@@ -76,16 +85,25 @@ func UServDropTableQuery(tx Runable, req UServDropTableQueryParams) *Result {
 type UServCreateTableQueryParams interface {
 }
 type UServInsertUsersQueryParams interface {
+	GetId() int64
+	GetName() string
+	GetFriends() []byte
+	GetCreatedOn() interface{}
 }
 type UServGetAllUsersQueryParams interface {
 }
 type UServSelectUserByIdQueryParams interface {
+	GetId() int64
 }
 type UServUpdateUserNamesQueryParams interface {
+	GetName() string
+	GetId() int64
 }
 type UServUpdateNameToFooQueryParams interface {
+	GetId() int64
 }
 type UServGetFriendsQueryParams interface {
+	GetNames() interface{}
 }
 type UServDropTableQueryParams interface {
 }
