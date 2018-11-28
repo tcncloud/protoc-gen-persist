@@ -255,18 +255,24 @@ func (s *SqlStringer) TranslateRowToResult() string {
 
 	p := &Printer{}
 
-	p.Q("func ", iterFuncName, "(serv ", sName, "TypeMapping row persist_lib.Scanable) (*", outputType, " error) {\n")
+	p.Q("func ", iterFuncName, "(serv ", sName, "TypeMapping, row persist_lib.Scanable) (*", outputType, ", error) {\n")
 	p.Q("cols, err := row.Columns()\n")
 	p.Q("if err != nil {\n")
 	p.Q("return nil, err\n")
 	p.Q("}\n")
+	// TODO if this doesn't work, manually generate the elipsis
+	p.Q("toScan := make([]interface{}, len(cols))\n")
 	p.Q("scanned := make([]alwaysScanner, len(cols))\n")
-	p.Q("if err := row.Scan(scanned...); err != nil {\n")
+	p.Q("for i := range scanned {\n")
+	p.Q("toScan[i] = &scanned[i]\n")
+	p.Q("}\n")
+	p.Q("if err := row.Scan(toScan...); err != nil {\n")
 	p.Q("return nil, err\n")
 	p.Q("}\n")
 	p.Q("res := &", outputType, "{}\n")
 
 	p.Q("for i, col := range cols {\n")
+	p.Q("_ = i\n")
 	p.Q("switch col {\n")
 	for _, td := range outputFields {
 		p.Q("case \"", td.ProtoName, "\":\n")
@@ -274,23 +280,32 @@ func (s *SqlStringer) TranslateRowToResult() string {
 			_, titleCased := getGoNamesForTypeMapping(td.Mapping, s.method.Service.File)
 			p.Q("{\n")
 			p.Q("var converted = serv.", titleCased, "().Empty()\n")
-			p.Q("if err := converted.Scan(scanned[i].i); err != nil {\n")
+			p.Q("if err := converted.Scan(*scanned[i].i); err != nil {\n")
 			p.Q("return nil, err\n")
 			p.Q("}\n")
 			p.Q("}\n")
 		} else if td.IsMessage {
 			p.Q("{\n")
+			p.Q("r, ok := (*scanned[i].i).([]byte)\n")
+			p.Q("if !ok {\n")
+			p.Q("return nil, fmt.Errorf(\"cant convert db column ", td.ProtoName, " to protobuf go type ", td.GoName, "\")\n")
+			p.Q("}\n")
 			p.Q("var converted = new(", td.GoTypeName, ")\n")
-			p.Q("if err := proto.Unmarshal([]byte(scanned[i].i), convertd); err != nil {\n")
+			p.Q("if err := proto.Unmarshal(r, converted); err != nil {\n")
 			p.Q("return nil, err\n")
 			p.Q("}\n")
 			p.Q("res.", td.Name, " = converted\n")
 			p.Q("}\n")
 		} else {
-			p.Q("res.", td.Name, " = ", td.GoTypeName, "(scanned[i].i)\n")
+			p.Q("r, ok := (*scanned[i].i).(", td.GoName, ")\n")
+			p.Q("if !ok {\n")
+			p.Q("return nil, fmt.Errorf(\"cant convert db column ", td.ProtoName, " to protobuf go type ", td.GoName, "\")\n")
+			p.Q("}\n")
+			p.Q("res.", td.Name, " = r\n")
+			// p.Q("res.", td.Name, " = ", td.GoName, "(*scanned[i].i)\n")
 		}
 	}
-	p.Q("default:\n:")
+	p.Q("default:\n")
 	p.Q("return nil, fmt.Errorf(\"unsupported column in output: %s\", col)\n")
 	p.Q("}\n")
 	p.Q("}\n")

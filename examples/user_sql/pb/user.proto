@@ -81,7 +81,7 @@ service UServ {
 			pm_strategy: "$",
 			name: "insert_users",
 		}, {
-			query: ["SELECT id, name, friends, created_on FROM users"]
+			query: ["SELECT id, name, friends, created_on FROM users"],
 			name: "get_all_users",
 		}, {
 			query: ["SELECT id, name, friends, created_on FROM users WHERE id = @id"],
@@ -107,7 +107,7 @@ service UServ {
 	};
 	rpc CreateTable(Empty) returns (Empty) {
 		option (persist.opts) = {
-			query: "create_user_table",
+			query: "create_users_table",
 		};
 	};
 	rpc InsertUsers(stream User) returns (Empty) {
@@ -125,9 +125,7 @@ service UServ {
 		};
 	};
 	rpc SelectUserById(User) returns (User) {
-		option (persist.opts) = {
-			query: "select_user_by_id",
-		};
+		option (persist.opts) = { query: "select_user_by_id", };
 	};
 	rpc UpdateUserNames(stream User) returns (stream User) {
 		option (persist.opts) = {

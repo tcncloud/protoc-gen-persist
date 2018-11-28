@@ -157,9 +157,25 @@ func EmptyToUServPersistType(serv UServTypeMapping, req *Empty) (*persist_lib.Em
 	return params, nil
 }
 func EmptyFromUServDatabaseRow(serv UServTypeMapping, row persist_lib.Scanable) (*Empty, error) {
-	res := &Empty{}
-	if err := row.Scan(); err != nil && err != sql.ErrNoRows {
+	cols, err := row.Columns()
+	if err != nil {
 		return nil, err
+	}
+	toScan := make([]interface{}, len(cols))
+	scanned := make([]alwaysScanner, len(cols))
+	for i := range scanned {
+		toScan[i] = &scanned[i]
+	}
+	if err := row.Scan(toScan...); err != nil {
+		return nil, err
+	}
+	res := &Empty{}
+	for i, col := range cols {
+		_ = i
+		switch col {
+		default:
+			return nil, fmt.Errorf("unsupported column in output: %s", col)
+		}
 	}
 	return res, nil
 }
@@ -193,30 +209,56 @@ func UserToUServPersistType(serv UServTypeMapping, req *User) (*persist_lib.User
 	return params, nil
 }
 func UserFromUServDatabaseRow(serv UServTypeMapping, row persist_lib.Scanable) (*User, error) {
+	cols, err := row.Columns()
+	if err != nil {
+		return nil, err
+	}
+	toScan := make([]interface{}, len(cols))
+	scanned := make([]alwaysScanner, len(cols))
+	for i := range scanned {
+		toScan[i] = &scanned[i]
+	}
+	if err := row.Scan(toScan...); err != nil {
+		return nil, err
+	}
 	res := &User{}
-	var Id_ int64
-	var Name_ string
-	var Friends_ []byte
-	CreatedOn_ := serv.TimestampTimestamp().Empty()
-	if err := row.Scan(
-		&Id_,
-		&Name_,
-		&Friends_,
-		CreatedOn_,
-	); err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-	res.Id = Id_
-	res.Name = Name_
-	{
-		var converted = new(Friends)
-		if err := proto.Unmarshal(Friends_, converted); err != nil {
-			return nil, err
+	for i, col := range cols {
+		_ = i
+		switch col {
+		case "id":
+			r, ok := (*scanned[i].i).(int64)
+			if !ok {
+				return nil, fmt.Errorf("cant convert db column id to protobuf go type int64")
+			}
+			res.Id = r
+		case "name":
+			r, ok := (*scanned[i].i).(string)
+			if !ok {
+				return nil, fmt.Errorf("cant convert db column name to protobuf go type string")
+			}
+			res.Name = r
+		case "friends":
+			{
+				r, ok := (*scanned[i].i).([]byte)
+				if !ok {
+					return nil, fmt.Errorf("cant convert db column friends to protobuf go type *Friends")
+				}
+				var converted = new(Friends)
+				if err := proto.Unmarshal(r, converted); err != nil {
+					return nil, err
+				}
+				res.Friends = converted
+			}
+		case "created_on":
+			{
+				var converted = serv.TimestampTimestamp().Empty()
+				if err := converted.Scan(*scanned[i].i); err != nil {
+					return nil, err
+				}
+			}
+		default:
+			return nil, fmt.Errorf("unsupported column in output: %s", col)
 		}
-		res.Friends = converted
-	}
-	if err := CreatedOn_.ToProto(&res.CreatedOn); err != nil {
-		return nil, err
 	}
 	return res, nil
 }

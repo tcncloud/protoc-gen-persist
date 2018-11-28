@@ -30,6 +30,8 @@
 package generator
 
 import (
+	"fmt"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/sirupsen/logrus"
@@ -65,7 +67,7 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 		if !fileStruct.Dependency {
 			fileContents, err := fileStruct.Generate()
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("error generating the file struct: %s", err)
 			}
 			ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
 				Content: proto.String(string(FormatCode(fileStruct.GetFileName(), fileContents))),
@@ -75,7 +77,10 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 	}
 	// generate our persist_lib package
 	persistPkg := NewPersistPackage(g.Files)
-	resps := persistPkg.Generate()
+	resps, err := persistPkg.Generate()
+	if err != nil {
+		return nil, fmt.Errorf("error generating persist_lib %s", err)
+	}
 
 	for _, resp := range resps {
 		ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{

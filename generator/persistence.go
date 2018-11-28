@@ -45,19 +45,23 @@ type PersistContent struct {
 	Name    string // the filename for the response
 }
 
-func (p *PersistPackage) Generate() []PersistContent {
+func (p *PersistPackage) Generate() ([]PersistContent, error) {
 	var contents []PersistContent
 	for pkg, files := range p.files {
 		// files is all the files that need to be in this package.
 		contents = append(contents, GeneratePkgLevelContent(pkg, files))
 		for _, file := range files {
-			contents = append(contents, GenerateFileQueryContent(pkg, file))
+			fqc, err := GenerateFileQueryContent(pkg, file)
+			if err != nil {
+				return nil, fmt.Errorf("could not generate the persist package: %v", err)
+			}
+			contents = append(contents, fqc)
 			contents = append(contents, GenerateFilePersistHandlerContent(pkg, file))
 		}
 	}
-	return contents
+	return contents, nil
 }
-func GenerateFileQueryContent(pkg PackagePath, file *FileStruct) PersistContent {
+func GenerateFileQueryContent(pkg PackagePath, file *FileStruct) (PersistContent, error) {
 	stringer := PersistStringer{}
 	p := file.GetPersistLibFullFilepath()
 
@@ -82,16 +86,24 @@ func GenerateFileQueryContent(pkg PackagePath, file *FileStruct) PersistContent 
 			if m.IsSpanner() {
 				content.Content += stringer.SpannerQueryFunction(m)
 			} else if m.IsSQL() {
-				content.Content += stringer.SqlQueryFunction(m)
+				c, err := stringer.SqlQueryFunction(m)
+				if err != nil {
+					return content, err
+				}
+				content.Content += c
 			}
 		}
 	}
 	for _, s := range *file.ServiceList {
 		for _, m := range *s.Methods {
-			content.Content += stringer.QueryInterfaceDefinition(m)
+			c, err := stringer.QueryInterfaceDefinition(m)
+			if err != nil {
+				return content, err
+			}
+			content.Content += c
 		}
 	}
-	return content
+	return content, nil
 }
 func GenerateFilePersistHandlerContent(pkg PackagePath, file *FileStruct) PersistContent {
 	stringer := PersistStringer{}

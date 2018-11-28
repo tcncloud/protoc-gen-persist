@@ -31,6 +31,7 @@ package generator
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"bytes"
@@ -77,11 +78,11 @@ func (m *Method) IsSelect() bool {
 	}
 	return false
 }
-func (m *Method) GetMethodOption() *persist.QLImpl {
-	if m.Desc.Options != nil && proto.HasExtension(m.Desc.Options, persist.E_Ql) {
-		ext, err := proto.GetExtension(m.Desc.Options, persist.E_Ql)
+func (m *Method) GetMethodOption() *persist.MOpts {
+	if m.Desc.Options != nil && proto.HasExtension(m.Desc.Options, persist.E_Opts) {
+		ext, err := proto.GetExtension(m.Desc.Options, persist.E_Opts)
 		if err == nil {
-			return ext.(*persist.QLImpl)
+			return ext.(*persist.MOpts)
 		}
 	}
 	return nil
@@ -98,13 +99,74 @@ func (m *Method) GetOutputTypeStruct() *Struct {
 	return m.GetTypeStructByProtoName(m.Desc.GetOutputType())
 }
 
-func (m *Method) GetQuery() string {
-	if opt := m.GetMethodOption(); opt != nil {
-		if q := opt.GetQuery(); q != nil {
-			return strings.Join(q, " ")
+func (m *Method) GetUndoctoredQuery() (*persist.QLImpl, error) {
+	opt := m.GetMethodOption()
+	if opt == nil {
+		return nil, fmt.Errorf("option not defined for method: %s", m.Desc.GetName())
+	}
+	qopts := m.Service.GetQueriesOption()
+	queries := qopts.GetQueries()
+
+	queryName := opt.GetQuery()
+	for _, query := range queries {
+		if query.GetName() == queryName {
+			return query, nil
 		}
 	}
-	return ""
+	return nil, fmt.Errorf("query not found with name: %s on service: %s, method: %s", queryName, m.GetName(), m.Service.GetName())
+}
+
+// GetQuery returns the doctored query string for this method
+// by applying the pm strategy to the joined query string found
+// on this methods service.
+func (m *Method) GetQuery() (string, []TypeDesc, error) {
+	query, err := m.GetUndoctoredQuery()
+	if err != nil {
+		return "", nil, err
+	}
+	orig := strings.Join(query.GetQuery(), " ")
+
+	pmStrat := query.GetPmStrategy()
+
+	nextParamMarker := func() func(string) string {
+		var count int
+		return func(req string) string {
+			if pmStrat == "$" {
+				count++
+				return fmt.Sprintf("$%d", count)
+			} else if pmStrat == "?" {
+				return "?"
+			}
+			return req
+		}
+	}()
+
+	newQuery := ""
+	// split the string on "@"
+	r := regexp.MustCompile("@[a-zA-Z0-9]*")
+	potentialFieldNames := r.FindAllString(orig, -1)
+	fieldsMap := m.GetTypeDescForFieldsInStruct(m.GetInputTypeStruct())
+	params := make([]TypeDesc, 0)
+
+	for _, pf := range potentialFieldNames {
+		start := strings.Index(orig, pf)
+		stop := start + len(pf)
+		// index into the map (removing the "@")
+		td, exists := fieldsMap[pf[0:]]
+		// eat up to the field name
+		newQuery += orig[:start]
+		if !exists { // it was just part of the query, not a field on input
+			newQuery += pf
+		} else { // it was a field, mark it
+			newQuery += nextParamMarker(pf)
+			params = append(params, td)
+		}
+		// remove the already written stuff
+		orig = orig[stop:]
+	}
+	newQuery += orig
+
+	return newQuery, params, nil
 }
 
 // helper method for getting a files package for stream calls
@@ -151,15 +213,6 @@ func (m *Method) GetInputTypeMinusPackage() string {
 
 func (m *Method) GetOutputType() string {
 	return m.GetGoTypeName(m.Desc.GetOutputType())
-}
-
-// returns the type mapping option on either the method, or the service.
-func (m *Method) GetTypeMappingOpts() *persist.TypeMapping {
-	if opt := m.Service.GetServiceOption(); opt != nil {
-		return opt
-	}
-	return nil
-
 }
 
 func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
@@ -273,7 +326,7 @@ func (m *Method) DefaultMapping(typ *descriptor.FieldDescriptorProto) string {
 }
 
 func (m *Method) GetMapping(typ *descriptor.FieldDescriptorProto) *persist.TypeMapping_TypeDescriptor {
-	if mapping := m.GetTypeMappingOpts(); mapping != nil {
+	if mapping := m.Service.GetTypeMapping(); mapping != nil {
 		// if we have a mapping we are going to process it first
 		for _, mapp := range mapping.Types {
 			ptn := mapp.GetProtoTypeName()
@@ -412,29 +465,6 @@ func (m *Method) GetTypeDescForFieldsInStructSnakeCase(str *Struct) map[string]T
 	}
 	return ret
 }
-func (m *Method) GetTypeDescForQueryFields() map[string]TypeDesc {
-	inputTypeDesc := m.GetTypeDescForFieldsInStructSnakeCase(m.GetInputTypeStruct())
-	findTypeDesc := func(queryField string) TypeDesc {
-		if queryField[0] == '@' {
-			queryField = queryField[1:]
-		}
-		return inputTypeDesc[queryField]
-	}
-	fields := make(map[string]TypeDesc)
-	if m.Query != nil {
-		for _, f := range m.Query.Fields() {
-			fields[f] = findTypeDesc(f)
-		}
-	} else if opts := m.GetMethodOption(); opts != nil {
-		if args := opts.GetArguments(); args != nil {
-			for _, arg := range args {
-				fields[arg] = findTypeDesc(arg)
-			}
-		}
-	}
-
-	return fields
-}
 
 func (m *Method) GetName() string {
 	return m.Desc.GetName()
@@ -463,7 +493,6 @@ func (m *Method) IsBidiStreaming() bool {
 	return m.Desc.GetClientStreaming() && m.Desc.GetServerStreaming()
 }
 
-// HOOKCHANGE
 func (m *Method) GetBeforeHookName() string {
 	return P(m.GetName(), "BeforeHook")
 }
@@ -474,17 +503,19 @@ func (m *Method) GetAfterHookName() string {
 func (m *Method) Process() error {
 	logrus.Debug("Process method %s", m.GetName())
 	if m.IsSpanner() {
-		query := m.GetQuery()
+		query, tds, err := m.GetQuery()
+		if err != nil {
+			return fmt.Errorf("error processing spanncer query: %v", err)
+		}
 		reader := bytes.NewBufferString(query)
+		// TODO remove
 		p := parser.NewParser(reader)
 		parsedQuery, err := p.Parse()
 		if err != nil {
 			return fmt.Errorf("%s\n  method: %s", err, m.GetName())
 		}
 		m.Query = parsedQuery
-		// WE REALLY SHOULD PUT THIS PART IN THE TEMPLATES, BUT IM TOO TIRED
-		types := m.GetTypeDescArrayForStruct(m.GetInputTypeStruct())
-		for _, t := range types {
+		for _, t := range tds {
 			// this needs to be @, otherwise it will not be found
 			m.Query.AddParam("@"+t.ProtoName, fmt.Sprintf("req.Get%s()", t.Name))
 		}

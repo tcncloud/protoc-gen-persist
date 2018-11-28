@@ -67,7 +67,16 @@ func (s *Service) GetName() string {
 	return s.Desc.GetName()
 }
 
-func (s *Service) GetServiceOption() *persist.TypeMapping {
+func (s *Service) GetQueriesOption() *persist.QueryOpts {
+	if s.Desc.Options != nil && proto.HasExtension(s.Desc.Options, persist.E_Ql) {
+		ext, err := proto.GetExtension(s.Desc.Options, persist.E_Ql)
+		if err == nil {
+			return ext.(*persist.QueryOpts)
+		}
+	}
+	return nil
+}
+func (s *Service) GetTypeMapping() *persist.TypeMapping {
 	if s.Desc.Options != nil && proto.HasExtension(s.Desc.Options, persist.E_Mapping) {
 		ext, err := proto.GetExtension(s.Desc.Options, persist.E_Mapping)
 		if err == nil {
