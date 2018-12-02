@@ -74,6 +74,30 @@ message QLImpl {
     optional string pm_strategy = 2;
     // name of this query.  must be unique to the service.
     required string name = 3;
+    // the message type that matches the parameters
+    // Input rpc messages will be converted to this type
+    // they will be used in the parameters in the query 
+    // The INTERFACE of this message will be used for parameters
+    // in the generated query function.
+    // if absent, this query takes no  parameters.
+    // The query does not have to use all the fields of this type as parameters,
+    // but it cannot use any parameter NOT listed here.
+    optional string in = 4;
+    // the message type that matches what the query returns.
+    // This entity message will be converted to the output type
+    // input/output messages on rpc calls will have their fields ignored if they
+    // don't match this entity.
+    // the generated query function will return this message type
+    // if absent, this query returns nothing, and .
+    // The query does not have to return a fully populated message,
+    // but additional rows returned from the query that do NOT exist on
+    // the out message will be ignored.
+    optional string out= 5;
+    // QUESTIONS:
+    // can we do anything special if:
+    // - if in and out are the same type, 
+    // - if in and out are both absent, 
+    // - if multiple queries were to be used, and they matched in/out types
 }
 message MOpts {
     // must match a name of a QLImpl query in the service.

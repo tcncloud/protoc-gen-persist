@@ -21,6 +21,12 @@ type Runable interface {
 	Query(string, ...interface{}) (*sql.Rows, error)
 	Exec(string, ...interface{}) (sql.Result, error)
 }
+
+// NEW
+type result interface {
+	Do(func(Scanable) error) error
+	Scanable
+}
 type Result struct {
 	result sql.Result
 	rows   *sql.Rows
@@ -57,7 +63,7 @@ func (r *Result) Scan(dest ...interface{}) error {
 		return sql.ErrNoRows
 	} else if r.rows != nil {
 		err := r.rows.Scan(dest...)
-		if r.rows.Next() {
+		if !r.rows.Next() {
 			r.rows.Close()
 		}
 		return err
