@@ -31,15 +31,18 @@ package generator
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
 type Service struct {
-	Desc       *descriptor.ServiceDescriptorProto
+	Desc       *desc.ServiceDescriptorProto
 	Methods    *Methods
 	Package    string // protobuf package
 	File       *FileStruct
@@ -114,6 +117,18 @@ func (s *Service) IsSpanner() bool {
 	return false
 }
 
+func (s *Service) GetUndoctoredQueryByName(queryName string) (*persist.QLImpl, error) {
+	qopts := s.GetQueriesOption()
+	queries := qopts.GetQueries()
+
+	for _, query := range queries {
+		if query.GetName() == queryName {
+			return query, nil
+		}
+	}
+	return nil, fmt.Errorf("query not found with name: %s on service: %s", queryName, s.GetName())
+}
+
 func (s *Service) PrintBuilder(cacheForTypeMappingNames map[string]bool) string {
 	p := PersistStringer{}
 	return p.PersistImplBuilder(s, cacheForTypeMappingNames)
@@ -132,7 +147,7 @@ func (s Services) HasPersistService() bool {
 	return false
 }
 
-func (s *Services) AddService(pkg string, desc *descriptor.ServiceDescriptorProto, allStructs *StructList, file *FileStruct) *Service {
+func (s *Services) AddService(pkg string, desc *desc.ServiceDescriptorProto, allStructs *StructList, file *FileStruct) *Service {
 	ret := &Service{
 		Package:    pkg,
 		Desc:       desc,
@@ -163,5 +178,501 @@ func (s *Services) PreGenerate() error {
 			return fmt.Errorf("%s\n  service: %s", err, srv.GetName())
 		}
 	}
+	return nil
+}
+
+type QueryProtoOpts struct {
+	query     *persist.QLImpl
+	inMsg     *Struct
+	outMsg    *Struct
+	inFields  []*desc.FieldDescriptorProto
+	outFields []*desc.FieldDescriptorProto
+}
+
+func NewQueryProtoOpts(qopt *persist.QLImpl, all *StructList) (*QueryProtoOpts, error) {
+	in := all.GetStructByProtoName(qopt.GetIn())
+	out := all.GetStructByProtoName(qopt.GetOut())
+	if !in.IsMessage || !out.IsMessage {
+		return nil, fmt.Errorf("in/out option must be proto messages for query: '%s'", qopt.GetName())
+	}
+	inFields, _ := in.GetFieldDescriptorsIfMessage()
+	outFields, _ := out.GetFieldDescriptorsIfMessage()
+
+	return &QueryProtoOpts{
+		query:     qopt,
+		inMsg:     in,
+		outMsg:    out,
+		inFields:  inFields,
+		outFields: outFields,
+	}, nil
+}
+
+type TypeMappingProtoOpts struct {
+	tm *persist.TypeMapping_TypeDescriptor
+}
+
+func NewTypeMappingProtoOpts(opt *persist.TypeMapping_TypeDescriptor, all *StructList) (*TypeMappingProtoOpts, error) {
+	return &TypeMappingProtoOpts{tm: opt}, nil
+}
+
+type MethodProtoOpts struct {
+	method    *desc.MethodDescriptorProto
+	option    *persist.MOpts
+	query     *persist.QLImpl
+	inMsg     *desc.DescriptorProto
+	outMsg    *desc.DescriptorProto
+	inFields  []*desc.FieldDescriptorProto
+	outFields []*desc.FieldDescriptorProto
+}
+
+func NewMethodProtoOpts(opt *desc.MethodDescriptorProto, all *StructList) (*MethodProtoOpts, error) {
+	in := all.GetStructByProtoName(opt.GetInputType())
+	out := all.GetStructByProtoName(opt.GetOutputType())
+
+	if !in.IsMessage || !out.IsMessage {
+		return nil, fmt.Errorf("in/out option must be proto messages for query: '%s'", opt.GetName())
+	}
+	inFields, _ := in.GetFieldDescriptorsIfMessage()
+	outFields, _ := out.GetFieldDescriptorsIfMessage()
+
+	var option *persist.MOpts
+
+	if opt.Options != nil && proto.HasExtension(opt.Options, persist.E_Opts) {
+		ext, err := proto.GetExtension(opt, persist.E_Opts)
+		if err == nil {
+			option = ext.(*persist.MOpts)
+		}
+	}
+
+	return &MethodProtoOpts{
+		method:    opt,
+		option:    option,
+		inMsg:     in.MsgDesc,
+		outMsg:    out.MsgDesc,
+		inFields:  inFields,
+		outFields: outFields,
+	}, nil
+}
+func WriteQueries(p *Printer, s *Service) error {
+	m := Matcher(s)
+	sName := s.GetName()
+	camelQ := func(q *QueryProtoOpts) string {
+		return _gen.CamelCase(q.query.GetName())
+	}
+	qname := func(q *QueryProtoOpts) string {
+		return q.query.GetName()
+	}
+	queryAndFields := func(q *QueryProtoOpts) (string, []string) {
+		orig := strings.Join(q.query.GetQuery(), " ")
+		pmStrat := q.query.GetPmStrategy()
+		nextParamMarker := func() func(string) string {
+			var count int
+			return func(req string) string {
+				if pmStrat == "$" {
+					count++
+					return fmt.Sprintf("$%d", count)
+				} else if pmStrat == "?" {
+					return "?"
+				}
+				return req
+			}
+		}()
+
+		newQuery := ""
+		r := regexp.MustCompile("@[a-zA-Z0-9_]*")
+		potentialFieldNames := r.FindAllString(orig, -1)
+		fieldsMap := make(map[string]bool)
+		for _, v := range q.inFields {
+			fieldsMap[v.GetName()] = true
+		}
+		params := make([]string, 0)
+		for _, pf := range potentialFieldNames {
+			start := strings.Index(orig, pf)
+			stop := start + len(pf)
+			// index into the map (removing the "@")
+			exists := fieldsMap[pf[1:]]
+			// eat up to the field name
+			newQuery += orig[:start]
+			if !exists { // it was just part of the query, not a field on input
+				newQuery += pf
+			} else { // it was a field, mark it
+				newQuery += nextParamMarker(pf)
+				params = append(params, pf[1:])
+			}
+			// remove the already written stuff
+			orig = orig[stop:]
+		}
+		newQuery += orig
+		return newQuery, params
+	}
+	qstring := func(q *QueryProtoOpts) string {
+		res, _ := queryAndFields(q)
+		return res
+	}
+	resultOrRows := func(q *QueryProtoOpts) string {
+		if len(q.outFields) == 0 {
+			return "result"
+		}
+		return "rows"
+	}
+	qmethod := func(q *QueryProtoOpts) string {
+		if len(q.outFields) == 0 {
+			return "Exec"
+		}
+		return "Query"
+	}
+	execParams := func(q *QueryProtoOpts) string {
+		paramStrings := make(map[string]string)
+		// basic mappping
+		m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			paramStrings[f.GetName()] = P(`func() (out interface{}) {
+				out = x.Get`, _gen.CamelCase(f.GetName()), `()
+				return
+			}(),
+			`)
+		}, m.MatchQuery(q))
+		// all the proto message types
+		// will overwrite paramStrings if the type is a message
+		m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			paramStrings[f.GetName()] = P(`func() (out interface{}) {
+				raw, err := proto.Marshal(x.Get`, _gen.CamelCase(f.GetName()), `())
+				if err != nil {
+					setupErr = err
+				}
+				out = raw
+				return
+			}(),
+			`)
+		}, m.MatchQuery(q), m.QueryFieldIsMessage)
+		// will overwrite paramStrings if type is mapped
+		m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			m.EachTM(func(tm *TypeMappingProtoOpts) {
+				_, titled := getGoNamesForTypeMapping(tm.tm, s.File)
+				paramStrings[f.GetName()] = P(`func() (out interface{}) {
+					mapper := this.opts.Mappings.`, titled, `()
+					out = mapper.ToSql(x.Get`, _gen.CamelCase(f.GetName()), `(),
+				`)
+			}, m.MatchTypeMapping(f))
+		}, m.MatchQuery(q), m.QueryFieldIsMapped)
+
+		_, paramOrdering := queryAndFields(q)
+		for _, paramName := range paramOrdering {
+			p.Q(paramStrings[paramName])
+		}
+		return p.String()
+	}
+
+	p.Q("type ", sName, "_QueryOpts {\n")
+	p.Q("MAPPINGS *", sName, "TypeMappings\n")
+	p.Q("db Runable\n")
+	p.Q("}\n")
+	p.Q("\\ Default", sName, "QueryOpts return the default options to be used with ", sName, "_Queries\n")
+	p.Q("Default", sName, "QueryOpts(db Runable) ", sName, "_QueryOpts {\n")
+	p.Q("return ", sName, "_QueryOpts{\n")
+	p.Q("db: db,\n")
+	p.Q("}\n")
+	p.Q("}\n") // End DefaultQueryOpts
+
+	p.Q("\\ ", sName, "_Queries holds all the queries found the proto service option as methods\n")
+	p.Q("type ", sName, "_Queries struct {\n")
+	p.Q("opts ", sName, "_QueryOpts\n")
+	p.Q("}\n")
+
+	p.Q(`// `, sName, `PersistQueries returns all the known 'SQL' queires for the '`, sName, `' service.
+	func `, sName, `PersistQueries(db Runable, opts ...`, sName, `_QueryOpts) *`, sName, `_Queries {
+		var myOpts `, sName, `_QueryOpts
+		if len(opts) > 0 {
+			myOpts = opts[0]
+		} else {
+			myOpts = Default`, sName, `QueryOpts(db)
+		}
+		return &`, sName, `_Queries{
+			opts: myOpts,
+		}
+	}
+	`)
+	m.EachQuery(func(q *QueryProtoOpts) {
+		p.Q(`// `, camelQ(q), `Query returns a new struct wrapping the current `, sName, `_QueryOpts
+		// that will perform '`, sName, `' services '`, qname(q), `' on the database
+		// when executed
+		func (this *`, sName, `_Queries) `, camelQ(q), `Query(ctx context.Context) *`, sName, `_`, camelQ(q), `Query {
+			return &`, sName, `_`, camelQ(q), `Query{
+				opts: `, sName, `_QueryOpts{
+					MAPPINGS: this.opts.MAPPINGS,
+					db:       this.opts.db,
+					ctx:      ctx,
+				},
+			}
+		}
+		type `, sName, `_`, camelQ(q), `Query struct {
+			opts `, sName, `_QueryOpts
+		}
+		
+		func (this *`, sName, `_`, camelQ(q), `Query) QueryInTypeUser()  {}
+		func (this *`, sName, `_`, camelQ(q), `Query) QueryOutTypeUser() {}
+		
+		// Executes the query with parameters retrieved from x
+		func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q), `Out) *`, sName, `_`, camelQ(q), `Iter {
+			var setupErr error
+			params := []interface{}{
+			`, execParams(q), `
+			}
+			result := &`, sName, `_`, camelQ(q), `Result{
+				tm: this.opts.MAPPINGS,
+				ctx: this.ctx,
+			}
+			if setupErr != nil {
+				result.err = setupErr
+				return result
+			}
+			result.`, resultOrRows(q), `, result.err = this.opts.db.`, qmethod(q), `Context(this.ctx, "`, qstring(q), `", params...)
+		
+			return result
+		}
+		`)
+	})
+
+	return nil
+}
+func WriteHooks(p *Printer, s *Service) error {
+	sName := s.GetName()
+	m := Matcher(s)
+	inName := func(mopt *MethodProtoOpts) string {
+		return convertedMsgTypeByProtoName(mopt.inMsg.GetName(), s.File)
+	}
+	outName := func(mopt *MethodProtoOpts) string {
+		return convertedMsgTypeByProtoName(mopt.outMsg.GetName(), s.File)
+	}
+	name := func(mopt *MethodProtoOpts) string {
+		return mopt.method.GetName()
+	}
+
+	p.Q("type ", sName, "_Hooks interface {\n")
+	m.EachMethod(func(m *MethodProtoOpts) {
+		p.Q(name(m), "BeforeHook(ctx context.Context, *", inName(m), ") ([]*", outName(m), ", error)\n")
+	}, m.BeforeHook, m.ServerStreaming)
+	m.EachMethod(func(m *MethodProtoOpts) {
+		p.Q(name(m), "BeforeHook(ctx context.Context, *", inName(m), ") (*", outName(m), ", error)\n")
+	}, m.BeforeHook)
+	m.EachMethod(func(m *MethodProtoOpts) {
+		p.Q(name(m), "AfterHook(ctx context.Context, *", inName(m), ",*", outName(m), ") error\n")
+	}, m.AfterHook)
+	p.Q("}\n")
+	return m.Err()
+}
+func WriteTypeMappings(p *Printer, s *Service) error {
+	sName := s.GetName()
+	// TODO google's WKT protobufs probably don't need the package prefix
+	p.Q("type ", sName, "_TypeMappings interface{\n")
+	tms := s.GetTypeMapping().GetTypes()
+	for _, tm := range tms {
+		// TODO implement these interfaces
+		_, titled := getGoNamesForTypeMapping(tm, s.File)
+		// p.Q(titled, "() ", sName, titled, "MappingImpl\n")
+		p.Q(titled, "() ", titled, "MappingImpl\n")
+	}
+	p.Q("}\n")
+	return nil
+}
+func WriteIters(p *Printer, s *Service) (outErr error) {
+	m := Matcher(s)
+	sName := s.GetName()
+	camelQ := func(q *QueryProtoOpts) string {
+		return _gen.CamelCase(q.query.GetName())
+	}
+	fName := func(f *desc.FieldDescriptorProto) string {
+		return f.GetName()
+	}
+	camelF := func(f *desc.FieldDescriptorProto) string {
+		return _gen.CamelCase(f.GetName())
+	}
+	inName := func(opt *QueryProtoOpts) string {
+		return convertedMsgTypeByProtoName(opt.inMsg.Descriptor.GetName(), s.File)
+	}
+	outName := func(opt *QueryProtoOpts) string {
+		return convertedMsgTypeByProtoName(opt.outMsg.Descriptor.GetName(), s.File)
+	}
+	colswitch := func(opt *QueryProtoOpts) string {
+		cases := make(map[string]string)
+		// message case
+		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			typ, err := defaultMapping(f, s.File)
+			// SET OUT ERR
+			if err != nil {
+				outErr = err
+			}
+			cases[fName(f)] = P(`case "`, fName(f), `":
+				r, ok := (*scanned[i].i).([]byte)
+				if !ok {
+					return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type *`, typ, `")}, true
+				}
+				var converted = new(`, typ, `)
+				if err := proto.Unmarshal(r, converted); err != nil {
+					return &`, sName, `_`, camelQ(q), `Row{err: err}, true
+				}
+				res.`, camelF(f), ` = converted
+			`)
+		}, m.MatchQuery(opt))
+
+		// fits case
+		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			typ, err := defaultMapping(f, s.File)
+			// SET OUT ERR
+			if err != nil {
+				outErr = err
+			}
+			cases[f.GetName()] = P(`case "`, fName(f), `": r, ok := (*scanned[i].i).(`, typ, `)
+			if !ok {
+				return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type string")}, true
+			}
+			res.`, camelF(f), `= r
+			`)
+		}, m.MatchQuery(opt), m.QueryFieldFitsDB)
+
+		// mapping case
+		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			m.EachTM(func(opt *TypeMappingProtoOpts) {
+				_, titled := getGoNamesForTypeMapping(opt.tm, s.File)
+				cases[fName(f)] = P(`case "`, fName(f), `":
+					var converted = this.tm.`, titled, `().Empty()
+					if err := converted.Scan(*scanned[i].i); err != nil {
+						return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("could not convert mapped db column `, fName(f), ` to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
+					}
+					if err := converted.ToProto(&res.`, camelF(f), `; err != nil {
+						return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("could not convert mapped db column `, fName(f), `to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
+					}
+				`)
+			}, m.MatchTypeMapping(f))
+		}, m.MatchQuery(opt), m.QueryFieldIsMapped)
+
+		p := &Printer{}
+
+		// loop this way to prevent random order write because map ordering iteration is random
+		m.EachQueryOut(func(f *desc.FieldDescriptorProto, _ *QueryProtoOpts) {
+			p.Q(cases[fName(f)])
+		}, m.MatchQuery(opt))
+
+		return p.String()
+	}
+	m.EachQuery(func(q *QueryProtoOpts) {
+		p.Q(`type `, sName, `_`, camelQ(q), `Iter struct {
+			result sql.Result
+			rows   *sql.Rows
+			err    error
+			tm     `, sName, `TypeMappings
+			ctx    context.Context
+		}
+		
+		func (this *`, sName, `_`, camelQ(q), `Iter) IterOutType`, outName(q), `() {}
+		func (this *`, sName, `_`, camelQ(q), `Iter) IterInType`, inName(q), `()  {}
+		
+		// Each performs 'fun' on each row in the result set.
+		// Each respects the context passed to it.
+		// It will stop iteration, and returns this.ctx.Err() if encountered.
+		func (this *`, sName, `_`, camelQ(q), `Iter) Each(fun func(*`, sName, `_`, camelQ(q), `Row) error) error {
+			for {
+				select {
+				case <-this.ctx.Done():
+					return this.ctx.Err()
+				default:
+					if row, ok := this.Next(); !ok {
+						return nil
+					} else if err := fun(row); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}
+		
+		// One returns the sole row, or ensures an error if there was not one result when this row is converted
+		func (this *`, sName, `_`, camelQ(q), `Iter) One() *`, sName, `_`, camelQ(q), `Row {
+			first, hasFirst := this.Next()
+			_, hasSecond := this.Next()
+			if !hasFirst || hasSecond {
+				return new`, sName, `_`, camelQ(q), `Row(first.item, fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `'"))
+			}
+			return first
+		}
+		
+		// Zero returns an error if there were any rows in the result
+		func (this *`, sName, `_`, camelQ(q), `Iter) Zero() error {
+			if _, ok := this.Next(); ok {
+				return fmt.Errorf("expected exactly 0 results from query '`, camelQ(q), `'")
+			}
+			return nil
+		}
+		
+		// Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
+		func (this *`, sName, `_`, camelQ(q), `Iter) Next() (*`, sName, `_`, camelQ(q), `Row, bool) {
+			if this.rows == nil || this.err == io.EOF {
+				return nil, false
+			} else if this.err != nil {
+				err := this.err
+				this.err = io.EOF
+				return &`, sName, `_`, camelQ(q), `Row{err: err}, true
+			}
+			cols, err := this.rows.Columns()
+			if err != nil {
+				return &`, sName, `_`, camelQ(q), `Row{err: err}, true
+			}
+			toScan := make([]interface{}, len(cols))
+			scanned := make([]alwaysScanner, len(cols))
+			for i := range scanned {
+				toScan[i] = &scanned[i]
+			}
+			if this.err = this.rows.Scan(toScan...); this.err != nil {
+				return &`, sName, `_`, camelQ(q), `Row{err: err}, true
+			}
+			if !this.rows.Next() {
+				if this.err = this.rows.Err(); this.err == nil {
+					this.err = io.EOF
+					return nil, false
+				}
+			}
+			res := &`, outName(q), `{}
+			for i, col := range cols {
+				_ = i
+				switch col {
+				`, colswitch(q), `
+				default:
+					return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("unsupported column in output: %s", col)}, true
+				}
+			}
+			return &`, sName, `_`, camelQ(q), `Row{item: res}, true
+		}
+		
+		// Slice returns all rows found in the iterator as a Slice.
+		func (this *`, sName, `_`, camelQ(q), `Iter) Slice() []*`, sName, `_`, camelQ(q), `Row {
+			var results []*`, sName, `_`, camelQ(q), `Row
+			for {
+				if i, ok := this.Next(); ok {
+					results = append(results, i)
+				} else {
+					break
+				}
+			}
+			return results
+		}
+		
+		// returns the known columns for this result
+		func (r *`, sName, `_`, camelQ(q), `Iter) Columns() ([]string, error) {
+			if r.err != nil {
+				return nil, r.err
+			}
+			if r.rows != nil {
+				return r.rows.Columns()
+			}
+			return nil, nil
+		}
+		`)
+	})
+
+	return
+}
+func WriteRows(p *Printer, s *Service) error {
+	return nil
+}
+func WriteHandlers(p *Printer, s *Service) error {
 	return nil
 }

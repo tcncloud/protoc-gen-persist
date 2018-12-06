@@ -87,6 +87,8 @@ func (per *PersistStringer) PersistImplBuilder(service *Service, alreadyWrote ma
 	}
 	printer.P("}\n")
 	WriteBuilderTypeMappingsInterface(printer, service)
+	// remove
+	WriteTypeMappingsContractInterfaces := func(*Printer, *Service, map[string]bool) {}
 	WriteTypeMappingsContractInterfaces(printer, service, alreadyWrote)
 	WriteBuilderHookInterfaceAndFunc(printer, service)
 
@@ -104,7 +106,8 @@ func (per *PersistStringer) PersistImplBuilder(service *Service, alreadyWrote ma
 		"return &", sName, "ImplBuilder{i: &", sName, "Impl{}}\n",
 		"}\n",
 	)
-
+	// remove
+	WriteBuilderHooksAcceptingFunc := func(*Printer, *Service) {}
 	WriteBuilderHooksAcceptingFunc(printer, service)
 	WriteBuilderTypeMappingsAcceptingFunc(printer, service)
 
@@ -221,115 +224,25 @@ func (per *PersistStringer) PersistImplBuilder(service *Service, alreadyWrote ma
 	return printer.String()
 }
 
-func WriteBuilderHookInterfaceAndFunc(p *Printer, s *Service) {
-	p.Q("type ", s.GetName(), "Hooks interface{\n")
-	for _, m := range *s.Methods {
-		opt := m.GetMethodOption()
-		if opt == nil {
-			continue
-		}
-		if opt.GetBefore() {
-			sliceStarOrStar := "*"
-			if m.IsServerStreaming() {
-				sliceStarOrStar = "[]*"
-			}
-
-			p.Q("\t", m.GetBeforeHookName(), "(*", m.GetInputType(), ") (", sliceStarOrStar, m.GetOutputType(), ", error)\n")
-		}
-		if opt.GetAfter() {
-			p.Q("\t", m.GetAfterHookName(), "(*", m.GetInputType(), ", *", m.GetOutputType(), ") error\n")
-		}
-	}
-	p.Q("}\n")
-}
-func WriteBuilderHooksAcceptingFunc(p *Printer, serv *Service) {
-	s := serv.GetName()
-	p.Q(
-		"func(b *", s, "ImplBuilder) WithHooks(hs ", s, "Hooks) *", s, "ImplBuilder {\n",
-		"b.hooks = hs\n",
-		"return b\n",
-		"}\n",
-	)
-}
-
-func WriteBuilderTypeMappingsAcceptingFunc(p *Printer, serv *Service) {
-	s := serv.GetName()
-	p.Q("func(b *", s, "ImplBuilder) WithTypeMapping(ts ", s, "TypeMapping) *", s, "ImplBuilder {\n")
-	p.Q("\tb.mappings = ts\n")
-	p.Q("\treturn b\n")
-	p.Q("}\n")
-}
-
-func WriteBuilderTypeMappingsInterface(p *Printer, s *Service) {
-	sName := s.GetName()
-	// TODO google's WKT protobufs probably don't need the package prefix
-	p.Q("type ", sName, "TypeMapping interface{\n")
-	tms := s.GetTypeMapping().GetTypes()
-	for _, tm := range tms {
-		// TODO implement these interfaces
-		_, titled := getGoNamesForTypeMapping(tm, s.File)
-		// p.Q(titled, "() ", sName, titled, "MappingImpl\n")
-		p.Q(titled, "() ", titled, "MappingImpl\n")
-	}
-	p.Q("}\n")
-
-}
-func WriteScanValuerInterface(p *Printer, s *Service) {
-	if s.IsSQL() {
-		p.Q("type ScanValuer interface {\n")
-		p.Q("\tsql.Scanner\n")
-		p.Q("\tdriver.Valuer\n")
-		p.Q("}\n")
-	} else if s.IsSpanner() {
-		p.Q("type ScanValuer interface {\n")
-		p.Q("\tSpannerScan(src *spanner.GenericColumnValue) error\n")
-		p.Q("\tSpannerValue() (interface{}, error)\n")
-		p.Q("}\n")
-	}
-}
-func WriteTypeMappingsContractInterfaces(p *Printer, s *Service, alreadyWrote map[string]bool) {
-	for _, tm := range s.GetTypeMapping().GetTypes() {
-		name, titled := getGoNamesForTypeMapping(tm, s.File)
-		if alreadyWrote[titled] {
-			continue
-		}
-		_, maybeStar := needsExtraStar(tm)
-		p.Q("type ", titled, "MappingImpl interface{\n")
-		p.Q("ToProto(*", maybeStar, name, ") error\n")
-		p.Q("Empty() ", titled, "MappingImpl\n")
-		if s.IsSQL() {
-			p.Q("ToSql(", maybeStar, name, ") sql.Scanner\n")
-			p.Q("sql.Scanner\n")
-			p.Q("driver.Valuer\n")
-		} else if s.IsSpanner() {
-			p.Q("ToSpanner(", maybeStar, name, ") ", titled, "MappingImpl\n")
-			p.Q("SpannerScan(src *spanner.GenericColumnValue) error\n")
-			p.Q("SpannerValue() (interface{}, error)\n")
-		}
-		p.Q("}\n")
-		alreadyWrote[titled] = true
-	}
-}
-
-func WriteConsumeAndFeedHandlers(p *Printer, s *Service, alreadyWrote map[string]bool) {
-	var dbType string
-	if s.IsSQL() {
-		dbType = "SQL"
-	} else if s.IsSpanner() {
-		dbType = "Spanner"
-	}
-	for _, method := range *s.Methods {
-		if method.GetMethodOption() == nil {
-			continue
-		}
-		typeName := NewPLInputName(method).String()
-		if alreadyWrote[typeName] {
-			continue
-		}
-		p.Q("type ", typeName, " ConsumeHandler func(context.Context,", dbType, "ClientGetter, *", typeName, ", func(Scanable)) error\n")
-		p.Q("type ", typeName, " FeedHandler func(context.Context,", dbType, "ClientGetter) (func(*", typeName, ") error, func() (*", typeName, ", error)\n")
-	}
-}
+// func WriteConsumeAndFeedHandlers(p *Printer, s *Service, alreadyWrote map[string]bool) {
+// 	var dbType string
+// 	if s.IsSQL() {
+// 		dbType = "SQL"
+// 	} else if s.IsSpanner() {
+// 		dbType = "Spanner"
+// 	}
+// 	for _, method := range *s.Methods {
+// 		if method.GetMethodOption() == nil {
+// 			continue
+// 		}
+// 		typeName := NewPLInputName(method).String()
+// 		if alreadyWrote[typeName] {
+// 			continue
+// 		}
+// 		p.Q("type ", typeName, " ConsumeHandler func(context.Context,", dbType, "ClientGetter, *", typeName, ", func(Scanable)) error\n")
+// 		p.Q("type ", typeName, " FeedHandler func(context.Context,", dbType, "ClientGetter) (func(*", typeName, ") error, func() (*", typeName, ", error)\n")
+// 	}
+// }
 
 // SPANNER
 // type UserForUServConsumeHandler func(context.Context, SpannerClientGetter, *UserForUserv, func(*spanner.Row) error

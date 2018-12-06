@@ -99,28 +99,12 @@ func (m *Method) GetOutputTypeStruct() *Struct {
 	return m.GetTypeStructByProtoName(m.Desc.GetOutputType())
 }
 
-func (m *Method) GetUndoctoredQuery() (*persist.QLImpl, error) {
-	opt := m.GetMethodOption()
-	if opt == nil {
-		return nil, fmt.Errorf("option not defined for method: %s", m.Desc.GetName())
-	}
-	qopts := m.Service.GetQueriesOption()
-	queries := qopts.GetQueries()
-
-	queryName := opt.GetQuery()
-	for _, query := range queries {
-		if query.GetName() == queryName {
-			return query, nil
-		}
-	}
-	return nil, fmt.Errorf("query not found with name: %s on service: %s, method: %s", queryName, m.GetName(), m.Service.GetName())
-}
-
 // GetQuery returns the doctored query string for this method
 // by applying the pm strategy to the joined query string found
 // on this methods service.
 func (m *Method) GetQuery() (string, []TypeDesc, error) {
-	query, err := m.GetUndoctoredQuery()
+	mopt := m.GetMethodOption()
+	query, err := m.Service.GetUndoctoredQueryByName(mopt.GetQuery())
 	if err != nil {
 		return "", nil, err
 	}
@@ -354,7 +338,6 @@ type TypeDesc struct {
 	IsRepeated      bool
 	IsEnum          bool
 	IsMessage       bool
-	ResultHook      bool
 	FieldDescriptor *descriptor.FieldDescriptorProto
 	// spanner.GenericColumnValue, spanner.NullString, spanner.NullInt64
 	// or if just the GoName
@@ -440,9 +423,6 @@ func (m *Method) GetTypeDescArrayForStruct(str *Struct) []TypeDesc {
 		typeDesc.SpannerType = SpannerType(typeDesc)
 		typeDesc.SpannerTypeFieldName = SpannerTypeFieldName(typeDesc)
 		typeDesc.NeedsSpannerConversion = (typeDesc.SpannerType != typeDesc.GoName)
-
-		if typeDesc.IsMapped {
-		}
 
 		ret = append(ret, typeDesc)
 	}

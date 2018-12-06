@@ -18,13 +18,18 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
+// WriteHandlers
+// RestOf<S>Handlers
 type RestOfUServHandlers interface {
 	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
 }
-type UServTypeMapping interface {
+
+// WriteTypeMappigns
+type UServTypeMappings interface {
 	TimestampTimestamp() TimestampTimestampMappingImpl
 	SliceStringParam() SliceStringParamMappingImpl
 }
+
 type TimestampTimestampMappingImpl interface {
 	ToProto(**timestamp.Timestamp) error
 	Empty() TimestampTimestampMappingImpl
@@ -81,8 +86,9 @@ func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface
 }
 
 type UServ_QueryOpts struct {
-	MAPPINGS *UServTypeMapping
+	MAPPINGS UServTypeMappings
 	db       Runable
+	ctx      context.Context
 }
 
 func DefaultUServQueryOpts(db Runable) UServ_QueryOpts {
@@ -153,7 +159,7 @@ func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
 		}
 	}
 
-	return this.item
+	return nil
 }
 
 // one for each Output type of the methods that use this query + the output proto itself
@@ -191,11 +197,12 @@ func UServPersistQueries(db Runable, opts ...UServ_QueryOpts) *UServ_Queries {
 // InsertUsersQuery returns a new struct wrapping the current UServ_QueryOpts
 // that will perform 'UServ' services 'insert_users_query' on the database
 // when executed
-func (this *UServ_Queries) InsertUsersQuery() *UServ_InsertUsersQuery {
+func (this *UServ_Queries) InsertUsersQuery(ctx context.Context) *UServ_InsertUsersQuery {
 	return &UServ_InsertUsersQuery{
 		opts: UServ_QueryOpts{
-			MAPPINGS: this.opts.MAPPIGNS,
+			MAPPINGS: this.opts.MAPPINGS,
 			db:       this.opts.db,
+			ctx:      ctx,
 		},
 	}
 }
@@ -203,13 +210,14 @@ func (this *UServ_Queries) InsertUsersQuery() *UServ_InsertUsersQuery {
 // I dont know this is a insert query, I only know this is a query
 type UServ_InsertUsersQuery struct {
 	opts UServ_QueryOpts
+	ctx  context.Context
 }
 
 func (this *UServ_InsertUsersQuery) QueryInTypeUser()  {}
 func (this *UServ_InsertUsersQuery) QueryOutTypeUser() {}
 
 // the main execute function
-func (this *UServ_InsertUsersQuery) Execute(ctx context.Context, x UServ_InsertUsersOut) *UServ_InsertUsersIter {
+func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_InsertUsersIter {
 	var setupErr error
 	params := []interface{}{
 		func() (out interface{}) {
@@ -234,14 +242,15 @@ func (this *UServ_InsertUsersQuery) Execute(ctx context.Context, x UServ_InsertU
 			return
 		}(),
 	}
-	result := &UServ_UnsertUserseResult{
-		tm: this.opts.MAPPINGS,
+	result := &UServ_InsertUsersIter{
+		tm:  this.opts.MAPPINGS,
+		ctx: this.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.opts.db.ExecContext(ctx, "INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)", params...)
+	result.result, result.err = this.opts.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)", params...)
 
 	return result
 }
@@ -251,7 +260,8 @@ type UServ_InsertUsersIter struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     UServTypeMapping
+	tm     UServTypeMappings
+	ctx    context.Context
 }
 
 func (this *UServ_InsertUsersIter) IterOutTypeUser() {}
@@ -260,19 +270,15 @@ func (this *UServ_InsertUsersIter) IterInTypeUser()  {}
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns ctx.Err() if encountered.
-func (this *UServ_InsertUsersIter) Each(ctx context.Context, fun func(*UServ_InsertUsersRow) error) error {
+func (this *UServ_InsertUsersIter) Each(fun func(*UServ_InsertUsersRow) error) error {
 	for {
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-this.ctx.Done():
+			return this.ctx.Err()
 		default:
-			res, err := this.Next()
-			if err == io.EOF {
+			if row, ok := this.Next(); !ok {
 				return nil
-			} else if err != nil {
-				return err
-			}
-			if err := fun(res); err != nil {
+			} else if err := fun(row); err != nil {
 				return err
 			}
 		}
@@ -303,7 +309,7 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	if this.rows == nil || this.err == io.EOF {
 		return nil, false
 	} else if this.err != nil {
-		err = this.err
+		err := this.err
 		this.err = io.EOF
 		return &UServ_InsertUsersRow{err: err}, true
 	}
@@ -378,7 +384,7 @@ func (this *UServ_InsertUsersIter) Slice() []*UServ_InsertUsersRow {
 			break
 		}
 	}
-	return results, nil
+	return results
 }
 
 // returns the known columns for this result
@@ -393,7 +399,7 @@ func (r *UServ_InsertUsersIter) Columns() ([]string, error) {
 }
 
 type UServ_ImplOpts struct {
-	MAPPINGS UServTypeMapping
+	MAPPINGS UServTypeMappings
 	HOOKS    UServHooks
 }
 
@@ -415,8 +421,8 @@ func UServPersistImpl(db *sql.DB, opts ...UServ_ImplOpts) *UServ_Impl {
 		myOpts = DefaultUServImplOpts()
 	}
 	return &UServ_Impl{
-		opts:    myOpts,
-		QUERIES: UServPersistQueries(UServ_QueryOpts{MAPPINGS: &myOpts.MAPPINGS}),
+		opts:    &myOpts,
+		QUERIES: UServPersistQueries(db, UServ_QueryOpts{MAPPINGS: myOpts.MAPPINGS}),
 		DB:      db,
 	}
 }
@@ -434,7 +440,7 @@ func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
 }
 
 func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx PersistTx) error {
-	query := this.QUERIES.InsertUsersQuery()
+	query := this.QUERIES.InsertUsersQuery(stream.Context())
 	var first *User
 	for {
 		req, err := stream.Recv()
@@ -454,6 +460,33 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 			continue
 		}
 		result := query.Execute(req)
+		/*for {
+			res := new(User)
+			if row, ok := result.Next(); !ok {
+				break
+			} else if err := row.Unwrap(res); err != nil {
+				return err
+			} else {
+				stream.Send(res)
+			}
+		}
+		err := result.Each(stream.Context(), func(row *UServ_InsertUsersRow) error {
+			res, err := row.User()
+			if err != nil {
+				return err
+			}
+			return stream.Send(res)
+		})
+		users := result.Slice()
+		for _, row := range users {
+			user, err := row.User()
+			if err != nil {
+				return err
+			}
+			stream.Send(user)
+		}
+		res, err := result.One().Friends()
+		err := result.Zero()*/
 		// TODO allow results to be returned here?
 		if err := result.Zero(); err != nil {
 			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")

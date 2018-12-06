@@ -118,6 +118,22 @@ func (s *Struct) GetImportedFiles() *FileList {
 	return fl
 }
 
+// GetFieldDescriptors returns a slice of FieldDescriptors that exist
+// on this message.  If this is not a message, it returns empty slice, false
+func (s *Struct) GetFieldDescriptorsIfMessage() ([]*desc.FieldDescriptorProto, bool) {
+	ret := make([]*desc.FieldDescriptorProto, 0)
+	if s == nil || !s.IsMessage {
+		return ret, false
+	}
+
+	for _, f := range s.MsgDesc.GetField() {
+		if f.OneofIndex == nil {
+			ret = append(ret, f)
+		}
+	}
+	return ret, true
+}
+
 type StructList []*Struct
 
 func NewStructList() *StructList {

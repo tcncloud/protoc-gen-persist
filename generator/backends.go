@@ -281,14 +281,17 @@ func (s *SqlStringer) TranslateRowToResult() string {
 			p.Q("{\n")
 			p.Q("var converted = serv.", titleCased, "().Empty()\n")
 			p.Q("if err := converted.Scan(*scanned[i].i); err != nil {\n")
-			p.Q("return nil, err\n")
+			p.Q("return nil, fmt.Errorf(\"could not convert mapped db column '", td.ProtoName, "' to type matching proto message '", outputType, ".", td.Name, "': %v\", err) \n")
+			p.Q("}\n")
+			p.Q("if err := converted.ToProto(&res.", td.Name, "); err != nil {\n")
+			p.Q("return nil, fmt.Errorf(\"could not convert mapped db column '", td.ProtoName, "' to type on ", outputType, ".", td.Name, ": %v\", err) \n")
 			p.Q("}\n")
 			p.Q("}\n")
 		} else if td.IsMessage {
 			p.Q("{\n")
 			p.Q("r, ok := (*scanned[i].i).([]byte)\n")
 			p.Q("if !ok {\n")
-			p.Q("return nil, fmt.Errorf(\"cant convert db column ", td.ProtoName, " to protobuf go type ", td.GoName, "\")\n")
+			p.Q("return nil, fmt.Errorf(\"could not convert mapped db column '", td.ProtoName, "' to type matching proto message '", outputType, ".", td.Name, "': %v\", err) \n")
 			p.Q("}\n")
 			p.Q("var converted = new(", td.GoTypeName, ")\n")
 			p.Q("if err := proto.Unmarshal(r, converted); err != nil {\n")
@@ -299,7 +302,7 @@ func (s *SqlStringer) TranslateRowToResult() string {
 		} else {
 			p.Q("r, ok := (*scanned[i].i).(", td.GoName, ")\n")
 			p.Q("if !ok {\n")
-			p.Q("return nil, fmt.Errorf(\"cant convert db column ", td.ProtoName, " to protobuf go type ", td.GoName, "\")\n")
+			p.Q("return nil, fmt.Errorf(\"cant convert db column '", td.ProtoName, "' to protobuf go type ", td.GoName, "\")\n")
 			p.Q("}\n")
 			p.Q("res.", td.Name, " = r\n")
 		}
