@@ -50,6 +50,15 @@ type UServHooks interface {
 	GetAllUsersBeforeHook(*Empty) ([]*User, error)
 	GetAllUsersAfterHook(*Empty, *User) error
 }
+type alwaysScanner struct {
+	i *interface{}
+}
+
+func (s *alwaysScanner) Scan(src interface{}) error {
+	s.i = &src
+	return nil
+}
+
 type scanable interface {
 	Scan(...interface{}) error
 	Columns() ([]string, error)
@@ -125,14 +134,6 @@ type UServ_InsertUsersRow struct {
 func newUServ_InsertUsersRow(item UServ_InsertUsersOut, err error) *UServ_InsertUsersRow {
 	return &UServ_InsertUsersRow{item, err}
 }
-
-// RowOutTypeUser is a function generated from service 'UServ' query: 'insert_users_query'
-// All Persist rows that share the same proto message for the out option will have this message
-func (this *UServ_InsertUsersRow) RowOutTypeUser() {}
-
-// RowInTypeUser is a function generated from service 'UServ' query: 'insert_users_query'
-// All Persist rows that share the same proto message for the out option will have this message
-func (this *UServ_InsertUsersRow) RowInTypeUser() {}
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself

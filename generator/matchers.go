@@ -57,6 +57,31 @@ func (Match) MatchMethod(mopt *MethodProtoOpts) func(*QueryProtoOpts) bool {
 		return mopt.option.GetQuery() == qopt.query.GetName()
 	}
 }
+func (Match) MatchQueryName(opt *QueryProtoOpts) func(*MethodProtoOpts) bool {
+	return func(m *MethodProtoOpts) bool {
+		return opt.query.GetName() == m.option.GetQuery()
+	}
+}
+func (Match) MatchQueryOutField(f *desc.FieldDescriptorProto) func(*desc.FieldDescriptorProto, *QueryProtoOpts) bool {
+	return func(_ *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
+		for _, v := range q.outFields {
+			if v.GetTypeName() == f.GetTypeName() {
+				return true
+			}
+		}
+		return false
+	}
+}
+func (Match) MatchQueryInField(f *desc.FieldDescriptorProto) func(*desc.FieldDescriptorProto, *QueryProtoOpts) bool {
+	return func(_ *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
+		for _, v := range q.inFields {
+			if v.GetTypeName() == f.GetTypeName() {
+				return true
+			}
+		}
+		return false
+	}
+}
 func (Match) MatchTypeMapping(f *desc.FieldDescriptorProto) func(*TypeMappingProtoOpts) bool {
 	return func(opt *TypeMappingProtoOpts) bool {
 		tm := opt.tm
@@ -149,6 +174,48 @@ func (m *Match) EachQueryOut(do func(*desc.FieldDescriptorProto, *QueryProtoOpts
 			}
 			if matchAll {
 				do(f, q)
+			}
+		}
+	}
+}
+func (m *Match) EachMethodIn(do func(*desc.FieldDescriptorProto, *MethodProtoOpts), matches ...func(*desc.FieldDescriptorProto, *MethodProtoOpts) bool) {
+	if m.err != nil {
+		return
+	}
+	for _, me := range m.s.Desc.GetMethod() {
+		mopt, err := NewMethodProtoOpts(me, m.s.AllStructs)
+		if err != nil {
+			m.err = err
+			return
+		}
+		for _, f := range mopt.inFields {
+			matchAll := true
+			for _, match := range matches {
+				matchAll = matchAll && match(f, mopt)
+			}
+			if matchAll {
+				do(f, mopt)
+			}
+		}
+	}
+}
+func (m *Match) EachMethodOut(do func(*desc.FieldDescriptorProto, *MethodProtoOpts), matches ...func(*desc.FieldDescriptorProto, *MethodProtoOpts) bool) {
+	if m.err != nil {
+		return
+	}
+	for _, me := range m.s.Desc.GetMethod() {
+		mopt, err := NewMethodProtoOpts(me, m.s.AllStructs)
+		if err != nil {
+			m.err = err
+			return
+		}
+		for _, f := range mopt.outFields {
+			matchAll := true
+			for _, match := range matches {
+				matchAll = matchAll && match(f, mopt)
+			}
+			if matchAll {
+				do(f, mopt)
 			}
 		}
 	}

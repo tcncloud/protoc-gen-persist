@@ -106,15 +106,6 @@ func (s SliceStringConverter) Empty() SliceStringParamMappingImpl {
 	return new(SliceStringConverter)
 }
 
-type alwaysScanner struct {
-	i *interface{}
-}
-
-func (s *alwaysScanner) Scan(src interface{}) error {
-	s.i = &src
-	return nil
-}
-
 var inc int64
 
 func IncId(u *User) ([]*User, error) {
