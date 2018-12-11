@@ -74,6 +74,7 @@ func (d *RestOfImpl) UpdateAllNames(r *pb.Empty, stream pb.UServ_UpdateAllNamesS
 		"user=postgres password=postgres dbname=postgres sslmode=disable",
 	)
 	if err != nil {
+		x
 		return err
 	}
 	params, err := pb.EmptyToUServPersistType(d.Mappings, r)
@@ -81,6 +82,7 @@ func (d *RestOfImpl) UpdateAllNames(r *pb.Empty, stream pb.UServ_UpdateAllNamesS
 		return err
 	}
 	res := pl.UServGetAllUsersQuery(db, params)
+
 	err = pb.IterUServUserProto(d.Mappings, res, func(user *pb.User) error {
 		params, err := pb.UserToUServPersistType(d.Mappings, user)
 		if err != nil {

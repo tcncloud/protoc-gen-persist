@@ -2,6 +2,7 @@ package persist_lib
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 type SqlClientGetter func() (*sql.DB, error)
@@ -14,24 +15,20 @@ func NewSqlClientGetter(cli **sql.DB) SqlClientGetter {
 
 type Scanable interface {
 	Scan(dest ...interface{}) error
+	Columns() ([]string, error)
 }
 type Runable interface {
 	Query(string, ...interface{}) (*sql.Rows, error)
-	QueryRow(string, ...interface{}) *sql.Row
 	Exec(string, ...interface{}) (sql.Result, error)
 }
 type Result struct {
 	result sql.Result
-	row    *sql.Row
 	rows   *sql.Rows
 	err    error
 }
 
 func newResultFromSqlResult(r sql.Result) *Result {
 	return &Result{result: r}
-}
-func newResultFromRow(r *sql.Row) *Result {
-	return &Result{row: r}
 }
 func newResultFromRows(r *sql.Rows) *Result {
 	return &Result{rows: r}
@@ -42,11 +39,6 @@ func newResultFromErr(err error) *Result {
 func (r *Result) Do(fun func(Scanable) error) error {
 	if r.err != nil {
 		return r.err
-	}
-	if r.row != nil {
-		if err := fun(r.row); err != nil {
-			return err
-		}
 	}
 	if r.rows != nil {
 		defer r.rows.Close()
@@ -63,8 +55,6 @@ func (r *Result) Do(fun func(Scanable) error) error {
 func (r *Result) Scan(dest ...interface{}) error {
 	if r.result != nil {
 		return sql.ErrNoRows
-	} else if r.row != nil {
-		return r.row.Scan(dest...)
 	} else if r.rows != nil {
 		err := r.rows.Scan(dest...)
 		if r.rows.Next() {
@@ -76,6 +66,24 @@ func (r *Result) Scan(dest ...interface{}) error {
 }
 func (r *Result) Err() error {
 	return r.err
+}
+func (r *Result) Columns() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.rows != nil {
+		return r.rows.Columns()
+	}
+	return nil, fmt.Errorf("unsupported call to columns")
+}
+
+type alwaysScanner struct {
+	i *interface{}
+}
+
+func (s *alwaysScanner) Scan(src interface{}) error {
+	s.i = &src
+	return nil
 }
 
 type EmptyForUServ struct {
