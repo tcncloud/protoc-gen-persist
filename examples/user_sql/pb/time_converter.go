@@ -73,8 +73,8 @@ func (t *TimeString) Scan(src interface{}) error {
 func (t *TimeString) Value() (driver.Value, error) {
 	return ptypes.TimestampString(t.t), nil
 }
-func (t TimeString) Empty() TimestampTimestampMappingImpl {
-	return new(TimeString)
+func (t TimeString) Empty() *TimestampTimestampMappingImpl {
+	return new(TimestampTimestampMappingImpl)
 }
 
 type SliceStringConverter struct {
@@ -102,8 +102,8 @@ func (s *SliceStringConverter) Scan(src interface{}) error {
 func (s *SliceStringConverter) Value() (driver.Value, error) {
 	return pq.StringArray(s.v.Slice).Value()
 }
-func (s SliceStringConverter) Empty() SliceStringParamMappingImpl {
-	return new(SliceStringConverter)
+func (s SliceStringConverter) Empty() *SliceStringParamMappingImpl {
+	return new(SliceStringParamMappingImpl)
 }
 
 var inc int64
@@ -113,3 +113,9 @@ func IncId(u *User) ([]*User, error) {
 	inc++
 	return nil, nil
 }
+
+// These are fake
+type UServHooks struct{}
+type UServTypeMappings struct{}
+type SliceStringParamMappingImpl struct{}
+type TimestampTimestampMappingImpl struct{}

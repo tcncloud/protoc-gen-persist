@@ -462,32 +462,32 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 		}
 		result := query.Execute(req)
 		/*for {
-			res := new(User)
-			if row, ok := result.Next(); !ok {
-				break
-			} else if err := row.Unwrap(res); err != nil {
-				return err
-			} else {
-				stream.Send(res)
-			}
-		}
-		err := result.Each(stream.Context(), func(row *UServ_InsertUsersRow) error {
-			res, err := row.User()
-			if err != nil {
-				return err
-			}
-			return stream.Send(res)
-		})
-		users := result.Slice()
-		for _, row := range users {
-			user, err := row.User()
-			if err != nil {
-				return err
-			}
-			stream.Send(user)
-		}
-		res, err := result.One().Friends()
-		err := result.Zero()*/
+		      res := new(User)
+		      if row, ok := result.Next(); !ok {
+		          break
+		      } else if err := row.Unwrap(res); err != nil {
+		          return err
+		      } else {
+		          stream.Send(res)
+		      }
+		  }
+		  err := result.Each(stream.Context(), func(row *UServ_InsertUsersRow) error {
+		      res, err := row.User()
+		      if err != nil {
+		          return err
+		      }
+		      return stream.Send(res)
+		  })
+		  users := result.Slice()
+		  for _, row := range users {
+		      user, err := row.User()
+		      if err != nil {
+		          return err
+		      }
+		      stream.Send(user)
+		  }
+		  res, err := result.One().Friends()
+		  err := result.Zero()*/
 		// TODO allow results to be returned here?
 		if err := result.Zero(); err != nil {
 			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
