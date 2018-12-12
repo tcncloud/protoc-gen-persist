@@ -13,8 +13,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	main "github.com/tcncloud/protoc-gen-persist/examples/user_sql"
-	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
+	main "github.com/coltonmorris/protoc-gen-persist/examples/user_sql"
+	"github.com/coltonmorris/protoc-gen-persist/examples/user_sql/pb"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )

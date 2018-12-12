@@ -5,8 +5,9 @@ import (
 	"net"
 
 	"cloud.google.com/go/spanner"
-	"github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel/pb"
-	pl "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel/pb/persist_lib"
+	"github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel/pb"
+	pl "github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel/pb/persist_lib"
+  // pl "github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel/pb/persist_lib"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )

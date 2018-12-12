@@ -3,7 +3,7 @@ package parser_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/tcncloud/protoc-gen-persist/generator/parser"
+	"github.com/coltonmorris/protoc-gen-persist/generator/parser"
 	"testing"
 )
 

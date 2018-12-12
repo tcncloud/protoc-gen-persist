@@ -9,7 +9,7 @@ go_library(
         "scanner.go",
         "tokens.go",
     ],
-    importpath = "github.com/tcncloud/protoc-gen-persist/generator/parser",
+    importpath = "github.com/coltonmorris/protoc-gen-persist/generator/parser",
     visibility = ["//visibility:public"],
 )
 

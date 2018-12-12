@@ -30,7 +30,7 @@
 package generator
 
 import (
-	"github.com/tcncloud/protoc-gen-persist/persist"
+	"github.com/coltonmorris/protoc-gen-persist/persist"
 	// "go/ast"
 	// "go/parser"
 )

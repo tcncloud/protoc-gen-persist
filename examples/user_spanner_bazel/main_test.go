@@ -14,8 +14,8 @@ import (
 	admin "cloud.google.com/go/spanner/admin/database/apiv1"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	main "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel"
-	"github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel/pb"
+	main "github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel"
+	"github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel/pb"
 	"golang.org/x/net/context"
 	db "google.golang.org/genproto/googleapis/spanner/admin/database/v1"
 	"google.golang.org/grpc"
@@ -166,28 +166,24 @@ var users = []*pb.User{
 		Id:              -1,
 		Name:            "foo",
 		Friends:         &pb.Friends{Names: []string{"bar", "baz"}},
-		FavoriteNumbers: []int64{1, 2, 3},
 		CreatedOn:       mustNow(),
 	},
 	&pb.User{
 		Id:              -1,
 		Name:            "bar",
 		Friends:         &pb.Friends{Names: []string{"foo", "baz"}},
-		FavoriteNumbers: []int64{4, 5, 6},
 		CreatedOn:       mustNow(),
 	},
 	&pb.User{
 		Id:              -1,
 		Name:            "baz",
 		Friends:         &pb.Friends{Names: []string{"foo", "bar"}},
-		FavoriteNumbers: []int64{7, 8, 9},
 		CreatedOn:       mustNow(),
 	},
 	&pb.User{
 		Id:              -1,
 		Name:            "zed",
 		Friends:         &pb.Friends{},
-		FavoriteNumbers: []int64{1, 4, 7},
 		CreatedOn:       mustNow(),
 	},
 }
@@ -220,7 +216,6 @@ func CreateTable(ctx context.Context, params main.SpannerParams) error {
 				name STRING(MAX) NOT NULL,
 				friends BYTES(MAX) NOT NULL,
 				created_on STRING(MAX) NOT NULL,
-				favorite_numbers ARRAY<INT64> NOT NULL,
 			) PRIMARY KEY (id)`,
 		},
 	})

@@ -6,8 +6,8 @@ import (
 	"net"
 
 	_ "github.com/lib/pq"
-	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
-	pl "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb/persist_lib"
+	"github.com/coltonmorris/protoc-gen-persist/examples/user_sql/pb"
+	pl "github.com/coltonmorris/protoc-gen-persist/examples/user_sql/pb/persist_lib"
 	"google.golang.org/grpc"
 )
 
@@ -74,7 +74,6 @@ func (d *RestOfImpl) UpdateAllNames(r *pb.Empty, stream pb.UServ_UpdateAllNamesS
 		"user=postgres password=postgres dbname=postgres sslmode=disable",
 	)
 	if err != nil {
-		x
 		return err
 	}
 	params, err := pb.EmptyToUServPersistType(d.Mappings, r)

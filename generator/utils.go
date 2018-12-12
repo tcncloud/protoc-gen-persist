@@ -36,7 +36,7 @@ import (
 
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/sirupsen/logrus"
-	"github.com/tcncloud/protoc-gen-persist/persist"
+	"github.com/coltonmorris/protoc-gen-persist/persist"
 
 	"golang.org/x/tools/imports"
 )

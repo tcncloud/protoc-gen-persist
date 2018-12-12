@@ -40,8 +40,8 @@ import (
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/sirupsen/logrus"
-	"github.com/tcncloud/protoc-gen-persist/generator/parser"
-	"github.com/tcncloud/protoc-gen-persist/persist"
+	"github.com/coltonmorris/protoc-gen-persist/generator/parser"
+	"github.com/coltonmorris/protoc-gen-persist/persist"
 )
 
 type Method struct {
