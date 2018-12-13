@@ -115,7 +115,5 @@ func IncId(u *User) ([]*User, error) {
 }
 
 // These are fake
-type UServHooks struct{}
-type UServTypeMappings struct{}
 type SliceStringParamMappingImpl struct{}
 type TimestampTimestampMappingImpl struct{}

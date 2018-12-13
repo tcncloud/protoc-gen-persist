@@ -5,12 +5,15 @@ package pb
 
 import (
 	sql "database/sql"
+	driver "database/sql/driver"
 	fmt "fmt"
 	io "io"
 
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	context "golang.org/x/net/context"
+	codes "google.golang.org/grpc/codes"
+	gstatus "google.golang.org/grpc/status"
 )
 
 type alwaysScanner struct {
@@ -68,8 +71,9 @@ func NopPersistTx(r Runable) (PersistTx, error) {
 }
 
 type UServ_QueryOpts struct {
-	MAPPINGS *UServTypeMappings
+	MAPPINGS UServ_TypeMappings
 	db       Runable
+	ctx      context.Context
 }
 
 // DefaultUServQueryOpts return the default options to be used with UServ_Queries
@@ -118,19 +122,18 @@ func (this *UServ_CreateUsersTableQuery) QueryInTypeUser()  {}
 func (this *UServ_CreateUsersTableQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
-func (this *UServ_CreateUsersTableQuery) Execute(x UServ_CreateUsersTableOut) *UServ_CreateUsersTableIter {
+func (this *UServ_CreateUsersTableQuery) Execute(x UServ_CreateUsersTableIn) *UServ_CreateUsersTableIter {
 	var setupErr error
 	params := []interface{}{}
-	result := &UServ_CreateUsersTableResult{
+	result := &UServ_CreateUsersTableIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		ctx: this.opts.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.opts.db.ExecContext(this.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))", params...)
-
+	result.result, result.err = this.opts.db.ExecContext(this.opts.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))", params...)
 	return result
 }
 
@@ -155,23 +158,15 @@ func (this *UServ_InsertUsersQuery) QueryInTypeUser()  {}
 func (this *UServ_InsertUsersQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
-func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_InsertUsersIter {
+func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersIn) *UServ_InsertUsersIter {
 	var setupErr error
 	params := []interface{}{
 		func() (out interface{}) {
-			raw, err := proto.Marshal(x.GetId())
-			if err != nil {
-				setupErr = err
-			}
-			out = raw
+			out = x.GetId()
 			return
 		}(),
 		func() (out interface{}) {
-			raw, err := proto.Marshal(x.GetName())
-			if err != nil {
-				setupErr = err
-			}
-			out = raw
+			out = x.GetName()
 			return
 		}(),
 		func() (out interface{}) {
@@ -183,21 +178,20 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 			return
 		}(),
 		func() (out interface{}) {
-			mapper := this.opts.Mappings.TimestampTimestamp()
+			mapper := this.opts.MAPPINGS.TimestampTimestamp()
 			out = mapper.ToSql(x.GetCreatedOn())
 			return
 		}(),
 	}
-	result := &UServ_InsertUsersResult{
+	result := &UServ_InsertUsersIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		ctx: this.opts.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.opts.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)", params...)
-
+	result.result, result.err = this.opts.db.ExecContext(this.opts.ctx, "INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)", params...)
 	return result
 }
 
@@ -222,19 +216,18 @@ func (this *UServ_GetAllUsersQuery) QueryInTypeUser()  {}
 func (this *UServ_GetAllUsersQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
-func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersOut) *UServ_GetAllUsersIter {
+func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAllUsersIter {
 	var setupErr error
 	params := []interface{}{}
-	result := &UServ_GetAllUsersResult{
+	result := &UServ_GetAllUsersIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		ctx: this.opts.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.opts.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users", params...)
-
+	result.rows, result.err = this.opts.db.QueryContext(this.opts.ctx, "SELECT id, name, friends, created_on FROM users", params...)
 	return result
 }
 
@@ -259,28 +252,23 @@ func (this *UServ_SelectUserByIdQuery) QueryInTypeUser()  {}
 func (this *UServ_SelectUserByIdQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
-func (this *UServ_SelectUserByIdQuery) Execute(x UServ_SelectUserByIdOut) *UServ_SelectUserByIdIter {
+func (this *UServ_SelectUserByIdQuery) Execute(x UServ_SelectUserByIdIn) *UServ_SelectUserByIdIter {
 	var setupErr error
 	params := []interface{}{
 		func() (out interface{}) {
-			raw, err := proto.Marshal(x.GetId())
-			if err != nil {
-				setupErr = err
-			}
-			out = raw
+			out = x.GetId()
 			return
 		}(),
 	}
-	result := &UServ_SelectUserByIdResult{
+	result := &UServ_SelectUserByIdIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		ctx: this.opts.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.opts.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users WHERE id = $1", params...)
-
+	result.rows, result.err = this.opts.db.QueryContext(this.opts.ctx, "SELECT id, name, friends, created_on FROM users WHERE id = $1", params...)
 	return result
 }
 
@@ -305,36 +293,27 @@ func (this *UServ_UpdateUserNameQuery) QueryInTypeUser()  {}
 func (this *UServ_UpdateUserNameQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
-func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameOut) *UServ_UpdateUserNameIter {
+func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameIn) *UServ_UpdateUserNameIter {
 	var setupErr error
 	params := []interface{}{
 		func() (out interface{}) {
-			raw, err := proto.Marshal(x.GetName())
-			if err != nil {
-				setupErr = err
-			}
-			out = raw
+			out = x.GetName()
 			return
 		}(),
 		func() (out interface{}) {
-			raw, err := proto.Marshal(x.GetId())
-			if err != nil {
-				setupErr = err
-			}
-			out = raw
+			out = x.GetId()
 			return
 		}(),
 	}
-	result := &UServ_UpdateUserNameResult{
+	result := &UServ_UpdateUserNameIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		ctx: this.opts.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.opts.db.QueryContext(this.ctx, "Update users set name = $1 WHERE id = $2  RETURNING id, name, friends, created_on", params...)
-
+	result.rows, result.err = this.opts.db.QueryContext(this.opts.ctx, "Update users set name = $1 WHERE id = $2  RETURNING id, name, friends, created_on", params...)
 	return result
 }
 
@@ -359,28 +338,23 @@ func (this *UServ_UpdateNameToFooQuery) QueryInTypeUser()  {}
 func (this *UServ_UpdateNameToFooQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
-func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooOut) *UServ_UpdateNameToFooIter {
+func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *UServ_UpdateNameToFooIter {
 	var setupErr error
 	params := []interface{}{
 		func() (out interface{}) {
-			raw, err := proto.Marshal(x.GetId())
-			if err != nil {
-				setupErr = err
-			}
-			out = raw
+			out = x.GetId()
 			return
 		}(),
 	}
-	result := &UServ_UpdateNameToFooResult{
+	result := &UServ_UpdateNameToFooIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		ctx: this.opts.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.opts.db.ExecContext(this.ctx, "Update users set name = 'foo' WHERE id = $1", params...)
-
+	result.result, result.err = this.opts.db.ExecContext(this.opts.ctx, "Update users set name = 'foo' WHERE id = $1", params...)
 	return result
 }
 
@@ -405,25 +379,24 @@ func (this *UServ_GetFriendsQuery) QueryInTypeUser()  {}
 func (this *UServ_GetFriendsQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
-func (this *UServ_GetFriendsQuery) Execute(x UServ_GetFriendsOut) *UServ_GetFriendsIter {
+func (this *UServ_GetFriendsQuery) Execute(x UServ_GetFriendsIn) *UServ_GetFriendsIter {
 	var setupErr error
 	params := []interface{}{
 		func() (out interface{}) {
-			mapper := this.opts.Mappings.SliceStringParam()
+			mapper := this.opts.MAPPINGS.SliceStringParam()
 			out = mapper.ToSql(x.GetNames())
 			return
 		}(),
 	}
-	result := &UServ_GetFriendsResult{
+	result := &UServ_GetFriendsIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		ctx: this.opts.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.opts.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)", params...)
-
+	result.rows, result.err = this.opts.db.QueryContext(this.opts.ctx, "SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)", params...)
 	return result
 }
 
@@ -448,19 +421,18 @@ func (this *UServ_DropQuery) QueryInTypeUser()  {}
 func (this *UServ_DropQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
-func (this *UServ_DropQuery) Execute(x UServ_DropOut) *UServ_DropIter {
+func (this *UServ_DropQuery) Execute(x UServ_DropIn) *UServ_DropIter {
 	var setupErr error
 	params := []interface{}{}
-	result := &UServ_DropResult{
+	result := &UServ_DropIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		ctx: this.opts.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.opts.db.ExecContext(this.ctx, "drop table users", params...)
-
+	result.result, result.err = this.opts.db.ExecContext(this.opts.ctx, "drop table users", params...)
 	return result
 }
 
@@ -468,7 +440,7 @@ type UServ_CreateUsersTableIter struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     UServTypeMappings
+	tm     UServ_TypeMappings
 	ctx    context.Context
 }
 
@@ -579,7 +551,7 @@ type UServ_InsertUsersIter struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     UServTypeMappings
+	tm     UServ_TypeMappings
 	ctx    context.Context
 }
 
@@ -690,7 +662,7 @@ type UServ_GetAllUsersIter struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     UServTypeMappings
+	tm     UServ_TypeMappings
 	ctx    context.Context
 }
 
@@ -827,7 +799,7 @@ type UServ_SelectUserByIdIter struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     UServTypeMappings
+	tm     UServ_TypeMappings
 	ctx    context.Context
 }
 
@@ -964,7 +936,7 @@ type UServ_UpdateUserNameIter struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     UServTypeMappings
+	tm     UServ_TypeMappings
 	ctx    context.Context
 }
 
@@ -1101,7 +1073,7 @@ type UServ_UpdateNameToFooIter struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     UServTypeMappings
+	tm     UServ_TypeMappings
 	ctx    context.Context
 }
 
@@ -1212,7 +1184,7 @@ type UServ_GetFriendsIter struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     UServTypeMappings
+	tm     UServ_TypeMappings
 	ctx    context.Context
 }
 
@@ -1349,7 +1321,7 @@ type UServ_DropIter struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     UServTypeMappings
+	tm     UServ_TypeMappings
 	ctx    context.Context
 }
 
@@ -1456,9 +1428,10 @@ func (r *UServ_DropIter) Columns() ([]string, error) {
 	return nil, nil
 }
 
+type UServ_CreateUsersTableIn interface {
+}
 type UServ_CreateUsersTableOut interface {
 }
-
 type UServ_CreateUsersTableRow struct {
 	item UServ_CreateUsersTableOut
 	err  error
@@ -1474,8 +1447,21 @@ func (this *UServ_CreateUsersTableRow) Unwrap(pointerToMsg proto.Message) error 
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
 
+		return nil
+	}
 	return nil
+}
+func (this *UServ_CreateUsersTableRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 func (this *UServ_CreateUsersTableRow) Proto() (*Empty, error) {
@@ -1485,13 +1471,14 @@ func (this *UServ_CreateUsersTableRow) Proto() (*Empty, error) {
 	return &Empty{}, nil
 }
 
-type UServ_InsertUsersOut interface {
+type UServ_InsertUsersIn interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-
+type UServ_InsertUsersOut interface {
+}
 type UServ_InsertUsersRow struct {
 	item UServ_InsertUsersOut
 	err  error
@@ -1507,8 +1494,21 @@ func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
 
+		return nil
+	}
 	return nil
+}
+func (this *UServ_InsertUsersRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 func (this *UServ_InsertUsersRow) Proto() (*Empty, error) {
@@ -1518,9 +1518,14 @@ func (this *UServ_InsertUsersRow) Proto() (*Empty, error) {
 	return &Empty{}, nil
 }
 
-type UServ_GetAllUsersOut interface {
+type UServ_GetAllUsersIn interface {
 }
-
+type UServ_GetAllUsersOut interface {
+	GetId() int64
+	GetName() string
+	GetFriends() *Friends
+	GetCreatedOn() *timestamp.Timestamp
+}
 type UServ_GetAllUsersRow struct {
 	item UServ_GetAllUsersOut
 	err  error
@@ -1536,8 +1541,29 @@ func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
-
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 	return nil
+}
+func (this *UServ_GetAllUsersRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_GetAllUsersRow) Proto() (*User, error) {
@@ -1552,13 +1578,18 @@ func (this *UServ_GetAllUsersRow) Proto() (*User, error) {
 	}, nil
 }
 
+type UServ_SelectUserByIdIn interface {
+	GetId() int64
+	GetName() string
+	GetFriends() *Friends
+	GetCreatedOn() *timestamp.Timestamp
+}
 type UServ_SelectUserByIdOut interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-
 type UServ_SelectUserByIdRow struct {
 	item UServ_SelectUserByIdOut
 	err  error
@@ -1574,8 +1605,29 @@ func (this *UServ_SelectUserByIdRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
-
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 	return nil
+}
+func (this *UServ_SelectUserByIdRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_SelectUserByIdRow) Proto() (*User, error) {
@@ -1590,13 +1642,18 @@ func (this *UServ_SelectUserByIdRow) Proto() (*User, error) {
 	}, nil
 }
 
+type UServ_UpdateUserNameIn interface {
+	GetId() int64
+	GetName() string
+	GetFriends() *Friends
+	GetCreatedOn() *timestamp.Timestamp
+}
 type UServ_UpdateUserNameOut interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-
 type UServ_UpdateUserNameRow struct {
 	item UServ_UpdateUserNameOut
 	err  error
@@ -1612,8 +1669,29 @@ func (this *UServ_UpdateUserNameRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
-
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 	return nil
+}
+func (this *UServ_UpdateUserNameRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_UpdateUserNameRow) Proto() (*User, error) {
@@ -1628,13 +1706,14 @@ func (this *UServ_UpdateUserNameRow) Proto() (*User, error) {
 	}, nil
 }
 
-type UServ_UpdateNameToFooOut interface {
+type UServ_UpdateNameToFooIn interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-
+type UServ_UpdateNameToFooOut interface {
+}
 type UServ_UpdateNameToFooRow struct {
 	item UServ_UpdateNameToFooOut
 	err  error
@@ -1650,8 +1729,21 @@ func (this *UServ_UpdateNameToFooRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
 
+		return nil
+	}
 	return nil
+}
+func (this *UServ_UpdateNameToFooRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 func (this *UServ_UpdateNameToFooRow) Proto() (*Empty, error) {
@@ -1661,10 +1753,15 @@ func (this *UServ_UpdateNameToFooRow) Proto() (*Empty, error) {
 	return &Empty{}, nil
 }
 
-type UServ_GetFriendsOut interface {
+type UServ_GetFriendsIn interface {
 	GetNames() *SliceStringParam
 }
-
+type UServ_GetFriendsOut interface {
+	GetId() int64
+	GetName() string
+	GetFriends() *Friends
+	GetCreatedOn() *timestamp.Timestamp
+}
 type UServ_GetFriendsRow struct {
 	item UServ_GetFriendsOut
 	err  error
@@ -1680,8 +1777,29 @@ func (this *UServ_GetFriendsRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
-
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 	return nil
+}
+func (this *UServ_GetFriendsRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_GetFriendsRow) Proto() (*User, error) {
@@ -1696,9 +1814,10 @@ func (this *UServ_GetFriendsRow) Proto() (*User, error) {
 	}, nil
 }
 
+type UServ_DropIn interface {
+}
 type UServ_DropOut interface {
 }
-
 type UServ_DropRow struct {
 	item UServ_DropOut
 	err  error
@@ -1714,8 +1833,21 @@ func (this *UServ_DropRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
 
+		return nil
+	}
 	return nil
+}
+func (this *UServ_DropRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 func (this *UServ_DropRow) Proto() (*Empty, error) {
@@ -1726,8 +1858,120 @@ func (this *UServ_DropRow) Proto() (*Empty, error) {
 }
 
 type UServ_Hooks interface {
+	InsertUsersBeforeHook(context.Context, *User) (*Empty, error)
+	GetAllUsersBeforeHook(context.Context, *Empty) (*User, error)
+	InsertUsersAfterHook(context.Context, *User, *Empty) error
+	GetAllUsersAfterHook(context.Context, *Empty, *User) error
 }
 type UServ_TypeMappings interface {
-	TimestampTimestamp() TimestampTimestampMappingImpl
-	SliceStringParam() SliceStringParamMappingImpl
+	TimestampTimestamp() UServTimestampTimestampMappingImpl
+	SliceStringParam() UServSliceStringParamMappingImpl
+}
+type UServTimestampTimestampMappingImpl interface {
+	ToProto(**timestamp.Timestamp) error
+	Empty() UServTimestampTimestampMappingImpl
+	ToSql(*timestamp.Timestamp) sql.Scanner
+	sql.Scanner
+	driver.Valuer
+}
+type UServSliceStringParamMappingImpl interface {
+	ToProto(**SliceStringParam) error
+	Empty() UServSliceStringParamMappingImpl
+	ToSql(*SliceStringParam) sql.Scanner
+	sql.Scanner
+	driver.Valuer
+}
+type UServ_ImplOpts struct {
+	MAPPINGS UServ_TypeMappings
+	HOOKS    UServ_Hooks
+}
+
+func DefaultUServImplOpts() UServ_ImplOpts {
+	return UServ_ImplOpts{}
+}
+
+type UServ_Impl struct {
+	opts    *UServ_ImplOpts
+	QUERIES *UServ_Queries
+	DB      *sql.DB
+}
+
+func UServPersistImpl(db *sql.DB, opts ...UServ_ImplOpts) *UServ_Impl {
+	var myOpts UServ_ImplOpts
+	if len(opts) > 0 {
+		myOpts = opts[0]
+	} else {
+		myOpts = DefaultUServImplOpts()
+	}
+	return &UServ_Impl{
+		opts:    &myOpts,
+		QUERIES: UServPersistQueries(db, UServ_QueryOpts{MAPPINGS: myOpts.MAPPINGS}),
+		DB:      db,
+	}
+}
+
+func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
+	tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.InsertUsersTx(stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx PersistTx) error {
+	query := this.QUERIES.InsertUsersQuery(stream.Context())
+	var first *User
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
+		}
+		if first == nil {
+			first = req
+		}
+
+		beforeRes, err := this.opts.HOOKS.InsertUsersBeforeHook(stream.Context(), req)
+		if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+		} else if beforeRes != nil {
+			continue
+		}
+
+		result := query.Execute(req)
+		if err := result.Zero(); err != nil {
+			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("executed 'insert_users' query without error, but received error on commit: %v", err)
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return fmt.Errorf("error executing 'insert_users' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
+		}
+	}
+	res := &Empty{}
+
+	if err := this.opts.HOOKS.InsertUsersAfterHook(stream.Context(), first, res); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+	}
+
+	if err := stream.SendAndClose(res); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
+	}
+	return nil
+}
+
+func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, error) {
+	query := this.QUERIES.SelectUserByIdQuery(ctx)
+
+	result := query.Execute(req)
+	res, err := result.One().User()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

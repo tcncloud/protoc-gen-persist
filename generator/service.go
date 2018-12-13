@@ -240,7 +240,7 @@ func NewMethodProtoOpts(opt *desc.MethodDescriptorProto, all *StructList) (*Meth
 	var option *persist.MOpts
 
 	if opt.Options != nil && proto.HasExtension(opt.Options, persist.E_Opts) {
-		ext, err := proto.GetExtension(opt, persist.E_Opts)
+		ext, err := proto.GetExtension(opt.Options, persist.E_Opts)
 		if err == nil {
 			option = ext.(*persist.MOpts)
 		}
@@ -370,7 +370,7 @@ func WriteQueries(p *Printer, s *Service) error {
 	}
 
 	p.Q("type ", sName, "_QueryOpts struct {\n")
-	p.Q("MAPPINGS *", sName, "TypeMappings\n")
+	p.Q("MAPPINGS ", sName, "_TypeMappings\n")
 	p.Q("db Runable\n")
 	p.Q("ctx context.Context\n")
 	p.Q("}\n")
@@ -420,14 +420,14 @@ func WriteQueries(p *Printer, s *Service) error {
         func (this *`, sName, `_`, camelQ(q), `Query) QueryOutTypeUser() {}
 
         // Executes the query with parameters retrieved from x
-        func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q), `Out) *`, sName, `_`, camelQ(q), `Iter {
+        func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q), `In) *`, sName, `_`, camelQ(q), `Iter {
             var setupErr error
             params := []interface{}{
             `, execParams(q), `
             }
-            result := &`, sName, `_`, camelQ(q), `Result{
+            result := &`, sName, `_`, camelQ(q), `Iter{
                 tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
+                ctx: this.opts.ctx,
             }
             if setupErr != nil {
                 result.err = setupErr
@@ -457,13 +457,15 @@ func WriteHooks(p *Printer, s *Service) error {
 
 	p.Q("type ", sName, "_Hooks interface {\n")
 	m.EachMethod(func(m *MethodProtoOpts) {
-		p.Q(name(m), "BeforeHook(ctx context.Context, *", inName(m), ") ([]*", outName(m), ", error)\n")
+		p.Q(name(m), "BeforeHook(context.Context, *", inName(m), ") ([]*", outName(m), ", error)\n")
+	}, func(m *MethodProtoOpts) bool {
+		return false
 	}, m.BeforeHook, m.ServerStreaming)
 	m.EachMethod(func(m *MethodProtoOpts) {
-		p.Q(name(m), "BeforeHook(ctx context.Context, *", inName(m), ") (*", outName(m), ", error)\n")
+		p.Q(name(m), "BeforeHook(context.Context, *", inName(m), ") (*", outName(m), ", error)\n")
 	}, m.BeforeHook)
 	m.EachMethod(func(m *MethodProtoOpts) {
-		p.Q(name(m), "AfterHook(ctx context.Context, *", inName(m), ",*", outName(m), ") error\n")
+		p.Q(name(m), "AfterHook(context.Context, *", inName(m), ",*", outName(m), ") error\n")
 	}, m.AfterHook)
 	p.Q("}\n")
 	return m.Err()
@@ -478,9 +480,23 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 		// TODO implement these interfaces
 		_, titled := getGoNamesForTypeMapping(tm, s.File)
 		// p.Q(titled, "() ", sName, titled, "MappingImpl\n")
-		p.Q(titled, "() ", titled, "MappingImpl\n")
+		p.Q(titled, "() ", sName, titled, "MappingImpl\n")
 	}
 	p.Q("}\n")
+
+	for _, tm := range tms {
+		name, titled := getGoNamesForTypeMapping(tm, s.File)
+		p.Q("type ", sName, titled, "MappingImpl interface {\n")
+		p.Q(fmt.Sprintf(`
+            ToProto(**%[1]s) error
+            Empty() %[3]s%[2]sMappingImpl
+            ToSql(*%[1]s) sql.Scanner
+            sql.Scanner
+            driver.Valuer
+        `, name, titled, sName))
+		p.Q("}\n")
+	}
+
 	return nil
 }
 
@@ -571,7 +587,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             result sql.Result
             rows   *sql.Rows
             err    error
-            tm     `, sName, `TypeMappings
+            tm     `, sName, `_TypeMappings
             ctx    context.Context
         }
 
@@ -709,9 +725,17 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 		return typ
 	}
 
-	interfaceFields := func(opt *QueryProtoOpts) string {
+	inInterfaceFields := func(opt *QueryProtoOpts) string {
 		printer := &Printer{}
 		m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			printer.Q(`Get`, camelF(f), `() `, mustDefaultMapping(f), "\n")
+		}, m.MatchQuery(opt))
+		return printer.String()
+	}
+
+	outInterfaceFields := func(opt *QueryProtoOpts) string {
+		printer := &Printer{}
+		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
 			printer.Q(`Get`, camelF(f), `() `, mustDefaultMapping(f), "\n")
 		}, m.MatchQuery(opt))
 		return printer.String()
@@ -786,8 +810,12 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 		return printer.String()
 	}
 	m.EachQuery(func(q *QueryProtoOpts) {
-		p.Q(`type `, sName, `_`, camelQ(q), `Out interface {
-            `, interfaceFields(q), `
+		p.Q(`type `, sName, `_`, camelQ(q), `In interface {
+            `, inInterfaceFields(q), `
+        }
+
+        type `, sName, `_`, camelQ(q), `Out interface {
+            `, outInterfaceFields(q), `
         }
 
         type `, sName, `_`, camelQ(q), `Row struct {

@@ -35,8 +35,8 @@ func WritePersistServerStruct(printer *Printer, service string) error {
 	printerProxy := NewPrinterProxy(printer)
 	structFormat := `
 type {{.Service}}_ImplOpts struct {
-    MAPPINGS {{.Service}}TypeMappings
-    HOOKS    {{.Service}}Hooks
+    MAPPINGS {{.Service}}_TypeMappings
+    HOOKS    {{.Service}}_Hooks
 }
 
 func Default{{.Service}}ImplOpts() {{.Service}}_ImplOpts {
@@ -97,8 +97,7 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
             first = req
         }
         {{if .Before}}
-        // TODO UPDATE HOOKS FOR CTX
-        beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook( /*stream.Context(),*/ req)
+        beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(stream.Context(), req)
         if err != nil {
             return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
         } else if beforeRes != nil {
@@ -119,7 +118,7 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
     res := &Empty{}
 
     {{if .After}}
-    if err := this.opts.HOOKS.{{.Method}}AfterHook( /*stream.Context(),*/ first, res); err != nil {
+    if err := this.opts.HOOKS.{{.Method}}AfterHook(stream.Context(), first, res); err != nil {
         return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
     }
     {{end}}
@@ -144,8 +143,7 @@ func WriteUnary(printer *Printer, params *handlerParams) error {
 func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
     query := this.QUERIES.{{camelCase .Query}}Query(ctx)
     {{if .Before}}
-    // TODO UPDATE HOOKS FOR CTX
-    beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook( /*ctx,*/ req)
+    beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(ctx, req)
     if err != nil {
         return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
     } else if beforeRes != nil {
@@ -154,13 +152,14 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
     req = beforeRes
     {{end}}
 
-    res := query.Execute(req)
-    if err := result.One(); err != nil {
-        return nil, gstatus.Errorf(codes.InvalidArgument, "unary queries must return one result: %v", err)
+    result := query.Execute(req)
+    res, err := result.One().{{.Response}}()
+    if err != nil {
+        return nil, err
     }
 
     {{if .After}}
-    if err := this.opts.HOOKS.{{.Method}}AfterHook( /*ctx,*/ req, res); err != nil {
+    if err := this.opts.HOOKS.{{.Method}}AfterHook(ctx, req, res); err != nil {
         return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
     }
     {{end}}
