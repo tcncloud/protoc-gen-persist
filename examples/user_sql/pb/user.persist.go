@@ -29,7 +29,7 @@ type scanable interface {
 	Scan(...interface{}) error
 	Columns() ([]string, error)
 }
-type Runable interface {
+type Runnable interface {
 	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
 	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 }
@@ -48,7 +48,7 @@ func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
 }
 
 type ignoreTx struct {
-	r Runable
+	r Runnable
 }
 
 func (this *ignoreTx) Commit() error   { return nil }
@@ -63,21 +63,21 @@ func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface
 type PersistTx interface {
 	Commit() error
 	Rollback() error
-	Runable
+	Runnable
 }
 
-func NopPersistTx(r Runable) (PersistTx, error) {
+func NopPersistTx(r Runnable) (PersistTx, error) {
 	return &ignoreTx{r}, nil
 }
 
 type UServ_QueryOpts struct {
 	MAPPINGS UServ_TypeMappings
-	db       Runable
+	db       Runnable
 	ctx      context.Context
 }
 
 // DefaultUServQueryOpts return the default options to be used with UServ_Queries
-func DefaultUServQueryOpts(db Runable) UServ_QueryOpts {
+func DefaultUServQueryOpts(db Runnable) UServ_QueryOpts {
 	return UServ_QueryOpts{
 		db: db,
 	}
@@ -89,7 +89,7 @@ type UServ_Queries struct {
 }
 
 // UServPersistQueries returns all the known 'SQL' queires for the 'UServ' service.
-func UServPersistQueries(db Runable, opts ...UServ_QueryOpts) *UServ_Queries {
+func UServPersistQueries(db Runnable, opts ...UServ_QueryOpts) *UServ_Queries {
 	var myOpts UServ_QueryOpts
 	if len(opts) > 0 {
 		myOpts = opts[0]

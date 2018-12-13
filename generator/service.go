@@ -371,11 +371,11 @@ func WriteQueries(p *Printer, s *Service) error {
 
 	p.Q("type ", sName, "_QueryOpts struct {\n")
 	p.Q("MAPPINGS ", sName, "_TypeMappings\n")
-	p.Q("db Runable\n")
+	p.Q("db Runnable\n")
 	p.Q("ctx context.Context\n")
 	p.Q("}\n")
 	p.Q("// Default", sName, "QueryOpts return the default options to be used with ", sName, "_Queries\n")
-	p.Q("func Default", sName, "QueryOpts(db Runable) ", sName, "_QueryOpts {\n")
+	p.Q("func Default", sName, "QueryOpts(db Runnable) ", sName, "_QueryOpts {\n")
 	p.Q("return ", sName, "_QueryOpts{\n")
 	p.Q("db: db,\n")
 	p.Q("}\n")
@@ -387,7 +387,7 @@ func WriteQueries(p *Printer, s *Service) error {
 	p.Q("}\n")
 
 	p.Q(`// `, sName, `PersistQueries returns all the known 'SQL' queires for the '`, sName, `' service.
-    func `, sName, `PersistQueries(db Runable, opts ...`, sName, `_QueryOpts) *`, sName, `_Queries {
+    func `, sName, `PersistQueries(db Runnable, opts ...`, sName, `_QueryOpts) *`, sName, `_Queries {
         var myOpts `, sName, `_QueryOpts
         if len(opts) > 0 {
             myOpts = opts[0]
@@ -768,8 +768,8 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
                 if o == nil {
                     return fmt.Errorf("must initialize *`, methOutName(mopt), ` before giving to Unwrap()")
                 }
-				res, _ := this.`, methOutName(mopt), `()
-				_ = res
+                res, _ := this.`, methOutName(mopt), `()
+                _ = res
                 `, setSharedOnPointer(mopt), `
                 return nil
             }`)
@@ -834,7 +834,7 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
             if this.err != nil {
                 return this.err
             }
-			`, unwrapMarshelOut(q), `
+            `, unwrapMarshelOut(q), `
             return nil
         }
         `, outMethods(q), `
@@ -951,7 +951,7 @@ func WriteImports(p *Printer, f *FileStruct) error {
         Scan(...interface{}) error
         Columns() ([]string, error)
     }
-    type Runable interface {
+    type Runnable interface {
         QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
         ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
     }
@@ -970,7 +970,7 @@ func WriteImports(p *Printer, f *FileStruct) error {
     }
 
     type ignoreTx struct {
-        r Runable
+        r Runnable
     }
 
     func (this *ignoreTx) Commit() error   { return nil }
@@ -984,10 +984,10 @@ func WriteImports(p *Printer, f *FileStruct) error {
     type PersistTx interface {
         Commit() error
         Rollback() error
-        Runable
+        Runnable
     }
 
-    func NopPersistTx(r Runable) (PersistTx, error) {
+    func NopPersistTx(r Runnable) (PersistTx, error) {
         return &ignoreTx{r}, nil
     }
     `)
