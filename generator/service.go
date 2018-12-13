@@ -902,12 +902,20 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 			if err != nil {
 				outErr = err
 			}
+			// Bidirectional Streaming
+		} else {
+			err = WriteBidirectionalStream(p, params)
+			if err != nil {
+				outErr = err
+			}
 		}
 
 	}, func(mpo *MethodProtoOpts) bool {
 		methods := []string{
 			"SelectUserById",
 			"InsertUsers",
+			"GetFriends",
+			"UpdateUserNames",
 		}
 
 		for _, method := range methods {

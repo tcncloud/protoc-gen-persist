@@ -176,10 +176,84 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
 
 func WriteSeverStream(printer *Printer, params *handlerParams) error {
 	printerProxy := NewPrinterProxy(printer)
-	serverFormat := ``
+	serverFormat := `
+func (this *{{.Service}}_Impl) {{.Method}}(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server) error {
+    tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
+    if err != nil {
+        return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+    }
+    if err := this.{{.Method}}Tx(req, stream, tx); err != nil {
+        return gstatus.Errorf(codes.Unknown, "error executing '{{.Query}}' query: %v", err)
+    }
+    return nil
+}
+
+func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
+    ctx := stream.Context()
+    query := this.QUERIES.{{camelCase .Query}}Query(ctx)
+
+    iter := query.Execute(req)
+    return iter.Each(func(row *{{.Service}}_{{camelCase .Query}}Row) error {
+        res, err := row.{{.Response}}()
+        if err != nil {
+            return err
+        }
+        return stream.Send(res)
+    })
+}
+    `
 	funcMap := template.FuncMap{
 		"camelCase": _gen.CamelCase,
 	}
 	t := template.Must(template.New("ServerStream").Funcs(funcMap).Parse(serverFormat))
+	return t.Execute(printerProxy, params)
+}
+
+func WriteBidirectionalStream(printer *Printer, params *handlerParams) error {
+	printerProxy := NewPrinterProxy(printer)
+	biFormat := `
+func (this *{{.Service}}_Impl) {{.Method}}(stream {{.Service}}_{{.Method}}Server) error {
+    tx, err := DefaultBidiStreamingPersistTx(stream.Context(), this.DB)
+    if err != nil {
+        return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+    }
+    if err := this.{{.Method}}Tx(stream, tx); err != nil {
+        return gstatus.Errorf(codes.Unknown, "error executing '{{.Query}}' query: %v", err)
+    }
+    return nil
+}
+
+func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
+    ctx := stream.Context()
+    for {
+        req, err := stream.Recv()
+        if err == io.EOF {
+            err = tx.Commit()
+            if err != nil {
+                return tx.Rollback()
+            }
+            return nil
+        } else if err != nil {
+            return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
+        }
+        iter := this.QUERIES.{{camelCase .Query}}Query(ctx).Execute(req)
+        err = iter.Each(func(row *{{.Service}}_{{camelCase .Query}}Row) error {
+            res, err := row.{{.Response}}()
+            if err != nil {
+                return err
+            }
+            return stream.Send(res)
+        })
+        if err != nil {
+            return err
+        }
+    }
+    return nil
+}
+    `
+	funcMap := template.FuncMap{
+		"camelCase": _gen.CamelCase,
+	}
+	t := template.Must(template.New("BidirectionalStream").Funcs(funcMap).Parse(biFormat))
 	return t.Execute(printerProxy, params)
 }

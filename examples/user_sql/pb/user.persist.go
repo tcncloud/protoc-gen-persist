@@ -1983,3 +1983,64 @@ func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, e
 
 	return res, nil
 }
+
+func (this *UServ_Impl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
+	tx, err := DefaultBidiStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.UpdateUserNamesTx(stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'update_user_name' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) UpdateUserNamesTx(stream UServ_UpdateUserNamesServer, tx PersistTx) error {
+	ctx := stream.Context()
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			err = tx.Commit()
+			if err != nil {
+				return tx.Rollback()
+			}
+			return nil
+		} else if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
+		}
+		iter := this.QUERIES.UpdateUserNameQuery(ctx).Execute(req)
+		err = iter.Each(func(row *UServ_UpdateUserNameRow) error {
+			res, err := row.User()
+			if err != nil {
+				return err
+			}
+			return stream.Send(res)
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (this *UServ_Impl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
+	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.GetFriendsTx(req, stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'get_friends' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsServer, tx PersistTx) error {
+	ctx := stream.Context()
+	query := this.QUERIES.GetFriendsQuery(ctx)
+	iter := query.Execute(req)
+	return iter.Each(func(row *UServ_GetFriendsRow) error {
+		res, err := row.User()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
+	})
+}
