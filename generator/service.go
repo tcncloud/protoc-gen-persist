@@ -768,7 +768,8 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
                 if o == nil {
                     return fmt.Errorf("must initialize *`, methOutName(mopt), ` before giving to Unwrap()")
                 }
-                res, _ := this.`, methOutName(mopt), `()
+				res, _ := this.`, methOutName(mopt), `()
+				_ = res
                 `, setSharedOnPointer(mopt), `
                 return nil
             }`)
@@ -833,7 +834,7 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
             if this.err != nil {
                 return this.err
             }
-            `, unwrapMarshelOut(q), `
+			`, unwrapMarshelOut(q), `
             return nil
         }
         `, outMethods(q), `

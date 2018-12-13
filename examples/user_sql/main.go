@@ -56,10 +56,10 @@ type MyTimestampImpl struct{}
 
 type MappingImpl struct{}
 
-func (m *MappingImpl) TimestampTimestamp() pb.TimestampTimestampMappingImpl {
+func (m *MappingImpl) TimestampTimestamp() pb.UServTimestampTimestampMappingImpl {
 	return &pb.TimeString{}
 }
-func (m *MappingImpl) SliceStringParam() pb.SliceStringParamMappingImpl {
+func (m *MappingImpl) SliceStringParam() pb.UServSliceStringParamMappingImpl {
 	return &pb.SliceStringConverter{}
 }
 
@@ -74,7 +74,6 @@ func (d *RestOfImpl) UpdateAllNames(r *pb.Empty, stream pb.UServ_UpdateAllNamesS
 		"user=postgres password=postgres dbname=postgres sslmode=disable",
 	)
 	if err != nil {
-		x
 		return err
 	}
 	params, err := pb.EmptyToUServPersistType(d.Mappings, r)

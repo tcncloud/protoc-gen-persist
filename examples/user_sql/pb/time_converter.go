@@ -73,19 +73,19 @@ func (t *TimeString) Scan(src interface{}) error {
 func (t *TimeString) Value() (driver.Value, error) {
 	return ptypes.TimestampString(t.t), nil
 }
-func (t TimeString) Empty() *TimestampTimestampMappingImpl {
-	return new(TimestampTimestampMappingImpl)
+func (t *TimeString) Empty() UServTimestampTimestampMappingImpl {
+	return new(TimeString)
 }
 
 type SliceStringConverter struct {
 	v *SliceStringParam
 }
 
-func (s SliceStringConverter) ToSql(v *SliceStringParam) sql.Scanner {
+func (s *SliceStringConverter) ToSql(v *SliceStringParam) sql.Scanner {
 	s.v = v
-	return &s
+	return s
 }
-func (s SliceStringConverter) ToProto(req **SliceStringParam) error {
+func (s *SliceStringConverter) ToProto(req **SliceStringParam) error {
 	*req = s.v
 	return nil
 }
@@ -102,8 +102,8 @@ func (s *SliceStringConverter) Scan(src interface{}) error {
 func (s *SliceStringConverter) Value() (driver.Value, error) {
 	return pq.StringArray(s.v.Slice).Value()
 }
-func (s SliceStringConverter) Empty() *SliceStringParamMappingImpl {
-	return new(SliceStringParamMappingImpl)
+func (s *SliceStringConverter) Empty() UServSliceStringParamMappingImpl {
+	return new(SliceStringConverter)
 }
 
 var inc int64
@@ -113,7 +113,3 @@ func IncId(u *User) ([]*User, error) {
 	inc++
 	return nil, nil
 }
-
-// These are fake
-type SliceStringParamMappingImpl struct{}
-type TimestampTimestampMappingImpl struct{}

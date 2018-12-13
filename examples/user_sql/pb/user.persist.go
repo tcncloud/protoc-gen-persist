@@ -1452,6 +1452,7 @@ func (this *UServ_CreateUsersTableRow) Unwrap(pointerToMsg proto.Message) error 
 			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
 		}
 		res, _ := this.Empty()
+		_ = res
 
 		return nil
 	}
@@ -1499,6 +1500,7 @@ func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
 			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
 		}
 		res, _ := this.Empty()
+		_ = res
 
 		return nil
 	}
@@ -1546,6 +1548,7 @@ func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
 			return fmt.Errorf("must initialize *User before giving to Unwrap()")
 		}
 		res, _ := this.User()
+		_ = res
 		o.Id = res.Id
 		o.Name = res.Name
 		o.Friends = res.Friends
@@ -1610,6 +1613,7 @@ func (this *UServ_SelectUserByIdRow) Unwrap(pointerToMsg proto.Message) error {
 			return fmt.Errorf("must initialize *User before giving to Unwrap()")
 		}
 		res, _ := this.User()
+		_ = res
 		o.Id = res.Id
 		o.Name = res.Name
 		o.Friends = res.Friends
@@ -1674,6 +1678,7 @@ func (this *UServ_UpdateUserNameRow) Unwrap(pointerToMsg proto.Message) error {
 			return fmt.Errorf("must initialize *User before giving to Unwrap()")
 		}
 		res, _ := this.User()
+		_ = res
 		o.Id = res.Id
 		o.Name = res.Name
 		o.Friends = res.Friends
@@ -1734,6 +1739,7 @@ func (this *UServ_UpdateNameToFooRow) Unwrap(pointerToMsg proto.Message) error {
 			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
 		}
 		res, _ := this.Empty()
+		_ = res
 
 		return nil
 	}
@@ -1782,6 +1788,7 @@ func (this *UServ_GetFriendsRow) Unwrap(pointerToMsg proto.Message) error {
 			return fmt.Errorf("must initialize *User before giving to Unwrap()")
 		}
 		res, _ := this.User()
+		_ = res
 		o.Id = res.Id
 		o.Name = res.Name
 		o.Friends = res.Friends
@@ -1838,6 +1845,7 @@ func (this *UServ_DropRow) Unwrap(pointerToMsg proto.Message) error {
 			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
 		}
 		res, _ := this.Empty()
+		_ = res
 
 		return nil
 	}
