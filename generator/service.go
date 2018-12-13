@@ -910,21 +910,6 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 			}
 		}
 
-	}, func(mpo *MethodProtoOpts) bool {
-		methods := []string{
-			"SelectUserById",
-			"InsertUsers",
-			"GetFriends",
-			"UpdateUserNames",
-		}
-
-		for _, method := range methods {
-			if mpo.method.GetName() == method {
-				return true
-			}
-		}
-
-		return false
 	})
 
 	return nil

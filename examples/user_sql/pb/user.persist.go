@@ -1918,6 +1918,18 @@ func UServPersistImpl(db *sql.DB, opts ...UServ_ImplOpts) *UServ_Impl {
 	}
 }
 
+func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
+	query := this.QUERIES.CreateUsersTableQuery(ctx)
+
+	result := query.Execute(req)
+	res, err := result.One().Empty()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
 	tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
 	if err != nil {
@@ -1972,6 +1984,29 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 	return nil
 }
 
+func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
+	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.GetAllUsersTx(req, stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'get_all_users' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer, tx PersistTx) error {
+	ctx := stream.Context()
+	query := this.QUERIES.GetAllUsersQuery(ctx)
+	iter := query.Execute(req)
+	return iter.Each(func(row *UServ_GetAllUsersRow) error {
+		res, err := row.User()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
+	})
+}
+
 func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, error) {
 	query := this.QUERIES.SelectUserByIdQuery(ctx)
 
@@ -2022,6 +2057,18 @@ func (this *UServ_Impl) UpdateUserNamesTx(stream UServ_UpdateUserNamesServer, tx
 	return nil
 }
 
+func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
+	query := this.QUERIES.UpdateNameToFooQuery(ctx)
+
+	result := query.Execute(req)
+	res, err := result.One().Empty()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 func (this *UServ_Impl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
 	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
 	if err != nil {
@@ -2043,4 +2090,16 @@ func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsSer
 		}
 		return stream.Send(res)
 	})
+}
+
+func (this *UServ_Impl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
+	query := this.QUERIES.DropQuery(ctx)
+
+	result := query.Execute(req)
+	res, err := result.One().Empty()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
