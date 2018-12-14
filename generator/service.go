@@ -883,6 +883,42 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 	p.Q("}\n")
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
+		if m.ServerStreaming(mpo) {
+			p.Q(fmt.Sprintf(`
+func (this *%[1]s_Impl) %[2]s(req *%[3]s, stream %[1]s_%[2]sServer) error {
+	return this.opts.HANDLERS.%[2]s(req, stream)
+}
+        `, serviceName, mpo.method.GetName(), mpo.inMsg.GetName()))
+		}
+
+		if m.ClientStreaming(mpo) {
+			p.Q(fmt.Sprintf(`
+func (this *%[1]s_Impl) %[2]s(stream %[1]s_%[2]sServer) error {
+	return this.opts.HANDLERS.%[2]s(stream)
+}
+        `, serviceName, mpo.method.GetName(), mpo.inMsg.GetName()))
+		}
+
+		if m.Unary(mpo) {
+			p.Q(fmt.Sprintf(`
+func (this *%[1]s_Impl) %[2]s(ctx context.Context, req *%[3]s) (*%[4]s, error) {
+	return this.opts.HANDLERS.%[2]s(ctx, req)
+}
+        `, serviceName, mpo.method.GetName(), mpo.inMsg.GetName(), mpo.outMsg.GetName()))
+		}
+
+		if m.BidiStreaming(mpo) {
+			p.Q(fmt.Sprintf(`
+func (this *%[1]s_Impl) %[2]s(stream %[1]s_%[2]sServer) error {
+	return this.opts.HANDLERS.%[2]s(stream)
+}
+        `, serviceName, mpo.method.GetName(), mpo.inMsg.GetName(), mpo.outMsg.GetName()))
+		}
+	}, func(mpo *MethodProtoOpts) bool {
+		return !proto.HasExtension(mpo.method.Options, persist.E_Opts)
+	})
+
+	m.EachMethod(func(mpo *MethodProtoOpts) {
 		var option *persist.MOpts
 		message, err := proto.GetExtension(mpo.method.Options, persist.E_Opts)
 		if err != nil {
@@ -890,8 +926,6 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 		}
 		option = message.(*persist.MOpts)
 
-		serverStream := mpo.method.GetServerStreaming()
-		clientStream := mpo.method.GetClientStreaming()
 		params := &handlerParams{
 			Service:  serviceName,
 			Method:   mpo.method.GetName(),
@@ -902,23 +936,27 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 			After:    option.GetAfter(),
 		}
 
-		// Unary
-		if !serverStream && !clientStream {
+		if m.Unary(mpo) {
 			err = WriteUnary(p, params)
-			// Client Streaming
-		} else if !serverStream && clientStream {
+			if err != nil {
+				outErr = err
+			}
+		}
+		if m.ClientStreaming(mpo) {
 			err = WriteClientStreaming(p, params)
 			if err != nil {
 				outErr = err
 			}
-			// Server Streaming
-		} else if serverStream && !clientStream {
+		}
+
+		if m.ServerStreaming(mpo) {
 			err = WriteSeverStream(p, params)
 			if err != nil {
 				outErr = err
 			}
-			// Bidirectional Streaming
-		} else {
+		}
+
+		if m.BidiStreaming(mpo) {
 			err = WriteBidirectionalStream(p, params)
 			if err != nil {
 				outErr = err

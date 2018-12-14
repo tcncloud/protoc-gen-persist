@@ -1923,6 +1923,10 @@ type RestOfUServHandlers interface {
 	UpdateAllNames(*Empty, UServ_UpdateAllNamesServer) error
 }
 
+func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
+	return this.opts.HANDLERS.UpdateAllNames(req, stream)
+}
+
 func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
 	query := this.QUERIES.CreateUsersTableQuery(ctx)
 
