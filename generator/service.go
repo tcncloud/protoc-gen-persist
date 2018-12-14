@@ -919,21 +919,14 @@ func (this *%[1]s_Impl) %[2]s(stream %[1]s_%[2]sServer) error {
 	})
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
-		var option *persist.MOpts
-		message, err := proto.GetExtension(mpo.method.Options, persist.E_Opts)
-		if err != nil {
-			outErr = err
-		}
-		option = message.(*persist.MOpts)
-
 		params := &handlerParams{
 			Service:  serviceName,
 			Method:   mpo.method.GetName(),
 			Request:  mpo.inMsg.GetName(),
 			Response: mpo.outMsg.GetName(),
-			Query:    option.GetQuery(),
-			Before:   option.GetBefore(),
-			After:    option.GetAfter(),
+			Query:    mpo.option.GetQuery(),
+			Before:   mpo.option.GetBefore(),
+			After:    mpo.option.GetAfter(),
 		}
 
 		if m.Unary(mpo) {
