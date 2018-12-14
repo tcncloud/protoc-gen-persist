@@ -28,14 +28,25 @@ func (Match) BidiStreaming(mopt *MethodProtoOpts) bool {
 func (Match) Unary(mopt *MethodProtoOpts) bool {
 	return !mopt.method.GetClientStreaming() && !mopt.method.GetServerStreaming()
 }
-func (Match) QueryFieldIsMapped(field *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
-	return true
+func (m Match) QueryFieldIsMapped(field *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
+	var out bool
+	m.EachTM(func(opts *TypeMappingProtoOpts) {
+		if field.GetLabel() != opts.tm.GetProtoLabel() {
+			return
+		} else if field.GetTypeName() != opts.tm.GetProtoTypeName() {
+			return
+		} else if field.GetType() != opts.tm.GetProtoType() {
+			return
+		}
+		out = true
+	})
+	return out
 }
 func (Match) QueryFieldIsMessage(field *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
-	return true
+	return field.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE
 }
 func (Match) QueryFieldIsRepeated(field *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
-	return true
+	return field.GetLabel() == desc.FieldDescriptorProto_LABEL_REPEATED
 }
 func (Match) QueryFieldFitsDB(field *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
 	return true

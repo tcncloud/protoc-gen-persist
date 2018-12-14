@@ -14,16 +14,24 @@ import (
 
 func main() {
 	params := ReadSpannerParams()
-	service := pb.NewUServBuilder().
-		WithDefaultQueryHandlers().
-		WithSpannerURI(context.Background(), params.URI()).
-		WithRestOfGrpcHandlers(&RestOfImpl{Params: params}).
-		WithHooks(&HooksImpl{}).
-		WithTypeMapping(&Mappings{}).
-		MustBuild()
+  ctx := context.Background()
+  conn, err := spanner.NewClient(ctx, params.URI())
+  if err != nil {
+    fmt.Printf("error connecting to db: %v\n", err)
+    return
+  }
+  defer conn.Close()
+
+  service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
+    HOOKS: &HooksImpl{},
+    MAPPINGS: &MappingImpl{},
+    HANDLERS: &RestOfImpl{},
+  })
+
 	server := grpc.NewServer()
 
-	pb.RegisterUServServer(server, service)
+  pb.RegisterUServServer(server, service)
+
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
 		panic(err)
@@ -36,19 +44,40 @@ func main() {
 type RestOfImpl struct {
 	Params SpannerParams
 }
-type Mappings struct{}
+type MappingImpl struct{}
 
-func (m *Mappings) TimestampTimestamp() pb.TimestampTimestampMappingImpl {
+func (m *MappingImpl) TimestampTimestamp() pb.TimestampTimestampMappingImpl {
 	return &pb.TimeString{}
+}
+func (m *MappingImpl) SliceStringParam() pb.SliceStringParamMappingImpl {
+  return &pb.SliceStringConverter{}
 }
 
 type HooksImpl struct{}
 
+func (h *HooksImpl) InsertUsersBeforeHook(req *pb.User) (*pb.Empty, error) {
+  pb.IncId(req)
+  return nil, nil
+}
+func (h *HooksImpl) InsertUsersAfterHook(*pb.User, *pb.Empty) error {
+  return nil
+}
+func (h *HooksImpl) GetAllUsersBeforeHook(*pb.Empty) ([]*pb.User, error) {
+  return nil, nil
+}
+func (h *HooksImpl) GetAllUsersAfterHook(*pb.Empty, *pb.User) error {
+  return nil
+}
 func (h *HooksImpl) GetFriendsBeforeHook(*pb.Friends) ([]*pb.User, error) {
 	return nil, nil
 }
 func (h *HooksImpl) GetFriendsAfterHook(*pb.Friends, *pb.User) error {
 	return nil
+}
+
+func (d *RestOfImpl) CreateTable(req *pb.Empty) (*pb.Empty, error) {
+  out := new(pb.Empty)
+  return out, nil
 }
 
 // using the persist lib queries to implement your own handlers.
@@ -58,15 +87,15 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 		return err
 	}
 	// convert our request type to a persist's type to use it in the query.
-	params, err := pb.EmptyToUServPersistType(&Mappings{}, req)
+	params, err := pb.EmptyToUServPersistType(&MappingImpl{}, req)
 	if err != nil {
 		return err
 	}
 	// create the query using the persist type we got above (params)
 	iter := client.Single().Query(stream.Context(), pl.UServGetAllUsersQuery(params))
 	muts := make([]*spanner.Mutation, 0)
-	err = pb.IterUServUserProto(&Mappings{}, iter, func(user *pb.User) error {
-		params, err := pb.UserToUServPersistType(&Mappings{}, user)
+	err = pb.IterUServUserProto(&MappingImpl{}, iter, func(user *pb.User) error {
+		params, err := pb.UserToUServPersistType(&MappingImpl{}, user)
 		if err != nil {
 			return err
 		}
@@ -82,8 +111,8 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 		return err
 	}
 	// get all our updated users, and stream them back to the client.
-	params, _ = pb.EmptyToUServPersistType(&Mappings{}, req)
+	params, _ = pb.EmptyToUServPersistType(&MappingImpl{}, req)
 	iter = client.Single().Query(stream.Context(), pl.UServGetAllUsersQuery(params))
 
-	return pb.IterUServUserProto(&Mappings{}, iter, stream.Send)
+	return pb.IterUServUserProto(&MappingImpl{}, iter, stream.Send)
 }
