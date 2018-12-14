@@ -42,5 +42,7 @@ func TestMain(t *testing.T) {
 }
 
 var _ = Describe("main", func() {
-	It("exists", func() {})
+	It("exists", func() {
+		Expect(false).To(BeTrue())
+	})
 })

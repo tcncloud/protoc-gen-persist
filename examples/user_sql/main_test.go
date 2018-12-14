@@ -1,10 +1,12 @@
 package main_test
 
 import (
+	"database/sql"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/tcncloud/protoc-gen-persist/examples/user_sql"
 
 	"fmt"
 	"io"
@@ -13,7 +15,6 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	main "github.com/tcncloud/protoc-gen-persist/examples/user_sql"
 	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -201,17 +202,17 @@ var users = []*pb.User{
 }
 
 func Serve(servFunc func(s *grpc.Server)) {
-	restOfHandlers := &main.RestOfImpl{
-		Mappings: &main.MappingImpl{},
-		Hooks:    &main.HooksImpl{},
+	conn, err := sql.Open("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable")
+	if err != nil {
+		panic(err)
 	}
-	service := pb.NewUServBuilder().
-		WithDefaultQueryHandlers().
-		WithNewSqlDb("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable host=localhost").
-		WithRestOfGrpcHandlers(restOfHandlers).
-		WithHooks(restOfHandlers.Hooks).
-		WithTypeMapping(restOfHandlers.Mappings).
-		MustBuild()
+
+	service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
+		HOOKS:    &HooksImpl{},
+		MAPPINGS: &MappingImpl{},
+		HANDLERS: &RestOfImpl{},
+	})
+
 	server := grpc.NewServer()
 
 	pb.RegisterUServServer(server, service)

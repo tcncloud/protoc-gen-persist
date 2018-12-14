@@ -480,11 +480,11 @@ func (m *Method) GetAfterHookName() string {
 }
 
 func (m *Method) Process() error {
-	logrus.Debug("Process method %s", m.GetName())
+	logrus.Debugf("Process method %s", m.GetName())
 	if m.IsSpanner() {
 		query, tds, err := m.GetQuery()
 		if err != nil {
-			return fmt.Errorf("error processing spanncer query: %v", err)
+			return fmt.Errorf("error processing spanner query: %v", err)
 		}
 		reader := bytes.NewBufferString(query)
 		// TODO remove
