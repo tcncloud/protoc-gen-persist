@@ -37,6 +37,7 @@ func WritePersistServerStruct(printer *Printer, service string) error {
 type {{.Service}}_ImplOpts struct {
     MAPPINGS {{.Service}}_TypeMappings
     HOOKS    {{.Service}}_Hooks
+    HANDLERS RestOf{{.Service}}Handlers
 }
 
 func Default{{.Service}}ImplOpts() {{.Service}}_ImplOpts {
@@ -110,7 +111,6 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
         }
     }
     if err := tx.Commit(); err != nil {
-        return fmt.Errorf("executed '{{.Query}}' query without error, but received error on commit: %v", err)
         if rollbackErr := tx.Rollback(); rollbackErr != nil {
             return fmt.Errorf("error executing '{{.Query}}' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
         }

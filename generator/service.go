@@ -701,6 +701,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 	}
 	return
 }
+
 func WriteRows(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	sName := s.GetName()
@@ -863,12 +864,26 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 		return err
 	}
 
+	p.Q(fmt.Sprintf(`
+    type RestOf%sHandlers interface {
+    `, serviceName))
+
+	m.EachMethod(func(mpo *MethodProtoOpts) {
+		if m.ServerStreaming(mpo) {
+			p.Q(fmt.Sprintf(`%[1]s(*%[2]s, %[3]s_%[1]sServer) error`,
+				mpo.method.GetName(),
+				mpo.inMsg.GetName(),
+				serviceName,
+			))
+		}
+	}, func(mpo *MethodProtoOpts) bool {
+		return !proto.HasExtension(mpo.method.Options, persist.E_Opts)
+	})
+
+	p.Q("}\n")
+
 	m.EachMethod(func(mpo *MethodProtoOpts) {
 		var option *persist.MOpts
-
-		if !proto.HasExtension(mpo.method.Options, persist.E_Opts) {
-			return
-		}
 		message, err := proto.GetExtension(mpo.method.Options, persist.E_Opts)
 		if err != nil {
 			outErr = err
@@ -910,6 +925,9 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 			}
 		}
 
+	}, func(mpo *MethodProtoOpts) bool {
+		// Only methods that have persist options
+		return proto.HasExtension(mpo.method.Options, persist.E_Opts)
 	})
 
 	return nil

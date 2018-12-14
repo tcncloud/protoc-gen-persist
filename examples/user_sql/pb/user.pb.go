@@ -39,7 +39,7 @@ func (m *User) Reset()         { *m = User{} }
 func (m *User) String() string { return proto.CompactTextString(m) }
 func (*User) ProtoMessage()    {}
 func (*User) Descriptor() ([]byte, []int) {
-	return fileDescriptor_user_7cdb0beb66f74ed8, []int{0}
+	return fileDescriptor_user_f3305310eebd2b9a, []int{0}
 }
 func (m *User) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_User.Unmarshal(m, b)
@@ -101,7 +101,7 @@ func (m *InsertUserReq) Reset()         { *m = InsertUserReq{} }
 func (m *InsertUserReq) String() string { return proto.CompactTextString(m) }
 func (*InsertUserReq) ProtoMessage()    {}
 func (*InsertUserReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_user_7cdb0beb66f74ed8, []int{1}
+	return fileDescriptor_user_f3305310eebd2b9a, []int{1}
 }
 func (m *InsertUserReq) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InsertUserReq.Unmarshal(m, b)
@@ -160,7 +160,7 @@ func (m *Friends) Reset()         { *m = Friends{} }
 func (m *Friends) String() string { return proto.CompactTextString(m) }
 func (*Friends) ProtoMessage()    {}
 func (*Friends) Descriptor() ([]byte, []int) {
-	return fileDescriptor_user_7cdb0beb66f74ed8, []int{2}
+	return fileDescriptor_user_f3305310eebd2b9a, []int{2}
 }
 func (m *Friends) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Friends.Unmarshal(m, b)
@@ -198,7 +198,7 @@ func (m *SliceStringParam) Reset()         { *m = SliceStringParam{} }
 func (m *SliceStringParam) String() string { return proto.CompactTextString(m) }
 func (*SliceStringParam) ProtoMessage()    {}
 func (*SliceStringParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_user_7cdb0beb66f74ed8, []int{3}
+	return fileDescriptor_user_f3305310eebd2b9a, []int{3}
 }
 func (m *SliceStringParam) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SliceStringParam.Unmarshal(m, b)
@@ -236,7 +236,7 @@ func (m *FriendsReq) Reset()         { *m = FriendsReq{} }
 func (m *FriendsReq) String() string { return proto.CompactTextString(m) }
 func (*FriendsReq) ProtoMessage()    {}
 func (*FriendsReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_user_7cdb0beb66f74ed8, []int{4}
+	return fileDescriptor_user_f3305310eebd2b9a, []int{4}
 }
 func (m *FriendsReq) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FriendsReq.Unmarshal(m, b)
@@ -273,7 +273,7 @@ func (m *Empty) Reset()         { *m = Empty{} }
 func (m *Empty) String() string { return proto.CompactTextString(m) }
 func (*Empty) ProtoMessage()    {}
 func (*Empty) Descriptor() ([]byte, []int) {
-	return fileDescriptor_user_7cdb0beb66f74ed8, []int{5}
+	return fileDescriptor_user_f3305310eebd2b9a, []int{5}
 }
 func (m *Empty) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Empty.Unmarshal(m, b)
@@ -786,9 +786,9 @@ var _UServ_serviceDesc = grpc.ServiceDesc{
 	Metadata: "pb/user.proto",
 }
 
-func init() { proto.RegisterFile("pb/user.proto", fileDescriptor_user_7cdb0beb66f74ed8) }
+func init() { proto.RegisterFile("pb/user.proto", fileDescriptor_user_f3305310eebd2b9a) }
 
-var fileDescriptor_user_7cdb0beb66f74ed8 = []byte{
+var fileDescriptor_user_f3305310eebd2b9a = []byte{
 	// 850 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x55, 0xdd, 0x6e, 0xe3, 0x44,
 	0x14, 0xde, 0x71, 0xff, 0xc8, 0x31, 0x2d, 0x61, 0x28, 0xda, 0x90, 0x0b, 0x76, 0x64, 0x81, 0xea,

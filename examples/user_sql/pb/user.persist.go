@@ -1892,6 +1892,7 @@ type UServSliceStringParamMappingImpl interface {
 type UServ_ImplOpts struct {
 	MAPPINGS UServ_TypeMappings
 	HOOKS    UServ_Hooks
+	HANDLERS RestOfUServHandlers
 }
 
 func DefaultUServImplOpts() UServ_ImplOpts {
@@ -1916,6 +1917,10 @@ func UServPersistImpl(db *sql.DB, opts ...UServ_ImplOpts) *UServ_Impl {
 		QUERIES: UServPersistQueries(db, UServ_QueryOpts{MAPPINGS: myOpts.MAPPINGS}),
 		DB:      db,
 	}
+}
+
+type RestOfUServHandlers interface {
+	UpdateAllNames(*Empty, UServ_UpdateAllNamesServer) error
 }
 
 func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
@@ -1967,7 +1972,6 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("executed 'insert_users' query without error, but received error on commit: %v", err)
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return fmt.Errorf("error executing 'insert_users' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
 		}
