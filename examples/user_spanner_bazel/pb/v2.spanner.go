@@ -207,12 +207,19 @@ func (this *UServ_InsertUsersRow) Friends() (*Friends, error) {
 
 // UServPersistQueries returns all the known 'SQL' queires for the 'UServ' service.
 func UServPersistQueries(db Runable, opts ...UServ_QueryOpts) *UServ_Queries {
+  fmt.Println("another", db)
+  fmt.Println("options", opts)
 	var myOpts UServ_QueryOpts
 	if len(opts) > 0 {
+    fmt.Println("if")
 		myOpts = opts[0]
 	} else {
+    fmt.Println("else")
 		myOpts = DefaultUServQueryOpts(db)
 	}
+  fmt.Println("****another", myOpts)
+  fmt.Println("****db", myOpts.db)
+  // TODO the problem is here. opts doesn't have a connection to the db.
 	return &UServ_Queries{
 		opts: myOpts,
 	}
@@ -225,6 +232,11 @@ func UServPersistQueries(db Runable, opts ...UServ_QueryOpts) *UServ_Queries {
 // that will perform 'UServ' services 'insert_users_query' on the database
 // when executed
 func (this *UServ_Queries) InsertUsersQuery(ctx context.Context) *UServ_InsertUsersQuery {
+  fmt.Println("---------")
+  fmt.Println(this)
+  fmt.Println(this.opts)
+  fmt.Println(this.opts.db)
+  fmt.Println("---------")
 	return &UServ_InsertUsersQuery{
 		opts: UServ_QueryOpts{
 			MAPPINGS: this.opts.MAPPINGS,
@@ -278,6 +290,9 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 		return result
 	}
 
+  fmt.Println(this)
+  fmt.Println(this.opts)
+  fmt.Println(this.opts.db)
   _, result.err = this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
     stmt := spanner.Statement{
       SQL: fmt.Sprintf("insert into users (id, name, friends, created_on) values (%v, %v, %v, %v);", params...)}
@@ -412,6 +427,7 @@ type UServ_Impl struct {
 }
 
 func UServPersistImpl(db *spanner.Client, opts ...UServ_ImplOpts) *UServ_Impl {
+  fmt.Println("1: ", db)
 	var myOpts UServ_ImplOpts
 	if len(opts) > 0 {
 		myOpts = opts[0]
@@ -431,24 +447,22 @@ func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
 	// if err != nil {
 	// 	return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
 	// }
+  fmt.Println("inserting users with connection: ", this.DB)
 	if err := this.InsertUsersTx(stream); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
 	}
 	return nil
 }
 
-func (this *UServ_Impl) CreateTable(Empty) Empty {
-  // tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
-  // if err != nil {
-  // 	return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+func (this *UServ_Impl) UpdateAllNames(empty *Empty,  stream UServ_UpdateAllNamesServer) error {
+  // if err := this.InsertUsersTx(stream); err != nil {
+  //   return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
   // }
-  if err := this.InsertUsersTx(stream); err != nil {
-    return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
-  }
   return nil
 }
 
 func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
+  fmt.Println("after", this.DB)
 	query := this.QUERIES.InsertUsersQuery(stream.Context())
 	var first *User
 	for {
