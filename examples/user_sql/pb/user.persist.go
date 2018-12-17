@@ -507,13 +507,14 @@ func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
+	this.err = this.rows.Scan(toScan...)
+	next := this.rows.Next()
+	if this.err != nil {
 		return &UServ_CreateUsersTableRow{err: this.err}, true
 	}
-	if !this.rows.Next() {
+	if !next {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
-			return nil, false
 		}
 	}
 	res := &Empty{}
@@ -622,13 +623,14 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
+	this.err = this.rows.Scan(toScan...)
+	next := this.rows.Next()
+	if this.err != nil {
 		return &UServ_InsertUsersRow{err: this.err}, true
 	}
-	if !this.rows.Next() {
+	if !next {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
-			return nil, false
 		}
 	}
 	res := &Empty{}
@@ -737,13 +739,14 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
+	this.err = this.rows.Scan(toScan...)
+	next := this.rows.Next()
+	if this.err != nil {
 		return &UServ_GetAllUsersRow{err: this.err}, true
 	}
-	if !this.rows.Next() {
+	if !next {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
-			return nil, false
 		}
 	}
 	res := &User{}
@@ -878,13 +881,14 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
+	this.err = this.rows.Scan(toScan...)
+	next := this.rows.Next()
+	if this.err != nil {
 		return &UServ_SelectUserByIdRow{err: this.err}, true
 	}
-	if !this.rows.Next() {
+	if !next {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
-			return nil, false
 		}
 	}
 	res := &User{}
@@ -1019,13 +1023,14 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
+	this.err = this.rows.Scan(toScan...)
+	next := this.rows.Next()
+	if this.err != nil {
 		return &UServ_UpdateUserNameRow{err: this.err}, true
 	}
-	if !this.rows.Next() {
+	if !next {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
-			return nil, false
 		}
 	}
 	res := &User{}
@@ -1160,13 +1165,14 @@ func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) 
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
+	this.err = this.rows.Scan(toScan...)
+	next := this.rows.Next()
+	if this.err != nil {
 		return &UServ_UpdateNameToFooRow{err: this.err}, true
 	}
-	if !this.rows.Next() {
+	if !next {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
-			return nil, false
 		}
 	}
 	res := &Empty{}
@@ -1275,13 +1281,14 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
+	this.err = this.rows.Scan(toScan...)
+	next := this.rows.Next()
+	if this.err != nil {
 		return &UServ_GetFriendsRow{err: this.err}, true
 	}
-	if !this.rows.Next() {
+	if !next {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
-			return nil, false
 		}
 	}
 	res := &User{}
@@ -1416,13 +1423,14 @@ func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
+	this.err = this.rows.Scan(toScan...)
+	next := this.rows.Next()
+	if this.err != nil {
 		return &UServ_DropRow{err: this.err}, true
 	}
-	if !this.rows.Next() {
+	if !next {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
-			return nil, false
 		}
 	}
 	res := &Empty{}
