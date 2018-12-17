@@ -162,7 +162,7 @@ var _ = Describe("persist", func() {
 		Expect(resps).To(BeNumerically(">", 0))
 	})
 
-	It("can drop a table", func() {
+	PIt("can drop a table", func() {
 		_, err := client.DropTable(context.Background(), &pb.Empty{})
 		Expect(err).ToNot(HaveOccurred())
 	})

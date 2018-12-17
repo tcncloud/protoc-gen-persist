@@ -869,17 +869,15 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 		return err
 	}
 
-	p.Q(fmt.Sprintf(`
-    type RestOf%sHandlers interface {
-    `, serviceName))
+	p.Q(`
+    type RestOf`, serviceName, `Handlers interface {
+    `)
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
 		if m.ServerStreaming(mpo) {
-			p.Q(fmt.Sprintf(`%[1]s(*%[2]s, %[3]s_%[1]sServer) error`,
-				mpo.method.GetName(),
-				mpo.inMsg.GetName(),
-				serviceName,
-			))
+			method := mpo.method.GetName()
+			inMsg := mpo.inMsg.GetName()
+			p.Q(method, `(*`, inMsg, `, `, serviceName, `_`, method, `Server) error`)
 		}
 	}, func(mpo *MethodProtoOpts) bool {
 		return !proto.HasExtension(mpo.method.Options, persist.E_Opts)
