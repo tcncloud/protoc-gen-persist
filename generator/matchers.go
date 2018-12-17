@@ -49,7 +49,22 @@ func (Match) QueryFieldIsRepeated(field *desc.FieldDescriptorProto, q *QueryProt
 	return field.GetLabel() == desc.FieldDescriptorProto_LABEL_REPEATED
 }
 func (Match) QueryFieldFitsDB(field *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
-	return true
+	switch field.GetType() {
+	case desc.FieldDescriptorProto_TYPE_STRING:
+		return true
+	case desc.FieldDescriptorProto_TYPE_BOOL:
+		return true
+	case desc.FieldDescriptorProto_TYPE_INT32:
+		return true
+	case desc.FieldDescriptorProto_TYPE_INT64:
+		return true
+	case desc.FieldDescriptorProto_TYPE_UINT32:
+		return true
+	case desc.FieldDescriptorProto_TYPE_UINT64:
+		return true
+
+	}
+	return false
 }
 
 func (Match) MatchQuery(opt *QueryProtoOpts) func(*desc.FieldDescriptorProto, *QueryProtoOpts) bool {

@@ -125,7 +125,6 @@ func convertedMsgTypeByProtoName(protoName string, f *FileStruct) string {
 	}
 	return str.GetGoName()
 }
-
 func defaultMapping(typ *descriptor.FieldDescriptorProto, file *FileStruct) (string, error) {
 	switch typ.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
