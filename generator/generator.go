@@ -75,19 +75,6 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 			})
 		}
 	}
-	// generate our persist_lib package
-	persistPkg := NewPersistPackage(g.Files)
-	resps, err := persistPkg.Generate()
-	if err != nil {
-		return nil, fmt.Errorf("error generating persist_lib %s", err)
-	}
-
-	for _, resp := range resps {
-		ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
-			Content: proto.String(string(FormatCode(resp.Name, []byte(resp.Content)))),
-			Name:    proto.String(resp.Name),
-		})
-	}
 
 	return ret, nil
 }

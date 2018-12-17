@@ -43,27 +43,9 @@ import (
 
 type Service struct {
 	Desc       *desc.ServiceDescriptorProto
-	Methods    *Methods
 	Package    string // protobuf package
 	File       *FileStruct
 	AllStructs *StructList
-}
-
-func (s *Service) ProcessMethods() error {
-	for _, m := range s.Desc.GetMethod() {
-		if err := s.Methods.AddMethod(m, s); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Service) Process() error {
-	err := s.ProcessMethods()
-	if err != nil {
-		return fmt.Errorf("%s\n  service: %s", err, s.GetName())
-	}
-	return nil
 }
 
 func (s *Service) GetName() string {
@@ -129,11 +111,6 @@ func (s *Service) GetUndoctoredQueryByName(queryName string) (*persist.QLImpl, e
 	return nil, fmt.Errorf("query not found with name: %s on service: %s", queryName, s.GetName())
 }
 
-func (s *Service) PrintBuilder(cacheForTypeMappingNames map[string]bool) string {
-	p := PersistStringer{}
-	return p.PersistImplBuilder(s, cacheForTypeMappingNames)
-}
-
 type Services []*Service
 
 // we are a persist service if we have persist options. meaning we are either spanner
@@ -151,34 +128,12 @@ func (s *Services) AddService(pkg string, desc *desc.ServiceDescriptorProto, all
 	ret := &Service{
 		Package:    pkg,
 		Desc:       desc,
-		Methods:    &Methods{},
 		AllStructs: allStructs,
 		File:       file,
 	}
-	ret.ProcessMethods()
 	logrus.Debugf("created a service: %s", ret)
 	*s = append(*s, ret)
 	return ret
-}
-
-func (s *Services) Process() error {
-	for _, srv := range *s {
-		err := srv.Process()
-		if err != nil {
-			return fmt.Errorf("%s\n  service: %s", err, srv.GetName())
-		}
-	}
-	return nil
-}
-
-func (s *Services) PreGenerate() error {
-	for _, srv := range *s {
-		err := srv.Methods.PreGenerate()
-		if err != nil {
-			return fmt.Errorf("%s\n  service: %s", err, srv.GetName())
-		}
-	}
-	return nil
 }
 
 type QueryProtoOpts struct {

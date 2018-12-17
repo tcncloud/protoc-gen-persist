@@ -30,9 +30,11 @@
 package generator
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/sirupsen/logrus"
@@ -232,4 +234,48 @@ func defaultMapping(typ *descriptor.FieldDescriptorProto, file *FileStruct) (str
 		}
 	}
 	return "__type__", fmt.Errorf("unknown type")
+}
+
+type Printer struct {
+	str string
+}
+
+func P(args ...interface{}) string {
+	printer := &Printer{}
+	printer.Q(args...)
+
+	return printer.String()
+}
+
+func (p *Printer) P(formatString string, args ...interface{}) {
+	p.str += fmt.Sprintf(formatString, args...)
+}
+
+func (p *Printer) Q(args ...interface{}) {
+	for _, arg := range args {
+		p.str += fmt.Sprintf("%v", arg)
+	}
+}
+func (p *Printer) PA(formatStrings []string, args ...interface{}) {
+	s := strings.Join(formatStrings, "")
+	p.P(s, args...)
+}
+
+func (p *Printer) PTemplate(t string, dot interface{}) {
+	var buff bytes.Buffer
+
+	tem, err := template.New("printTemplate").Parse(t)
+	if err != nil {
+		p.P("\nPARSE ERROR:<%v>\nPARSING:<%s>\n", err, t)
+		return
+	}
+	if err := tem.Execute(&buff, dot); err != nil {
+		p.P("\nEXEC ERROR:<%v>\nEXECUTING:<%s>\n", err, t)
+		return
+	}
+	p.P("%s", buff.String())
+}
+
+func (p *Printer) String() string {
+	return p.str
 }
