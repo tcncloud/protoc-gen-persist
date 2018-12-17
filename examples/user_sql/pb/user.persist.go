@@ -96,6 +96,7 @@ func UServPersistQueries(db Runnable, opts ...UServ_QueryOpts) *UServ_Queries {
 	} else {
 		myOpts = DefaultUServQueryOpts(db)
 	}
+	myOpts.db = db
 	return &UServ_Queries{
 		opts: myOpts,
 	}
@@ -471,7 +472,7 @@ func (this *UServ_CreateUsersTableIter) One() *UServ_CreateUsersTableRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_CreateUsersTableRow(first.item, fmt.Errorf("expected exactly 1 result from query 'CreateUsersTable'"))
+		return &UServ_CreateUsersTableRow{err: fmt.Errorf("expected exactly 1 result from query 'CreateUsersTable'")}
 	}
 	return first
 }
@@ -503,7 +504,7 @@ func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_CreateUsersTableRow{err: err}, true
+		return &UServ_CreateUsersTableRow{err: this.err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -582,7 +583,7 @@ func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_InsertUsersRow(first.item, fmt.Errorf("expected exactly 1 result from query 'InsertUsers'"))
+		return &UServ_InsertUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'InsertUsers'")}
 	}
 	return first
 }
@@ -614,7 +615,7 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_InsertUsersRow{err: err}, true
+		return &UServ_InsertUsersRow{err: this.err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -693,7 +694,7 @@ func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_GetAllUsersRow(first.item, fmt.Errorf("expected exactly 1 result from query 'GetAllUsers'"))
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'GetAllUsers'")}
 	}
 	return first
 }
@@ -725,7 +726,7 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_GetAllUsersRow{err: err}, true
+		return &UServ_GetAllUsersRow{err: this.err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -830,7 +831,7 @@ func (this *UServ_SelectUserByIdIter) One() *UServ_SelectUserByIdRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_SelectUserByIdRow(first.item, fmt.Errorf("expected exactly 1 result from query 'SelectUserById'"))
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("expected exactly 1 result from query 'SelectUserById'")}
 	}
 	return first
 }
@@ -862,7 +863,7 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_SelectUserByIdRow{err: err}, true
+		return &UServ_SelectUserByIdRow{err: this.err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -967,7 +968,7 @@ func (this *UServ_UpdateUserNameIter) One() *UServ_UpdateUserNameRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_UpdateUserNameRow(first.item, fmt.Errorf("expected exactly 1 result from query 'UpdateUserName'"))
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateUserName'")}
 	}
 	return first
 }
@@ -999,7 +1000,7 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_UpdateUserNameRow{err: err}, true
+		return &UServ_UpdateUserNameRow{err: this.err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -1104,7 +1105,7 @@ func (this *UServ_UpdateNameToFooIter) One() *UServ_UpdateNameToFooRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_UpdateNameToFooRow(first.item, fmt.Errorf("expected exactly 1 result from query 'UpdateNameToFoo'"))
+		return &UServ_UpdateNameToFooRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateNameToFoo'")}
 	}
 	return first
 }
@@ -1136,7 +1137,7 @@ func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) 
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_UpdateNameToFooRow{err: err}, true
+		return &UServ_UpdateNameToFooRow{err: this.err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -1215,7 +1216,7 @@ func (this *UServ_GetFriendsIter) One() *UServ_GetFriendsRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_GetFriendsRow(first.item, fmt.Errorf("expected exactly 1 result from query 'GetFriends'"))
+		return &UServ_GetFriendsRow{err: fmt.Errorf("expected exactly 1 result from query 'GetFriends'")}
 	}
 	return first
 }
@@ -1247,7 +1248,7 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_GetFriendsRow{err: err}, true
+		return &UServ_GetFriendsRow{err: this.err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -1352,7 +1353,7 @@ func (this *UServ_DropIter) One() *UServ_DropRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_DropRow(first.item, fmt.Errorf("expected exactly 1 result from query 'Drop'"))
+		return &UServ_DropRow{err: fmt.Errorf("expected exactly 1 result from query 'Drop'")}
 	}
 	return first
 }
@@ -1384,7 +1385,7 @@ func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_DropRow{err: err}, true
+		return &UServ_DropRow{err: this.err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {

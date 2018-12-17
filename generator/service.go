@@ -393,7 +393,8 @@ func WriteQueries(p *Printer, s *Service) error {
             myOpts = opts[0]
         } else {
             myOpts = Default`, sName, `QueryOpts(db)
-        }
+		}
+		myOpts.db = db
         return &`, sName, `_Queries{
             opts: myOpts,
         }
@@ -618,7 +619,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             first, hasFirst := this.Next()
             _, hasSecond := this.Next()
             if !hasFirst || hasSecond {
-                return new`, sName, `_`, camelQ(q), `Row(first.item, fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `'"))
+				return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `'")}
             }
             return first
         }
@@ -650,7 +651,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                 toScan[i] = &scanned[i]
             }
             if this.err = this.rows.Scan(toScan...); this.err != nil {
-                return &`, sName, `_`, camelQ(q), `Row{err: err}, true
+                return &`, sName, `_`, camelQ(q), `Row{err: this.err}, true
             }
             if !this.rows.Next() {
                 if this.err = this.rows.Err(); this.err == nil {
