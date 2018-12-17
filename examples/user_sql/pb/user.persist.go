@@ -498,20 +498,19 @@ func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool
 	if err != nil {
 		return &UServ_CreateUsersTableRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	this.err = this.rows.Scan(toScan...)
-	next := this.rows.Next()
-	if this.err != nil {
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &UServ_CreateUsersTableRow{err: this.err}, true
-	}
-	if !next {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-		}
 	}
 	res := &Empty{}
 	for i, col := range cols {
@@ -610,20 +609,19 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	this.err = this.rows.Scan(toScan...)
-	next := this.rows.Next()
-	if this.err != nil {
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &UServ_InsertUsersRow{err: this.err}, true
-	}
-	if !next {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-		}
 	}
 	res := &Empty{}
 	for i, col := range cols {
@@ -722,20 +720,19 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 	if err != nil {
 		return &UServ_GetAllUsersRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	this.err = this.rows.Scan(toScan...)
-	next := this.rows.Next()
-	if this.err != nil {
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &UServ_GetAllUsersRow{err: this.err}, true
-	}
-	if !next {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-		}
 	}
 	res := &User{}
 	for i, col := range cols {
@@ -860,20 +857,19 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 	if err != nil {
 		return &UServ_SelectUserByIdRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	this.err = this.rows.Scan(toScan...)
-	next := this.rows.Next()
-	if this.err != nil {
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &UServ_SelectUserByIdRow{err: this.err}, true
-	}
-	if !next {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-		}
 	}
 	res := &User{}
 	for i, col := range cols {
@@ -998,20 +994,19 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 	if err != nil {
 		return &UServ_UpdateUserNameRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	this.err = this.rows.Scan(toScan...)
-	next := this.rows.Next()
-	if this.err != nil {
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &UServ_UpdateUserNameRow{err: this.err}, true
-	}
-	if !next {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-		}
 	}
 	res := &User{}
 	for i, col := range cols {
@@ -1136,20 +1131,19 @@ func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) 
 	if err != nil {
 		return &UServ_UpdateNameToFooRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	this.err = this.rows.Scan(toScan...)
-	next := this.rows.Next()
-	if this.err != nil {
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &UServ_UpdateNameToFooRow{err: this.err}, true
-	}
-	if !next {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-		}
 	}
 	res := &Empty{}
 	for i, col := range cols {
@@ -1248,20 +1242,19 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 	if err != nil {
 		return &UServ_GetFriendsRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	this.err = this.rows.Scan(toScan...)
-	next := this.rows.Next()
-	if this.err != nil {
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &UServ_GetFriendsRow{err: this.err}, true
-	}
-	if !next {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-		}
 	}
 	res := &User{}
 	for i, col := range cols {
@@ -1386,20 +1379,19 @@ func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
 	if err != nil {
 		return &UServ_DropRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
-	this.err = this.rows.Scan(toScan...)
-	next := this.rows.Next()
-	if this.err != nil {
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &UServ_DropRow{err: this.err}, true
-	}
-	if !next {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-		}
 	}
 	res := &Empty{}
 	for i, col := range cols {

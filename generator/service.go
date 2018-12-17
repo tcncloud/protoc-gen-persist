@@ -600,20 +600,19 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             if err != nil {
                 return &`, sName, `_`, camelQ(q), `Row{err: err}, true
             }
+            if !this.rows.Next() {
+                if this.err = this.rows.Err(); this.err == nil {
+                    this.err = io.EOF
+                    return nil, false
+                }
+            }
             toScan := make([]interface{}, len(cols))
             scanned := make([]alwaysScanner, len(cols))
             for i := range scanned {
                 toScan[i] = &scanned[i]
             }
-			this.err = this.rows.Scan(toScan...)
-			next := this.rows.Next()
-			if this.err != nil {
-				return &`, sName, `_`, camelQ(q), `Row{err: this.err}, true
-			}
-            if !next {
-                if this.err = this.rows.Err(); this.err == nil {
-                    this.err = io.EOF
-                }
+            if this.err = this.rows.Scan(toScan...); this.err != nil {
+                return &`, sName, `_`, camelQ(q), `Row{err: this.err}, true
             }
             res := &`, outName(q), `{}
             for i, col := range cols {
