@@ -566,7 +566,6 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                     }
                 }
             }
-            return nil
         }
 
         // One returns the sole row, or ensures an error if there was not one result when this row is converted

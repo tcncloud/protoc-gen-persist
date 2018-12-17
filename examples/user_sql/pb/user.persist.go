@@ -464,7 +464,6 @@ func (this *UServ_CreateUsersTableIter) Each(fun func(*UServ_CreateUsersTableRow
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -580,7 +579,6 @@ func (this *UServ_InsertUsersIter) Each(fun func(*UServ_InsertUsersRow) error) e
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -696,7 +694,6 @@ func (this *UServ_GetAllUsersIter) Each(fun func(*UServ_GetAllUsersRow) error) e
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -838,7 +835,6 @@ func (this *UServ_SelectUserByIdIter) Each(fun func(*UServ_SelectUserByIdRow) er
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -980,7 +976,6 @@ func (this *UServ_UpdateUserNameIter) Each(fun func(*UServ_UpdateUserNameRow) er
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -1122,7 +1117,6 @@ func (this *UServ_UpdateNameToFooIter) Each(fun func(*UServ_UpdateNameToFooRow) 
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -1238,7 +1232,6 @@ func (this *UServ_GetFriendsIter) Each(fun func(*UServ_GetFriendsRow) error) err
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -1380,7 +1373,6 @@ func (this *UServ_DropIter) Each(fun func(*UServ_DropRow) error) error {
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
