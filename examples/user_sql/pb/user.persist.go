@@ -472,7 +472,11 @@ func (this *UServ_CreateUsersTableIter) One() *UServ_CreateUsersTableRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return &UServ_CreateUsersTableRow{err: fmt.Errorf("expected exactly 1 result from query 'CreateUsersTable'")}
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_CreateUsersTableRow{err: fmt.Errorf("expected exactly 1 result from query 'CreateUsersTable' found %s", amount)}
 	}
 	return first
 }
@@ -583,7 +587,11 @@ func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return &UServ_InsertUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'InsertUsers'")}
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_InsertUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'InsertUsers' found %s", amount)}
 	}
 	return first
 }
@@ -694,7 +702,11 @@ func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'GetAllUsers'")}
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'GetAllUsers' found %s", amount)}
 	}
 	return first
 }
@@ -831,7 +843,11 @@ func (this *UServ_SelectUserByIdIter) One() *UServ_SelectUserByIdRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("expected exactly 1 result from query 'SelectUserById'")}
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("expected exactly 1 result from query 'SelectUserById' found %s", amount)}
 	}
 	return first
 }
@@ -968,7 +984,11 @@ func (this *UServ_UpdateUserNameIter) One() *UServ_UpdateUserNameRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateUserName'")}
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateUserName' found %s", amount)}
 	}
 	return first
 }
@@ -1105,7 +1125,11 @@ func (this *UServ_UpdateNameToFooIter) One() *UServ_UpdateNameToFooRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return &UServ_UpdateNameToFooRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateNameToFoo'")}
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_UpdateNameToFooRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateNameToFoo' found %s", amount)}
 	}
 	return first
 }
@@ -1216,7 +1240,11 @@ func (this *UServ_GetFriendsIter) One() *UServ_GetFriendsRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("expected exactly 1 result from query 'GetFriends'")}
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_GetFriendsRow{err: fmt.Errorf("expected exactly 1 result from query 'GetFriends' found %s", amount)}
 	}
 	return first
 }
@@ -1353,7 +1381,11 @@ func (this *UServ_DropIter) One() *UServ_DropRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return &UServ_DropRow{err: fmt.Errorf("expected exactly 1 result from query 'Drop'")}
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_DropRow{err: fmt.Errorf("expected exactly 1 result from query 'Drop' found %s", amount)}
 	}
 	return first
 }

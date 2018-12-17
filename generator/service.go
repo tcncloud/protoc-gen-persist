@@ -393,8 +393,8 @@ func WriteQueries(p *Printer, s *Service) error {
             myOpts = opts[0]
         } else {
             myOpts = Default`, sName, `QueryOpts(db)
-		}
-		myOpts.db = db
+        }
+        myOpts.db = db
         return &`, sName, `_Queries{
             opts: myOpts,
         }
@@ -619,7 +619,11 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             first, hasFirst := this.Next()
             _, hasSecond := this.Next()
             if !hasFirst || hasSecond {
-				return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `'")}
+                amount := "none"
+                if hasSecond {
+                    amount = "multiple"
+                }
+                return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}
             }
             return first
         }
@@ -884,36 +888,40 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 	p.Q("}\n")
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
+		method := mpo.method.GetName()
+		inMsg := mpo.inMsg.GetName()
+		outMsg := mpo.outMsg.GetName()
+
 		if m.ServerStreaming(mpo) {
-			p.Q(fmt.Sprintf(`
-func (this *%[1]s_Impl) %[2]s(req *%[3]s, stream %[1]s_%[2]sServer) error {
-	return this.opts.HANDLERS.%[2]s(req, stream)
+			p.Q(`
+func (this *`, serviceName, `_Impl) `, method, `(req *`, inMsg, `, stream `, serviceName, `_`, method, `Server) error {
+    return this.opts.HANDLERS.`, method, `(req, stream)
 }
-        `, serviceName, mpo.method.GetName(), mpo.inMsg.GetName()))
+        `)
 		}
 
 		if m.ClientStreaming(mpo) {
-			p.Q(fmt.Sprintf(`
-func (this *%[1]s_Impl) %[2]s(stream %[1]s_%[2]sServer) error {
-	return this.opts.HANDLERS.%[2]s(stream)
+			p.Q(`
+func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, inMsg, `Server) error {
+    return this.opts.HANDLERS.`, inMsg, `(stream)
 }
-        `, serviceName, mpo.method.GetName(), mpo.inMsg.GetName()))
+        `)
 		}
 
 		if m.Unary(mpo) {
-			p.Q(fmt.Sprintf(`
-func (this *%[1]s_Impl) %[2]s(ctx context.Context, req *%[3]s) (*%[4]s, error) {
-	return this.opts.HANDLERS.%[2]s(ctx, req)
+			p.Q(`
+func (this *`, serviceName, `_Impl) `, method, `(ctx context.Context, req *`, inMsg, `) (*`, outMsg, `, error) {
+    return this.opts.HANDLERS.`, method, `(ctx, req)
 }
-        `, serviceName, mpo.method.GetName(), mpo.inMsg.GetName(), mpo.outMsg.GetName()))
+        `)
 		}
 
 		if m.BidiStreaming(mpo) {
-			p.Q(fmt.Sprintf(`
-func (this *%[1]s_Impl) %[2]s(stream %[1]s_%[2]sServer) error {
-	return this.opts.HANDLERS.%[2]s(stream)
+			p.Q(`
+func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, method, `Server) error {
+    return this.opts.HANDLERS.`, method, `(stream)
 }
-        `, serviceName, mpo.method.GetName(), mpo.inMsg.GetName(), mpo.outMsg.GetName()))
+        `)
 		}
 	}, func(mpo *MethodProtoOpts) bool {
 		return !proto.HasExtension(mpo.method.Options, persist.E_Opts)
