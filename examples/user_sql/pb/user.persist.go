@@ -741,21 +741,25 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type string")}, true
+				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 		case "friends":
-			r, ok := (*scanned[i].i).(*Friends)
+			r, ok := (*scanned[i].i).([]byte)
 			if !ok {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type string")}, true
+				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
 			}
-			res.Friends = r
+			var converted = new(Friends)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &UServ_GetAllUsersRow{err: err}, true
+			}
+			res.Friends = converted
 		case "created_on":
 			var converted = this.tm.TimestampTimestamp().Empty()
 			if err := converted.Scan(*scanned[i].i); err != nil {
@@ -878,21 +882,25 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column id to protobuf go type string")}, true
+				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 		case "friends":
-			r, ok := (*scanned[i].i).(*Friends)
+			r, ok := (*scanned[i].i).([]byte)
 			if !ok {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column friends to protobuf go type string")}, true
+				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
 			}
-			res.Friends = r
+			var converted = new(Friends)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &UServ_SelectUserByIdRow{err: err}, true
+			}
+			res.Friends = converted
 		case "created_on":
 			var converted = this.tm.TimestampTimestamp().Empty()
 			if err := converted.Scan(*scanned[i].i); err != nil {
@@ -1015,21 +1023,25 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column id to protobuf go type string")}, true
+				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 		case "friends":
-			r, ok := (*scanned[i].i).(*Friends)
+			r, ok := (*scanned[i].i).([]byte)
 			if !ok {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column friends to protobuf go type string")}, true
+				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
 			}
-			res.Friends = r
+			var converted = new(Friends)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &UServ_UpdateUserNameRow{err: err}, true
+			}
+			res.Friends = converted
 		case "created_on":
 			var converted = this.tm.TimestampTimestamp().Empty()
 			if err := converted.Scan(*scanned[i].i); err != nil {
@@ -1263,21 +1275,25 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column id to protobuf go type string")}, true
+				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 		case "friends":
-			r, ok := (*scanned[i].i).(*Friends)
+			r, ok := (*scanned[i].i).([]byte)
 			if !ok {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column friends to protobuf go type string")}, true
+				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
 			}
-			res.Friends = r
+			var converted = new(Friends)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &UServ_GetFriendsRow{err: err}, true
+			}
+			res.Friends = converted
 		case "created_on":
 			var converted = this.tm.TimestampTimestamp().Empty()
 			if err := converted.Scan(*scanned[i].i); err != nil {

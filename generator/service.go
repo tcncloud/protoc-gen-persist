@@ -481,6 +481,14 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 		}
 		return typ
 	}
+	mustDefaultMappingNoStar := func(f *desc.FieldDescriptorProto) string {
+		return strings.Map(func(r rune) rune {
+			if r == '*' {
+				return -1
+			}
+			return r
+		}, mustDefaultMapping(f))
+	}
 	colswitch := func(opt *QueryProtoOpts) string {
 		cases := make(map[string]string)
 		// message case
@@ -488,9 +496,9 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			cases[fName(f)] = P(`case "`, fName(f), `":
                 r, ok := (*scanned[i].i).([]byte)
                 if !ok {
-                    return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type *`, mustDefaultMapping(f), `")}, true
+                    return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type *`, mustDefaultMappingNoStar(f), `")}, true
                 }
-                var converted = new(`, mustDefaultMapping(f), `)
+                var converted = new(`, mustDefaultMappingNoStar(f), `)
                 if err := proto.Unmarshal(r, converted); err != nil {
                     return &`, sName, `_`, camelQ(q), `Row{err: err}, true
                 }
@@ -507,7 +515,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			}
 			cases[f.GetName()] = P(`case "`, fName(f), `": r, ok := (*scanned[i].i).(`, typ, `)
             if !ok {
-                return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type string")}, true
+                return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type `, f.GetTypeName(), `")}, true
             }
             res.`, camelF(f), `= r
             `)
