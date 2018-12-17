@@ -881,14 +881,26 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 	})
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
+		var queryOptions *QueryProtoOpts
+		m.EachQuery(func(qpo *QueryProtoOpts) {
+			queryOptions = qpo
+		}, func(qpo *QueryProtoOpts) bool {
+			if qpo.query.GetName() == mpo.option.GetQuery() {
+				return true
+			}
+			return false
+		})
+
+		zeroResponse := len(queryOptions.outFields) == 0
 		params := &handlerParams{
-			Service:  serviceName,
-			Method:   mpo.method.GetName(),
-			Request:  mpo.inMsg.GetName(),
-			Response: mpo.outMsg.GetName(),
-			Query:    mpo.option.GetQuery(),
-			Before:   mpo.option.GetBefore(),
-			After:    mpo.option.GetAfter(),
+			Service:      serviceName,
+			Method:       mpo.method.GetName(),
+			Request:      mpo.inMsg.GetName(),
+			Response:     mpo.outMsg.GetName(),
+			ZeroResponse: zeroResponse,
+			Query:        mpo.option.GetQuery(),
+			Before:       mpo.option.GetBefore(),
+			After:        mpo.option.GetAfter(),
 		}
 
 		if m.Unary(mpo) {

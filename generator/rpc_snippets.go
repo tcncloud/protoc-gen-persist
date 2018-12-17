@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"strings"
 	"text/template"
 
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
@@ -11,13 +12,24 @@ type printerProxy struct {
 }
 
 type handlerParams struct {
-	Service  string
-	Method   string
-	Query    string
-	Request  string
-	Response string
-	Before   bool
-	After    bool
+	Service      string
+	Method       string
+	Query        string
+	Request      string
+	Response     string
+	ZeroResponse bool
+	Before       bool
+	After        bool
+}
+
+func OneOrZero(response string, zero bool) string {
+	if zero {
+		return strings.Join([]string{`
+err := result.Zero()
+res := &`, response, `{}
+        `}, "")
+	}
+	return "res, err := result.One()." + response + "()"
 }
 
 func (h *printerProxy) Write(data []byte) (int, error) {
@@ -153,7 +165,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
     {{end}}
 
     result := query.Execute(req)
-    res, err := result.One().{{.Response}}()
+    {{oneOrZero .Response .ZeroResponse}}
     if err != nil {
         return nil, err
     }
@@ -169,6 +181,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
     `
 	funcMap := template.FuncMap{
 		"camelCase": _gen.CamelCase,
+		"oneOrZero": OneOrZero,
 	}
 	t := template.Must(template.New("UnaryRequest").Funcs(funcMap).Parse(unaryFormat))
 	return t.Execute(printerProxy, params)

@@ -1964,7 +1964,10 @@ func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, er
 	query := this.QUERIES.CreateUsersTableQuery(ctx)
 
 	result := query.Execute(req)
-	res, err := result.One().Empty()
+
+	err := result.Zero()
+	res := &Empty{}
+
 	if err != nil {
 		return nil, err
 	}
@@ -2102,7 +2105,10 @@ func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty,
 	query := this.QUERIES.UpdateNameToFooQuery(ctx)
 
 	result := query.Execute(req)
-	res, err := result.One().Empty()
+
+	err := result.Zero()
+	res := &Empty{}
+
 	if err != nil {
 		return nil, err
 	}
@@ -2137,7 +2143,10 @@ func (this *UServ_Impl) DropTable(ctx context.Context, req *Empty) (*Empty, erro
 	query := this.QUERIES.DropQuery(ctx)
 
 	result := query.Execute(req)
-	res, err := result.One().Empty()
+
+	err := result.Zero()
+	res := &Empty{}
+
 	if err != nil {
 		return nil, err
 	}
