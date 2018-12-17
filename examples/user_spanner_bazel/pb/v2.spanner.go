@@ -8,6 +8,7 @@ package pb
 import (
 	"fmt"
   "time"
+  "reflect"
 	io "io"
 
   spanner "cloud.google.com/go/spanner"
@@ -207,19 +208,13 @@ func (this *UServ_InsertUsersRow) Friends() (*Friends, error) {
 
 // UServPersistQueries returns all the known 'SQL' queires for the 'UServ' service.
 func UServPersistQueries(db Runable, opts ...UServ_QueryOpts) *UServ_Queries {
-  fmt.Println("another", db)
-  fmt.Println("options", opts)
 	var myOpts UServ_QueryOpts
 	if len(opts) > 0 {
-    fmt.Println("if")
 		myOpts = opts[0]
+    myOpts.db = db
 	} else {
-    fmt.Println("else")
 		myOpts = DefaultUServQueryOpts(db)
 	}
-  fmt.Println("****another", myOpts)
-  fmt.Println("****db", myOpts.db)
-  // TODO the problem is here. opts doesn't have a connection to the db.
 	return &UServ_Queries{
 		opts: myOpts,
 	}
@@ -232,11 +227,6 @@ func UServPersistQueries(db Runable, opts ...UServ_QueryOpts) *UServ_Queries {
 // that will perform 'UServ' services 'insert_users_query' on the database
 // when executed
 func (this *UServ_Queries) InsertUsersQuery(ctx context.Context) *UServ_InsertUsersQuery {
-  fmt.Println("---------")
-  fmt.Println(this)
-  fmt.Println(this.opts)
-  fmt.Println(this.opts.db)
-  fmt.Println("---------")
 	return &UServ_InsertUsersQuery{
 		opts: UServ_QueryOpts{
 			MAPPINGS: this.opts.MAPPINGS,
@@ -290,21 +280,28 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 		return result
 	}
 
-  fmt.Println(this)
-  fmt.Println(this.opts)
-  fmt.Println(this.opts.db)
-  _, result.err = this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+  tmp := reflect.TypeOf(this.opts.db)
+  for i := 0; i < tmp.NumMethod(); i++ {
+    method := tmp.Method(i)
+    fmt.Println("method: ", method.Name)
+  }
+  // TODO this is causing the seg fault.
+    // considered that the client is closed by a defer, but it doesn't seem like it
+  _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+    fmt.Println("doing query")
     stmt := spanner.Statement{
       SQL: fmt.Sprintf("insert into users (id, name, friends, created_on) values (%v, %v, %v, %v);", params...)}
     iter := txn.QueryWithStats(ctx, stmt)
+    fmt.Println("done query")
     result.rows = iter
     result.result = SpannerResult{
       iter: iter,
     }
-    // TODO TODO TODO defer iter.Stop()
+    // TODO consider the effects of calling "defer iter.Stop()" here
     return nil
   })
-
+  fmt.Println("after query: ", err)
+  result.err = err
 	return result
 }
 
@@ -427,7 +424,6 @@ type UServ_Impl struct {
 }
 
 func UServPersistImpl(db *spanner.Client, opts ...UServ_ImplOpts) *UServ_Impl {
-  fmt.Println("1: ", db)
 	var myOpts UServ_ImplOpts
 	if len(opts) > 0 {
 		myOpts = opts[0]
@@ -447,7 +443,6 @@ func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
 	// if err != nil {
 	// 	return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
 	// }
-  fmt.Println("inserting users with connection: ", this.DB)
 	if err := this.InsertUsersTx(stream); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
 	}
@@ -462,7 +457,6 @@ func (this *UServ_Impl) UpdateAllNames(empty *Empty,  stream UServ_UpdateAllName
 }
 
 func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
-  fmt.Println("after", this.DB)
 	query := this.QUERIES.InsertUsersQuery(stream.Context())
 	var first *User
 	for {

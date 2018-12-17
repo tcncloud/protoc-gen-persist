@@ -19,7 +19,7 @@ func main() {
     fmt.Printf("error connecting to db: %v\n", err)
     return
   }
-  defer conn.Close()
+  // defer conn.Close()
 
   service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
     HOOKS: &HooksImpl{},

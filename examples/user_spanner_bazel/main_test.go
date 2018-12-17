@@ -5,7 +5,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-  . "github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel"
 
 	"fmt"
 	"net"
@@ -13,10 +12,10 @@ import (
 
   spanner "cloud.google.com/go/spanner"
 	admin "cloud.google.com/go/spanner/admin/database/apiv1"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
+	ptypess "github.com/golang/protobuf/ptypes"
+	timeystamp "github.com/golang/protobuf/ptypes/timestamp"
 	main "github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel"
-	"github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel/pb"
+	pbb "github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel/pb"
 	"golang.org/x/net/context"
 	db "google.golang.org/genproto/googleapis/spanner/admin/database/v1"
 	"google.golang.org/grpc"
@@ -29,7 +28,7 @@ func TestMain(t *testing.T) {
 
 var (
 	testServer *grpc.Server
-	client     pb.UServClient
+	client     pbb.UServClient
 )
 
 var _ = BeforeSuite(func() {
@@ -49,7 +48,7 @@ var _ = BeforeSuite(func() {
 		if err != nil {
 			Fail("could not create the client: " + err.Error())
 		}
-		client = pb.NewUServClient(conn)
+		client = pbb.NewUServClient(conn)
 	})
 	// err := CreateTable(context.Background(), main.ReadSpannerParams())
 	// Expect(err).ToNot(HaveOccurred())
@@ -156,59 +155,58 @@ var _ = Describe("persist", func() {
 	// })
 })
 
-func mustTimestamp(now time.Time) *timestamp.Timestamp {
-	t, _ := ptypes.TimestampProto(now)
+func mustTimestamp(now time.Time) *timeystamp.Timestamp {
+	t, _ := ptypess.TimestampProto(now)
 	return t
 }
-func mustNow() *timestamp.Timestamp { return mustTimestamp(time.Now()) }
+func mustNow() *timeystamp.Timestamp { return mustTimestamp(time.Now()) }
 
-var users = []*pb.User{
-	&pb.User{
+var users = []*pbb.User{
+	&pbb.User{
 		Id:              -1,
 		Name:            "foo",
-		Friends:         &pb.Friends{Names: []string{"bar", "baz"}},
+		Friends:         &pbb.Friends{Names: []string{"bar", "baz"}},
 		CreatedOn:       mustNow(),
 	},
-	&pb.User{
+	&pbb.User{
 		Id:              -1,
 		Name:            "bar",
-		Friends:         &pb.Friends{Names: []string{"foo", "baz"}},
+		Friends:         &pbb.Friends{Names: []string{"foo", "baz"}},
 		CreatedOn:       mustNow(),
 	},
-	&pb.User{
+	&pbb.User{
 		Id:              -1,
 		Name:            "baz",
-		Friends:         &pb.Friends{Names: []string{"foo", "bar"}},
+		Friends:         &pbb.Friends{Names: []string{"foo", "bar"}},
 		CreatedOn:       mustNow(),
 	},
-	&pb.User{
+	&pbb.User{
 		Id:              -1,
 		Name:            "zed",
-		Friends:         &pb.Friends{},
+		Friends:         &pbb.Friends{},
 		CreatedOn:       mustNow(),
 	},
 }
 
 func Serve(servFunc func(s *grpc.Server)) {
-  params := ReadSpannerParams()
+  params := main.ReadSpannerParams()
   ctx := context.Background()
   conn, err := spanner.NewClient(ctx, params.URI())
-  fmt.Println("first connection: ", conn)
   if err != nil {
     fmt.Printf("error connecting to db: %v\n", err)
     return
   }
-  defer conn.Close()
+  // defer conn.Close()
 
-  service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
-    HOOKS: &HooksImpl{},
-    MAPPINGS: &MappingImpl{},
-    HANDLERS: &RestOfImpl{},
+  service := pbb.UServPersistImpl(conn, pbb.UServ_ImplOpts{
+    HOOKS: &main.HooksImpl{},
+    MAPPINGS: &main.MappingImpl{},
+    HANDLERS: &main.RestOfImpl{},
   })
 
   server := grpc.NewServer()
 
-  pb.RegisterUServServer(server, service)
+  pbb.RegisterUServServer(server, service)
 
 	servFunc(server)
 }
@@ -236,7 +234,7 @@ func CreateTable(ctx context.Context, params main.SpannerParams) error {
 	if _, err := op.Wait(ctx); err != nil {
 		return err
 	}
-	adminClient.Close()
+	// adminClient.Close()
 
 	return nil
 }
@@ -249,7 +247,7 @@ func DropTable(ctx context.Context, params main.SpannerParams) error {
 	if err != nil {
 		return err
 	}
-	adminClient.Close()
+	// adminClient.Close()
 
 	return nil
 }
