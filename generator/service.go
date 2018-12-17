@@ -605,13 +605,14 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             for i := range scanned {
                 toScan[i] = &scanned[i]
             }
-            if this.err = this.rows.Scan(toScan...); this.err != nil {
-                return &`, sName, `_`, camelQ(q), `Row{err: this.err}, true
-            }
-            if !this.rows.Next() {
+			this.err = this.rows.Scan(toScan...)
+			next := this.rows.Next()
+			if this.err != nil {
+				return &`, sName, `_`, camelQ(q), `Row{err: this.err}, true
+			}
+            if !next {
                 if this.err = this.rows.Err(); this.err == nil {
                     this.err = io.EOF
-                    return nil, false
                 }
             }
             res := &`, outName(q), `{}
