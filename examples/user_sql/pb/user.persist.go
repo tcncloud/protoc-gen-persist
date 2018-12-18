@@ -9,7 +9,7 @@ import (
 	fmt "fmt"
 	io "io"
 
-	proto "github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"

@@ -13,6 +13,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
@@ -90,16 +91,21 @@ var _ = Describe("persist", func() {
 			retUsers = append(retUsers, u)
 		}
 		Expect(retUsers).To(HaveLen(len(users)))
+		strUsers := make([]string, 0)
+		for _, u := range users {
+			strUsers = append(strUsers, proto.MarshalTextString(u))
+		}
 		for _, u := range retUsers {
-			Expect(users).To(ContainElement(BeEquivalentTo(u)))
+			Expect(strUsers).To(ContainElement(proto.MarshalTextString(u)))
 		}
 	})
 
 	It("can select a user by id", func() {
 		u, err := client.SelectUserById(context.Background(), &pb.User{Id: 0})
 		Expect(err).ToNot(HaveOccurred())
+		Expect(u.Id).To(BeEquivalentTo(0))
 		u.Id = -1
-		Expect(u).To(BeEquivalentTo(users[0]))
+		Expect(proto.MarshalTextString(u)).To(BeEquivalentTo(proto.MarshalTextString(users[0])))
 	})
 
 	It("can select all friends of foo", func() {
@@ -162,7 +168,7 @@ var _ = Describe("persist", func() {
 		Expect(resps).To(BeNumerically(">", 0))
 	})
 
-	PIt("can drop a table", func() {
+	It("can drop a table", func() {
 		_, err := client.DropTable(context.Background(), &pb.Empty{})
 		Expect(err).ToNot(HaveOccurred())
 	})
