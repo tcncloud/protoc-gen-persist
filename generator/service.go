@@ -43,27 +43,9 @@ import (
 
 type Service struct {
 	Desc       *desc.ServiceDescriptorProto
-	Methods    *Methods
 	Package    string // protobuf package
 	File       *FileStruct
 	AllStructs *StructList
-}
-
-func (s *Service) ProcessMethods() error {
-	for _, m := range s.Desc.GetMethod() {
-		if err := s.Methods.AddMethod(m, s); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Service) Process() error {
-	err := s.ProcessMethods()
-	if err != nil {
-		return fmt.Errorf("%s\n  service: %s", err, s.GetName())
-	}
-	return nil
 }
 
 func (s *Service) GetName() string {
@@ -129,11 +111,6 @@ func (s *Service) GetUndoctoredQueryByName(queryName string) (*persist.QLImpl, e
 	return nil, fmt.Errorf("query not found with name: %s on service: %s", queryName, s.GetName())
 }
 
-func (s *Service) PrintBuilder(cacheForTypeMappingNames map[string]bool) string {
-	p := PersistStringer{}
-	return p.PersistImplBuilder(s, cacheForTypeMappingNames)
-}
-
 type Services []*Service
 
 // we are a persist service if we have persist options. meaning we are either spanner
@@ -151,34 +128,12 @@ func (s *Services) AddService(pkg string, desc *desc.ServiceDescriptorProto, all
 	ret := &Service{
 		Package:    pkg,
 		Desc:       desc,
-		Methods:    &Methods{},
 		AllStructs: allStructs,
 		File:       file,
 	}
-	ret.ProcessMethods()
 	logrus.Debugf("created a service: %s", ret)
 	*s = append(*s, ret)
 	return ret
-}
-
-func (s *Services) Process() error {
-	for _, srv := range *s {
-		err := srv.Process()
-		if err != nil {
-			return fmt.Errorf("%s\n  service: %s", err, srv.GetName())
-		}
-	}
-	return nil
-}
-
-func (s *Services) PreGenerate() error {
-	for _, srv := range *s {
-		err := srv.Methods.PreGenerate()
-		if err != nil {
-			return fmt.Errorf("%s\n  service: %s", err, srv.GetName())
-		}
-	}
-	return nil
 }
 
 type QueryProtoOpts struct {
@@ -371,11 +326,11 @@ func WriteQueries(p *Printer, s *Service) error {
 
 	p.Q("type ", sName, "_QueryOpts struct {\n")
 	p.Q("MAPPINGS ", sName, "_TypeMappings\n")
-	p.Q("db Runable\n")
+	p.Q("db Runnable\n")
 	p.Q("ctx context.Context\n")
 	p.Q("}\n")
 	p.Q("// Default", sName, "QueryOpts return the default options to be used with ", sName, "_Queries\n")
-	p.Q("func Default", sName, "QueryOpts(db Runable) ", sName, "_QueryOpts {\n")
+	p.Q("func Default", sName, "QueryOpts(db Runnable) ", sName, "_QueryOpts {\n")
 	p.Q("return ", sName, "_QueryOpts{\n")
 	p.Q("db: db,\n")
 	p.Q("}\n")
@@ -387,13 +342,14 @@ func WriteQueries(p *Printer, s *Service) error {
 	p.Q("}\n")
 
 	p.Q(`// `, sName, `PersistQueries returns all the known 'SQL' queires for the '`, sName, `' service.
-    func `, sName, `PersistQueries(db Runable, opts ...`, sName, `_QueryOpts) *`, sName, `_Queries {
+    func `, sName, `PersistQueries(db Runnable, opts ...`, sName, `_QueryOpts) *`, sName, `_Queries {
         var myOpts `, sName, `_QueryOpts
         if len(opts) > 0 {
             myOpts = opts[0]
         } else {
             myOpts = Default`, sName, `QueryOpts(db)
         }
+        myOpts.db = db
         return &`, sName, `_Queries{
             opts: myOpts,
         }
@@ -525,6 +481,14 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 		}
 		return typ
 	}
+	mustDefaultMappingNoStar := func(f *desc.FieldDescriptorProto) string {
+		return strings.Map(func(r rune) rune {
+			if r == '*' {
+				return -1
+			}
+			return r
+		}, mustDefaultMapping(f))
+	}
 	colswitch := func(opt *QueryProtoOpts) string {
 		cases := make(map[string]string)
 		// message case
@@ -532,9 +496,9 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			cases[fName(f)] = P(`case "`, fName(f), `":
                 r, ok := (*scanned[i].i).([]byte)
                 if !ok {
-                    return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type *`, mustDefaultMapping(f), `")}, true
+                    return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type *`, mustDefaultMappingNoStar(f), `")}, true
                 }
-                var converted = new(`, mustDefaultMapping(f), `)
+                var converted = new(`, mustDefaultMappingNoStar(f), `)
                 if err := proto.Unmarshal(r, converted); err != nil {
                     return &`, sName, `_`, camelQ(q), `Row{err: err}, true
                 }
@@ -551,7 +515,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			}
 			cases[f.GetName()] = P(`case "`, fName(f), `": r, ok := (*scanned[i].i).(`, typ, `)
             if !ok {
-                return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type string")}, true
+                return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type `, f.GetTypeName(), `")}, true
             }
             res.`, camelF(f), `= r
             `)
@@ -610,7 +574,6 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                     }
                 }
             }
-            return nil
         }
 
         // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -618,7 +581,11 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             first, hasFirst := this.Next()
             _, hasSecond := this.Next()
             if !hasFirst || hasSecond {
-                return new`, sName, `_`, camelQ(q), `Row(first.item, fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `'"))
+                amount := "none"
+                if hasSecond {
+                    amount = "multiple"
+                }
+                return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}
             }
             return first
         }
@@ -644,19 +611,19 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             if err != nil {
                 return &`, sName, `_`, camelQ(q), `Row{err: err}, true
             }
+            if !this.rows.Next() {
+                if this.err = this.rows.Err(); this.err == nil {
+                    this.err = io.EOF
+                    return nil, false
+                }
+            }
             toScan := make([]interface{}, len(cols))
             scanned := make([]alwaysScanner, len(cols))
             for i := range scanned {
                 toScan[i] = &scanned[i]
             }
             if this.err = this.rows.Scan(toScan...); this.err != nil {
-                return &`, sName, `_`, camelQ(q), `Row{err: err}, true
-            }
-            if !this.rows.Next() {
-                if this.err = this.rows.Err(); this.err == nil {
-                    this.err = io.EOF
-                    return nil, false
-                }
+                return &`, sName, `_`, camelQ(q), `Row{err: this.err}, true
             }
             res := &`, outName(q), `{}
             for i, col := range cols {
@@ -701,6 +668,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 	}
 	return
 }
+
 func WriteRows(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	sName := s.GetName()
@@ -768,8 +736,8 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
                 if o == nil {
                     return fmt.Errorf("must initialize *`, methOutName(mopt), ` before giving to Unwrap()")
                 }
-				res, _ := this.`, methOutName(mopt), `()
-				_ = res
+                res, _ := this.`, methOutName(mopt), `()
+                _ = res
                 `, setSharedOnPointer(mopt), `
                 return nil
             }`)
@@ -834,7 +802,7 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
             if this.err != nil {
                 return this.err
             }
-			`, unwrapMarshelOut(q), `
+            `, unwrapMarshelOut(q), `
             return nil
         }
         `, outMethods(q), `
@@ -863,60 +831,115 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 		return err
 	}
 
+	p.Q(`
+    type RestOf`, serviceName, `Handlers interface {
+    `)
+
 	m.EachMethod(func(mpo *MethodProtoOpts) {
-		var option *persist.MOpts
-
-		if !proto.HasExtension(mpo.method.Options, persist.E_Opts) {
-			return
+		if m.ServerStreaming(mpo) {
+			method := mpo.method.GetName()
+			inMsg := mpo.inMsg.GetName()
+			p.Q(method, `(*`, inMsg, `, `, serviceName, `_`, method, `Server) error`)
 		}
-		message, err := proto.GetExtension(mpo.method.Options, persist.E_Opts)
-		if err != nil {
-			outErr = err
-		}
-		option = message.(*persist.MOpts)
+	}, func(mpo *MethodProtoOpts) bool {
+		return !proto.HasExtension(mpo.method.Options, persist.E_Opts)
+	})
 
-		serverStream := mpo.method.GetServerStreaming()
-		clientStream := mpo.method.GetClientStreaming()
+	p.Q("}\n")
+
+	m.EachMethod(func(mpo *MethodProtoOpts) {
+		method := mpo.method.GetName()
+		inMsg := mpo.inMsg.GetName()
+		outMsg := mpo.outMsg.GetName()
+
+		if m.ServerStreaming(mpo) {
+			p.Q(`
+func (this *`, serviceName, `_Impl) `, method, `(req *`, inMsg, `, stream `, serviceName, `_`, method, `Server) error {
+    return this.opts.HANDLERS.`, method, `(req, stream)
+}
+        `)
+		}
+
+		if m.ClientStreaming(mpo) {
+			p.Q(`
+func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, inMsg, `Server) error {
+    return this.opts.HANDLERS.`, inMsg, `(stream)
+}
+        `)
+		}
+
+		if m.Unary(mpo) {
+			p.Q(`
+func (this *`, serviceName, `_Impl) `, method, `(ctx context.Context, req *`, inMsg, `) (*`, outMsg, `, error) {
+    return this.opts.HANDLERS.`, method, `(ctx, req)
+}
+        `)
+		}
+
+		if m.BidiStreaming(mpo) {
+			p.Q(`
+func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, method, `Server) error {
+    return this.opts.HANDLERS.`, method, `(stream)
+}
+        `)
+		}
+	}, func(mpo *MethodProtoOpts) bool {
+		return !proto.HasExtension(mpo.method.Options, persist.E_Opts)
+	})
+
+	m.EachMethod(func(mpo *MethodProtoOpts) {
+		var queryOptions *QueryProtoOpts
+		m.EachQuery(func(qpo *QueryProtoOpts) {
+			queryOptions = qpo
+		}, func(qpo *QueryProtoOpts) bool {
+			if qpo.query.GetName() == mpo.option.GetQuery() {
+				return true
+			}
+			return false
+		})
+
+		zeroResponse := len(queryOptions.outFields) == 0
 		params := &handlerParams{
-			Service:  serviceName,
-			Method:   mpo.method.GetName(),
-			Request:  mpo.inMsg.GetName(),
-			Response: mpo.outMsg.GetName(),
-			Query:    option.GetQuery(),
-			Before:   option.GetBefore(),
-			After:    option.GetAfter(),
+			Service:      serviceName,
+			Method:       mpo.method.GetName(),
+			Request:      mpo.inMsg.GetName(),
+			Response:     mpo.outMsg.GetName(),
+			ZeroResponse: zeroResponse,
+			Query:        mpo.option.GetQuery(),
+			Before:       mpo.option.GetBefore(),
+			After:        mpo.option.GetAfter(),
 		}
 
-		// Unary
-		if !serverStream && !clientStream {
+		if m.Unary(mpo) {
 			err = WriteUnary(p, params)
-			// Client Streaming
-		} else if !serverStream && clientStream {
+			if err != nil {
+				outErr = err
+			}
+		}
+		if m.ClientStreaming(mpo) {
 			err = WriteClientStreaming(p, params)
 			if err != nil {
 				outErr = err
 			}
-			// Server Streaming
-		} else if serverStream && !clientStream {
+		}
+
+		if m.ServerStreaming(mpo) {
 			err = WriteSeverStream(p, params)
 			if err != nil {
 				outErr = err
 			}
 		}
 
-	}, func(mpo *MethodProtoOpts) bool {
-		methods := []string{
-			"SelectUserById",
-			"InsertUsers",
-		}
-
-		for _, method := range methods {
-			if mpo.method.GetName() == method {
-				return true
+		if m.BidiStreaming(mpo) {
+			err = WriteBidirectionalStream(p, params)
+			if err != nil {
+				outErr = err
 			}
 		}
 
-		return false
+	}, func(mpo *MethodProtoOpts) bool {
+		// Only methods that have persist options
+		return proto.HasExtension(mpo.method.Options, persist.E_Opts)
 	})
 
 	return nil
@@ -951,7 +974,7 @@ func WriteImports(p *Printer, f *FileStruct) error {
         Scan(...interface{}) error
         Columns() ([]string, error)
     }
-    type Runable interface {
+    type Runnable interface {
         QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
         ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
     }
@@ -970,7 +993,7 @@ func WriteImports(p *Printer, f *FileStruct) error {
     }
 
     type ignoreTx struct {
-        r Runable
+        r Runnable
     }
 
     func (this *ignoreTx) Commit() error   { return nil }
@@ -984,10 +1007,10 @@ func WriteImports(p *Printer, f *FileStruct) error {
     type PersistTx interface {
         Commit() error
         Rollback() error
-        Runable
+        Runnable
     }
 
-    func NopPersistTx(r Runable) (PersistTx, error) {
+    func NopPersistTx(r Runnable) (PersistTx, error) {
         return &ignoreTx{r}, nil
     }
     `)

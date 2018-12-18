@@ -9,7 +9,7 @@ import (
 	fmt "fmt"
 	io "io"
 
-  proto "github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
@@ -29,7 +29,7 @@ type scanable interface {
 	Scan(...interface{}) error
 	Columns() ([]string, error)
 }
-type Runable interface {
+type Runnable interface {
 	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
 	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 }
@@ -48,7 +48,7 @@ func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
 }
 
 type ignoreTx struct {
-	r Runable
+	r Runnable
 }
 
 func (this *ignoreTx) Commit() error   { return nil }
@@ -63,21 +63,21 @@ func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface
 type PersistTx interface {
 	Commit() error
 	Rollback() error
-	Runable
+	Runnable
 }
 
-func NopPersistTx(r Runable) (PersistTx, error) {
+func NopPersistTx(r Runnable) (PersistTx, error) {
 	return &ignoreTx{r}, nil
 }
 
 type UServ_QueryOpts struct {
 	MAPPINGS UServ_TypeMappings
-	db       Runable
+	db       Runnable
 	ctx      context.Context
 }
 
 // DefaultUServQueryOpts return the default options to be used with UServ_Queries
-func DefaultUServQueryOpts(db Runable) UServ_QueryOpts {
+func DefaultUServQueryOpts(db Runnable) UServ_QueryOpts {
 	return UServ_QueryOpts{
 		db: db,
 	}
@@ -89,13 +89,14 @@ type UServ_Queries struct {
 }
 
 // UServPersistQueries returns all the known 'SQL' queires for the 'UServ' service.
-func UServPersistQueries(db Runable, opts ...UServ_QueryOpts) *UServ_Queries {
+func UServPersistQueries(db Runnable, opts ...UServ_QueryOpts) *UServ_Queries {
 	var myOpts UServ_QueryOpts
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
 		myOpts = DefaultUServQueryOpts(db)
 	}
+	myOpts.db = db
 	return &UServ_Queries{
 		opts: myOpts,
 	}
@@ -463,7 +464,6 @@ func (this *UServ_CreateUsersTableIter) Each(fun func(*UServ_CreateUsersTableRow
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -471,7 +471,11 @@ func (this *UServ_CreateUsersTableIter) One() *UServ_CreateUsersTableRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_CreateUsersTableRow(first.item, fmt.Errorf("expected exactly 1 result from query 'CreateUsersTable'"))
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_CreateUsersTableRow{err: fmt.Errorf("expected exactly 1 result from query 'CreateUsersTable' found %s", amount)}
 	}
 	return first
 }
@@ -497,19 +501,19 @@ func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool
 	if err != nil {
 		return &UServ_CreateUsersTableRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_CreateUsersTableRow{err: err}, true
-	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+		return &UServ_CreateUsersTableRow{err: this.err}, true
 	}
 	res := &Empty{}
 	for i, col := range cols {
@@ -574,7 +578,6 @@ func (this *UServ_InsertUsersIter) Each(fun func(*UServ_InsertUsersRow) error) e
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -582,7 +585,11 @@ func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_InsertUsersRow(first.item, fmt.Errorf("expected exactly 1 result from query 'InsertUsers'"))
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_InsertUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'InsertUsers' found %s", amount)}
 	}
 	return first
 }
@@ -608,19 +615,19 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_InsertUsersRow{err: err}, true
-	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+		return &UServ_InsertUsersRow{err: this.err}, true
 	}
 	res := &Empty{}
 	for i, col := range cols {
@@ -685,7 +692,6 @@ func (this *UServ_GetAllUsersIter) Each(fun func(*UServ_GetAllUsersRow) error) e
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -693,7 +699,11 @@ func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_GetAllUsersRow(first.item, fmt.Errorf("expected exactly 1 result from query 'GetAllUsers'"))
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'GetAllUsers' found %s", amount)}
 	}
 	return first
 }
@@ -719,19 +729,19 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 	if err != nil {
 		return &UServ_GetAllUsersRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_GetAllUsersRow{err: err}, true
-	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+		return &UServ_GetAllUsersRow{err: this.err}, true
 	}
 	res := &User{}
 	for i, col := range cols {
@@ -740,21 +750,25 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type string")}, true
+				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 		case "friends":
-			r, ok := (*scanned[i].i).(*Friends)
+			r, ok := (*scanned[i].i).([]byte)
 			if !ok {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type string")}, true
+				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
 			}
-			res.Friends = r
+			var converted = new(Friends)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &UServ_GetAllUsersRow{err: err}, true
+			}
+			res.Friends = converted
 		case "created_on":
 			var converted = this.tm.TimestampTimestamp().Empty()
 			if err := converted.Scan(*scanned[i].i); err != nil {
@@ -822,7 +836,6 @@ func (this *UServ_SelectUserByIdIter) Each(fun func(*UServ_SelectUserByIdRow) er
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -830,7 +843,11 @@ func (this *UServ_SelectUserByIdIter) One() *UServ_SelectUserByIdRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_SelectUserByIdRow(first.item, fmt.Errorf("expected exactly 1 result from query 'SelectUserById'"))
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("expected exactly 1 result from query 'SelectUserById' found %s", amount)}
 	}
 	return first
 }
@@ -856,19 +873,19 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 	if err != nil {
 		return &UServ_SelectUserByIdRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_SelectUserByIdRow{err: err}, true
-	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+		return &UServ_SelectUserByIdRow{err: this.err}, true
 	}
 	res := &User{}
 	for i, col := range cols {
@@ -877,21 +894,25 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column id to protobuf go type string")}, true
+				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 		case "friends":
-			r, ok := (*scanned[i].i).(*Friends)
+			r, ok := (*scanned[i].i).([]byte)
 			if !ok {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column friends to protobuf go type string")}, true
+				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
 			}
-			res.Friends = r
+			var converted = new(Friends)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &UServ_SelectUserByIdRow{err: err}, true
+			}
+			res.Friends = converted
 		case "created_on":
 			var converted = this.tm.TimestampTimestamp().Empty()
 			if err := converted.Scan(*scanned[i].i); err != nil {
@@ -959,7 +980,6 @@ func (this *UServ_UpdateUserNameIter) Each(fun func(*UServ_UpdateUserNameRow) er
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -967,7 +987,11 @@ func (this *UServ_UpdateUserNameIter) One() *UServ_UpdateUserNameRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_UpdateUserNameRow(first.item, fmt.Errorf("expected exactly 1 result from query 'UpdateUserName'"))
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateUserName' found %s", amount)}
 	}
 	return first
 }
@@ -993,19 +1017,19 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 	if err != nil {
 		return &UServ_UpdateUserNameRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_UpdateUserNameRow{err: err}, true
-	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+		return &UServ_UpdateUserNameRow{err: this.err}, true
 	}
 	res := &User{}
 	for i, col := range cols {
@@ -1014,21 +1038,25 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column id to protobuf go type string")}, true
+				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 		case "friends":
-			r, ok := (*scanned[i].i).(*Friends)
+			r, ok := (*scanned[i].i).([]byte)
 			if !ok {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column friends to protobuf go type string")}, true
+				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
 			}
-			res.Friends = r
+			var converted = new(Friends)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &UServ_UpdateUserNameRow{err: err}, true
+			}
+			res.Friends = converted
 		case "created_on":
 			var converted = this.tm.TimestampTimestamp().Empty()
 			if err := converted.Scan(*scanned[i].i); err != nil {
@@ -1096,7 +1124,6 @@ func (this *UServ_UpdateNameToFooIter) Each(fun func(*UServ_UpdateNameToFooRow) 
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -1104,7 +1131,11 @@ func (this *UServ_UpdateNameToFooIter) One() *UServ_UpdateNameToFooRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_UpdateNameToFooRow(first.item, fmt.Errorf("expected exactly 1 result from query 'UpdateNameToFoo'"))
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_UpdateNameToFooRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateNameToFoo' found %s", amount)}
 	}
 	return first
 }
@@ -1130,19 +1161,19 @@ func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) 
 	if err != nil {
 		return &UServ_UpdateNameToFooRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_UpdateNameToFooRow{err: err}, true
-	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+		return &UServ_UpdateNameToFooRow{err: this.err}, true
 	}
 	res := &Empty{}
 	for i, col := range cols {
@@ -1207,7 +1238,6 @@ func (this *UServ_GetFriendsIter) Each(fun func(*UServ_GetFriendsRow) error) err
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -1215,7 +1245,11 @@ func (this *UServ_GetFriendsIter) One() *UServ_GetFriendsRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_GetFriendsRow(first.item, fmt.Errorf("expected exactly 1 result from query 'GetFriends'"))
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_GetFriendsRow{err: fmt.Errorf("expected exactly 1 result from query 'GetFriends' found %s", amount)}
 	}
 	return first
 }
@@ -1241,19 +1275,19 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 	if err != nil {
 		return &UServ_GetFriendsRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_GetFriendsRow{err: err}, true
-	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+		return &UServ_GetFriendsRow{err: this.err}, true
 	}
 	res := &User{}
 	for i, col := range cols {
@@ -1262,21 +1296,25 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column id to protobuf go type string")}, true
+				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 		case "friends":
-			r, ok := (*scanned[i].i).(*Friends)
+			r, ok := (*scanned[i].i).([]byte)
 			if !ok {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column friends to protobuf go type string")}, true
+				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
 			}
-			res.Friends = r
+			var converted = new(Friends)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &UServ_GetFriendsRow{err: err}, true
+			}
+			res.Friends = converted
 		case "created_on":
 			var converted = this.tm.TimestampTimestamp().Empty()
 			if err := converted.Scan(*scanned[i].i); err != nil {
@@ -1344,7 +1382,6 @@ func (this *UServ_DropIter) Each(fun func(*UServ_DropRow) error) error {
 			}
 		}
 	}
-	return nil
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
@@ -1352,7 +1389,11 @@ func (this *UServ_DropIter) One() *UServ_DropRow {
 	first, hasFirst := this.Next()
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
-		return newUServ_DropRow(first.item, fmt.Errorf("expected exactly 1 result from query 'Drop'"))
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &UServ_DropRow{err: fmt.Errorf("expected exactly 1 result from query 'Drop' found %s", amount)}
 	}
 	return first
 }
@@ -1378,19 +1419,19 @@ func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
 	if err != nil {
 		return &UServ_DropRow{err: err}, true
 	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
 	toScan := make([]interface{}, len(cols))
 	scanned := make([]alwaysScanner, len(cols))
 	for i := range scanned {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_DropRow{err: err}, true
-	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+		return &UServ_DropRow{err: this.err}, true
 	}
 	res := &Empty{}
 	for i, col := range cols {
@@ -1892,6 +1933,7 @@ type UServSliceStringParamMappingImpl interface {
 type UServ_ImplOpts struct {
 	MAPPINGS UServ_TypeMappings
 	HOOKS    UServ_Hooks
+	HANDLERS RestOfUServHandlers
 }
 
 func DefaultUServImplOpts() UServ_ImplOpts {
@@ -1916,6 +1958,29 @@ func UServPersistImpl(db *sql.DB, opts ...UServ_ImplOpts) *UServ_Impl {
 		QUERIES: UServPersistQueries(db, UServ_QueryOpts{MAPPINGS: myOpts.MAPPINGS}),
 		DB:      db,
 	}
+}
+
+type RestOfUServHandlers interface {
+	UpdateAllNames(*Empty, UServ_UpdateAllNamesServer) error
+}
+
+func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
+	return this.opts.HANDLERS.UpdateAllNames(req, stream)
+}
+
+func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
+	query := this.QUERIES.CreateUsersTableQuery(ctx)
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
@@ -1955,7 +2020,6 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("executed 'insert_users' query without error, but received error on commit: %v", err)
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return fmt.Errorf("error executing 'insert_users' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
 		}
@@ -1972,11 +2036,125 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 	return nil
 }
 
+func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
+	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.GetAllUsersTx(req, stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'get_all_users' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer, tx PersistTx) error {
+	ctx := stream.Context()
+	query := this.QUERIES.GetAllUsersQuery(ctx)
+	iter := query.Execute(req)
+	return iter.Each(func(row *UServ_GetAllUsersRow) error {
+		res, err := row.User()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
+	})
+}
+
 func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, error) {
 	query := this.QUERIES.SelectUserByIdQuery(ctx)
 
 	result := query.Execute(req)
 	res, err := result.One().User()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (this *UServ_Impl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
+	tx, err := DefaultBidiStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.UpdateUserNamesTx(stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'update_user_name' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) UpdateUserNamesTx(stream UServ_UpdateUserNamesServer, tx PersistTx) error {
+	ctx := stream.Context()
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			err = tx.Commit()
+			if err != nil {
+				return tx.Rollback()
+			}
+			return nil
+		} else if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
+		}
+		iter := this.QUERIES.UpdateUserNameQuery(ctx).Execute(req)
+		err = iter.Each(func(row *UServ_UpdateUserNameRow) error {
+			res, err := row.User()
+			if err != nil {
+				return err
+			}
+			return stream.Send(res)
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
+	query := this.QUERIES.UpdateNameToFooQuery(ctx)
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (this *UServ_Impl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
+	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.GetFriendsTx(req, stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'get_friends' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsServer, tx PersistTx) error {
+	ctx := stream.Context()
+	query := this.QUERIES.GetFriendsQuery(ctx)
+	iter := query.Execute(req)
+	return iter.Each(func(row *UServ_GetFriendsRow) error {
+		res, err := row.User()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
+	})
+}
+
+func (this *UServ_Impl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
+	query := this.QUERIES.DropQuery(ctx)
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
 	if err != nil {
 		return nil, err
 	}
