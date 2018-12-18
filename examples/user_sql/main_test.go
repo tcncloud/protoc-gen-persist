@@ -212,14 +212,12 @@ func Serve(servFunc func(s *grpc.Server)) {
 	if err != nil {
 		panic(err)
 	}
-
-	service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
-		HOOKS:    &HooksImpl{},
-		MAPPINGS: &MappingImpl{},
-		HANDLERS: &RestOfImpl{
-			DB: conn,
-		},
-	})
+	opts := pb.UServOpts(&HooksImpl{}, &MappingImpl{})
+	handlers := &RestOfImpl{
+		DB:      conn,
+		QUERIES: pb.UServPersistQueries(opts),
+	}
+	service := pb.UServPersistImpl(conn, handlers, opts)
 
 	server := grpc.NewServer()
 

@@ -9,7 +9,7 @@ import (
 	fmt "fmt"
 	io "io"
 
-	"github.com/gogo/protobuf/proto"
+	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
@@ -70,53 +70,39 @@ func NopPersistTx(r Runnable) (PersistTx, error) {
 	return &ignoreTx{r}, nil
 }
 
-type UServ_QueryOpts struct {
-	MAPPINGS UServ_TypeMappings
-	db       Runnable
-	ctx      context.Context
-}
-
-// DefaultUServQueryOpts return the default options to be used with UServ_Queries
-func DefaultUServQueryOpts(db Runnable) UServ_QueryOpts {
-	return UServ_QueryOpts{
-		db: db,
-	}
-}
-
 // UServ_Queries holds all the queries found the proto service option as methods
 type UServ_Queries struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
 }
 
 // UServPersistQueries returns all the known 'SQL' queires for the 'UServ' service.
-func UServPersistQueries(db Runnable, opts ...UServ_QueryOpts) *UServ_Queries {
-	var myOpts UServ_QueryOpts
+func UServPersistQueries(opts ...UServ_Opts) *UServ_Queries {
+	var myOpts UServ_Opts
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = DefaultUServQueryOpts(db)
+		myOpts = UServOpts(nil, nil)
 	}
-	myOpts.db = db
 	return &UServ_Queries{
 		opts: myOpts,
 	}
 }
 
-// CreateUsersTableQuery returns a new struct wrapping the current UServ_QueryOpts
+// CreateUsersTableQuery returns a new struct wrapping the current UServ_Opts
 // that will perform 'UServ' services 'create_users_table' on the database
 // when executed
-func (this *UServ_Queries) CreateUsersTableQuery(ctx context.Context) *UServ_CreateUsersTableQuery {
+func (this *UServ_Queries) CreateUsersTable(ctx context.Context, db Runnable) *UServ_CreateUsersTableQuery {
 	return &UServ_CreateUsersTableQuery{
-		opts: UServ_QueryOpts{
-			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
-			ctx:      ctx,
-		},
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
 	}
 }
 
 type UServ_CreateUsersTableQuery struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
+	db   Runnable
+	ctx  context.Context
 }
 
 func (this *UServ_CreateUsersTableQuery) QueryInTypeUser()  {}
@@ -128,31 +114,31 @@ func (this *UServ_CreateUsersTableQuery) Execute(x UServ_CreateUsersTableIn) *US
 	params := []interface{}{}
 	result := &UServ_CreateUsersTableIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.opts.ctx,
+		ctx: this.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.opts.db.ExecContext(this.opts.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))", params...)
 	return result
 }
 
-// InsertUsersQuery returns a new struct wrapping the current UServ_QueryOpts
+// InsertUsersQuery returns a new struct wrapping the current UServ_Opts
 // that will perform 'UServ' services 'insert_users' on the database
 // when executed
-func (this *UServ_Queries) InsertUsersQuery(ctx context.Context) *UServ_InsertUsersQuery {
+func (this *UServ_Queries) InsertUsers(ctx context.Context, db Runnable) *UServ_InsertUsersQuery {
 	return &UServ_InsertUsersQuery{
-		opts: UServ_QueryOpts{
-			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
-			ctx:      ctx,
-		},
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
 	}
 }
 
 type UServ_InsertUsersQuery struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
+	db   Runnable
+	ctx  context.Context
 }
 
 func (this *UServ_InsertUsersQuery) QueryInTypeUser()  {}
@@ -186,31 +172,31 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersIn) *UServ_Insert
 	}
 	result := &UServ_InsertUsersIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.opts.ctx,
+		ctx: this.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.opts.db.ExecContext(this.opts.ctx, "INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)", params...)
 	return result
 }
 
-// GetAllUsersQuery returns a new struct wrapping the current UServ_QueryOpts
+// GetAllUsersQuery returns a new struct wrapping the current UServ_Opts
 // that will perform 'UServ' services 'get_all_users' on the database
 // when executed
-func (this *UServ_Queries) GetAllUsersQuery(ctx context.Context) *UServ_GetAllUsersQuery {
+func (this *UServ_Queries) GetAllUsers(ctx context.Context, db Runnable) *UServ_GetAllUsersQuery {
 	return &UServ_GetAllUsersQuery{
-		opts: UServ_QueryOpts{
-			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
-			ctx:      ctx,
-		},
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
 	}
 }
 
 type UServ_GetAllUsersQuery struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
+	db   Runnable
+	ctx  context.Context
 }
 
 func (this *UServ_GetAllUsersQuery) QueryInTypeUser()  {}
@@ -222,31 +208,31 @@ func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAll
 	params := []interface{}{}
 	result := &UServ_GetAllUsersIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.opts.ctx,
+		ctx: this.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.opts.db.QueryContext(this.opts.ctx, "SELECT id, name, friends, created_on FROM users", params...)
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users", params...)
 	return result
 }
 
-// SelectUserByIdQuery returns a new struct wrapping the current UServ_QueryOpts
+// SelectUserByIdQuery returns a new struct wrapping the current UServ_Opts
 // that will perform 'UServ' services 'select_user_by_id' on the database
 // when executed
-func (this *UServ_Queries) SelectUserByIdQuery(ctx context.Context) *UServ_SelectUserByIdQuery {
+func (this *UServ_Queries) SelectUserById(ctx context.Context, db Runnable) *UServ_SelectUserByIdQuery {
 	return &UServ_SelectUserByIdQuery{
-		opts: UServ_QueryOpts{
-			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
-			ctx:      ctx,
-		},
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
 	}
 }
 
 type UServ_SelectUserByIdQuery struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
+	db   Runnable
+	ctx  context.Context
 }
 
 func (this *UServ_SelectUserByIdQuery) QueryInTypeUser()  {}
@@ -263,31 +249,31 @@ func (this *UServ_SelectUserByIdQuery) Execute(x UServ_SelectUserByIdIn) *UServ_
 	}
 	result := &UServ_SelectUserByIdIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.opts.ctx,
+		ctx: this.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.opts.db.QueryContext(this.opts.ctx, "SELECT id, name, friends, created_on FROM users WHERE id = $1", params...)
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users WHERE id = $1", params...)
 	return result
 }
 
-// UpdateUserNameQuery returns a new struct wrapping the current UServ_QueryOpts
+// UpdateUserNameQuery returns a new struct wrapping the current UServ_Opts
 // that will perform 'UServ' services 'update_user_name' on the database
 // when executed
-func (this *UServ_Queries) UpdateUserNameQuery(ctx context.Context) *UServ_UpdateUserNameQuery {
+func (this *UServ_Queries) UpdateUserName(ctx context.Context, db Runnable) *UServ_UpdateUserNameQuery {
 	return &UServ_UpdateUserNameQuery{
-		opts: UServ_QueryOpts{
-			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
-			ctx:      ctx,
-		},
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
 	}
 }
 
 type UServ_UpdateUserNameQuery struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
+	db   Runnable
+	ctx  context.Context
 }
 
 func (this *UServ_UpdateUserNameQuery) QueryInTypeUser()  {}
@@ -308,31 +294,31 @@ func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameIn) *UServ_
 	}
 	result := &UServ_UpdateUserNameIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.opts.ctx,
+		ctx: this.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.opts.db.QueryContext(this.opts.ctx, "Update users set name = $1 WHERE id = $2  RETURNING id, name, friends, created_on", params...)
+	result.rows, result.err = this.db.QueryContext(this.ctx, "Update users set name = $1 WHERE id = $2  RETURNING id, name, friends, created_on", params...)
 	return result
 }
 
-// UpdateNameToFooQuery returns a new struct wrapping the current UServ_QueryOpts
+// UpdateNameToFooQuery returns a new struct wrapping the current UServ_Opts
 // that will perform 'UServ' services 'update_name_to_foo' on the database
 // when executed
-func (this *UServ_Queries) UpdateNameToFooQuery(ctx context.Context) *UServ_UpdateNameToFooQuery {
+func (this *UServ_Queries) UpdateNameToFoo(ctx context.Context, db Runnable) *UServ_UpdateNameToFooQuery {
 	return &UServ_UpdateNameToFooQuery{
-		opts: UServ_QueryOpts{
-			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
-			ctx:      ctx,
-		},
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
 	}
 }
 
 type UServ_UpdateNameToFooQuery struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
+	db   Runnable
+	ctx  context.Context
 }
 
 func (this *UServ_UpdateNameToFooQuery) QueryInTypeUser()  {}
@@ -349,31 +335,31 @@ func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *USer
 	}
 	result := &UServ_UpdateNameToFooIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.opts.ctx,
+		ctx: this.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.opts.db.ExecContext(this.opts.ctx, "Update users set name = 'foo' WHERE id = $1", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "Update users set name = 'foo' WHERE id = $1", params...)
 	return result
 }
 
-// GetFriendsQuery returns a new struct wrapping the current UServ_QueryOpts
+// GetFriendsQuery returns a new struct wrapping the current UServ_Opts
 // that will perform 'UServ' services 'get_friends' on the database
 // when executed
-func (this *UServ_Queries) GetFriendsQuery(ctx context.Context) *UServ_GetFriendsQuery {
+func (this *UServ_Queries) GetFriends(ctx context.Context, db Runnable) *UServ_GetFriendsQuery {
 	return &UServ_GetFriendsQuery{
-		opts: UServ_QueryOpts{
-			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
-			ctx:      ctx,
-		},
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
 	}
 }
 
 type UServ_GetFriendsQuery struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
+	db   Runnable
+	ctx  context.Context
 }
 
 func (this *UServ_GetFriendsQuery) QueryInTypeUser()  {}
@@ -391,31 +377,31 @@ func (this *UServ_GetFriendsQuery) Execute(x UServ_GetFriendsIn) *UServ_GetFrien
 	}
 	result := &UServ_GetFriendsIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.opts.ctx,
+		ctx: this.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.opts.db.QueryContext(this.opts.ctx, "SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)", params...)
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)", params...)
 	return result
 }
 
-// DropQuery returns a new struct wrapping the current UServ_QueryOpts
+// DropQuery returns a new struct wrapping the current UServ_Opts
 // that will perform 'UServ' services 'drop' on the database
 // when executed
-func (this *UServ_Queries) DropQuery(ctx context.Context) *UServ_DropQuery {
+func (this *UServ_Queries) Drop(ctx context.Context, db Runnable) *UServ_DropQuery {
 	return &UServ_DropQuery{
-		opts: UServ_QueryOpts{
-			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
-			ctx:      ctx,
-		},
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
 	}
 }
 
 type UServ_DropQuery struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
+	db   Runnable
+	ctx  context.Context
 }
 
 func (this *UServ_DropQuery) QueryInTypeUser()  {}
@@ -427,13 +413,13 @@ func (this *UServ_DropQuery) Execute(x UServ_DropIn) *UServ_DropIter {
 	params := []interface{}{}
 	result := &UServ_DropIter{
 		tm:  this.opts.MAPPINGS,
-		ctx: this.opts.ctx,
+		ctx: this.ctx,
 	}
 	if setupErr != nil {
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.opts.db.ExecContext(this.opts.ctx, "drop table users", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "drop table users", params...)
 	return result
 }
 
@@ -1912,10 +1898,49 @@ type UServ_Hooks interface {
 	InsertUsersAfterHook(context.Context, *User, *Empty) error
 	GetAllUsersAfterHook(context.Context, *Empty, *User) error
 }
+type UServ_DefaultHooks struct{}
+
+func (*UServ_DefaultHooks) InsertUsersBeforeHook(context.Context, *User) (*Empty, error) {
+	return nil, nil
+}
+func (*UServ_DefaultHooks) GetAllUsersBeforeHook(context.Context, *Empty) (*User, error) {
+	return nil, nil
+}
+func (*UServ_DefaultHooks) InsertUsersAfterHook(context.Context, *User, *Empty) error {
+	return nil
+}
+func (*UServ_DefaultHooks) GetAllUsersAfterHook(context.Context, *Empty, *User) error {
+	return nil
+}
+
 type UServ_TypeMappings interface {
 	TimestampTimestamp() UServTimestampTimestampMappingImpl
 	SliceStringParam() UServSliceStringParamMappingImpl
 }
+type UServ_DefaultTypeMappings struct{}
+
+func (this *UServ_DefaultTypeMappings) TimestampTimestamp() UServTimestampTimestampMappingImpl {
+	return &UServ_DefaultTimestampTimestampMappingImpl{}
+}
+
+type UServ_DefaultTimestampTimestampMappingImpl struct{}
+
+func (this *UServ_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
+	return nil
+}
+func (this *UServ_DefaultTimestampTimestampMappingImpl) Empty() UServTimestampTimestampMappingImpl {
+	return this
+}
+func (this *UServ_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
+	return this
+}
+func (this *UServ_DefaultTimestampTimestampMappingImpl) Scan(interface{}) error {
+	return nil
+}
+func (this *UServ_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
+	return "DEFAULT_TYPE_MAPPING_VALUE", nil
+}
+
 type UServTimestampTimestampMappingImpl interface {
 	ToProto(**timestamp.Timestamp) error
 	Empty() UServTimestampTimestampMappingImpl
@@ -1923,6 +1948,29 @@ type UServTimestampTimestampMappingImpl interface {
 	sql.Scanner
 	driver.Valuer
 }
+
+func (this *UServ_DefaultTypeMappings) SliceStringParam() UServSliceStringParamMappingImpl {
+	return &UServ_DefaultSliceStringParamMappingImpl{}
+}
+
+type UServ_DefaultSliceStringParamMappingImpl struct{}
+
+func (this *UServ_DefaultSliceStringParamMappingImpl) ToProto(**SliceStringParam) error {
+	return nil
+}
+func (this *UServ_DefaultSliceStringParamMappingImpl) Empty() UServSliceStringParamMappingImpl {
+	return this
+}
+func (this *UServ_DefaultSliceStringParamMappingImpl) ToSql(*SliceStringParam) sql.Scanner {
+	return this
+}
+func (this *UServ_DefaultSliceStringParamMappingImpl) Scan(interface{}) error {
+	return nil
+}
+func (this *UServ_DefaultSliceStringParamMappingImpl) Value() (driver.Value, error) {
+	return "DEFAULT_TYPE_MAPPING_VALUE", nil
+}
+
 type UServSliceStringParamMappingImpl interface {
 	ToProto(**SliceStringParam) error
 	Empty() UServSliceStringParamMappingImpl
@@ -1930,46 +1978,62 @@ type UServSliceStringParamMappingImpl interface {
 	sql.Scanner
 	driver.Valuer
 }
-type UServ_ImplOpts struct {
+type UServ_Opts struct {
 	MAPPINGS UServ_TypeMappings
 	HOOKS    UServ_Hooks
-	HANDLERS RestOfUServHandlers
 }
 
-func DefaultUServImplOpts() UServ_ImplOpts {
-	return UServ_ImplOpts{}
+func UServOpts(hooks UServ_Hooks, mappings UServ_TypeMappings) UServ_Opts {
+	opts := UServ_Opts{
+		HOOKS:    &UServ_DefaultHooks{},
+		MAPPINGS: &UServ_DefaultTypeMappings{},
+	}
+	if hooks != nil {
+		opts.HOOKS = hooks
+	}
+	if mappings != nil {
+		opts.MAPPINGS = mappings
+	}
+	return opts
 }
 
 type UServ_Impl struct {
-	opts    *UServ_ImplOpts
-	QUERIES *UServ_Queries
-	DB      *sql.DB
+	opts     *UServ_Opts
+	QUERIES  *UServ_Queries
+	HANDLERS RestOfUServHandlers
+	DB       *sql.DB
 }
 
-func UServPersistImpl(db *sql.DB, opts ...UServ_ImplOpts) *UServ_Impl {
-	var myOpts UServ_ImplOpts
+func UServPersistImpl(db *sql.DB, handlers RestOfUServHandlers, opts ...UServ_Opts) *UServ_Impl {
+	var myOpts UServ_Opts
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = DefaultUServImplOpts()
+		myOpts = UServOpts(nil, nil)
 	}
 	return &UServ_Impl{
-		opts:    &myOpts,
-		QUERIES: UServPersistQueries(db, UServ_QueryOpts{MAPPINGS: myOpts.MAPPINGS}),
-		DB:      db,
+		opts:     &myOpts,
+		QUERIES:  UServPersistQueries(myOpts),
+		DB:       db,
+		HANDLERS: handlers,
 	}
 }
 
 type RestOfUServHandlers interface {
+	UpdateUserNames(UServ_UpdateUserNamesServer) error
 	UpdateAllNames(*Empty, UServ_UpdateAllNamesServer) error
 }
 
+func (this *UServ_Impl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
+	return this.HANDLERS.UpdateUserNames(stream)
+}
+
 func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
-	return this.opts.HANDLERS.UpdateAllNames(req, stream)
+	return this.HANDLERS.UpdateAllNames(req, stream)
 }
 
 func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
-	query := this.QUERIES.CreateUsersTableQuery(ctx)
+	query := this.QUERIES.CreateUsersTable(ctx, this.DB)
 
 	result := query.Execute(req)
 
@@ -1994,7 +2058,7 @@ func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
 	return nil
 }
 func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx PersistTx) error {
-	query := this.QUERIES.InsertUsersQuery(stream.Context())
+	query := this.QUERIES.InsertUsers(stream.Context(), tx)
 	var first *User
 	for {
 		req, err := stream.Recv()
@@ -2048,7 +2112,7 @@ func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) 
 }
 func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer, tx PersistTx) error {
 	ctx := stream.Context()
-	query := this.QUERIES.GetAllUsersQuery(ctx)
+	query := this.QUERIES.GetAllUsers(ctx, tx)
 	iter := query.Execute(req)
 	return iter.Each(func(row *UServ_GetAllUsersRow) error {
 		res, err := row.User()
@@ -2060,7 +2124,7 @@ func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer
 }
 
 func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, error) {
-	query := this.QUERIES.SelectUserByIdQuery(ctx)
+	query := this.QUERIES.SelectUserById(ctx, this.DB)
 
 	result := query.Execute(req)
 	res, err := result.One().User()
@@ -2071,46 +2135,8 @@ func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, e
 	return res, nil
 }
 
-func (this *UServ_Impl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
-	tx, err := DefaultBidiStreamingPersistTx(stream.Context(), this.DB)
-	if err != nil {
-		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-	}
-	if err := this.UpdateUserNamesTx(stream, tx); err != nil {
-		return gstatus.Errorf(codes.Unknown, "error executing 'update_user_name' query: %v", err)
-	}
-	return nil
-}
-func (this *UServ_Impl) UpdateUserNamesTx(stream UServ_UpdateUserNamesServer, tx PersistTx) error {
-	ctx := stream.Context()
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			err = tx.Commit()
-			if err != nil {
-				return tx.Rollback()
-			}
-			return nil
-		} else if err != nil {
-			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
-		}
-		iter := this.QUERIES.UpdateUserNameQuery(ctx).Execute(req)
-		err = iter.Each(func(row *UServ_UpdateUserNameRow) error {
-			res, err := row.User()
-			if err != nil {
-				return err
-			}
-			return stream.Send(res)
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
-	query := this.QUERIES.UpdateNameToFooQuery(ctx)
+	query := this.QUERIES.UpdateNameToFoo(ctx, this.DB)
 
 	result := query.Execute(req)
 
@@ -2136,7 +2162,7 @@ func (this *UServ_Impl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServe
 }
 func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsServer, tx PersistTx) error {
 	ctx := stream.Context()
-	query := this.QUERIES.GetFriendsQuery(ctx)
+	query := this.QUERIES.GetFriends(ctx, tx)
 	iter := query.Execute(req)
 	return iter.Each(func(row *UServ_GetFriendsRow) error {
 		res, err := row.User()
@@ -2148,7 +2174,7 @@ func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsSer
 }
 
 func (this *UServ_Impl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
-	query := this.QUERIES.DropQuery(ctx)
+	query := this.QUERIES.Drop(ctx, this.DB)
 
 	result := query.Execute(req)
 

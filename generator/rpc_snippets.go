@@ -46,33 +46,45 @@ func NewPrinterProxy(printer *Printer) *printerProxy {
 func WritePersistServerStruct(printer *Printer, service string) error {
 	printerProxy := NewPrinterProxy(printer)
 	structFormat := `
-type {{.Service}}_ImplOpts struct {
+type {{.Service}}_Opts struct {
     MAPPINGS {{.Service}}_TypeMappings
     HOOKS    {{.Service}}_Hooks
-    HANDLERS RestOf{{.Service}}Handlers
 }
 
-func Default{{.Service}}ImplOpts() {{.Service}}_ImplOpts {
-    return {{.Service}}_ImplOpts{}
+func {{.Service}}Opts(hooks {{.Service}}_Hooks, mappings {{.Service}}_TypeMappings) {{.Service}}_Opts {
+    opts := {{.Service}}_Opts{
+        HOOKS: &{{.Service}}_DefaultHooks{},
+        MAPPINGS: &{{.Service}}_DefaultTypeMappings{},
+    }
+    if hooks != nil {
+        opts.HOOKS = hooks
+    }
+    if mappings != nil {
+        opts.MAPPINGS = mappings
+    }
+    return opts
 }
+
 
 type {{.Service}}_Impl struct {
-    opts    *{{.Service}}_ImplOpts
+    opts    *{{.Service}}_Opts
     QUERIES *{{.Service}}_Queries
+    HANDLERS RestOf{{.Service}}Handlers
     DB      *sql.DB
 }
 
-func {{.Service}}PersistImpl(db *sql.DB, opts ...{{.Service}}_ImplOpts) *{{.Service}}_Impl {
-    var myOpts {{.Service}}_ImplOpts
+func {{.Service}}PersistImpl(db *sql.DB, handlers RestOf{{.Service}}Handlers, opts ...{{.Service}}_Opts) *{{.Service}}_Impl {
+    var myOpts {{.Service}}_Opts
     if len(opts) > 0 {
         myOpts = opts[0]
     } else {
-        myOpts = Default{{.Service}}ImplOpts()
+        myOpts = {{.Service}}Opts(nil, nil)
     }
     return &{{.Service}}_Impl{
         opts:    &myOpts,
-        QUERIES: {{.Service}}PersistQueries(db, {{.Service}}_QueryOpts{MAPPINGS: myOpts.MAPPINGS}),
+        QUERIES: {{.Service}}PersistQueries(myOpts),
         DB:      db,
+        HANDLERS: handlers,
     }
 }
     `
@@ -97,7 +109,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(stream {{.Service}}_{{.Method}}Server
 }
 
 func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
-    query := this.QUERIES.{{camelCase .Query}}Query(stream.Context())
+    query := this.QUERIES.{{camelCase .Query}}(stream.Context(), tx)
     var first *{{.Request}}
     for {
         req, err := stream.Recv()
@@ -153,7 +165,7 @@ func WriteUnary(printer *Printer, params *handlerParams) error {
 	printerProxy := NewPrinterProxy(printer)
 	unaryFormat := `
 func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
-    query := this.QUERIES.{{camelCase .Query}}Query(ctx)
+    query := this.QUERIES.{{camelCase .Query}}(ctx, this.DB)
     {{if .Before}}
     beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(ctx, req)
     if err != nil {
@@ -203,7 +215,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(req *{{.Request}}, stream {{.Service}
 
 func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
     ctx := stream.Context()
-    query := this.QUERIES.{{camelCase .Query}}Query(ctx)
+    query := this.QUERIES.{{camelCase .Query}}(ctx, tx)
 
     iter := query.Execute(req)
     return iter.Each(func(row *{{.Service}}_{{camelCase .Query}}Row) error {
@@ -219,54 +231,5 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Servic
 		"camelCase": _gen.CamelCase,
 	}
 	t := template.Must(template.New("ServerStream").Funcs(funcMap).Parse(serverFormat))
-	return t.Execute(printerProxy, params)
-}
-
-func WriteBidirectionalStream(printer *Printer, params *handlerParams) error {
-	printerProxy := NewPrinterProxy(printer)
-	biFormat := `
-func (this *{{.Service}}_Impl) {{.Method}}(stream {{.Service}}_{{.Method}}Server) error {
-    tx, err := DefaultBidiStreamingPersistTx(stream.Context(), this.DB)
-    if err != nil {
-        return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-    }
-    if err := this.{{.Method}}Tx(stream, tx); err != nil {
-        return gstatus.Errorf(codes.Unknown, "error executing '{{.Query}}' query: %v", err)
-    }
-    return nil
-}
-
-func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
-    ctx := stream.Context()
-    for {
-        req, err := stream.Recv()
-        if err == io.EOF {
-            err = tx.Commit()
-            if err != nil {
-                return tx.Rollback()
-            }
-            return nil
-        } else if err != nil {
-            return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
-        }
-        iter := this.QUERIES.{{camelCase .Query}}Query(ctx).Execute(req)
-        err = iter.Each(func(row *{{.Service}}_{{camelCase .Query}}Row) error {
-            res, err := row.{{.Response}}()
-            if err != nil {
-                return err
-            }
-            return stream.Send(res)
-        })
-        if err != nil {
-            return err
-        }
-    }
-    return nil
-}
-    `
-	funcMap := template.FuncMap{
-		"camelCase": _gen.CamelCase,
-	}
-	t := template.Must(template.New("BidirectionalStream").Funcs(funcMap).Parse(biFormat))
 	return t.Execute(printerProxy, params)
 }

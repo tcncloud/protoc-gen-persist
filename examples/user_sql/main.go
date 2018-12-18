@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"net"
 
 	_ "github.com/lib/pq"
@@ -19,13 +20,12 @@ func main() {
 
 	hooks := &HooksImpl{}
 	mapping := &MappingImpl{}
-	service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
-		HOOKS:    hooks,
-		MAPPINGS: mapping,
-		HANDLERS: &RestOfImpl{
-			DB: conn,
-		},
-	})
+	opts := pb.UServOpts(hooks, mapping)
+	handlers := &RestOfImpl{
+		DB:      conn,
+		QUERIES: pb.UServPersistQueries(opts),
+	}
+	service := pb.UServPersistImpl(conn, handlers, opts)
 	server := grpc.NewServer()
 
 	pb.RegisterUServServer(server, service)
@@ -66,18 +66,41 @@ func (m *MappingImpl) SliceStringParam() pb.UServSliceStringParamMappingImpl {
 	return &pb.SliceStringConverter{}
 }
 
+// Type Aliasing to remove redundency
+type Queries = pb.UServ_Queries
 type RestOfImpl struct {
-	DB *sql.DB
+	DB      *sql.DB
+	QUERIES *Queries
+}
+
+func (d *RestOfImpl) UpdateUserNames(stream pb.UServ_UpdateUserNamesServer) error {
+	query := d.QUERIES.UpdateUserName(stream.Context(), d.DB)
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+		res := new(pb.User)
+		if err := query.Execute(req).One().Unwrap(res); err != nil {
+			return err
+		}
+		if err := stream.Send(res); err != nil {
+			return err
+		}
+	}
+	return nil
+
 }
 
 func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {
 	ctx := stream.Context()
-	queries := pb.UServPersistQueries(d.DB, pb.UServ_QueryOpts{
-		MAPPINGS: &MappingImpl{},
-	})
-	renameToFoo := queries.UpdateNameToFooQuery(ctx)
-	allUsers := queries.GetAllUsersQuery(ctx).Execute(req)
-	selectUser := queries.SelectUserByIdQuery(ctx)
+	// tests that we can use both queries made from two different calls
+	testOpts := pb.UServ_Opts{MAPPINGS: &MappingImpl{}}
+	renameToFoo := pb.UServPersistQueries(testOpts).UpdateNameToFoo(ctx, d.DB)
+	allUsers := d.QUERIES.GetAllUsers(ctx, d.DB).Execute(req)
+	selectUser := d.QUERIES.SelectUserById(ctx, d.DB)
 
 	return allUsers.Each(func(row *pb.UServ_GetAllUsersRow) error {
 		user, err := row.User()

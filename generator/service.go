@@ -38,7 +38,7 @@ import (
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/sirupsen/logrus"
-	"github.com/coltonmorris/protoc-gen-persist/persist"
+	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
 type Service struct {
@@ -324,52 +324,39 @@ func WriteQueries(p *Printer, s *Service) error {
 		return printer.String()
 	}
 
-	p.Q("type ", sName, "_QueryOpts struct {\n")
-	p.Q("MAPPINGS ", sName, "_TypeMappings\n")
-	p.Q("db Runnable\n")
-	p.Q("ctx context.Context\n")
-	p.Q("}\n")
-	p.Q("// Default", sName, "QueryOpts return the default options to be used with ", sName, "_Queries\n")
-	p.Q("func Default", sName, "QueryOpts(db Runnable) ", sName, "_QueryOpts {\n")
-	p.Q("return ", sName, "_QueryOpts{\n")
-	p.Q("db: db,\n")
-	p.Q("}\n")
-	p.Q("}\n") // End DefaultQueryOpts
-
 	p.Q("// ", sName, "_Queries holds all the queries found the proto service option as methods\n")
 	p.Q("type ", sName, "_Queries struct {\n")
-	p.Q("opts ", sName, "_QueryOpts\n")
+	p.Q("opts ", sName, "_Opts\n")
 	p.Q("}\n")
 
 	p.Q(`// `, sName, `PersistQueries returns all the known 'SQL' queires for the '`, sName, `' service.
-    func `, sName, `PersistQueries(db Runnable, opts ...`, sName, `_QueryOpts) *`, sName, `_Queries {
-        var myOpts `, sName, `_QueryOpts
+    func `, sName, `PersistQueries(opts ...`, sName, `_Opts) *`, sName, `_Queries {
+        var myOpts `, sName, `_Opts
         if len(opts) > 0 {
             myOpts = opts[0]
         } else {
-            myOpts = Default`, sName, `QueryOpts(db)
+            myOpts = `, sName, `Opts(nil, nil)
         }
-        myOpts.db = db
         return &`, sName, `_Queries{
             opts: myOpts,
         }
     }
     `)
 	m.EachQuery(func(q *QueryProtoOpts) {
-		p.Q(`// `, camelQ(q), `Query returns a new struct wrapping the current `, sName, `_QueryOpts
+		p.Q(`// `, camelQ(q), `Query returns a new struct wrapping the current `, sName, `_Opts
         // that will perform '`, sName, `' services '`, qname(q), `' on the database
         // when executed
-        func (this *`, sName, `_Queries) `, camelQ(q), `Query(ctx context.Context) *`, sName, `_`, camelQ(q), `Query {
+        func (this *`, sName, `_Queries) `, camelQ(q), `(ctx context.Context, db Runnable) *`, sName, `_`, camelQ(q), `Query {
             return &`, sName, `_`, camelQ(q), `Query{
-                opts: `, sName, `_QueryOpts{
-                    MAPPINGS: this.opts.MAPPINGS,
-                    db:       this.opts.db,
-                    ctx:      ctx,
-                },
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
             }
         }
         type `, sName, `_`, camelQ(q), `Query struct {
-            opts `, sName, `_QueryOpts
+			opts `, sName, `_Opts
+			db Runnable
+			ctx context.Context
         }
 
         func (this *`, sName, `_`, camelQ(q), `Query) QueryInTypeUser()  {}
@@ -383,13 +370,13 @@ func WriteQueries(p *Printer, s *Service) error {
             }
             result := &`, sName, `_`, camelQ(q), `Iter{
                 tm: this.opts.MAPPINGS,
-                ctx: this.opts.ctx,
+                ctx: this.ctx,
             }
             if setupErr != nil {
                 result.err = setupErr
                 return result
             }
-            result.`, resultOrRows(q), `, result.err = this.opts.db.`, qmethod(q), `Context(this.opts.ctx, "`, qstring(q), `", params...)
+            result.`, resultOrRows(q), `, result.err = this.db.`, qmethod(q), `Context(this.ctx, "`, qstring(q), `", params...)
 
             return result
         }
@@ -424,6 +411,28 @@ func WriteHooks(p *Printer, s *Service) error {
 		p.Q(name(m), "AfterHook(context.Context, *", inName(m), ",*", outName(m), ") error\n")
 	}, m.AfterHook)
 	p.Q("}\n")
+	p.Q("type ", sName, "_DefaultHooks struct{}\n")
+	m.EachMethod(func(m *MethodProtoOpts) {
+		p.Q(`func(*`, sName, `_DefaultHooks) `, name(m), `BeforeHook(context.Context, *`, inName(m), `) ([]*`, outName(m), `, error) {
+			return nil, nil
+		}
+		`)
+	}, func(m *MethodProtoOpts) bool {
+		return false
+	}, m.BeforeHook, m.ServerStreaming)
+	m.EachMethod(func(m *MethodProtoOpts) {
+		p.Q(`func(*`, sName, `_DefaultHooks) `, name(m), `BeforeHook(context.Context, *`, inName(m), `) (*`, outName(m), `, error) {
+			return nil, nil
+		}
+		`)
+	}, m.BeforeHook)
+	m.EachMethod(func(m *MethodProtoOpts) {
+		p.Q(`func(*`, sName, `_DefaultHooks) `, name(m), `AfterHook(context.Context, *`, inName(m), `,*`, outName(m), `)error {
+			return nil
+		}
+		`)
+	}, m.AfterHook)
+
 	return m.Err()
 }
 
@@ -439,9 +448,32 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 		p.Q(titled, "() ", sName, titled, "MappingImpl\n")
 	}
 	p.Q("}\n")
+	p.Q(`type `, sName, `_DefaultTypeMappings struct{}
+	`)
 
 	for _, tm := range tms {
 		name, titled := getGoNamesForTypeMapping(tm, s.File)
+		p.Q(`func (this *`, sName, `_DefaultTypeMappings) `, titled, `() `, sName, ``, titled, `MappingImpl {
+			return &`, sName, `_Default`, titled, `MappingImpl{}
+		}
+		type `, sName, `_Default`, titled, `MappingImpl struct{}
+
+		func (this *`, sName, `_Default`, titled, `MappingImpl) ToProto(**`, name, `) error {
+			return nil
+		}
+		func (this *`, sName, `_Default`, titled, `MappingImpl) Empty() `, sName, ``, titled, `MappingImpl {
+			return this
+		}
+		func (this *`, sName, `_Default`, titled, `MappingImpl) ToSql(*`, name, `) sql.Scanner {
+			return this
+		}
+		func (this *`, sName, `_Default`, titled, `MappingImpl) Scan(interface{}) error {
+			return nil
+		}
+		func (this *`, sName, `_Default`, titled, `MappingImpl) Value() (driver.Value, error) {
+			return "DEFAULT_TYPE_MAPPING_VALUE", nil
+		}
+		`)
 		p.Q("type ", sName, titled, "MappingImpl interface {\n")
 		p.Q(fmt.Sprintf(`
             ToProto(**%[1]s) error
@@ -836,13 +868,20 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
     `)
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
+		method := mpo.method.GetName()
+		inMsg := mpo.inMsg.GetName()
+		outMsg := mpo.outMsg.GetName()
 		if m.ServerStreaming(mpo) {
-			method := mpo.method.GetName()
-			inMsg := mpo.inMsg.GetName()
-			p.Q(method, `(*`, inMsg, `, `, serviceName, `_`, method, `Server) error`)
+			p.Q(method, `(*`, inMsg, `, `, serviceName, `_`, method, `Server) error`, "\n")
+		}
+		if m.ClientStreaming(mpo) || m.BidiStreaming(mpo) {
+			p.Q(method, `(`, serviceName, `_`, method, `Server) error`, "\n")
+		}
+		if m.Unary(mpo) {
+			p.Q(method, `(context.Context, *`, inMsg, `) (*`, outMsg, `, error)`, "\n")
 		}
 	}, func(mpo *MethodProtoOpts) bool {
-		return !proto.HasExtension(mpo.method.Options, persist.E_Opts)
+		return !proto.HasExtension(mpo.method.Options, persist.E_Opts) || m.BidiStreaming(mpo)
 	})
 
 	p.Q("}\n")
@@ -855,7 +894,7 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 		if m.ServerStreaming(mpo) {
 			p.Q(`
 func (this *`, serviceName, `_Impl) `, method, `(req *`, inMsg, `, stream `, serviceName, `_`, method, `Server) error {
-    return this.opts.HANDLERS.`, method, `(req, stream)
+    return this.HANDLERS.`, method, `(req, stream)
 }
         `)
 		}
@@ -863,7 +902,7 @@ func (this *`, serviceName, `_Impl) `, method, `(req *`, inMsg, `, stream `, ser
 		if m.ClientStreaming(mpo) {
 			p.Q(`
 func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, inMsg, `Server) error {
-    return this.opts.HANDLERS.`, inMsg, `(stream)
+    return this.HANDLERS.`, inMsg, `(stream)
 }
         `)
 		}
@@ -871,7 +910,7 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, inM
 		if m.Unary(mpo) {
 			p.Q(`
 func (this *`, serviceName, `_Impl) `, method, `(ctx context.Context, req *`, inMsg, `) (*`, outMsg, `, error) {
-    return this.opts.HANDLERS.`, method, `(ctx, req)
+    return this.HANDLERS.`, method, `(ctx, req)
 }
         `)
 		}
@@ -879,12 +918,12 @@ func (this *`, serviceName, `_Impl) `, method, `(ctx context.Context, req *`, in
 		if m.BidiStreaming(mpo) {
 			p.Q(`
 func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, method, `Server) error {
-    return this.opts.HANDLERS.`, method, `(stream)
+    return this.HANDLERS.`, method, `(stream)
 }
         `)
 		}
 	}, func(mpo *MethodProtoOpts) bool {
-		return !proto.HasExtension(mpo.method.Options, persist.E_Opts)
+		return !proto.HasExtension(mpo.method.Options, persist.E_Opts) || m.BidiStreaming(mpo)
 	})
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
@@ -925,13 +964,6 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 
 		if m.ServerStreaming(mpo) {
 			err = WriteSeverStream(p, params)
-			if err != nil {
-				outErr = err
-			}
-		}
-
-		if m.BidiStreaming(mpo) {
-			err = WriteBidirectionalStream(p, params)
 			if err != nil {
 				outErr = err
 			}
