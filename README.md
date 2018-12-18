@@ -18,7 +18,7 @@ documentation for the project can be found [Here](docs/index.md)
 The documentation goes over the persist options, how to structure your proto file,
 custom type mapping to/from the database, and spanner query parsing
 
-## NOTE: This project is under development, use it at your own risk!
+## NOTE: This project is under development, use it at your own risk
 
 ## Version 2.0.0
 - new method for generating before and after hooks. See #82 (@iamneal)
