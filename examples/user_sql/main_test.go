@@ -216,7 +216,9 @@ func Serve(servFunc func(s *grpc.Server)) {
 	service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
 		HOOKS:    &HooksImpl{},
 		MAPPINGS: &MappingImpl{},
-		HANDLERS: &RestOfImpl{},
+		HANDLERS: &RestOfImpl{
+			DB: conn,
+		},
 	})
 
 	server := grpc.NewServer()

@@ -16,10 +16,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	hooks := &HooksImpl{}
+	mapping := &MappingImpl{}
 	service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
-		HOOKS:    &HooksImpl{},
-		MAPPINGS: &MappingImpl{},
-		HANDLERS: &RestOfImpl{},
+		HOOKS:    hooks,
+		MAPPINGS: mapping,
+		HANDLERS: &RestOfImpl{
+			DB: conn,
+		},
 	})
 	server := grpc.NewServer()
 
@@ -62,41 +67,33 @@ func (m *MappingImpl) SliceStringParam() pb.UServSliceStringParamMappingImpl {
 }
 
 type RestOfImpl struct {
-	Mappings *MappingImpl
-	Hooks    *HooksImpl
+	DB *sql.DB
 }
 
-func (d *RestOfImpl) UpdateAllNames(r *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {
-	// db, err := sql.Open(
-	// 	"postgres",
-	// 	"user=postgres password=postgres dbname=postgres sslmode=disable",
-	// )
-	// if err != nil {
-	// 	return err
-	// }
-	// params, err := pb.EmptyToUServPersistType(d.Mappings, r)
-	// if err != nil {
-	// 	return err
-	// }
-	// res := pl.UServGetAllUsersQuery(db, params)
+func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {
+	ctx := stream.Context()
+	queries := pb.UServPersistQueries(d.DB, pb.UServ_QueryOpts{
+		MAPPINGS: &MappingImpl{},
+	})
+	renameToFoo := queries.UpdateNameToFooQuery(ctx)
+	allUsers := queries.GetAllUsersQuery(ctx).Execute(req)
+	selectUser := queries.SelectUserByIdQuery(ctx)
 
-	// err = pb.IterUServUserProto(d.Mappings, res, func(user *pb.User) error {
-	// 	params, err := pb.UserToUServPersistType(d.Mappings, user)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	// unlike spanner, the query is actually run here.
-	// 	res := pl.UServUpdateNameToFooQuery(db, params)
-	// 	return res.Err()
-	// })
-	// if err != nil {
-	// 	return err
-	// }
-	// res = pl.UServGetAllUsersQuery(db, params)
-	// if res.Err() != nil {
-	// 	return res.Err()
-	// }
-	// return pb.IterUServUserProto(d.Mappings, res, stream.Send)
+	return allUsers.Each(func(row *pb.UServ_GetAllUsersRow) error {
+		user, err := row.User()
+		if err != nil {
+			return err
+		}
 
-	return nil
+		err = renameToFoo.Execute(user).Zero()
+		if err != nil {
+			return err
+		}
+
+		res, err := selectUser.Execute(user).One().User()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
+	})
 }
