@@ -29,10 +29,10 @@
 
 all: gen build
 
+# --plugin=../../protoc-gen-persist 
 gen:
 	cd ../../ && go build
 	protoc -I. -I../../ -I/usr/local/include -I./pb -I$$GOPATH/src \
-		--plugin=../../protoc-gen-persist \
 		--go_out=plugins=grpc:. \
 		--persist_out=persist_root=github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel/pb:. \
 		./pb/*.proto

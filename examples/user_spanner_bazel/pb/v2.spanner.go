@@ -8,7 +8,6 @@ package pb
 import (
 	"fmt"
   "time"
-  "reflect"
 	io "io"
 
   spanner "cloud.google.com/go/spanner"
@@ -254,20 +253,26 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 			return
 		}(),
 		func() (out interface{}) {
-			out = x.GetName()
+      out = fmt.Sprintf(`"%s"`, x.GetName())
 			return
 		}(),
 		func() (out interface{}) {
 			raw, err := proto.Marshal(x.GetFriends())
+      fmt.Println("****",raw)
 			if err != nil {
 				setupErr = err
 			}
-			out = raw
+			out = fmt.Sprintf(`CAST("%v" as BYTES)`, raw)
 			return
 		}(),
 		func() (out interface{}) {
 			mapper := this.opts.MAPPINGS.TimestampTimestamp()
-			out = mapper.ToSpanner(x.GetCreatedOn())
+      ts, err := mapper.ToSpanner(x.GetCreatedOn()).SpannerValue()
+      if err != nil {
+        setupErr = err
+      }
+
+      out = fmt.Sprintf(`"%s"`, ts)
 			return
 		}(),
 	}
@@ -280,19 +285,12 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 		return result
 	}
 
-  tmp := reflect.TypeOf(this.opts.db)
-  for i := 0; i < tmp.NumMethod(); i++ {
-    method := tmp.Method(i)
-    fmt.Println("method: ", method.Name)
-  }
-  // TODO this is causing the seg fault.
-    // considered that the client is closed by a defer, but it doesn't seem like it
+  fmt.Println("params: ", params)
   _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-    fmt.Println("doing query")
     stmt := spanner.Statement{
       SQL: fmt.Sprintf("insert into users (id, name, friends, created_on) values (%v, %v, %v, %v);", params...)}
     iter := txn.QueryWithStats(ctx, stmt)
-    fmt.Println("done query")
+    // err, rowCount := txn.Update(ctx, stmt)
     result.rows = iter
     result.result = SpannerResult{
       iter: iter,
@@ -300,7 +298,6 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
     // TODO consider the effects of calling "defer iter.Stop()" here
     return nil
   })
-  fmt.Println("after query: ", err)
   result.err = err
 	return result
 }
@@ -476,6 +473,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 		} else if beforeRes != nil {
 			continue
 		}
+    query.ctx = stream.Context()
 		result := query.Execute(req)
 		/*for {
 		      res := new(User)
@@ -509,7 +507,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
 		}
 	}
-  // TODO might need to handle commits and rollbacks uniquely.
+  // TODO might need to handle commits and rollbacks uniquely with spanner.
 	// if err := tx.Commit(); err != nil {
 		// return fmt.Errorf("executed 'insert_users' query without error, but received error on commit: %v", err)
 		// if rollbackErr := tx.Rollback(); rollbackErr != nil {
