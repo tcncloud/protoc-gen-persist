@@ -6,7 +6,7 @@ go_library(
         "myenum.go",
         "time.go",
     ],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/tests/mytime",
+    importpath = "github.com/tcncloud/protoc-gen-persist/tests/mytime",
     visibility = ["//visibility:public"],
     deps = [
         "//tests/test:test_go_proto",

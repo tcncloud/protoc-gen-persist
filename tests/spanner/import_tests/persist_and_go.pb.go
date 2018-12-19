@@ -16,9 +16,9 @@ package import_tests
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "github.com/coltonmorris/protoc-gen-persist/persist"
+import _ "github.com/tcncloud/protoc-gen-persist/persist"
 import google_protobuf1 "github.com/golang/protobuf/ptypes/timestamp"
-import examples_test "github.com/coltonmorris/protoc-gen-persist/examples/test"
+import examples_test "github.com/tcncloud/protoc-gen-persist/examples/test"
 
 import (
 	context "golang.org/x/net/context"

@@ -16,7 +16,7 @@ proto_library(
 go_proto_library(
     name = "test_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/tests/test",
+    importpath = "github.com/tcncloud/protoc-gen-persist/tests/test",
     proto = ":test_proto",
     visibility = ["//visibility:public"],
     deps = ["@com_github_golang_protobuf//ptypes/timestamp:go_default_library"],

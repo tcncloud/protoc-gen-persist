@@ -30,7 +30,7 @@ specified options, and decides how the database must be structured.
 It then writes function to marshal a protobuf message to, and from the database row,
 perform iterations over a protobuf from a database's iterator, and functions that
 run the protobuf option's query on the backend.
-for example, given this [snippet from our sql examples](https://github.com/coltonmorris/protoc-gen-persist/blob/master/examples/user_sql/main.go)
+for example, given this [snippet from our sql examples](https://github.com/tcncloud/protoc-gen-persist/blob/master/examples/user_sql/main.go)
 ```proto
 message Friends {
 	repeated string names = 1;
@@ -56,7 +56,7 @@ service UServ {
 
 you get the following go code:
 
-in [the pb package](https://github.com/coltonmorris/protoc-gen-persist/tree/master/examples/user_sql/pb):
+in [the pb package](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples/user_sql/pb):
 - function that marshals from protobuf message to a database row
 ```go
 func UserToUServPersistType(serv UServTypeMapping, req *User) (*persist_lib.UserForUServ, error) {
@@ -241,7 +241,7 @@ func (b *UServImplBuilder) MustBuild() *UServImpl {
 }
 ```
 
-in [the persist_lib package](https://github.com/coltonmorris/protoc-gen-persist/tree/master/examples/user_sql/pb/persist_lib):
+in [the persist_lib package](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples/user_sql/pb/persist_lib):
 -  struct that matches protobuf type with getters and setters
 ```go
 type UserForUServ struct {
@@ -424,7 +424,7 @@ type UServSliceStringParamMappingImpl interface {
 ```
 
 to map a type from protobuf to the database, you need to implement a type with 4 methods
-a type [in our examples](https://github.com/coltonmorris/protoc-gen-persist/blob/master/examples/user_sql/pb/time_converter.go)
+a type [in our examples](https://github.com/tcncloud/protoc-gen-persist/blob/master/examples/user_sql/pb/time_converter.go)
 for converting google protobuf typestamps looks like this:
 ```go
 type TimeString struct {
@@ -573,5 +573,5 @@ type UServHooks interface {
 
 
 most other questions can be answered by looking at our
-[options](https://github.com/coltonmorris/protoc-gen-persist/blob/master/persist/options.proto)
+[options](https://github.com/tcncloud/protoc-gen-persist/blob/master/persist/options.proto)
 or looking at the examples

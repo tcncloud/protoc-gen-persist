@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["hooks.go"],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/tests/spanner/hooks",
+    importpath = "github.com/tcncloud/protoc-gen-persist/tests/spanner/hooks",
     visibility = ["//visibility:public"],
     deps = ["//tests/test:test_go_proto"],
 )

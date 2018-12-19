@@ -23,6 +23,6 @@ proto_library(
 
 go_proto_library(
     name = "options_pb",
-    importpath = "github.com/coltonmorris/protoc-gen-persist",
+    importpath = "github.com/tcncloud/protoc-gen-persist",
     proto = ":persist_proto",
 )

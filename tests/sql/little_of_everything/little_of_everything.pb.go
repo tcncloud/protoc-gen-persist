@@ -17,10 +17,10 @@ package little_of_everything
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "github.com/coltonmorris/protoc-gen-persist/persist"
+import _ "github.com/tcncloud/protoc-gen-persist/persist"
 import google_protobuf1 "github.com/golang/protobuf/ptypes/timestamp"
 import _ "github.com/golang/protobuf/protoc-gen-go/descriptor"
-import tests_test "github.com/coltonmorris/protoc-gen-persist/tests/test"
+import tests_test "github.com/tcncloud/protoc-gen-persist/tests/test"
 
 import (
 	context "golang.org/x/net/context"

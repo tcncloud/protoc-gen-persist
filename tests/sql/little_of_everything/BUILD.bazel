@@ -21,7 +21,7 @@ proto_library(
 go_proto_library(
     name = "little_of_everything_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/tests/sql/little_of_everything",
+    importpath = "github.com/tcncloud/protoc-gen-persist/tests/sql/little_of_everything",
     proto = ":little_of_everything_proto",
     visibility = ["//visibility:public"],
     deps = [

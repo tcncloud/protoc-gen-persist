@@ -6,7 +6,7 @@ package pb
 import (
 	context "context"
 	fmt "fmt"
-	_ "github.com/coltonmorris/protoc-gen-persist/persist"
+	_ "github.com/tcncloud/protoc-gen-persist/persist"
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	grpc "google.golang.org/grpc"

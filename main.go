@@ -38,7 +38,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/sirupsen/logrus"
-	"github.com/coltonmorris/protoc-gen-persist/generator"
+	"github.com/tcncloud/protoc-gen-persist/generator"
 )
 
 func init() {
@@ -49,7 +49,7 @@ func init() {
 
 func main() {
 	if len(os.Args) > 1 {
-		fmt.Println("This executable is meant to be used by protoc!\nGo to http://github.com/coltonmorris/protoc-gen-persist for more info")
+		fmt.Println("This executable is meant to be used by protoc!\nGo to http://github.com/tcncloud/protoc-gen-persist for more info")
 		os.Exit(-1)
 	}
 	var req plugin_go.CodeGeneratorRequest

@@ -33,7 +33,7 @@ package persist;
 
 import "google/protobuf/descriptor.proto";
 
-option go_package="github.com/coltonmorris/protoc-gen-persist/persist;persist";
+option go_package="github.com/tcncloud/protoc-gen-persist/persist;persist";
 
 extend google.protobuf.FileOptions {
     optional string pkg = 560003;

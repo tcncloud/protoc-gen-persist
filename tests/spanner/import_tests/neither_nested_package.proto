@@ -53,7 +53,7 @@ service MySpanner {
         proto_type_name: ".google.protobuf.Timestamp"
         proto_type:  TYPE_MESSAGE
         go_type: "MyTime"
-        go_package: "github.com/coltonmorris/protoc-gen-persist/examples/mytime"
+        go_package: "github.com/tcncloud/protoc-gen-persist/examples/mytime"
       },
       {
         proto_type_name: ".examples.test.TestEnum"

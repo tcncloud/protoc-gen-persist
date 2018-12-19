@@ -12,7 +12,7 @@ import (
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/coltonmorris/protoc-gen-persist/generator"
+	"github.com/tcncloud/protoc-gen-persist/generator"
 )
 
 func TestNestedService(t *testing.T) {
