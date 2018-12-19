@@ -7,7 +7,7 @@ go_library(
         "basic_query_handlers.persist.go",
         "pkg_level_definitions.persist.go",
     ],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/tests/sql/basic/persist_lib",
+    importpath = "github.com/tcncloud/protoc-gen-persist/tests/sql/basic/persist_lib",
     visibility = ["//visibility:public"],
     deps = ["@org_golang_x_net//context:go_default_library"],
 )

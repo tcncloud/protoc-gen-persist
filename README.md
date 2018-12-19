@@ -12,7 +12,7 @@ The code generation is accomplished by providing a protobuf file with proper ann
 ## Installation
 This project requires [protoc](https://github.com/google/protobuf) and [protoc-gen-go](https://developers.google.com/protocol-buffers/docs/gotutorial) be installed
 
-Then install with ```go get github.com/coltonmorris/protoc-gen-persist```
+Then install with ```go get github.com/tcncloud/protoc-gen-persist```
 ## Documentation
 documentation for the project can be found [Here](docs/index.md)
 The documentation goes over the persist options, how to structure your proto file,

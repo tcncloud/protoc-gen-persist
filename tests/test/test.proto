@@ -33,7 +33,7 @@ package tests.test;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/coltonmorris/protoc-gen-persist/tests/test;test";
+option go_package = "github.com/tcncloud/protoc-gen-persist/tests/test;test";
 
 
 enum TestEnum {

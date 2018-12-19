@@ -4,13 +4,13 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 
 gazelle(
     name = "gazelle",
-    prefix = "github.com/coltonmorris/protoc-gen-persist",
+    prefix = "github.com/tcncloud/protoc-gen-persist",
 )
 
 go_proto_library(
     name = "persist_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/persist",
+    importpath = "github.com/tcncloud/protoc-gen-persist/persist",
     proto = "//persist:persist_proto",
     visibility = ["//visibility:public"],
     deps = [
@@ -21,7 +21,7 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/coltonmorris/protoc-gen-persist",
+    importpath = "github.com/tcncloud/protoc-gen-persist",
     visibility = ["//visibility:public"],
     deps = [
         "//generator:go_default_library",
@@ -40,7 +40,7 @@ go_binary(
 # go_test(
 #     name = "go_default_xtest",
 #     srcs = ["main_test.go"],
-#     importpath = "github.com/coltonmorris/protoc-gen-persist",
+#     importpath = "github.com/tcncloud/protoc-gen-persist",
 #     deps = [
 #         "@com_github_onsi_ginkgo//:go_default_library",
 #         "@com_github_onsi_gomega//:go_default_library",

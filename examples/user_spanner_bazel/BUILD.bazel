@@ -11,7 +11,7 @@ filegroup(
 go_library(
     name = "user_spanner_bazel_go",
     srcs = [":main_files"],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel",
+    importpath = "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel",
     deps = [
         "//examples/user_spanner_bazel/pb:persist_lib_go_proto",
         "//examples/user_spanner_bazel/pb:user_go_proto",

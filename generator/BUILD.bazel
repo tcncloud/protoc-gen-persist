@@ -18,7 +18,7 @@ go_library(
         "struct.go",
         "utils.go",
     ],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/generator",
+    importpath = "github.com/tcncloud/protoc-gen-persist/generator",
     visibility = ["//visibility:public"],
     deps = [
         "//:persist_go_proto",

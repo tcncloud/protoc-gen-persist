@@ -8,9 +8,9 @@ import (
 	strings "strings"
 
 	"cloud.google.com/go/spanner"
-	mytime "github.com/coltonmorris/protoc-gen-persist/examples/mytime"
-	pb "github.com/coltonmorris/protoc-gen-persist/examples/spanner/import_tests"
-	test "github.com/coltonmorris/protoc-gen-persist/examples/test"
+	mytime "github.com/tcncloud/protoc-gen-persist/examples/mytime"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/spanner/import_tests"
+	test "github.com/tcncloud/protoc-gen-persist/examples/test"
 	context "golang.org/x/net/context"
 	iterator "google.golang.org/api/iterator"
 	grpc "google.golang.org/grpc"

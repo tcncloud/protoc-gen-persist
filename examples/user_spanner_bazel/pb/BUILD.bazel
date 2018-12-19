@@ -20,7 +20,7 @@ persist_lib_go_library(
         "@com_google_cloud_go//spanner:go_default_library",
         "@org_golang_x_net//context:go_default_library",
     ],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel/pb/persist_lib",
+    importpath = "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel/pb/persist_lib",
     proto = ":user_proto",
     visibility = ["//visibility:public"],
 )
@@ -42,7 +42,7 @@ persist_go_library(
     go_srcs = [
         "time_converter.go",
     ],
-    importpath = "github.com/coltonmorris/protoc-gen-persist/examples/user_spanner_bazel/pb",
+    importpath = "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel/pb",
     proto = ":user_proto",
     visibility = ["//visibility:public"],
 )
