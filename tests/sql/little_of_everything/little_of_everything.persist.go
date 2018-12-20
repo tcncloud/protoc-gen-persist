@@ -1469,7 +1469,7 @@ func (this *Testservice1_Impl) UnaryExample1(ctx context.Context, req *ExampleTa
 	return res, nil
 }
 
-func (this *Testservice1_Impl) UnaryExample2(ctx context.Context, req *Test) (*ExampleTable1, error) {
+func (this *Testservice1_Impl) UnaryExample2(ctx context.Context, req *test.Test) (*ExampleTable1, error) {
 	query := this.QUERIES.UnaryExample2(ctx, this.DB)
 
 	result := query.Execute(req)

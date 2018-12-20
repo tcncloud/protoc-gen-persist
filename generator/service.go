@@ -910,6 +910,22 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 func WriteHandlers(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	serviceName := s.GetName()
+	mustDefaultMapping := func(f *desc.FieldDescriptorProto) string {
+		typ, err := defaultMapping(f, s.File)
+		if err != nil {
+			outErr = err
+		}
+		return typ
+	}
+	mustDefaultMappingNoStar := func(f *desc.FieldDescriptorProto) string {
+		return strings.Map(func(r rune) rune {
+			if r == '*' {
+				return -1
+			}
+			return r
+		}, mustDefaultMapping(f))
+	}
+	_ = mustDefaultMappingNoStar
 	err := WritePersistServerStruct(p, s.GetName())
 	if err != nil {
 		return err
@@ -921,8 +937,10 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
 		method := mpo.method.GetName()
-		inMsg := mpo.inMsg.GetName()
-		outMsg := mpo.outMsg.GetName()
+		// inMsg := mpo.inMsg.GetName()
+		// outMsg := mpo.outMsg.GetName()
+		inMsg := s.File.GetGoTypeName(mpo.inStruct.GetProtoName())
+		outMsg := s.File.GetGoTypeName(mpo.outStruct.GetProtoName())
 		if m.ServerStreaming(mpo) {
 			p.Q(method, `(*`, inMsg, `, `, serviceName, `_`, method, `Server) error`, "\n")
 		}
@@ -940,8 +958,8 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
 		method := mpo.method.GetName()
-		inMsg := mpo.inMsg.GetName()
-		outMsg := mpo.outMsg.GetName()
+		inMsg := s.File.GetGoTypeName(mpo.inStruct.GetProtoName())
+		outMsg := s.File.GetGoTypeName(mpo.outStruct.GetProtoName())
 
 		if m.ServerStreaming(mpo) {
 			p.Q(`
@@ -980,6 +998,8 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
 		var queryOptions *QueryProtoOpts
+		inMsg := s.File.GetGoTypeName(mpo.inStruct.GetProtoName())
+		outMsg := s.File.GetGoTypeName(mpo.outStruct.GetProtoName())
 		m.EachQuery(func(qpo *QueryProtoOpts) {
 			queryOptions = qpo
 		}, func(qpo *QueryProtoOpts) bool {
@@ -993,8 +1013,8 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 		params := &handlerParams{
 			Service:      serviceName,
 			Method:       mpo.method.GetName(),
-			Request:      mpo.inMsg.GetName(),
-			Response:     mpo.outMsg.GetName(),
+			Request:      inMsg,  //mpo.inMsg.GetName(),
+			Response:     outMsg, //mpo.outMsg.GetName(),
 			ZeroResponse: zeroResponse,
 			Query:        mpo.option.GetQuery(),
 			Before:       mpo.option.GetBefore(),
