@@ -13,7 +13,7 @@ driver "database/sql/driver"
 test "github.com/tcncloud/protoc-gen-persist/tests/test"
 timestamp "github.com/golang/protobuf/ptypes/timestamp"
 )
-type alwaysScanner struct {
+    type alwaysScanner struct {
         i *interface{}
     }
     func (s *alwaysScanner) Scan(src interface{}) error {
@@ -65,39 +65,40 @@ type Amazing_Queries struct {
 opts Amazing_Opts
 }
 // AmazingPersistQueries returns all the known 'SQL' queires for the 'Amazing' service.
-    func AmazingPersistQueries(opts ...Amazing_Opts) *Amazing_Queries {
-        var myOpts Amazing_Opts
-        if len(opts) > 0 {
-            myOpts = opts[0]
-        } else {
-            myOpts = AmazingOpts(nil, nil)
-        }
-        return &Amazing_Queries{
-            opts: myOpts,
-        }
+func AmazingPersistQueries(opts ...Amazing_Opts) *Amazing_Queries {
+    var myOpts Amazing_Opts
+    if len(opts) > 0 {
+        myOpts = opts[0]
+    } else {
+        myOpts = AmazingOpts(nil, nil)
     }
-    // SelectByIdQuery returns a new struct wrapping the current Amazing_Opts
-        // that will perform 'Amazing' services 'select_by_id' on the database
-        // when executed
-        func (this *Amazing_Queries) SelectById(ctx context.Context, db Runnable) *Amazing_SelectByIdQuery {
-            return &Amazing_SelectByIdQuery{
-                opts: this.opts,
-				ctx: ctx,
-				db: db,
-            }
-        }
-        type Amazing_SelectByIdQuery struct {
-			opts Amazing_Opts
-			db Runnable
-			ctx context.Context
-        }
-        func (this *Amazing_SelectByIdQuery) QueryInTypeUser()  {}
-        func (this *Amazing_SelectByIdQuery) QueryOutTypeUser() {}
-        // Executes the query with parameters retrieved from x
-        func (this *Amazing_SelectByIdQuery) Execute(x Amazing_SelectByIdIn) *Amazing_SelectByIdIter {
-            var setupErr error
-            params := []interface{}{
-            func() (out interface{}) {
+    return &Amazing_Queries{
+        opts: myOpts,
+    }
+}
+    
+// SelectByIdQuery returns a new struct wrapping the current Amazing_Opts
+// that will perform 'Amazing' services 'select_by_id' on the database
+// when executed
+func (this *Amazing_Queries) SelectById(ctx context.Context, db Runnable) *Amazing_SelectByIdQuery {
+    return &Amazing_SelectByIdQuery{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type Amazing_SelectByIdQuery struct {
+    opts Amazing_Opts
+    db Runnable
+    ctx context.Context
+}
+func (this *Amazing_SelectByIdQuery) QueryInTypeUser()  {}
+func (this *Amazing_SelectByIdQuery) QueryOutTypeUser() {}
+// Executes the query with parameters retrieved from x
+func (this *Amazing_SelectByIdQuery) Execute(x Amazing_SelectByIdIn) *Amazing_SelectByIdIter {
+    var setupErr error
+    params := []interface{}{
+    func() (out interface{}) {
                 out = x.GetId()
                 return
             }(),
@@ -107,78 +108,80 @@ opts Amazing_Opts
                     return
                 }(),
                 
-            }
-            result := &Amazing_SelectByIdIter{
-                tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
-            }
-            if setupErr != nil {
-                result.err = setupErr
-                return result
-            }
-            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT * from example_table Where id=$1 AND start_time>$2", params...)
-            return result
-        }
-        // SelectByNameQuery returns a new struct wrapping the current Amazing_Opts
-        // that will perform 'Amazing' services 'select_by_name' on the database
-        // when executed
-        func (this *Amazing_Queries) SelectByName(ctx context.Context, db Runnable) *Amazing_SelectByNameQuery {
-            return &Amazing_SelectByNameQuery{
-                opts: this.opts,
-				ctx: ctx,
-				db: db,
-            }
-        }
-        type Amazing_SelectByNameQuery struct {
-			opts Amazing_Opts
-			db Runnable
-			ctx context.Context
-        }
-        func (this *Amazing_SelectByNameQuery) QueryInTypeUser()  {}
-        func (this *Amazing_SelectByNameQuery) QueryOutTypeUser() {}
-        // Executes the query with parameters retrieved from x
-        func (this *Amazing_SelectByNameQuery) Execute(x Amazing_SelectByNameIn) *Amazing_SelectByNameIter {
-            var setupErr error
-            params := []interface{}{
-            func() (out interface{}) {
+    }
+    result := &Amazing_SelectByIdIter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+    result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT * from example_table Where id=$1 AND start_time>$2", params...)
+    return result
+}
+        
+// SelectByNameQuery returns a new struct wrapping the current Amazing_Opts
+// that will perform 'Amazing' services 'select_by_name' on the database
+// when executed
+func (this *Amazing_Queries) SelectByName(ctx context.Context, db Runnable) *Amazing_SelectByNameQuery {
+    return &Amazing_SelectByNameQuery{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type Amazing_SelectByNameQuery struct {
+    opts Amazing_Opts
+    db Runnable
+    ctx context.Context
+}
+func (this *Amazing_SelectByNameQuery) QueryInTypeUser()  {}
+func (this *Amazing_SelectByNameQuery) QueryOutTypeUser() {}
+// Executes the query with parameters retrieved from x
+func (this *Amazing_SelectByNameQuery) Execute(x Amazing_SelectByNameIn) *Amazing_SelectByNameIter {
+    var setupErr error
+    params := []interface{}{
+    func() (out interface{}) {
                 out = x.GetName()
                 return
             }(),
             
-            }
-            result := &Amazing_SelectByNameIter{
-                tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
-            }
-            if setupErr != nil {
-                result.err = setupErr
-                return result
-            }
-            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT * FROM example_table WHERE name=$1", params...)
-            return result
-        }
-        // InsertQuery returns a new struct wrapping the current Amazing_Opts
-        // that will perform 'Amazing' services 'insert' on the database
-        // when executed
-        func (this *Amazing_Queries) Insert(ctx context.Context, db Runnable) *Amazing_InsertQuery {
-            return &Amazing_InsertQuery{
-                opts: this.opts,
-				ctx: ctx,
-				db: db,
-            }
-        }
-        type Amazing_InsertQuery struct {
-			opts Amazing_Opts
-			db Runnable
-			ctx context.Context
-        }
-        func (this *Amazing_InsertQuery) QueryInTypeUser()  {}
-        func (this *Amazing_InsertQuery) QueryOutTypeUser() {}
-        // Executes the query with parameters retrieved from x
-        func (this *Amazing_InsertQuery) Execute(x Amazing_InsertIn) *Amazing_InsertIter {
-            var setupErr error
-            params := []interface{}{
-            func() (out interface{}) {
+    }
+    result := &Amazing_SelectByNameIter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+    result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT * FROM example_table WHERE name=$1", params...)
+    return result
+}
+        
+// InsertQuery returns a new struct wrapping the current Amazing_Opts
+// that will perform 'Amazing' services 'insert' on the database
+// when executed
+func (this *Amazing_Queries) Insert(ctx context.Context, db Runnable) *Amazing_InsertQuery {
+    return &Amazing_InsertQuery{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type Amazing_InsertQuery struct {
+    opts Amazing_Opts
+    db Runnable
+    ctx context.Context
+}
+func (this *Amazing_InsertQuery) QueryInTypeUser()  {}
+func (this *Amazing_InsertQuery) QueryOutTypeUser() {}
+// Executes the query with parameters retrieved from x
+func (this *Amazing_InsertQuery) Execute(x Amazing_InsertIn) *Amazing_InsertIter {
+    var setupErr error
+    params := []interface{}{
+    func() (out interface{}) {
                 out = x.GetId()
                 return
             }(),
@@ -192,18 +195,18 @@ opts Amazing_Opts
                 return
             }(),
             
-            }
-            result := &Amazing_InsertIter{
-                tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
-            }
-            if setupErr != nil {
-                result.err = setupErr
-                return result
-            }
-            result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)", params...)
-            return result
-        }
+    }
+    result := &Amazing_InsertIter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+    result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)", params...)
+    return result
+}
         type Amazing_SelectByIdIter struct {
             result sql.Result
             rows   *sql.Rows
@@ -764,47 +767,47 @@ ClientStreamWithHookAfterHook(context.Context, *test.ExampleTable,*test.Ids) err
 }
 type Amazing_DefaultHooks struct{}
 func(*Amazing_DefaultHooks) UniarySelectWithHooksBeforeHook(context.Context, *test.PartialTable) (*test.ExampleTable, error) {
-			return nil, nil
-		}
-		func(*Amazing_DefaultHooks) ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error) {
-			return nil, nil
-		}
-		func(*Amazing_DefaultHooks) ClientStreamWithHookBeforeHook(context.Context, *test.ExampleTable) (*test.Ids, error) {
-			return nil, nil
-		}
-		func(*Amazing_DefaultHooks) UniarySelectWithHooksAfterHook(context.Context, *test.PartialTable,*test.ExampleTable)error {
-			return nil
-		}
-		func(*Amazing_DefaultHooks) ServerStreamWithHooksAfterHook(context.Context, *test.Name,*test.ExampleTable)error {
-			return nil
-		}
-		func(*Amazing_DefaultHooks) ClientStreamWithHookAfterHook(context.Context, *test.ExampleTable,*test.Ids)error {
-			return nil
-		}
-		type Amazing_TypeMappings interface{
+            return nil, nil
+        }
+        func(*Amazing_DefaultHooks) ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error) {
+            return nil, nil
+        }
+        func(*Amazing_DefaultHooks) ClientStreamWithHookBeforeHook(context.Context, *test.ExampleTable) (*test.Ids, error) {
+            return nil, nil
+        }
+        func(*Amazing_DefaultHooks) UniarySelectWithHooksAfterHook(context.Context, *test.PartialTable,*test.ExampleTable)error {
+            return nil
+        }
+        func(*Amazing_DefaultHooks) ServerStreamWithHooksAfterHook(context.Context, *test.Name,*test.ExampleTable)error {
+            return nil
+        }
+        func(*Amazing_DefaultHooks) ClientStreamWithHookAfterHook(context.Context, *test.ExampleTable,*test.Ids)error {
+            return nil
+        }
+        type Amazing_TypeMappings interface{
 TimestampTimestamp() AmazingTimestampTimestampMappingImpl
 }
 type Amazing_DefaultTypeMappings struct{}
-	func (this *Amazing_DefaultTypeMappings) TimestampTimestamp() AmazingTimestampTimestampMappingImpl {
-			return &Amazing_DefaultTimestampTimestampMappingImpl{}
-		}
-		type Amazing_DefaultTimestampTimestampMappingImpl struct{}
-		func (this *Amazing_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
-			return nil
-		}
-		func (this *Amazing_DefaultTimestampTimestampMappingImpl) Empty() AmazingTimestampTimestampMappingImpl {
-			return this
-		}
-		func (this *Amazing_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
-			return this
-		}
-		func (this *Amazing_DefaultTimestampTimestampMappingImpl) Scan(interface{}) error {
-			return nil
-		}
-		func (this *Amazing_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
-			return "DEFAULT_TYPE_MAPPING_VALUE", nil
-		}
-		type AmazingTimestampTimestampMappingImpl interface {
+    func (this *Amazing_DefaultTypeMappings) TimestampTimestamp() AmazingTimestampTimestampMappingImpl {
+            return &Amazing_DefaultTimestampTimestampMappingImpl{}
+        }
+        type Amazing_DefaultTimestampTimestampMappingImpl struct{}
+        func (this *Amazing_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
+            return nil
+        }
+        func (this *Amazing_DefaultTimestampTimestampMappingImpl) Empty() AmazingTimestampTimestampMappingImpl {
+            return this
+        }
+        func (this *Amazing_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
+            return this
+        }
+        func (this *Amazing_DefaultTimestampTimestampMappingImpl) Scan(interface{}) error {
+            return nil
+        }
+        func (this *Amazing_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
+            return "DEFAULT_TYPE_MAPPING_VALUE", nil
+        }
+        type AmazingTimestampTimestampMappingImpl interface {
             ToProto(**timestamp.Timestamp) error
             Empty() AmazingTimestampTimestampMappingImpl
             ToSql(*timestamp.Timestamp) sql.Scanner
