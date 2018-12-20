@@ -799,7 +799,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_InsertIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_InsertIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_InsertIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -904,8 +904,8 @@ opts MySpanner_Opts
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectIter) IterOutTypetest.ExampleTable() {}
-        func (this *MySpanner_SelectIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_SelectIter) IterOutTypetest_ExampleTable() {}
+        func (this *MySpanner_SelectIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -970,7 +970,7 @@ opts MySpanner_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -1030,8 +1030,8 @@ opts MySpanner_Opts
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectIndexIter) IterOutTypetest.ExampleTable() {}
-        func (this *MySpanner_SelectIndexIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_SelectIndexIter) IterOutTypetest_ExampleTable() {}
+        func (this *MySpanner_SelectIndexIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1096,7 +1096,7 @@ opts MySpanner_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectIndexRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -1157,7 +1157,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_UpdateIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_UpdateIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_UpdateIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1263,7 +1263,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_DeleteIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_DeleteIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_DeleteIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1368,8 +1368,8 @@ opts MySpanner_Opts
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectAllIter) IterOutTypetest.ExampleTable() {}
-        func (this *MySpanner_SelectAllIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_SelectAllIter) IterOutTypetest_ExampleTable() {}
+        func (this *MySpanner_SelectAllIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1434,7 +1434,7 @@ opts MySpanner_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectAllRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -1495,7 +1495,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_Insert_3Iter) IterOutTypeEmpty() {}
-        func (this *MySpanner_Insert_3Iter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_Insert_3Iter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1601,7 +1601,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_DeleteIdIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_DeleteIdIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_DeleteIdIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1707,7 +1707,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_SetNameAsdfIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_SetNameAsdfIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_SetNameAsdfIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.

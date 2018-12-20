@@ -211,8 +211,8 @@ opts Amazing_Opts
             tm     Amazing_TypeMappings
             ctx    context.Context
         }
-        func (this *Amazing_SelectByIdIter) IterOutTypetest.ExampleTable() {}
-        func (this *Amazing_SelectByIdIter) IterInTypetest.PartialTable()  {}
+        func (this *Amazing_SelectByIdIter) IterOutTypetest_ExampleTable() {}
+        func (this *Amazing_SelectByIdIter) IterInTypetest_PartialTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -277,7 +277,7 @@ opts Amazing_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &Amazing_SelectByIdRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -289,10 +289,10 @@ opts Amazing_Opts
             case "start_time":
                     var converted = this.tm.TimestampTimestamp().Empty()
                     if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test.ExampleTable.StartTime: %v", err)}, true
+                        return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test_ExampleTable.StartTime: %v", err)}, true
                     }
                     if err := converted.ToProto(&res.StartTime); err != nil {
-                        return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test.ExampleTable.StartTime: %v", err)}, true
+                        return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test_ExampleTable.StartTime: %v", err)}, true
                     }
                 case "name": r, ok := (*scanned[i].i).(string)
             if !ok {
@@ -335,8 +335,8 @@ opts Amazing_Opts
             tm     Amazing_TypeMappings
             ctx    context.Context
         }
-        func (this *Amazing_SelectByNameIter) IterOutTypetest.ExampleTable() {}
-        func (this *Amazing_SelectByNameIter) IterInTypetest.Name()  {}
+        func (this *Amazing_SelectByNameIter) IterOutTypetest_ExampleTable() {}
+        func (this *Amazing_SelectByNameIter) IterInTypetest_Name()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -401,7 +401,7 @@ opts Amazing_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &Amazing_SelectByNameRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -413,10 +413,10 @@ opts Amazing_Opts
             case "start_time":
                     var converted = this.tm.TimestampTimestamp().Empty()
                     if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test.ExampleTable.StartTime: %v", err)}, true
+                        return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test_ExampleTable.StartTime: %v", err)}, true
                     }
                     if err := converted.ToProto(&res.StartTime); err != nil {
-                        return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test.ExampleTable.StartTime: %v", err)}, true
+                        return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test_ExampleTable.StartTime: %v", err)}, true
                     }
                 case "name": r, ok := (*scanned[i].i).(string)
             if !ok {
@@ -460,7 +460,7 @@ opts Amazing_Opts
             ctx    context.Context
         }
         func (this *Amazing_InsertIter) IterOutTypeEmpty() {}
-        func (this *Amazing_InsertIter) IterInTypetest.ExampleTable()  {}
+        func (this *Amazing_InsertIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
