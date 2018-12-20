@@ -9,7 +9,8 @@ import (
 	fmt "fmt"
 	io "io"
 
-	"github.com/gogo/protobuf/proto"
+	spanner "cloud.google.com/go/spanner"
+	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
@@ -119,6 +120,13 @@ func (this *UServ_CreateUsersTableQuery) Execute(x UServ_CreateUsersTableIn) *US
 		result.err = setupErr
 		return result
 	}
+	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		stmt := spanner.Statement{
+			SQL:    "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))",
+			Params: map[string]interface{}{},
+		}
+		return nil
+	})
 	return result
 }
 
@@ -153,6 +161,13 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersIn) *UServ_Insert
 		result.err = setupErr
 		return result
 	}
+	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		stmt := spanner.Statement{
+			SQL:    "INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)",
+			Params: map[string]interface{}{},
+		}
+		return nil
+	})
 	return result
 }
 
@@ -187,6 +202,13 @@ func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAll
 		result.err = setupErr
 		return result
 	}
+	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		stmt := spanner.Statement{
+			SQL:    "SELECT id, name, friends, created_on FROM users",
+			Params: map[string]interface{}{},
+		}
+		return nil
+	})
 	return result
 }
 
@@ -221,6 +243,15 @@ func (this *UServ_SelectUserByIdQuery) Execute(x UServ_SelectUserByIdIn) *UServ_
 		result.err = setupErr
 		return result
 	}
+	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		stmt := spanner.Statement{
+			SQL: "SELECT id, name, friends, created_on FROM users WHERE id = @id",
+			Params: map[string]interface{}{
+				"id": x.GetId(),
+			},
+		}
+		return nil
+	})
 	return result
 }
 
@@ -255,6 +286,16 @@ func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameIn) *UServ_
 		result.err = setupErr
 		return result
 	}
+	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		stmt := spanner.Statement{
+			SQL: "Update users set name = @name PK(id = @id) ",
+			Params: map[string]interface{}{
+				"name": x.GetName(),
+				"id":   x.GetId(),
+			},
+		}
+		return nil
+	})
 	return result
 }
 
@@ -289,6 +330,15 @@ func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *USer
 		result.err = setupErr
 		return result
 	}
+	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		stmt := spanner.Statement{
+			SQL: "Update users set name = 'foo' PRIMARY_KEY(id = @id)",
+			Params: map[string]interface{}{
+				"id": x.GetId(),
+			},
+		}
+		return nil
+	})
 	return result
 }
 
@@ -323,6 +373,15 @@ func (this *UServ_GetFriendsQuery) Execute(x UServ_GetFriendsIn) *UServ_GetFrien
 		result.err = setupErr
 		return result
 	}
+	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		stmt := spanner.Statement{
+			SQL: "SELECT id, name, friends, created_on  FROM users WHERE name IN UNNEST(@names)",
+			Params: map[string]interface{}{
+				"names": x.GetNames(),
+			},
+		}
+		return nil
+	})
 	return result
 }
 
@@ -357,6 +416,13 @@ func (this *UServ_DropQuery) Execute(x UServ_DropIn) *UServ_DropIter {
 		result.err = setupErr
 		return result
 	}
+	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		stmt := spanner.Statement{
+			SQL:    "drop table users",
+			Params: map[string]interface{}{},
+		}
+		return nil
+	})
 	return result
 }
 
@@ -1528,8 +1594,30 @@ func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
-
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 	return nil
+}
+func (this *UServ_GetAllUsersRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_GetAllUsersRow) Proto() (*User, error) {
@@ -1736,14 +1824,22 @@ func (this *UServ_DropRow) Proto() (*Empty, error) {
 
 type UServ_Hooks interface {
 	InsertUsersBeforeHook(context.Context, *User) (*Empty, error)
+	GetAllUsersBeforeHook(context.Context, *Empty) (*User, error)
 	InsertUsersAfterHook(context.Context, *User, *Empty) error
+	GetAllUsersAfterHook(context.Context, *Empty, *User) error
 }
 type UServ_DefaultHooks struct{}
 
 func (*UServ_DefaultHooks) InsertUsersBeforeHook(context.Context, *User) (*Empty, error) {
 	return nil, nil
 }
+func (*UServ_DefaultHooks) GetAllUsersBeforeHook(context.Context, *Empty) (*User, error) {
+	return nil, nil
+}
 func (*UServ_DefaultHooks) InsertUsersAfterHook(context.Context, *User, *Empty) error {
+	return nil
+}
+func (*UServ_DefaultHooks) GetAllUsersAfterHook(context.Context, *Empty, *User) error {
 	return nil
 }
 
@@ -1912,4 +2008,27 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 	return nil
+}
+
+func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
+	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.GetAllUsersTx(req, stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'get_all_users' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer, tx PersistTx) error {
+	ctx := stream.Context()
+	query := this.QUERIES.GetAllUsers(ctx, tx)
+	iter := query.Execute(req)
+	return iter.Each(func(row *UServ_GetAllUsersRow) error {
+		res, err := row.User()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
+	})
 }

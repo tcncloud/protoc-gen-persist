@@ -229,6 +229,55 @@ func WriteQueries(p *Printer, s *Service) error {
 	qname := func(q *QueryProtoOpts) string {
 		return q.query.GetName()
 	}
+	createNextParamMarker := func(pmStrat string) func(string) string {
+		var count int
+		return func(req string) string {
+			if pmStrat == "$" {
+				count++
+				return fmt.Sprintf("$%d", count)
+			} else if pmStrat == "?" {
+				return "?"
+			}
+			return req
+		}
+	}
+
+	queryAndFields := func(q *QueryProtoOpts) (string, []string) {
+		orig := strings.Join(q.query.GetQuery(), " ")
+		pmStrat := q.query.GetPmStrategy()
+		nextParamMarker := createNextParamMarker(pmStrat)
+		newQuery := ""
+		r := regexp.MustCompile("@[a-zA-Z0-9_]*")
+		potentialFieldNames := r.FindAllString(orig, -1)
+		fieldsMap := make(map[string]bool)
+		for _, v := range q.inFields {
+			fieldsMap[v.GetName()] = true
+		}
+		params := make([]string, 0)
+		for _, pf := range potentialFieldNames {
+			start := strings.Index(orig, pf)
+			stop := start + len(pf)
+			// index into the map (removing the "@")
+			exists := fieldsMap[pf[1:]]
+			// eat up to the field name
+			newQuery += orig[:start]
+			if !exists { // it was just part of the query, not a field on input
+				newQuery += pf
+			} else { // it was a field, mark it
+				newQuery += nextParamMarker(pf)
+				params = append(params, pf[1:])
+			}
+			// remove the already written stuff
+			orig = orig[stop:]
+		}
+		newQuery += orig
+		return newQuery, params
+	}
+
+	qstring := func(q *QueryProtoOpts) string {
+		res, _ := queryAndFields(q)
+		return res
+	}
 
 	p.Q("// ", sName, "_Queries holds all the queries found the proto service option as methods\n")
 	p.Q("type ", sName, "_Queries struct {\n")
@@ -250,53 +299,6 @@ func `, sName, `PersistQueries(opts ...`, sName, `_Opts) *`, sName, `_Queries {
     `)
 
 	if s.IsSQL() {
-		queryAndFields := func(q *QueryProtoOpts) (string, []string) {
-			orig := strings.Join(q.query.GetQuery(), " ")
-			pmStrat := q.query.GetPmStrategy()
-			nextParamMarker := func() func(string) string {
-				var count int
-				return func(req string) string {
-					if pmStrat == "$" {
-						count++
-						return fmt.Sprintf("$%d", count)
-					} else if pmStrat == "?" {
-						return "?"
-					}
-					return req
-				}
-			}()
-
-			newQuery := ""
-			r := regexp.MustCompile("@[a-zA-Z0-9_]*")
-			potentialFieldNames := r.FindAllString(orig, -1)
-			fieldsMap := make(map[string]bool)
-			for _, v := range q.inFields {
-				fieldsMap[v.GetName()] = true
-			}
-			params := make([]string, 0)
-			for _, pf := range potentialFieldNames {
-				start := strings.Index(orig, pf)
-				stop := start + len(pf)
-				// index into the map (removing the "@")
-				exists := fieldsMap[pf[1:]]
-				// eat up to the field name
-				newQuery += orig[:start]
-				if !exists { // it was just part of the query, not a field on input
-					newQuery += pf
-				} else { // it was a field, mark it
-					newQuery += nextParamMarker(pf)
-					params = append(params, pf[1:])
-				}
-				// remove the already written stuff
-				orig = orig[stop:]
-			}
-			newQuery += orig
-			return newQuery, params
-		}
-		qstring := func(q *QueryProtoOpts) string {
-			res, _ := queryAndFields(q)
-			return res
-		}
 		resultOrRows := func(q *QueryProtoOpts) string {
 			if len(q.outFields) == 0 {
 				return "result"
@@ -354,48 +356,74 @@ func `, sName, `PersistQueries(opts ...`, sName, `_Opts) *`, sName, `_Queries {
 		}
 
 		m.EachQuery(func(q *QueryProtoOpts) {
-			p.Q(`// `, camelQ(q), `Query returns a new struct wrapping the current `, sName, `_Opts
-        // that will perform '`, sName, `' services '`, qname(q), `' on the database
-        // when executed
-        func (this *`, sName, `_Queries) `, camelQ(q), `(ctx context.Context, db Runnable) *`, sName, `_`, camelQ(q), `Query {
-            return &`, sName, `_`, camelQ(q), `Query{
-                opts: this.opts,
-                ctx: ctx,
-                db: db,
-            }
-        }
-        type `, sName, `_`, camelQ(q), `Query struct {
-            opts `, sName, `_Opts
-            db Runnable
-            ctx context.Context
-        }
+			p.Q(`
+// `, camelQ(q), `Query returns a new struct wrapping the current `, sName, `_Opts
+// that will perform '`, sName, `' services '`, qname(q), `' on the database
+// when executed
+func (this *`, sName, `_Queries) `, camelQ(q), `(ctx context.Context, db Runnable) *`, sName, `_`, camelQ(q), `Query {
+    return &`, sName, `_`, camelQ(q), `Query{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type `, sName, `_`, camelQ(q), `Query struct {
+    opts `, sName, `_Opts
+    db Runnable
+    ctx context.Context
+}
 
-        func (this *`, sName, `_`, camelQ(q), `Query) QueryInTypeUser()  {}
-        func (this *`, sName, `_`, camelQ(q), `Query) QueryOutTypeUser() {}
+func (this *`, sName, `_`, camelQ(q), `Query) QueryInTypeUser()  {}
+func (this *`, sName, `_`, camelQ(q), `Query) QueryOutTypeUser() {}
 
-        // Executes the query with parameters retrieved from x
-        func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q), `In) *`, sName, `_`, camelQ(q), `Iter {
-            var setupErr error
-            params := []interface{}{
-            `, execParams(q), `
-            }
-            result := &`, sName, `_`, camelQ(q), `Iter{
-                tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
-            }
-            if setupErr != nil {
-                result.err = setupErr
-                return result
-            }
-            result.`, resultOrRows(q), `, result.err = this.db.`, qmethod(q), `Context(this.ctx, "`, qstring(q), `", params...)
+// Executes the query with parameters retrieved from x
+func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q), `In) *`, sName, `_`, camelQ(q), `Iter {
+    var setupErr error
+    params := []interface{}{
+    `, execParams(q), `
+    }
+    result := &`, sName, `_`, camelQ(q), `Iter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+    result.`, resultOrRows(q), `, result.err = this.db.`, qmethod(q), `Context(this.ctx, "`, qstring(q), `", params...)
 
-            return result
-        }
+    return result
+}
         `)
 		})
 	}
 
 	if s.IsSpanner() {
+		populateParams := func(q *QueryProtoOpts) string {
+			orig := strings.Join(q.query.GetQuery(), " ")
+			result := ""
+
+			r := regexp.MustCompile("@[a-zA-Z0-9_]*")
+			potentialFieldNames := r.FindAllString(orig, -1)
+			fieldsMap := make(map[string]bool)
+			for _, v := range q.inFields {
+				fieldsMap[v.GetName()] = true
+			}
+
+			for _, pf := range potentialFieldNames {
+				start := strings.Index(orig, pf)
+				stop := start + len(pf)
+				exists := fieldsMap[pf[1:]]
+				if exists { // it was a field, mark it
+					key := pf[1:]
+					result += fmt.Sprintf("\"%s\": x.Get%s(),\n", key, _gen.CamelCase(key))
+				}
+				orig = orig[stop:]
+			}
+
+			return result
+		}
+
 		m.EachQuery(func(q *QueryProtoOpts) {
 			p.Q(`
 // `, camelQ(q), `Query returns a new struct wrapping the current `, sName, `_Opts
@@ -428,6 +456,17 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
         result.err = setupErr
         return result
     }
+
+    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+        stmt := spanner.Statement{
+            SQL: "`, qstring(q), `",
+            Params: map[string]interface{}{
+                `, populateParams(q), `
+            },
+        }
+
+        return nil
+    })
 
     return result
 }
@@ -1045,7 +1084,8 @@ func WriteImports(p *Printer, f *FileStruct) error {
 		}
 	}
 	p.P(")\n")
-	p.Q(`type alwaysScanner struct {
+	p.Q(`
+    type alwaysScanner struct {
         i *interface{}
     }
 
