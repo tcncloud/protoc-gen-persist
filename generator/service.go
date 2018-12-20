@@ -147,6 +147,14 @@ type QueryProtoOpts struct {
 func NewQueryProtoOpts(qopt *persist.QLImpl, all *StructList) (*QueryProtoOpts, error) {
 	in := all.GetStructByProtoName(qopt.GetIn())
 	out := all.GetStructByProtoName(qopt.GetOut())
+	if in == nil || out == nil {
+		existing := make([]string, 0)
+		for _, v := range *all {
+			existing = append(existing, v.GetProtoName())
+		}
+
+		return nil, fmt.Errorf("in/out message did not exist: in: %s\n out: %s\nexisting: %s", qopt.GetIn(), qopt.GetOut(), strings.Join(existing, "\n"))
+	}
 	if !in.IsMessage || !out.IsMessage {
 		return nil, fmt.Errorf("in/out option must be proto messages for query: '%s'", qopt.GetName())
 	}

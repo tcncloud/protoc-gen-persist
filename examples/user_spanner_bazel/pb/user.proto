@@ -140,13 +140,13 @@ service UServ {
       after: true
     };
   };
-  // rpc GetAllUsers(Empty) returns (stream User) {
-  //   option (persist.opts) = {
-  //     query: "get_all_users",
-  //     after: true,
-  //     before: true
-  //   };
-  // };
+  rpc GetAllUsers(Empty) returns (stream User) {
+    option (persist.opts) = {
+      query: "get_all_users",
+      after: true,
+      before: true
+    };
+  };
   // rpc SelectUserById(User) returns (User) {
   //   option (persist.opts) = {
   //     query: "select_user_by_id"

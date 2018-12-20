@@ -40,6 +40,8 @@ import "google/protobuf/descriptor.proto";
 
 import "tests/test/test.proto";
 
+message Empty{}
+
 service Amazing {
   option (persist.service_type) = SQL;
   option (persist.mapping) = {
@@ -50,65 +52,62 @@ service Amazing {
       }
     ]
   };
+  option (persist.ql) = {
+    queries: [{
+      name: "select_by_id",
+      query: ["SELECT * from example_table Where id=@id AND start_time>@start_time"],
+      pm_strategy: "$",
+      in: ".tests.test.PartialTable",
+      out: ".tests.test.ExampleTable",
+    }, {
+      name: "select_by_name",
+      query: ["SELECT * FROM example_table WHERE name=@name"]
+      pm_strategy: "$",
+      in: ".tests.test.Name",
+      out: ".tests.test.ExampleTable",
+    }, {
+      name: "insert",
+      query: ["INSERT INTO example_table (id, start_time, name) VALUES (@id, @start_time, @name)"]
+      pm_strategy: "$",
+      in: ".tests.test.ExampleTable",
+      out: ".tests.Empty",
+
+    }]
+  };
+
 
   rpc UniarySelect(test.PartialTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table Where id=$1 AND start_time>$2"]
-      arguments: ["id", "start_time"]
+    option (persist.opts) = {
+      query: "select_by_id",
     };
   };
   rpc UniarySelectWithHooks(test.PartialTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table Where id=$1 AND start_time>$2"]
-      arguments: ["id", "start_time"]
+    option (persist.opts) = {
+      query: "select_by_id",
       before: true,
       after: true
     };
   };
   rpc ServerStream(test.Name) returns (stream test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * FROM example_table WHERE name=$1"]
-      arguments: ["name"]
+    option (persist.opts) = {
+      query: "select_by_name",
     };
   };
   rpc ServerStreamWithHooks(test.Name) returns (stream test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * FROM example_table WHERE name=$1"]
-      arguments: ["name"]
-      before: true,
-      after: true
-    };
-  };
-  rpc Bidirectional(stream test.ExampleTable) returns (stream test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["UPDATE example_table SET (start_time, name) = ($2, $3) WHERE id=$1 RETURNING *"]
-      arguments: ["id", "start_time", "name"]
-    };
-  };
-  // Test multi-line query
-  rpc BidirectionalWithHooks(stream test.ExampleTable) returns (stream test.ExampleTable) {
-    option (persist.ql) = {
-      query: [
-        "UPDATE example_table",
-        "SET (start_time, name) = ($2, $3)",
-        "WHERE id=$1 RETURNING",
-        "*"
-      ]
-      arguments: ["id", "start_time", "name"]
+    option (persist.opts) = {
+      query: "select_by_name",
       before: true,
       after: true
     };
   };
   rpc ClientStream(stream test.ExampleTable) returns (test.NumRows) {
-    option (persist.ql) = {
-      query: ["INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)"]
-      arguments: ["id", "start_time", "name"]
+    option (persist.opts) = {
+      query: "insert",
     };
   };
   rpc ClientStreamWithHook(stream test.ExampleTable) returns (test.Ids) {
-    option (persist.ql) = {
-      query: ["INSERT INTO example_table (id, start_time, name) VALUES ($1, $2, $3)"]
-      arguments: ["id", "start_time", "name"]
+    option (persist.opts) = {
+      query: "insert",
       before: true,
       after: true
     };
