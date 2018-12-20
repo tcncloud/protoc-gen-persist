@@ -392,17 +392,17 @@ func ExtraSrvPersistImpl(db *sql.DB, handlers RestOfExtraSrvHandlers, opts ...Ex
 }
     
     type RestOfExtraSrvHandlers interface {
-    ExtraMethod(context.Context, *ExampleTable) (*ExampleTable, error)
+    ExtraMethod(context.Context, *test.ExampleTable) (*test.ExampleTable, error)
 }
-func (this *ExtraSrv_Impl) ExtraMethod(ctx context.Context, req *ExampleTable) (*ExampleTable, error) {
+func (this *ExtraSrv_Impl) ExtraMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
     return this.HANDLERS.ExtraMethod(ctx, req)
 }
         
-func (this *ExtraSrv_Impl) ExtraUnary(ctx context.Context, req *NumRows) (*ExampleTable, error) {
+func (this *ExtraSrv_Impl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test.ExampleTable, error) {
     query := this.QUERIES.Extra(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().ExampleTable()
+    res, err := result.One().test.ExampleTable()
     if err != nil {
         return nil, err
     }
@@ -799,7 +799,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_InsertIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_InsertIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_InsertIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -904,8 +904,8 @@ opts MySpanner_Opts
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectIter) IterOutTypetest.ExampleTable() {}
-        func (this *MySpanner_SelectIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_SelectIter) IterOutTypetest_ExampleTable() {}
+        func (this *MySpanner_SelectIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -970,7 +970,7 @@ opts MySpanner_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -1030,8 +1030,8 @@ opts MySpanner_Opts
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectIndexIter) IterOutTypetest.ExampleTable() {}
-        func (this *MySpanner_SelectIndexIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_SelectIndexIter) IterOutTypetest_ExampleTable() {}
+        func (this *MySpanner_SelectIndexIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1096,7 +1096,7 @@ opts MySpanner_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectIndexRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -1157,7 +1157,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_UpdateIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_UpdateIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_UpdateIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1263,7 +1263,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_DeleteIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_DeleteIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_DeleteIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1368,8 +1368,8 @@ opts MySpanner_Opts
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectAllIter) IterOutTypetest.ExampleTable() {}
-        func (this *MySpanner_SelectAllIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_SelectAllIter) IterOutTypetest_ExampleTable() {}
+        func (this *MySpanner_SelectAllIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1434,7 +1434,7 @@ opts MySpanner_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectAllRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -1495,7 +1495,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_Insert_3Iter) IterOutTypeEmpty() {}
-        func (this *MySpanner_Insert_3Iter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_Insert_3Iter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1601,7 +1601,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_DeleteIdIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_DeleteIdIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_DeleteIdIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1707,7 +1707,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_SetNameAsdfIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_SetNameAsdfIter) IterInTypetest.ExampleTable()  {}
+        func (this *MySpanner_SetNameAsdfIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -2414,13 +2414,13 @@ func MySpannerPersistImpl(db *sql.DB, handlers RestOfMySpannerHandlers, opts ...
     
     type RestOfMySpannerHandlers interface {
     }
-func (this *MySpanner_Impl) UniaryInsert(ctx context.Context, req *ExampleTable) (*ExampleTable, error) {
+func (this *MySpanner_Impl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
     query := this.QUERIES.Insert(ctx, this.DB)
     
     result := query.Execute(req)
     
 err := result.Zero()
-res := &ExampleTable{}
+res := &test.ExampleTable{}
         
     if err != nil {
         return nil, err
@@ -2429,11 +2429,11 @@ res := &ExampleTable{}
     return res, nil
 }
     
-func (this *MySpanner_Impl) UniarySelect(ctx context.Context, req *ExampleTable) (*ExampleTable, error) {
+func (this *MySpanner_Impl) UniarySelect(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
     query := this.QUERIES.Select(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().ExampleTable()
+    res, err := result.One().test.ExampleTable()
     if err != nil {
         return nil, err
     }
@@ -2441,11 +2441,11 @@ func (this *MySpanner_Impl) UniarySelect(ctx context.Context, req *ExampleTable)
     return res, nil
 }
     
-func (this *MySpanner_Impl) UniarySelectWithDirectives(ctx context.Context, req *ExampleTable) (*ExampleTable, error) {
+func (this *MySpanner_Impl) UniarySelectWithDirectives(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
     query := this.QUERIES.SelectIndex(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().ExampleTable()
+    res, err := result.One().test.ExampleTable()
     if err != nil {
         return nil, err
     }
@@ -2453,13 +2453,13 @@ func (this *MySpanner_Impl) UniarySelectWithDirectives(ctx context.Context, req 
     return res, nil
 }
     
-func (this *MySpanner_Impl) UniaryUpdate(ctx context.Context, req *ExampleTable) (*PartialTable, error) {
+func (this *MySpanner_Impl) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
     query := this.QUERIES.Update(ctx, this.DB)
     
     result := query.Execute(req)
     
 err := result.Zero()
-res := &PartialTable{}
+res := &test.PartialTable{}
         
     if err != nil {
         return nil, err
@@ -2468,13 +2468,13 @@ res := &PartialTable{}
     return res, nil
 }
     
-func (this *MySpanner_Impl) UniaryDeleteRange(ctx context.Context, req *ExampleTableRange) (*ExampleTable, error) {
+func (this *MySpanner_Impl) UniaryDeleteRange(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
     query := this.QUERIES.Delete(ctx, this.DB)
     
     result := query.Execute(req)
     
 err := result.Zero()
-res := &ExampleTable{}
+res := &test.ExampleTable{}
         
     if err != nil {
         return nil, err
@@ -2483,7 +2483,7 @@ res := &ExampleTable{}
     return res, nil
 }
     
-func (this *MySpanner_Impl) ServerStream(req *Name, stream MySpanner_ServerStreamServer) error {
+func (this *MySpanner_Impl) ServerStream(req *test.Name, stream MySpanner_ServerStreamServer) error {
     tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
     if err != nil {
         return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -2493,12 +2493,12 @@ func (this *MySpanner_Impl) ServerStream(req *Name, stream MySpanner_ServerStrea
     }
     return nil
 }
-func (this *MySpanner_Impl) ServerStreamTx(req *Name, stream MySpanner_ServerStreamServer, tx PersistTx) error {
+func (this *MySpanner_Impl) ServerStreamTx(req *test.Name, stream MySpanner_ServerStreamServer, tx PersistTx) error {
     ctx := stream.Context()
     query := this.QUERIES.SelectAll(ctx, tx)
     iter := query.Execute(req)
     return iter.Each(func(row *MySpanner_SelectAllRow) error {
-        res, err := row.ExampleTable()
+        res, err := row.test.ExampleTable()
         if err != nil {
             return err
         }
@@ -2518,7 +2518,7 @@ func (this *MySpanner_Impl) ClientStreamInsert(stream MySpanner_ClientStreamInse
 }
 func (this *MySpanner_Impl) ClientStreamInsertTx(stream MySpanner_ClientStreamInsertServer, tx PersistTx) error {
     query := this.QUERIES.Insert_3(stream.Context(), tx)
-    var first *ExampleTable
+    var first *test.ExampleTable
     for {
         req, err := stream.Recv()
         if err == io.EOF {
@@ -2560,7 +2560,7 @@ func (this *MySpanner_Impl) ClientStreamDelete(stream MySpanner_ClientStreamDele
 }
 func (this *MySpanner_Impl) ClientStreamDeleteTx(stream MySpanner_ClientStreamDeleteServer, tx PersistTx) error {
     query := this.QUERIES.DeleteId(stream.Context(), tx)
-    var first *ExampleTable
+    var first *test.ExampleTable
     for {
         req, err := stream.Recv()
         if err == io.EOF {
@@ -2590,7 +2590,7 @@ func (this *MySpanner_Impl) ClientStreamDeleteTx(stream MySpanner_ClientStreamDe
     return nil
 }
         
-func (this *MySpanner_Impl) UniarySelectWithHooks(ctx context.Context, req *ExampleTable) (*ExampleTable, error) {
+func (this *MySpanner_Impl) UniarySelectWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
     query := this.QUERIES.SelectIndex(ctx, this.DB)
     
     beforeRes, err := this.opts.HOOKS.UniarySelectWithHooksBeforeHook(ctx, req)
@@ -2602,7 +2602,7 @@ func (this *MySpanner_Impl) UniarySelectWithHooks(ctx context.Context, req *Exam
     req = beforeRes
     
     result := query.Execute(req)
-    res, err := result.One().ExampleTable()
+    res, err := result.One().test.ExampleTable()
     if err != nil {
         return nil, err
     }
@@ -2614,7 +2614,7 @@ func (this *MySpanner_Impl) UniarySelectWithHooks(ctx context.Context, req *Exam
     return res, nil
 }
     
-func (this *MySpanner_Impl) ServerStreamWithHooks(req *Name, stream MySpanner_ServerStreamWithHooksServer) error {
+func (this *MySpanner_Impl) ServerStreamWithHooks(req *test.Name, stream MySpanner_ServerStreamWithHooksServer) error {
     tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
     if err != nil {
         return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -2624,12 +2624,12 @@ func (this *MySpanner_Impl) ServerStreamWithHooks(req *Name, stream MySpanner_Se
     }
     return nil
 }
-func (this *MySpanner_Impl) ServerStreamWithHooksTx(req *Name, stream MySpanner_ServerStreamWithHooksServer, tx PersistTx) error {
+func (this *MySpanner_Impl) ServerStreamWithHooksTx(req *test.Name, stream MySpanner_ServerStreamWithHooksServer, tx PersistTx) error {
     ctx := stream.Context()
     query := this.QUERIES.SelectAll(ctx, tx)
     iter := query.Execute(req)
     return iter.Each(func(row *MySpanner_SelectAllRow) error {
-        res, err := row.ExampleTable()
+        res, err := row.test.ExampleTable()
         if err != nil {
             return err
         }
@@ -2649,7 +2649,7 @@ func (this *MySpanner_Impl) ClientStreamUpdateWithHooks(stream MySpanner_ClientS
 }
 func (this *MySpanner_Impl) ClientStreamUpdateWithHooksTx(stream MySpanner_ClientStreamUpdateWithHooksServer, tx PersistTx) error {
     query := this.QUERIES.SetNameAsdf(stream.Context(), tx)
-    var first *ExampleTable
+    var first *test.ExampleTable
     for {
         req, err := stream.Recv()
         if err == io.EOF {

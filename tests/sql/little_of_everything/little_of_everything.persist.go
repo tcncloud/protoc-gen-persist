@@ -2,1551 +2,1615 @@
 // Source File: tests/sql/little_of_everything/little_of_everything.proto
 // DO NOT EDIT !
 package little_of_everything
-import(
-fmt "fmt"
-io "io"
-context "golang.org/x/net/context"
-codes "google.golang.org/grpc/codes"
-gstatus "google.golang.org/grpc/status"
-sql "database/sql"
-driver "database/sql/driver"
-timestamp "github.com/golang/protobuf/ptypes/timestamp"
-test "github.com/tcncloud/protoc-gen-persist/tests/test"
+
+import (
+	sql "database/sql"
+	driver "database/sql/driver"
+	fmt "fmt"
+	io "io"
+
+	proto "github.com/golang/protobuf/proto"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	test "github.com/tcncloud/protoc-gen-persist/tests/test"
+	context "golang.org/x/net/context"
+	codes "google.golang.org/grpc/codes"
+	gstatus "google.golang.org/grpc/status"
 )
+
 type alwaysScanner struct {
-        i *interface{}
-    }
-    func (s *alwaysScanner) Scan(src interface{}) error {
-        s.i = &src
-        return nil
-    }
-    type scanable interface {
-        Scan(...interface{}) error
-        Columns() ([]string, error)
-    }
-    type Runnable interface {
-        QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-        ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-    }
-    func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-        return db.BeginTx(ctx, nil)
-    }
-    func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-        return NopPersistTx(db)
-    }
-    func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-        return NopPersistTx(db)
-    }
-    func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-        return NopPersistTx(db)
-    }
-    type ignoreTx struct {
-        r Runnable
-    }
-    func (this *ignoreTx) Commit() error   { return nil }
-    func (this *ignoreTx) Rollback() error { return nil }
-    func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
-        return this.r.QueryContext(ctx, x, ys...)
-    }
-    func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
-        return this.r.ExecContext(ctx, x, ys...)
-    }
-    type PersistTx interface {
-        Commit() error
-        Rollback() error
-        Runnable
-    }
-    func NopPersistTx(r Runnable) (PersistTx, error) {
-        return &ignoreTx{r}, nil
-    }
-    
+	i *interface{}
+}
+
+func (s *alwaysScanner) Scan(src interface{}) error {
+	s.i = &src
+	return nil
+}
+
+type scanable interface {
+	Scan(...interface{}) error
+	Columns() ([]string, error)
+}
+type Runnable interface {
+	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+}
+
+func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+	return db.BeginTx(ctx, nil)
+}
+func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+	return NopPersistTx(db)
+}
+func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+	return NopPersistTx(db)
+}
+func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+	return NopPersistTx(db)
+}
+
+type ignoreTx struct {
+	r Runnable
+}
+
+func (this *ignoreTx) Commit() error   { return nil }
+func (this *ignoreTx) Rollback() error { return nil }
+func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
+	return this.r.QueryContext(ctx, x, ys...)
+}
+func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
+	return this.r.ExecContext(ctx, x, ys...)
+}
+
+type PersistTx interface {
+	Commit() error
+	Rollback() error
+	Runnable
+}
+
+func NopPersistTx(r Runnable) (PersistTx, error) {
+	return &ignoreTx{r}, nil
+}
+
 // Testservice1_Queries holds all the queries found the proto service option as methods
 type Testservice1_Queries struct {
-opts Testservice1_Opts
+	opts Testservice1_Opts
 }
+
 // Testservice1PersistQueries returns all the known 'SQL' queires for the 'Testservice1' service.
-    func Testservice1PersistQueries(opts ...Testservice1_Opts) *Testservice1_Queries {
-        var myOpts Testservice1_Opts
-        if len(opts) > 0 {
-            myOpts = opts[0]
-        } else {
-            myOpts = Testservice1Opts(nil, nil)
-        }
-        return &Testservice1_Queries{
-            opts: myOpts,
-        }
-    }
-    // UnaryExample1Query returns a new struct wrapping the current Testservice1_Opts
-        // that will perform 'Testservice1' services 'unary_example1' on the database
-        // when executed
-        func (this *Testservice1_Queries) UnaryExample1(ctx context.Context, db Runnable) *Testservice1_UnaryExample1Query {
-            return &Testservice1_UnaryExample1Query{
-                opts: this.opts,
-				ctx: ctx,
-				db: db,
-            }
-        }
-        type Testservice1_UnaryExample1Query struct {
-			opts Testservice1_Opts
-			db Runnable
-			ctx context.Context
-        }
-        func (this *Testservice1_UnaryExample1Query) QueryInTypeUser()  {}
-        func (this *Testservice1_UnaryExample1Query) QueryOutTypeUser() {}
-        // Executes the query with parameters retrieved from x
-        func (this *Testservice1_UnaryExample1Query) Execute(x Testservice1_UnaryExample1In) *Testservice1_UnaryExample1Iter {
-            var setupErr error
-            params := []interface{}{
-            func() (out interface{}) {
-                out = x.GetTableId()
-                return
-            }(),
-            
-            }
-            result := &Testservice1_UnaryExample1Iter{
-                tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
-            }
-            if setupErr != nil {
-                result.err = setupErr
-                return result
-            }
-            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id AS 'table_key', id, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
-            return result
-        }
-        // UnaryExample2Query returns a new struct wrapping the current Testservice1_Opts
-        // that will perform 'Testservice1' services 'unary_example2' on the database
-        // when executed
-        func (this *Testservice1_Queries) UnaryExample2(ctx context.Context, db Runnable) *Testservice1_UnaryExample2Query {
-            return &Testservice1_UnaryExample2Query{
-                opts: this.opts,
-				ctx: ctx,
-				db: db,
-            }
-        }
-        type Testservice1_UnaryExample2Query struct {
-			opts Testservice1_Opts
-			db Runnable
-			ctx context.Context
-        }
-        func (this *Testservice1_UnaryExample2Query) QueryInTypeUser()  {}
-        func (this *Testservice1_UnaryExample2Query) QueryOutTypeUser() {}
-        // Executes the query with parameters retrieved from x
-        func (this *Testservice1_UnaryExample2Query) Execute(x Testservice1_UnaryExample2In) *Testservice1_UnaryExample2Iter {
-            var setupErr error
-            params := []interface{}{
-            func() (out interface{}) {
-                out = x.GetId()
-                return
-            }(),
-            
-            }
-            result := &Testservice1_UnaryExample2Iter{
-                tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
-            }
-            if setupErr != nil {
-                result.err = setupErr
-                return result
-            }
-            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
-            return result
-        }
-        // ServerStreamSelectQuery returns a new struct wrapping the current Testservice1_Opts
-        // that will perform 'Testservice1' services 'server_stream_select' on the database
-        // when executed
-        func (this *Testservice1_Queries) ServerStreamSelect(ctx context.Context, db Runnable) *Testservice1_ServerStreamSelectQuery {
-            return &Testservice1_ServerStreamSelectQuery{
-                opts: this.opts,
-				ctx: ctx,
-				db: db,
-            }
-        }
-        type Testservice1_ServerStreamSelectQuery struct {
-			opts Testservice1_Opts
-			db Runnable
-			ctx context.Context
-        }
-        func (this *Testservice1_ServerStreamSelectQuery) QueryInTypeUser()  {}
-        func (this *Testservice1_ServerStreamSelectQuery) QueryOutTypeUser() {}
-        // Executes the query with parameters retrieved from x
-        func (this *Testservice1_ServerStreamSelectQuery) Execute(x Testservice1_ServerStreamSelectIn) *Testservice1_ServerStreamSelectIter {
-            var setupErr error
-            params := []interface{}{
-            func() (out interface{}) {
-                out = x.GetTableId()
-                return
-            }(),
-            
-            }
-            result := &Testservice1_ServerStreamSelectIter{
-                tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
-            }
-            if setupErr != nil {
-                result.err = setupErr
-                return result
-            }
-            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
-            return result
-        }
-        // ClientStreamingExampleQuery returns a new struct wrapping the current Testservice1_Opts
-        // that will perform 'Testservice1' services 'client_streaming_example' on the database
-        // when executed
-        func (this *Testservice1_Queries) ClientStreamingExample(ctx context.Context, db Runnable) *Testservice1_ClientStreamingExampleQuery {
-            return &Testservice1_ClientStreamingExampleQuery{
-                opts: this.opts,
-				ctx: ctx,
-				db: db,
-            }
-        }
-        type Testservice1_ClientStreamingExampleQuery struct {
-			opts Testservice1_Opts
-			db Runnable
-			ctx context.Context
-        }
-        func (this *Testservice1_ClientStreamingExampleQuery) QueryInTypeUser()  {}
-        func (this *Testservice1_ClientStreamingExampleQuery) QueryOutTypeUser() {}
-        // Executes the query with parameters retrieved from x
-        func (this *Testservice1_ClientStreamingExampleQuery) Execute(x Testservice1_ClientStreamingExampleIn) *Testservice1_ClientStreamingExampleIter {
-            var setupErr error
-            params := []interface{}{
-            func() (out interface{}) {
-                out = x.GetTableId()
-                return
-            }(),
-            
-            }
-            result := &Testservice1_ClientStreamingExampleIter{
-                tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
-            }
-            if setupErr != nil {
-                result.err = setupErr
-                return result
-            }
-            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
-            return result
-        }
-        type Testservice1_UnaryExample1Iter struct {
-            result sql.Result
-            rows   *sql.Rows
-            err    error
-            tm     Testservice1_TypeMappings
-            ctx    context.Context
-        }
-        func (this *Testservice1_UnaryExample1Iter) IterOutTypeExampleTable1() {}
-        func (this *Testservice1_UnaryExample1Iter) IterInTypeExampleTable1()  {}
-        // Each performs 'fun' on each row in the result set.
-        // Each respects the context passed to it.
-        // It will stop iteration, and returns this.ctx.Err() if encountered.
-        func (this *Testservice1_UnaryExample1Iter) Each(fun func(*Testservice1_UnaryExample1Row) error) error {
-            for {
-                select {
-                case <-this.ctx.Done():
-                    return this.ctx.Err()
-                default:
-                    if row, ok := this.Next(); !ok {
-                        return nil
-                    } else if err := fun(row); err != nil {
-                        return err
-                    }
-                }
-            }
-        }
-        // One returns the sole row, or ensures an error if there was not one result when this row is converted
-        func (this *Testservice1_UnaryExample1Iter) One() *Testservice1_UnaryExample1Row {
-            first, hasFirst := this.Next()
-            _, hasSecond := this.Next()
-            if !hasFirst || hasSecond {
-                amount := "none"
-                if hasSecond {
-                    amount = "multiple"
-                }
-                return &Testservice1_UnaryExample1Row{err: fmt.Errorf("expected exactly 1 result from query 'UnaryExample1' found %s", amount)}
-            }
-            return first
-        }
-        // Zero returns an error if there were any rows in the result
-        func (this *Testservice1_UnaryExample1Iter) Zero() error {
-            if _, ok := this.Next(); ok {
-                return fmt.Errorf("expected exactly 0 results from query 'UnaryExample1'")
-            }
-            return nil
-        }
-        // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-        func (this *Testservice1_UnaryExample1Iter) Next() (*Testservice1_UnaryExample1Row, bool) {
-            if this.rows == nil || this.err == io.EOF {
-                return nil, false
-            } else if this.err != nil {
-                err := this.err
-                this.err = io.EOF
-                return &Testservice1_UnaryExample1Row{err: err}, true
-            }
-            cols, err := this.rows.Columns()
-            if err != nil {
-                return &Testservice1_UnaryExample1Row{err: err}, true
-            }
-            if !this.rows.Next() {
-                if this.err = this.rows.Err(); this.err == nil {
-                    this.err = io.EOF
-                    return nil, false
-                }
-            }
-            toScan := make([]interface{}, len(cols))
-            scanned := make([]alwaysScanner, len(cols))
-            for i := range scanned {
-                toScan[i] = &scanned[i]
-            }
-            if this.err = this.rows.Scan(toScan...); this.err != nil {
-                return &Testservice1_UnaryExample1Row{err: this.err}, true
-            }
-            res := &ExampleTable1{}
-            for i, col := range cols {
-                _ = i
-                switch col {
-                case "table_id": r, ok := (*scanned[i].i).(int32)
-            if !ok {
-                return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column table_id to protobuf go type ")}, true
-            }
-            res.TableId= r
-            case "key": r, ok := (*scanned[i].i).(string)
-            if !ok {
-                return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column key to protobuf go type ")}, true
-            }
-            res.Key= r
-            case "value": r, ok := (*scanned[i].i).(string)
-            if !ok {
-                return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column value to protobuf go type ")}, true
-            }
-            res.Value= r
-            case "inner_message":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column inner_message to protobuf go type *ExampleTable1_InnerMessage")}, true
-                }
-                var converted = new(ExampleTable1_InnerMessage)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample1Row{err: err}, true
-                }
-                res.InnerMessage = converted
-            case "inner_enum":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column inner_enum to protobuf go type *int32")}, true
-                }
-                var converted = new(int32)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample1Row{err: err}, true
-                }
-                res.InnerEnum = converted
-            case "string_array": r, ok := (*scanned[i].i).([]string)
-            if !ok {
-                return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column string_array to protobuf go type ")}, true
-            }
-            res.StringArray= r
-            case "bytes_field":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column bytes_field to protobuf go type *[]byte")}, true
-                }
-                var converted = new([]byte)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample1Row{err: err}, true
-                }
-                res.BytesField = converted
-            case "start_time":
-                    var converted = this.tm.TimestampTimestamp().Empty()
-                    if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Testservice1_UnaryExample1Row{err: fmt.Errorf("could not convert mapped db column start_time to type on ExampleTable1.StartTime: %v", err)}, true
-                    }
-                    if err := converted.ToProto(&res.StartTime); err != nil {
-                        return &Testservice1_UnaryExample1Row{err: fmt.Errorf("could not convert mapped db column start_timeto type on ExampleTable1.StartTime: %v", err)}, true
-                    }
-                case "test_field":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column test_field to protobuf go type *test.Test")}, true
-                }
-                var converted = new(test.Test)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample1Row{err: err}, true
-                }
-                res.TestField = converted
-            case "myyenum":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column myyenum to protobuf go type *int32")}, true
-                }
-                var converted = new(int32)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample1Row{err: err}, true
-                }
-                res.Myyenum = converted
-            case "testsenum":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column testsenum to protobuf go type *int32")}, true
-                }
-                var converted = new(int32)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample1Row{err: err}, true
-                }
-                res.Testsenum = converted
-            case "mappedenum":
-                    var converted = this.tm.MappedEnum().Empty()
-                    if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Testservice1_UnaryExample1Row{err: fmt.Errorf("could not convert mapped db column mappedenum to type on ExampleTable1.Mappedenum: %v", err)}, true
-                    }
-                    if err := converted.ToProto(&res.Mappedenum); err != nil {
-                        return &Testservice1_UnaryExample1Row{err: fmt.Errorf("could not convert mapped db column mappedenumto type on ExampleTable1.Mappedenum: %v", err)}, true
-                    }
-                
-                default:
-                    return &Testservice1_UnaryExample1Row{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-                }
-            }
-            return &Testservice1_UnaryExample1Row{item: res}, true
-        }
-        // Slice returns all rows found in the iterator as a Slice.
-        func (this *Testservice1_UnaryExample1Iter) Slice() []*Testservice1_UnaryExample1Row {
-            var results []*Testservice1_UnaryExample1Row
-            for {
-                if i, ok := this.Next(); ok {
-                    results = append(results, i)
-                } else {
-                    break
-                }
-            }
-            return results
-        }
-        // returns the known columns for this result
-        func (r *Testservice1_UnaryExample1Iter) Columns() ([]string, error) {
-            if r.err != nil {
-                return nil, r.err
-            }
-            if r.rows != nil {
-                return r.rows.Columns()
-            }
-            return nil, nil
-        }
-        type Testservice1_UnaryExample2Iter struct {
-            result sql.Result
-            rows   *sql.Rows
-            err    error
-            tm     Testservice1_TypeMappings
-            ctx    context.Context
-        }
-        func (this *Testservice1_UnaryExample2Iter) IterOutTypeExampleTable1() {}
-        func (this *Testservice1_UnaryExample2Iter) IterInTypetest.Test()  {}
-        // Each performs 'fun' on each row in the result set.
-        // Each respects the context passed to it.
-        // It will stop iteration, and returns this.ctx.Err() if encountered.
-        func (this *Testservice1_UnaryExample2Iter) Each(fun func(*Testservice1_UnaryExample2Row) error) error {
-            for {
-                select {
-                case <-this.ctx.Done():
-                    return this.ctx.Err()
-                default:
-                    if row, ok := this.Next(); !ok {
-                        return nil
-                    } else if err := fun(row); err != nil {
-                        return err
-                    }
-                }
-            }
-        }
-        // One returns the sole row, or ensures an error if there was not one result when this row is converted
-        func (this *Testservice1_UnaryExample2Iter) One() *Testservice1_UnaryExample2Row {
-            first, hasFirst := this.Next()
-            _, hasSecond := this.Next()
-            if !hasFirst || hasSecond {
-                amount := "none"
-                if hasSecond {
-                    amount = "multiple"
-                }
-                return &Testservice1_UnaryExample2Row{err: fmt.Errorf("expected exactly 1 result from query 'UnaryExample2' found %s", amount)}
-            }
-            return first
-        }
-        // Zero returns an error if there were any rows in the result
-        func (this *Testservice1_UnaryExample2Iter) Zero() error {
-            if _, ok := this.Next(); ok {
-                return fmt.Errorf("expected exactly 0 results from query 'UnaryExample2'")
-            }
-            return nil
-        }
-        // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-        func (this *Testservice1_UnaryExample2Iter) Next() (*Testservice1_UnaryExample2Row, bool) {
-            if this.rows == nil || this.err == io.EOF {
-                return nil, false
-            } else if this.err != nil {
-                err := this.err
-                this.err = io.EOF
-                return &Testservice1_UnaryExample2Row{err: err}, true
-            }
-            cols, err := this.rows.Columns()
-            if err != nil {
-                return &Testservice1_UnaryExample2Row{err: err}, true
-            }
-            if !this.rows.Next() {
-                if this.err = this.rows.Err(); this.err == nil {
-                    this.err = io.EOF
-                    return nil, false
-                }
-            }
-            toScan := make([]interface{}, len(cols))
-            scanned := make([]alwaysScanner, len(cols))
-            for i := range scanned {
-                toScan[i] = &scanned[i]
-            }
-            if this.err = this.rows.Scan(toScan...); this.err != nil {
-                return &Testservice1_UnaryExample2Row{err: this.err}, true
-            }
-            res := &ExampleTable1{}
-            for i, col := range cols {
-                _ = i
-                switch col {
-                case "table_id": r, ok := (*scanned[i].i).(int32)
-            if !ok {
-                return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column table_id to protobuf go type ")}, true
-            }
-            res.TableId= r
-            case "key": r, ok := (*scanned[i].i).(string)
-            if !ok {
-                return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column key to protobuf go type ")}, true
-            }
-            res.Key= r
-            case "value": r, ok := (*scanned[i].i).(string)
-            if !ok {
-                return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column value to protobuf go type ")}, true
-            }
-            res.Value= r
-            case "inner_message":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column inner_message to protobuf go type *ExampleTable1_InnerMessage")}, true
-                }
-                var converted = new(ExampleTable1_InnerMessage)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample2Row{err: err}, true
-                }
-                res.InnerMessage = converted
-            case "inner_enum":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column inner_enum to protobuf go type *int32")}, true
-                }
-                var converted = new(int32)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample2Row{err: err}, true
-                }
-                res.InnerEnum = converted
-            case "string_array": r, ok := (*scanned[i].i).([]string)
-            if !ok {
-                return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column string_array to protobuf go type ")}, true
-            }
-            res.StringArray= r
-            case "bytes_field":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column bytes_field to protobuf go type *[]byte")}, true
-                }
-                var converted = new([]byte)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample2Row{err: err}, true
-                }
-                res.BytesField = converted
-            case "start_time":
-                    var converted = this.tm.TimestampTimestamp().Empty()
-                    if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Testservice1_UnaryExample2Row{err: fmt.Errorf("could not convert mapped db column start_time to type on ExampleTable1.StartTime: %v", err)}, true
-                    }
-                    if err := converted.ToProto(&res.StartTime); err != nil {
-                        return &Testservice1_UnaryExample2Row{err: fmt.Errorf("could not convert mapped db column start_timeto type on ExampleTable1.StartTime: %v", err)}, true
-                    }
-                case "test_field":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column test_field to protobuf go type *test.Test")}, true
-                }
-                var converted = new(test.Test)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample2Row{err: err}, true
-                }
-                res.TestField = converted
-            case "myyenum":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column myyenum to protobuf go type *int32")}, true
-                }
-                var converted = new(int32)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample2Row{err: err}, true
-                }
-                res.Myyenum = converted
-            case "testsenum":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column testsenum to protobuf go type *int32")}, true
-                }
-                var converted = new(int32)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_UnaryExample2Row{err: err}, true
-                }
-                res.Testsenum = converted
-            case "mappedenum":
-                    var converted = this.tm.MappedEnum().Empty()
-                    if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Testservice1_UnaryExample2Row{err: fmt.Errorf("could not convert mapped db column mappedenum to type on ExampleTable1.Mappedenum: %v", err)}, true
-                    }
-                    if err := converted.ToProto(&res.Mappedenum); err != nil {
-                        return &Testservice1_UnaryExample2Row{err: fmt.Errorf("could not convert mapped db column mappedenumto type on ExampleTable1.Mappedenum: %v", err)}, true
-                    }
-                
-                default:
-                    return &Testservice1_UnaryExample2Row{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-                }
-            }
-            return &Testservice1_UnaryExample2Row{item: res}, true
-        }
-        // Slice returns all rows found in the iterator as a Slice.
-        func (this *Testservice1_UnaryExample2Iter) Slice() []*Testservice1_UnaryExample2Row {
-            var results []*Testservice1_UnaryExample2Row
-            for {
-                if i, ok := this.Next(); ok {
-                    results = append(results, i)
-                } else {
-                    break
-                }
-            }
-            return results
-        }
-        // returns the known columns for this result
-        func (r *Testservice1_UnaryExample2Iter) Columns() ([]string, error) {
-            if r.err != nil {
-                return nil, r.err
-            }
-            if r.rows != nil {
-                return r.rows.Columns()
-            }
-            return nil, nil
-        }
-        type Testservice1_ServerStreamSelectIter struct {
-            result sql.Result
-            rows   *sql.Rows
-            err    error
-            tm     Testservice1_TypeMappings
-            ctx    context.Context
-        }
-        func (this *Testservice1_ServerStreamSelectIter) IterOutTypeExampleTable1() {}
-        func (this *Testservice1_ServerStreamSelectIter) IterInTypeExampleTable1()  {}
-        // Each performs 'fun' on each row in the result set.
-        // Each respects the context passed to it.
-        // It will stop iteration, and returns this.ctx.Err() if encountered.
-        func (this *Testservice1_ServerStreamSelectIter) Each(fun func(*Testservice1_ServerStreamSelectRow) error) error {
-            for {
-                select {
-                case <-this.ctx.Done():
-                    return this.ctx.Err()
-                default:
-                    if row, ok := this.Next(); !ok {
-                        return nil
-                    } else if err := fun(row); err != nil {
-                        return err
-                    }
-                }
-            }
-        }
-        // One returns the sole row, or ensures an error if there was not one result when this row is converted
-        func (this *Testservice1_ServerStreamSelectIter) One() *Testservice1_ServerStreamSelectRow {
-            first, hasFirst := this.Next()
-            _, hasSecond := this.Next()
-            if !hasFirst || hasSecond {
-                amount := "none"
-                if hasSecond {
-                    amount = "multiple"
-                }
-                return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("expected exactly 1 result from query 'ServerStreamSelect' found %s", amount)}
-            }
-            return first
-        }
-        // Zero returns an error if there were any rows in the result
-        func (this *Testservice1_ServerStreamSelectIter) Zero() error {
-            if _, ok := this.Next(); ok {
-                return fmt.Errorf("expected exactly 0 results from query 'ServerStreamSelect'")
-            }
-            return nil
-        }
-        // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-        func (this *Testservice1_ServerStreamSelectIter) Next() (*Testservice1_ServerStreamSelectRow, bool) {
-            if this.rows == nil || this.err == io.EOF {
-                return nil, false
-            } else if this.err != nil {
-                err := this.err
-                this.err = io.EOF
-                return &Testservice1_ServerStreamSelectRow{err: err}, true
-            }
-            cols, err := this.rows.Columns()
-            if err != nil {
-                return &Testservice1_ServerStreamSelectRow{err: err}, true
-            }
-            if !this.rows.Next() {
-                if this.err = this.rows.Err(); this.err == nil {
-                    this.err = io.EOF
-                    return nil, false
-                }
-            }
-            toScan := make([]interface{}, len(cols))
-            scanned := make([]alwaysScanner, len(cols))
-            for i := range scanned {
-                toScan[i] = &scanned[i]
-            }
-            if this.err = this.rows.Scan(toScan...); this.err != nil {
-                return &Testservice1_ServerStreamSelectRow{err: this.err}, true
-            }
-            res := &ExampleTable1{}
-            for i, col := range cols {
-                _ = i
-                switch col {
-                case "table_id": r, ok := (*scanned[i].i).(int32)
-            if !ok {
-                return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column table_id to protobuf go type ")}, true
-            }
-            res.TableId= r
-            case "key": r, ok := (*scanned[i].i).(string)
-            if !ok {
-                return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column key to protobuf go type ")}, true
-            }
-            res.Key= r
-            case "value": r, ok := (*scanned[i].i).(string)
-            if !ok {
-                return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column value to protobuf go type ")}, true
-            }
-            res.Value= r
-            case "inner_message":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column inner_message to protobuf go type *ExampleTable1_InnerMessage")}, true
-                }
-                var converted = new(ExampleTable1_InnerMessage)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_ServerStreamSelectRow{err: err}, true
-                }
-                res.InnerMessage = converted
-            case "inner_enum":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column inner_enum to protobuf go type *int32")}, true
-                }
-                var converted = new(int32)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_ServerStreamSelectRow{err: err}, true
-                }
-                res.InnerEnum = converted
-            case "string_array": r, ok := (*scanned[i].i).([]string)
-            if !ok {
-                return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column string_array to protobuf go type ")}, true
-            }
-            res.StringArray= r
-            case "bytes_field":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column bytes_field to protobuf go type *[]byte")}, true
-                }
-                var converted = new([]byte)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_ServerStreamSelectRow{err: err}, true
-                }
-                res.BytesField = converted
-            case "start_time":
-                    var converted = this.tm.TimestampTimestamp().Empty()
-                    if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("could not convert mapped db column start_time to type on ExampleTable1.StartTime: %v", err)}, true
-                    }
-                    if err := converted.ToProto(&res.StartTime); err != nil {
-                        return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on ExampleTable1.StartTime: %v", err)}, true
-                    }
-                case "test_field":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column test_field to protobuf go type *test.Test")}, true
-                }
-                var converted = new(test.Test)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_ServerStreamSelectRow{err: err}, true
-                }
-                res.TestField = converted
-            case "myyenum":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column myyenum to protobuf go type *int32")}, true
-                }
-                var converted = new(int32)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_ServerStreamSelectRow{err: err}, true
-                }
-                res.Myyenum = converted
-            case "testsenum":
-                r, ok := (*scanned[i].i).([]byte)
-                if !ok {
-                    return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column testsenum to protobuf go type *int32")}, true
-                }
-                var converted = new(int32)
-                if err := proto.Unmarshal(r, converted); err != nil {
-                    return &Testservice1_ServerStreamSelectRow{err: err}, true
-                }
-                res.Testsenum = converted
-            case "mappedenum":
-                    var converted = this.tm.MappedEnum().Empty()
-                    if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("could not convert mapped db column mappedenum to type on ExampleTable1.Mappedenum: %v", err)}, true
-                    }
-                    if err := converted.ToProto(&res.Mappedenum); err != nil {
-                        return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("could not convert mapped db column mappedenumto type on ExampleTable1.Mappedenum: %v", err)}, true
-                    }
-                
-                default:
-                    return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-                }
-            }
-            return &Testservice1_ServerStreamSelectRow{item: res}, true
-        }
-        // Slice returns all rows found in the iterator as a Slice.
-        func (this *Testservice1_ServerStreamSelectIter) Slice() []*Testservice1_ServerStreamSelectRow {
-            var results []*Testservice1_ServerStreamSelectRow
-            for {
-                if i, ok := this.Next(); ok {
-                    results = append(results, i)
-                } else {
-                    break
-                }
-            }
-            return results
-        }
-        // returns the known columns for this result
-        func (r *Testservice1_ServerStreamSelectIter) Columns() ([]string, error) {
-            if r.err != nil {
-                return nil, r.err
-            }
-            if r.rows != nil {
-                return r.rows.Columns()
-            }
-            return nil, nil
-        }
-        type Testservice1_ClientStreamingExampleIter struct {
-            result sql.Result
-            rows   *sql.Rows
-            err    error
-            tm     Testservice1_TypeMappings
-            ctx    context.Context
-        }
-        func (this *Testservice1_ClientStreamingExampleIter) IterOutTypeCountRows() {}
-        func (this *Testservice1_ClientStreamingExampleIter) IterInTypeExampleTable1()  {}
-        // Each performs 'fun' on each row in the result set.
-        // Each respects the context passed to it.
-        // It will stop iteration, and returns this.ctx.Err() if encountered.
-        func (this *Testservice1_ClientStreamingExampleIter) Each(fun func(*Testservice1_ClientStreamingExampleRow) error) error {
-            for {
-                select {
-                case <-this.ctx.Done():
-                    return this.ctx.Err()
-                default:
-                    if row, ok := this.Next(); !ok {
-                        return nil
-                    } else if err := fun(row); err != nil {
-                        return err
-                    }
-                }
-            }
-        }
-        // One returns the sole row, or ensures an error if there was not one result when this row is converted
-        func (this *Testservice1_ClientStreamingExampleIter) One() *Testservice1_ClientStreamingExampleRow {
-            first, hasFirst := this.Next()
-            _, hasSecond := this.Next()
-            if !hasFirst || hasSecond {
-                amount := "none"
-                if hasSecond {
-                    amount = "multiple"
-                }
-                return &Testservice1_ClientStreamingExampleRow{err: fmt.Errorf("expected exactly 1 result from query 'ClientStreamingExample' found %s", amount)}
-            }
-            return first
-        }
-        // Zero returns an error if there were any rows in the result
-        func (this *Testservice1_ClientStreamingExampleIter) Zero() error {
-            if _, ok := this.Next(); ok {
-                return fmt.Errorf("expected exactly 0 results from query 'ClientStreamingExample'")
-            }
-            return nil
-        }
-        // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-        func (this *Testservice1_ClientStreamingExampleIter) Next() (*Testservice1_ClientStreamingExampleRow, bool) {
-            if this.rows == nil || this.err == io.EOF {
-                return nil, false
-            } else if this.err != nil {
-                err := this.err
-                this.err = io.EOF
-                return &Testservice1_ClientStreamingExampleRow{err: err}, true
-            }
-            cols, err := this.rows.Columns()
-            if err != nil {
-                return &Testservice1_ClientStreamingExampleRow{err: err}, true
-            }
-            if !this.rows.Next() {
-                if this.err = this.rows.Err(); this.err == nil {
-                    this.err = io.EOF
-                    return nil, false
-                }
-            }
-            toScan := make([]interface{}, len(cols))
-            scanned := make([]alwaysScanner, len(cols))
-            for i := range scanned {
-                toScan[i] = &scanned[i]
-            }
-            if this.err = this.rows.Scan(toScan...); this.err != nil {
-                return &Testservice1_ClientStreamingExampleRow{err: this.err}, true
-            }
-            res := &CountRows{}
-            for i, col := range cols {
-                _ = i
-                switch col {
-                case "count": r, ok := (*scanned[i].i).(int64)
-            if !ok {
-                return &Testservice1_ClientStreamingExampleRow{err: fmt.Errorf("cant convert db column count to protobuf go type ")}, true
-            }
-            res.Count= r
-            
-                default:
-                    return &Testservice1_ClientStreamingExampleRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-                }
-            }
-            return &Testservice1_ClientStreamingExampleRow{item: res}, true
-        }
-        // Slice returns all rows found in the iterator as a Slice.
-        func (this *Testservice1_ClientStreamingExampleIter) Slice() []*Testservice1_ClientStreamingExampleRow {
-            var results []*Testservice1_ClientStreamingExampleRow
-            for {
-                if i, ok := this.Next(); ok {
-                    results = append(results, i)
-                } else {
-                    break
-                }
-            }
-            return results
-        }
-        // returns the known columns for this result
-        func (r *Testservice1_ClientStreamingExampleIter) Columns() ([]string, error) {
-            if r.err != nil {
-                return nil, r.err
-            }
-            if r.rows != nil {
-                return r.rows.Columns()
-            }
-            return nil, nil
-        }
-        type Testservice1_UnaryExample1In interface {
-            GetTableId() int32
-GetKey() string
-GetValue() string
-GetInnerMessage() *ExampleTable1_InnerMessage
-GetInnerEnum() int32
-GetStringArray() []string
-GetBytesField() []byte
-GetStartTime() *timestamp.Timestamp
-GetTestField() *test.Test
-GetMyyenum() int32
-GetTestsenum() int32
-GetMappedenum() int32
-        }
-        type Testservice1_UnaryExample1Out interface {
-            GetTableId() int32
-GetKey() string
-GetValue() string
-GetInnerMessage() *ExampleTable1_InnerMessage
-GetInnerEnum() int32
-GetStringArray() []string
-GetBytesField() []byte
-GetStartTime() *timestamp.Timestamp
-GetTestField() *test.Test
-GetMyyenum() int32
-GetTestsenum() int32
-GetMappedenum() int32
-        }
-        type Testservice1_UnaryExample1Row struct {
-            item Testservice1_UnaryExample1Out
-            err  error
-        }
-        func newTestservice1_UnaryExample1Row(item Testservice1_UnaryExample1Out, err error) *Testservice1_UnaryExample1Row {
-            return &Testservice1_UnaryExample1Row{item, err}
-        }
-        // Unwrap takes an address to a proto.Message as its only parameter
-        // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-        func (this *Testservice1_UnaryExample1Row) Unwrap(pointerToMsg proto.Message) error {
-            if this.err != nil {
-                return this.err
-            }
-            if o, ok := (pointerToMsg).(*ExampleTable1); ok {
-                if o == nil {
-                    return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
-                }
-                res, _ := this.ExampleTable1()
-                _ = res
-                o.TableId = res.TableId
-o.Key = res.Key
-o.Value = res.Value
-o.InnerMessage = res.InnerMessage
-o.InnerEnum = res.InnerEnum
-o.StringArray = res.StringArray
-o.BytesField = res.BytesField
-o.StartTime = res.StartTime
-o.TestField = res.TestField
-o.Myyenum = res.Myyenum
-o.Testsenum = res.Testsenum
-o.Mappedenum = res.Mappedenum
-                return nil
-            }
-            return nil
-        }
-        func (this *Testservice1_UnaryExample1Row) ExampleTable1() (*ExampleTable1, error) {
-                if this.err != nil {
-                    return nil, this.err
-                }
-                return &ExampleTable1{
-                TableId: this.item.GetTableId(),
-Key: this.item.GetKey(),
-Value: this.item.GetValue(),
-InnerMessage: this.item.GetInnerMessage(),
-InnerEnum: this.item.GetInnerEnum(),
-StringArray: this.item.GetStringArray(),
-BytesField: this.item.GetBytesField(),
-StartTime: this.item.GetStartTime(),
-TestField: this.item.GetTestField(),
-Myyenum: this.item.GetMyyenum(),
-Testsenum: this.item.GetTestsenum(),
-Mappedenum: this.item.GetMappedenum(),
-                }, nil
-            }
-            
-        func (this *Testservice1_UnaryExample1Row) Proto() (*ExampleTable1, error) {
-            if this.err != nil {
-                return nil, this.err
-            }
-            return &ExampleTable1{
-                TableId: this.item.GetTableId(),
-Key: this.item.GetKey(),
-Value: this.item.GetValue(),
-InnerMessage: this.item.GetInnerMessage(),
-InnerEnum: this.item.GetInnerEnum(),
-StringArray: this.item.GetStringArray(),
-BytesField: this.item.GetBytesField(),
-StartTime: this.item.GetStartTime(),
-TestField: this.item.GetTestField(),
-Myyenum: this.item.GetMyyenum(),
-Testsenum: this.item.GetTestsenum(),
-Mappedenum: this.item.GetMappedenum(),
-            }, nil
-        }
-        type Testservice1_UnaryExample2In interface {
-            GetId() int32
-GetName() string
-        }
-        type Testservice1_UnaryExample2Out interface {
-            GetTableId() int32
-GetKey() string
-GetValue() string
-GetInnerMessage() *ExampleTable1_InnerMessage
-GetInnerEnum() int32
-GetStringArray() []string
-GetBytesField() []byte
-GetStartTime() *timestamp.Timestamp
-GetTestField() *test.Test
-GetMyyenum() int32
-GetTestsenum() int32
-GetMappedenum() int32
-        }
-        type Testservice1_UnaryExample2Row struct {
-            item Testservice1_UnaryExample2Out
-            err  error
-        }
-        func newTestservice1_UnaryExample2Row(item Testservice1_UnaryExample2Out, err error) *Testservice1_UnaryExample2Row {
-            return &Testservice1_UnaryExample2Row{item, err}
-        }
-        // Unwrap takes an address to a proto.Message as its only parameter
-        // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-        func (this *Testservice1_UnaryExample2Row) Unwrap(pointerToMsg proto.Message) error {
-            if this.err != nil {
-                return this.err
-            }
-            if o, ok := (pointerToMsg).(*ExampleTable1); ok {
-                if o == nil {
-                    return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
-                }
-                res, _ := this.ExampleTable1()
-                _ = res
-                o.TableId = res.TableId
-o.Key = res.Key
-o.Value = res.Value
-o.InnerMessage = res.InnerMessage
-o.InnerEnum = res.InnerEnum
-o.StringArray = res.StringArray
-o.BytesField = res.BytesField
-o.StartTime = res.StartTime
-o.TestField = res.TestField
-o.Myyenum = res.Myyenum
-o.Testsenum = res.Testsenum
-o.Mappedenum = res.Mappedenum
-                return nil
-            }
-            return nil
-        }
-        func (this *Testservice1_UnaryExample2Row) ExampleTable1() (*ExampleTable1, error) {
-                if this.err != nil {
-                    return nil, this.err
-                }
-                return &ExampleTable1{
-                TableId: this.item.GetTableId(),
-Key: this.item.GetKey(),
-Value: this.item.GetValue(),
-InnerMessage: this.item.GetInnerMessage(),
-InnerEnum: this.item.GetInnerEnum(),
-StringArray: this.item.GetStringArray(),
-BytesField: this.item.GetBytesField(),
-StartTime: this.item.GetStartTime(),
-TestField: this.item.GetTestField(),
-Myyenum: this.item.GetMyyenum(),
-Testsenum: this.item.GetTestsenum(),
-Mappedenum: this.item.GetMappedenum(),
-                }, nil
-            }
-            
-        func (this *Testservice1_UnaryExample2Row) Proto() (*ExampleTable1, error) {
-            if this.err != nil {
-                return nil, this.err
-            }
-            return &ExampleTable1{
-                TableId: this.item.GetTableId(),
-Key: this.item.GetKey(),
-Value: this.item.GetValue(),
-InnerMessage: this.item.GetInnerMessage(),
-InnerEnum: this.item.GetInnerEnum(),
-StringArray: this.item.GetStringArray(),
-BytesField: this.item.GetBytesField(),
-StartTime: this.item.GetStartTime(),
-TestField: this.item.GetTestField(),
-Myyenum: this.item.GetMyyenum(),
-Testsenum: this.item.GetTestsenum(),
-Mappedenum: this.item.GetMappedenum(),
-            }, nil
-        }
-        type Testservice1_ServerStreamSelectIn interface {
-            GetTableId() int32
-GetKey() string
-GetValue() string
-GetInnerMessage() *ExampleTable1_InnerMessage
-GetInnerEnum() int32
-GetStringArray() []string
-GetBytesField() []byte
-GetStartTime() *timestamp.Timestamp
-GetTestField() *test.Test
-GetMyyenum() int32
-GetTestsenum() int32
-GetMappedenum() int32
-        }
-        type Testservice1_ServerStreamSelectOut interface {
-            GetTableId() int32
-GetKey() string
-GetValue() string
-GetInnerMessage() *ExampleTable1_InnerMessage
-GetInnerEnum() int32
-GetStringArray() []string
-GetBytesField() []byte
-GetStartTime() *timestamp.Timestamp
-GetTestField() *test.Test
-GetMyyenum() int32
-GetTestsenum() int32
-GetMappedenum() int32
-        }
-        type Testservice1_ServerStreamSelectRow struct {
-            item Testservice1_ServerStreamSelectOut
-            err  error
-        }
-        func newTestservice1_ServerStreamSelectRow(item Testservice1_ServerStreamSelectOut, err error) *Testservice1_ServerStreamSelectRow {
-            return &Testservice1_ServerStreamSelectRow{item, err}
-        }
-        // Unwrap takes an address to a proto.Message as its only parameter
-        // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-        func (this *Testservice1_ServerStreamSelectRow) Unwrap(pointerToMsg proto.Message) error {
-            if this.err != nil {
-                return this.err
-            }
-            if o, ok := (pointerToMsg).(*ExampleTable1); ok {
-                if o == nil {
-                    return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
-                }
-                res, _ := this.ExampleTable1()
-                _ = res
-                o.TableId = res.TableId
-o.Key = res.Key
-o.Value = res.Value
-o.InnerMessage = res.InnerMessage
-o.InnerEnum = res.InnerEnum
-o.StringArray = res.StringArray
-o.BytesField = res.BytesField
-o.StartTime = res.StartTime
-o.TestField = res.TestField
-o.Myyenum = res.Myyenum
-o.Testsenum = res.Testsenum
-o.Mappedenum = res.Mappedenum
-                return nil
-            }
-            return nil
-        }
-        func (this *Testservice1_ServerStreamSelectRow) ExampleTable1() (*ExampleTable1, error) {
-                if this.err != nil {
-                    return nil, this.err
-                }
-                return &ExampleTable1{
-                TableId: this.item.GetTableId(),
-Key: this.item.GetKey(),
-Value: this.item.GetValue(),
-InnerMessage: this.item.GetInnerMessage(),
-InnerEnum: this.item.GetInnerEnum(),
-StringArray: this.item.GetStringArray(),
-BytesField: this.item.GetBytesField(),
-StartTime: this.item.GetStartTime(),
-TestField: this.item.GetTestField(),
-Myyenum: this.item.GetMyyenum(),
-Testsenum: this.item.GetTestsenum(),
-Mappedenum: this.item.GetMappedenum(),
-                }, nil
-            }
-            
-        func (this *Testservice1_ServerStreamSelectRow) Proto() (*ExampleTable1, error) {
-            if this.err != nil {
-                return nil, this.err
-            }
-            return &ExampleTable1{
-                TableId: this.item.GetTableId(),
-Key: this.item.GetKey(),
-Value: this.item.GetValue(),
-InnerMessage: this.item.GetInnerMessage(),
-InnerEnum: this.item.GetInnerEnum(),
-StringArray: this.item.GetStringArray(),
-BytesField: this.item.GetBytesField(),
-StartTime: this.item.GetStartTime(),
-TestField: this.item.GetTestField(),
-Myyenum: this.item.GetMyyenum(),
-Testsenum: this.item.GetTestsenum(),
-Mappedenum: this.item.GetMappedenum(),
-            }, nil
-        }
-        type Testservice1_ClientStreamingExampleIn interface {
-            GetTableId() int32
-GetKey() string
-GetValue() string
-GetInnerMessage() *ExampleTable1_InnerMessage
-GetInnerEnum() int32
-GetStringArray() []string
-GetBytesField() []byte
-GetStartTime() *timestamp.Timestamp
-GetTestField() *test.Test
-GetMyyenum() int32
-GetTestsenum() int32
-GetMappedenum() int32
-        }
-        type Testservice1_ClientStreamingExampleOut interface {
-            GetCount() int64
-        }
-        type Testservice1_ClientStreamingExampleRow struct {
-            item Testservice1_ClientStreamingExampleOut
-            err  error
-        }
-        func newTestservice1_ClientStreamingExampleRow(item Testservice1_ClientStreamingExampleOut, err error) *Testservice1_ClientStreamingExampleRow {
-            return &Testservice1_ClientStreamingExampleRow{item, err}
-        }
-        // Unwrap takes an address to a proto.Message as its only parameter
-        // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-        func (this *Testservice1_ClientStreamingExampleRow) Unwrap(pointerToMsg proto.Message) error {
-            if this.err != nil {
-                return this.err
-            }
-            if o, ok := (pointerToMsg).(*CountRows); ok {
-                if o == nil {
-                    return fmt.Errorf("must initialize *CountRows before giving to Unwrap()")
-                }
-                res, _ := this.CountRows()
-                _ = res
-                o.Count = res.Count
-                return nil
-            }
-            return nil
-        }
-        func (this *Testservice1_ClientStreamingExampleRow) CountRows() (*CountRows, error) {
-                if this.err != nil {
-                    return nil, this.err
-                }
-                return &CountRows{
-                Count: this.item.GetCount(),
-                }, nil
-            }
-            
-        func (this *Testservice1_ClientStreamingExampleRow) Proto() (*CountRows, error) {
-            if this.err != nil {
-                return nil, this.err
-            }
-            return &CountRows{
-                Count: this.item.GetCount(),
-            }, nil
-        }
-        type Testservice1_Hooks interface {
+func Testservice1PersistQueries(opts ...Testservice1_Opts) *Testservice1_Queries {
+	var myOpts Testservice1_Opts
+	if len(opts) > 0 {
+		myOpts = opts[0]
+	} else {
+		myOpts = Testservice1Opts(nil, nil)
+	}
+	return &Testservice1_Queries{
+		opts: myOpts,
+	}
+}
+
+// UnaryExample1Query returns a new struct wrapping the current Testservice1_Opts
+// that will perform 'Testservice1' services 'unary_example1' on the database
+// when executed
+func (this *Testservice1_Queries) UnaryExample1(ctx context.Context, db Runnable) *Testservice1_UnaryExample1Query {
+	return &Testservice1_UnaryExample1Query{
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
+	}
+}
+
+type Testservice1_UnaryExample1Query struct {
+	opts Testservice1_Opts
+	db   Runnable
+	ctx  context.Context
+}
+
+func (this *Testservice1_UnaryExample1Query) QueryInTypeUser()  {}
+func (this *Testservice1_UnaryExample1Query) QueryOutTypeUser() {}
+
+// Executes the query with parameters retrieved from x
+func (this *Testservice1_UnaryExample1Query) Execute(x Testservice1_UnaryExample1In) *Testservice1_UnaryExample1Iter {
+	var setupErr error
+	params := []interface{}{
+		func() (out interface{}) {
+			out = x.GetTableId()
+			return
+		}(),
+	}
+	result := &Testservice1_UnaryExample1Iter{
+		tm:  this.opts.MAPPINGS,
+		ctx: this.ctx,
+	}
+	if setupErr != nil {
+		result.err = setupErr
+		return result
+	}
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id AS 'table_key', id, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
+	return result
+}
+
+// UnaryExample2Query returns a new struct wrapping the current Testservice1_Opts
+// that will perform 'Testservice1' services 'unary_example2' on the database
+// when executed
+func (this *Testservice1_Queries) UnaryExample2(ctx context.Context, db Runnable) *Testservice1_UnaryExample2Query {
+	return &Testservice1_UnaryExample2Query{
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
+	}
+}
+
+type Testservice1_UnaryExample2Query struct {
+	opts Testservice1_Opts
+	db   Runnable
+	ctx  context.Context
+}
+
+func (this *Testservice1_UnaryExample2Query) QueryInTypeUser()  {}
+func (this *Testservice1_UnaryExample2Query) QueryOutTypeUser() {}
+
+// Executes the query with parameters retrieved from x
+func (this *Testservice1_UnaryExample2Query) Execute(x Testservice1_UnaryExample2In) *Testservice1_UnaryExample2Iter {
+	var setupErr error
+	params := []interface{}{
+		func() (out interface{}) {
+			out = x.GetId()
+			return
+		}(),
+	}
+	result := &Testservice1_UnaryExample2Iter{
+		tm:  this.opts.MAPPINGS,
+		ctx: this.ctx,
+	}
+	if setupErr != nil {
+		result.err = setupErr
+		return result
+	}
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
+	return result
+}
+
+// ServerStreamSelectQuery returns a new struct wrapping the current Testservice1_Opts
+// that will perform 'Testservice1' services 'server_stream_select' on the database
+// when executed
+func (this *Testservice1_Queries) ServerStreamSelect(ctx context.Context, db Runnable) *Testservice1_ServerStreamSelectQuery {
+	return &Testservice1_ServerStreamSelectQuery{
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
+	}
+}
+
+type Testservice1_ServerStreamSelectQuery struct {
+	opts Testservice1_Opts
+	db   Runnable
+	ctx  context.Context
+}
+
+func (this *Testservice1_ServerStreamSelectQuery) QueryInTypeUser()  {}
+func (this *Testservice1_ServerStreamSelectQuery) QueryOutTypeUser() {}
+
+// Executes the query with parameters retrieved from x
+func (this *Testservice1_ServerStreamSelectQuery) Execute(x Testservice1_ServerStreamSelectIn) *Testservice1_ServerStreamSelectIter {
+	var setupErr error
+	params := []interface{}{
+		func() (out interface{}) {
+			out = x.GetTableId()
+			return
+		}(),
+	}
+	result := &Testservice1_ServerStreamSelectIter{
+		tm:  this.opts.MAPPINGS,
+		ctx: this.ctx,
+	}
+	if setupErr != nil {
+		result.err = setupErr
+		return result
+	}
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
+	return result
+}
+
+// ClientStreamingExampleQuery returns a new struct wrapping the current Testservice1_Opts
+// that will perform 'Testservice1' services 'client_streaming_example' on the database
+// when executed
+func (this *Testservice1_Queries) ClientStreamingExample(ctx context.Context, db Runnable) *Testservice1_ClientStreamingExampleQuery {
+	return &Testservice1_ClientStreamingExampleQuery{
+		opts: this.opts,
+		ctx:  ctx,
+		db:   db,
+	}
+}
+
+type Testservice1_ClientStreamingExampleQuery struct {
+	opts Testservice1_Opts
+	db   Runnable
+	ctx  context.Context
+}
+
+func (this *Testservice1_ClientStreamingExampleQuery) QueryInTypeUser()  {}
+func (this *Testservice1_ClientStreamingExampleQuery) QueryOutTypeUser() {}
+
+// Executes the query with parameters retrieved from x
+func (this *Testservice1_ClientStreamingExampleQuery) Execute(x Testservice1_ClientStreamingExampleIn) *Testservice1_ClientStreamingExampleIter {
+	var setupErr error
+	params := []interface{}{
+		func() (out interface{}) {
+			out = x.GetTableId()
+			return
+		}(),
+	}
+	result := &Testservice1_ClientStreamingExampleIter{
+		tm:  this.opts.MAPPINGS,
+		ctx: this.ctx,
+	}
+	if setupErr != nil {
+		result.err = setupErr
+		return result
+	}
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
+	return result
+}
+
+type Testservice1_UnaryExample1Iter struct {
+	result sql.Result
+	rows   *sql.Rows
+	err    error
+	tm     Testservice1_TypeMappings
+	ctx    context.Context
+}
+
+func (this *Testservice1_UnaryExample1Iter) IterOutTypeExampleTable1() {}
+func (this *Testservice1_UnaryExample1Iter) IterInTypeExampleTable1()  {}
+
+// Each performs 'fun' on each row in the result set.
+// Each respects the context passed to it.
+// It will stop iteration, and returns this.ctx.Err() if encountered.
+func (this *Testservice1_UnaryExample1Iter) Each(fun func(*Testservice1_UnaryExample1Row) error) error {
+	for {
+		select {
+		case <-this.ctx.Done():
+			return this.ctx.Err()
+		default:
+			if row, ok := this.Next(); !ok {
+				return nil
+			} else if err := fun(row); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// One returns the sole row, or ensures an error if there was not one result when this row is converted
+func (this *Testservice1_UnaryExample1Iter) One() *Testservice1_UnaryExample1Row {
+	first, hasFirst := this.Next()
+	_, hasSecond := this.Next()
+	if !hasFirst || hasSecond {
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &Testservice1_UnaryExample1Row{err: fmt.Errorf("expected exactly 1 result from query 'UnaryExample1' found %s", amount)}
+	}
+	return first
+}
+
+// Zero returns an error if there were any rows in the result
+func (this *Testservice1_UnaryExample1Iter) Zero() error {
+	if _, ok := this.Next(); ok {
+		return fmt.Errorf("expected exactly 0 results from query 'UnaryExample1'")
+	}
+	return nil
+}
+
+// Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
+func (this *Testservice1_UnaryExample1Iter) Next() (*Testservice1_UnaryExample1Row, bool) {
+	if this.rows == nil || this.err == io.EOF {
+		return nil, false
+	} else if this.err != nil {
+		err := this.err
+		this.err = io.EOF
+		return &Testservice1_UnaryExample1Row{err: err}, true
+	}
+	cols, err := this.rows.Columns()
+	if err != nil {
+		return &Testservice1_UnaryExample1Row{err: err}, true
+	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
+	toScan := make([]interface{}, len(cols))
+	scanned := make([]alwaysScanner, len(cols))
+	for i := range scanned {
+		toScan[i] = &scanned[i]
+	}
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
+		return &Testservice1_UnaryExample1Row{err: this.err}, true
+	}
+	res := &ExampleTable1{}
+	for i, col := range cols {
+		_ = i
+		switch col {
+		case "table_id":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column table_id to protobuf go type ")}, true
+			}
+			res.TableId = r
+		case "key":
+			r, ok := (*scanned[i].i).(string)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column key to protobuf go type ")}, true
+			}
+			res.Key = r
+		case "value":
+			r, ok := (*scanned[i].i).(string)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column value to protobuf go type ")}, true
+			}
+			res.Value = r
+		case "inner_message":
+			r, ok := (*scanned[i].i).([]byte)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column inner_message to protobuf go type *ExampleTable1_InnerMessage")}, true
+			}
+			var converted = new(ExampleTable1_InnerMessage)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &Testservice1_UnaryExample1Row{err: err}, true
+			}
+			res.InnerMessage = converted
+		case "inner_enum":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column inner_enum to protobuf go type *ExampleTable1_InnerEnum")}, true
+			}
+			var converted = (ExampleTable1_InnerEnum)(r)
+			res.InnerEnum = converted
+		case "string_array":
+			r, ok := (*scanned[i].i).([]string)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column string_array to protobuf go type ")}, true
+			}
+			res.StringArray = r
+		case "bytes_field":
+			r, ok := (*scanned[i].i).([]byte)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column bytes_field to protobuf go type ")}, true
+			}
+			res.BytesField = r
+		case "start_time":
+			var converted = this.tm.TimestampTimestamp().Empty()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("could not convert mapped db column start_time to type on ExampleTable1.StartTime: %v", err)}, true
+			}
+			if err := converted.ToProto(&res.StartTime); err != nil {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("could not convert mapped db column start_timeto type on ExampleTable1.StartTime: %v", err)}, true
+			}
+		case "test_field":
+			r, ok := (*scanned[i].i).([]byte)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column test_field to protobuf go type *test.Test")}, true
+			}
+			var converted = new(test.Test)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &Testservice1_UnaryExample1Row{err: err}, true
+			}
+			res.TestField = converted
+		case "myyenum":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column myyenum to protobuf go type *MyEnum")}, true
+			}
+			var converted = (MyEnum)(r)
+			res.Myyenum = converted
+		case "testsenum":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("cant convert db column testsenum to protobuf go type *test.TestEnum")}, true
+			}
+			var converted = (test.TestEnum)(r)
+			res.Testsenum = converted
+		case "mappedenum":
+			var converted = this.tm.MappedEnum().Empty()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("could not convert mapped db column mappedenum to type on ExampleTable1.Mappedenum: %v", err)}, true
+			}
+			pToRes := &res.Mappedenum
+			if err := converted.ToProto(&pToRes); err != nil {
+				return &Testservice1_UnaryExample1Row{err: fmt.Errorf("could not convert mapped db column mappedenumto type on ExampleTable1.Mappedenum: %v", err)}, true
+			}
+
+		default:
+			return &Testservice1_UnaryExample1Row{err: fmt.Errorf("unsupported column in output: %s", col)}, true
+		}
+	}
+	return &Testservice1_UnaryExample1Row{item: res}, true
+}
+
+// Slice returns all rows found in the iterator as a Slice.
+func (this *Testservice1_UnaryExample1Iter) Slice() []*Testservice1_UnaryExample1Row {
+	var results []*Testservice1_UnaryExample1Row
+	for {
+		if i, ok := this.Next(); ok {
+			results = append(results, i)
+		} else {
+			break
+		}
+	}
+	return results
+}
+
+// returns the known columns for this result
+func (r *Testservice1_UnaryExample1Iter) Columns() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.rows != nil {
+		return r.rows.Columns()
+	}
+	return nil, nil
+}
+
+type Testservice1_UnaryExample2Iter struct {
+	result sql.Result
+	rows   *sql.Rows
+	err    error
+	tm     Testservice1_TypeMappings
+	ctx    context.Context
+}
+
+func (this *Testservice1_UnaryExample2Iter) IterOutTypeExampleTable1() {}
+func (this *Testservice1_UnaryExample2Iter) IterInTypetest_Test()      {}
+
+// Each performs 'fun' on each row in the result set.
+// Each respects the context passed to it.
+// It will stop iteration, and returns this.ctx.Err() if encountered.
+func (this *Testservice1_UnaryExample2Iter) Each(fun func(*Testservice1_UnaryExample2Row) error) error {
+	for {
+		select {
+		case <-this.ctx.Done():
+			return this.ctx.Err()
+		default:
+			if row, ok := this.Next(); !ok {
+				return nil
+			} else if err := fun(row); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// One returns the sole row, or ensures an error if there was not one result when this row is converted
+func (this *Testservice1_UnaryExample2Iter) One() *Testservice1_UnaryExample2Row {
+	first, hasFirst := this.Next()
+	_, hasSecond := this.Next()
+	if !hasFirst || hasSecond {
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &Testservice1_UnaryExample2Row{err: fmt.Errorf("expected exactly 1 result from query 'UnaryExample2' found %s", amount)}
+	}
+	return first
+}
+
+// Zero returns an error if there were any rows in the result
+func (this *Testservice1_UnaryExample2Iter) Zero() error {
+	if _, ok := this.Next(); ok {
+		return fmt.Errorf("expected exactly 0 results from query 'UnaryExample2'")
+	}
+	return nil
+}
+
+// Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
+func (this *Testservice1_UnaryExample2Iter) Next() (*Testservice1_UnaryExample2Row, bool) {
+	if this.rows == nil || this.err == io.EOF {
+		return nil, false
+	} else if this.err != nil {
+		err := this.err
+		this.err = io.EOF
+		return &Testservice1_UnaryExample2Row{err: err}, true
+	}
+	cols, err := this.rows.Columns()
+	if err != nil {
+		return &Testservice1_UnaryExample2Row{err: err}, true
+	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
+	toScan := make([]interface{}, len(cols))
+	scanned := make([]alwaysScanner, len(cols))
+	for i := range scanned {
+		toScan[i] = &scanned[i]
+	}
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
+		return &Testservice1_UnaryExample2Row{err: this.err}, true
+	}
+	res := &ExampleTable1{}
+	for i, col := range cols {
+		_ = i
+		switch col {
+		case "table_id":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column table_id to protobuf go type ")}, true
+			}
+			res.TableId = r
+		case "key":
+			r, ok := (*scanned[i].i).(string)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column key to protobuf go type ")}, true
+			}
+			res.Key = r
+		case "value":
+			r, ok := (*scanned[i].i).(string)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column value to protobuf go type ")}, true
+			}
+			res.Value = r
+		case "inner_message":
+			r, ok := (*scanned[i].i).([]byte)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column inner_message to protobuf go type *ExampleTable1_InnerMessage")}, true
+			}
+			var converted = new(ExampleTable1_InnerMessage)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &Testservice1_UnaryExample2Row{err: err}, true
+			}
+			res.InnerMessage = converted
+		case "inner_enum":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column inner_enum to protobuf go type *ExampleTable1_InnerEnum")}, true
+			}
+			var converted = (ExampleTable1_InnerEnum)(r)
+			res.InnerEnum = converted
+		case "string_array":
+			r, ok := (*scanned[i].i).([]string)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column string_array to protobuf go type ")}, true
+			}
+			res.StringArray = r
+		case "bytes_field":
+			r, ok := (*scanned[i].i).([]byte)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column bytes_field to protobuf go type ")}, true
+			}
+			res.BytesField = r
+		case "start_time":
+			var converted = this.tm.TimestampTimestamp().Empty()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("could not convert mapped db column start_time to type on ExampleTable1.StartTime: %v", err)}, true
+			}
+			if err := converted.ToProto(&res.StartTime); err != nil {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("could not convert mapped db column start_timeto type on ExampleTable1.StartTime: %v", err)}, true
+			}
+		case "test_field":
+			r, ok := (*scanned[i].i).([]byte)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column test_field to protobuf go type *test.Test")}, true
+			}
+			var converted = new(test.Test)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &Testservice1_UnaryExample2Row{err: err}, true
+			}
+			res.TestField = converted
+		case "myyenum":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column myyenum to protobuf go type *MyEnum")}, true
+			}
+			var converted = (MyEnum)(r)
+			res.Myyenum = converted
+		case "testsenum":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("cant convert db column testsenum to protobuf go type *test.TestEnum")}, true
+			}
+			var converted = (test.TestEnum)(r)
+			res.Testsenum = converted
+		case "mappedenum":
+			var converted = this.tm.MappedEnum().Empty()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("could not convert mapped db column mappedenum to type on ExampleTable1.Mappedenum: %v", err)}, true
+			}
+			pToRes := &res.Mappedenum
+			if err := converted.ToProto(&pToRes); err != nil {
+				return &Testservice1_UnaryExample2Row{err: fmt.Errorf("could not convert mapped db column mappedenumto type on ExampleTable1.Mappedenum: %v", err)}, true
+			}
+
+		default:
+			return &Testservice1_UnaryExample2Row{err: fmt.Errorf("unsupported column in output: %s", col)}, true
+		}
+	}
+	return &Testservice1_UnaryExample2Row{item: res}, true
+}
+
+// Slice returns all rows found in the iterator as a Slice.
+func (this *Testservice1_UnaryExample2Iter) Slice() []*Testservice1_UnaryExample2Row {
+	var results []*Testservice1_UnaryExample2Row
+	for {
+		if i, ok := this.Next(); ok {
+			results = append(results, i)
+		} else {
+			break
+		}
+	}
+	return results
+}
+
+// returns the known columns for this result
+func (r *Testservice1_UnaryExample2Iter) Columns() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.rows != nil {
+		return r.rows.Columns()
+	}
+	return nil, nil
+}
+
+type Testservice1_ServerStreamSelectIter struct {
+	result sql.Result
+	rows   *sql.Rows
+	err    error
+	tm     Testservice1_TypeMappings
+	ctx    context.Context
+}
+
+func (this *Testservice1_ServerStreamSelectIter) IterOutTypeExampleTable1() {}
+func (this *Testservice1_ServerStreamSelectIter) IterInTypeExampleTable1()  {}
+
+// Each performs 'fun' on each row in the result set.
+// Each respects the context passed to it.
+// It will stop iteration, and returns this.ctx.Err() if encountered.
+func (this *Testservice1_ServerStreamSelectIter) Each(fun func(*Testservice1_ServerStreamSelectRow) error) error {
+	for {
+		select {
+		case <-this.ctx.Done():
+			return this.ctx.Err()
+		default:
+			if row, ok := this.Next(); !ok {
+				return nil
+			} else if err := fun(row); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// One returns the sole row, or ensures an error if there was not one result when this row is converted
+func (this *Testservice1_ServerStreamSelectIter) One() *Testservice1_ServerStreamSelectRow {
+	first, hasFirst := this.Next()
+	_, hasSecond := this.Next()
+	if !hasFirst || hasSecond {
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("expected exactly 1 result from query 'ServerStreamSelect' found %s", amount)}
+	}
+	return first
+}
+
+// Zero returns an error if there were any rows in the result
+func (this *Testservice1_ServerStreamSelectIter) Zero() error {
+	if _, ok := this.Next(); ok {
+		return fmt.Errorf("expected exactly 0 results from query 'ServerStreamSelect'")
+	}
+	return nil
+}
+
+// Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
+func (this *Testservice1_ServerStreamSelectIter) Next() (*Testservice1_ServerStreamSelectRow, bool) {
+	if this.rows == nil || this.err == io.EOF {
+		return nil, false
+	} else if this.err != nil {
+		err := this.err
+		this.err = io.EOF
+		return &Testservice1_ServerStreamSelectRow{err: err}, true
+	}
+	cols, err := this.rows.Columns()
+	if err != nil {
+		return &Testservice1_ServerStreamSelectRow{err: err}, true
+	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
+	toScan := make([]interface{}, len(cols))
+	scanned := make([]alwaysScanner, len(cols))
+	for i := range scanned {
+		toScan[i] = &scanned[i]
+	}
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
+		return &Testservice1_ServerStreamSelectRow{err: this.err}, true
+	}
+	res := &ExampleTable1{}
+	for i, col := range cols {
+		_ = i
+		switch col {
+		case "table_id":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column table_id to protobuf go type ")}, true
+			}
+			res.TableId = r
+		case "key":
+			r, ok := (*scanned[i].i).(string)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column key to protobuf go type ")}, true
+			}
+			res.Key = r
+		case "value":
+			r, ok := (*scanned[i].i).(string)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column value to protobuf go type ")}, true
+			}
+			res.Value = r
+		case "inner_message":
+			r, ok := (*scanned[i].i).([]byte)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column inner_message to protobuf go type *ExampleTable1_InnerMessage")}, true
+			}
+			var converted = new(ExampleTable1_InnerMessage)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &Testservice1_ServerStreamSelectRow{err: err}, true
+			}
+			res.InnerMessage = converted
+		case "inner_enum":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column inner_enum to protobuf go type *ExampleTable1_InnerEnum")}, true
+			}
+			var converted = (ExampleTable1_InnerEnum)(r)
+			res.InnerEnum = converted
+		case "string_array":
+			r, ok := (*scanned[i].i).([]string)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column string_array to protobuf go type ")}, true
+			}
+			res.StringArray = r
+		case "bytes_field":
+			r, ok := (*scanned[i].i).([]byte)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column bytes_field to protobuf go type ")}, true
+			}
+			res.BytesField = r
+		case "start_time":
+			var converted = this.tm.TimestampTimestamp().Empty()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("could not convert mapped db column start_time to type on ExampleTable1.StartTime: %v", err)}, true
+			}
+			if err := converted.ToProto(&res.StartTime); err != nil {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on ExampleTable1.StartTime: %v", err)}, true
+			}
+		case "test_field":
+			r, ok := (*scanned[i].i).([]byte)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column test_field to protobuf go type *test.Test")}, true
+			}
+			var converted = new(test.Test)
+			if err := proto.Unmarshal(r, converted); err != nil {
+				return &Testservice1_ServerStreamSelectRow{err: err}, true
+			}
+			res.TestField = converted
+		case "myyenum":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column myyenum to protobuf go type *MyEnum")}, true
+			}
+			var converted = (MyEnum)(r)
+			res.Myyenum = converted
+		case "testsenum":
+			r, ok := (*scanned[i].i).(int32)
+			if !ok {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("cant convert db column testsenum to protobuf go type *test.TestEnum")}, true
+			}
+			var converted = (test.TestEnum)(r)
+			res.Testsenum = converted
+		case "mappedenum":
+			var converted = this.tm.MappedEnum().Empty()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("could not convert mapped db column mappedenum to type on ExampleTable1.Mappedenum: %v", err)}, true
+			}
+			pToRes := &res.Mappedenum
+			if err := converted.ToProto(&pToRes); err != nil {
+				return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("could not convert mapped db column mappedenumto type on ExampleTable1.Mappedenum: %v", err)}, true
+			}
+
+		default:
+			return &Testservice1_ServerStreamSelectRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
+		}
+	}
+	return &Testservice1_ServerStreamSelectRow{item: res}, true
+}
+
+// Slice returns all rows found in the iterator as a Slice.
+func (this *Testservice1_ServerStreamSelectIter) Slice() []*Testservice1_ServerStreamSelectRow {
+	var results []*Testservice1_ServerStreamSelectRow
+	for {
+		if i, ok := this.Next(); ok {
+			results = append(results, i)
+		} else {
+			break
+		}
+	}
+	return results
+}
+
+// returns the known columns for this result
+func (r *Testservice1_ServerStreamSelectIter) Columns() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.rows != nil {
+		return r.rows.Columns()
+	}
+	return nil, nil
+}
+
+type Testservice1_ClientStreamingExampleIter struct {
+	result sql.Result
+	rows   *sql.Rows
+	err    error
+	tm     Testservice1_TypeMappings
+	ctx    context.Context
+}
+
+func (this *Testservice1_ClientStreamingExampleIter) IterOutTypeCountRows()    {}
+func (this *Testservice1_ClientStreamingExampleIter) IterInTypeExampleTable1() {}
+
+// Each performs 'fun' on each row in the result set.
+// Each respects the context passed to it.
+// It will stop iteration, and returns this.ctx.Err() if encountered.
+func (this *Testservice1_ClientStreamingExampleIter) Each(fun func(*Testservice1_ClientStreamingExampleRow) error) error {
+	for {
+		select {
+		case <-this.ctx.Done():
+			return this.ctx.Err()
+		default:
+			if row, ok := this.Next(); !ok {
+				return nil
+			} else if err := fun(row); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// One returns the sole row, or ensures an error if there was not one result when this row is converted
+func (this *Testservice1_ClientStreamingExampleIter) One() *Testservice1_ClientStreamingExampleRow {
+	first, hasFirst := this.Next()
+	_, hasSecond := this.Next()
+	if !hasFirst || hasSecond {
+		amount := "none"
+		if hasSecond {
+			amount = "multiple"
+		}
+		return &Testservice1_ClientStreamingExampleRow{err: fmt.Errorf("expected exactly 1 result from query 'ClientStreamingExample' found %s", amount)}
+	}
+	return first
+}
+
+// Zero returns an error if there were any rows in the result
+func (this *Testservice1_ClientStreamingExampleIter) Zero() error {
+	if _, ok := this.Next(); ok {
+		return fmt.Errorf("expected exactly 0 results from query 'ClientStreamingExample'")
+	}
+	return nil
+}
+
+// Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
+func (this *Testservice1_ClientStreamingExampleIter) Next() (*Testservice1_ClientStreamingExampleRow, bool) {
+	if this.rows == nil || this.err == io.EOF {
+		return nil, false
+	} else if this.err != nil {
+		err := this.err
+		this.err = io.EOF
+		return &Testservice1_ClientStreamingExampleRow{err: err}, true
+	}
+	cols, err := this.rows.Columns()
+	if err != nil {
+		return &Testservice1_ClientStreamingExampleRow{err: err}, true
+	}
+	if !this.rows.Next() {
+		if this.err = this.rows.Err(); this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
+	toScan := make([]interface{}, len(cols))
+	scanned := make([]alwaysScanner, len(cols))
+	for i := range scanned {
+		toScan[i] = &scanned[i]
+	}
+	if this.err = this.rows.Scan(toScan...); this.err != nil {
+		return &Testservice1_ClientStreamingExampleRow{err: this.err}, true
+	}
+	res := &CountRows{}
+	for i, col := range cols {
+		_ = i
+		switch col {
+		case "count":
+			r, ok := (*scanned[i].i).(int64)
+			if !ok {
+				return &Testservice1_ClientStreamingExampleRow{err: fmt.Errorf("cant convert db column count to protobuf go type ")}, true
+			}
+			res.Count = r
+
+		default:
+			return &Testservice1_ClientStreamingExampleRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
+		}
+	}
+	return &Testservice1_ClientStreamingExampleRow{item: res}, true
+}
+
+// Slice returns all rows found in the iterator as a Slice.
+func (this *Testservice1_ClientStreamingExampleIter) Slice() []*Testservice1_ClientStreamingExampleRow {
+	var results []*Testservice1_ClientStreamingExampleRow
+	for {
+		if i, ok := this.Next(); ok {
+			results = append(results, i)
+		} else {
+			break
+		}
+	}
+	return results
+}
+
+// returns the known columns for this result
+func (r *Testservice1_ClientStreamingExampleIter) Columns() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.rows != nil {
+		return r.rows.Columns()
+	}
+	return nil, nil
+}
+
+type Testservice1_UnaryExample1In interface {
+	GetTableId() int32
+	GetKey() string
+	GetValue() string
+	GetInnerMessage() *ExampleTable1_InnerMessage
+	GetInnerEnum() ExampleTable1_InnerEnum
+	GetStringArray() []string
+	GetBytesField() []byte
+	GetStartTime() *timestamp.Timestamp
+	GetTestField() *test.Test
+	GetMyyenum() MyEnum
+	GetTestsenum() test.TestEnum
+	GetMappedenum() MappedEnum
+}
+type Testservice1_UnaryExample1Out interface {
+	GetTableId() int32
+	GetKey() string
+	GetValue() string
+	GetInnerMessage() *ExampleTable1_InnerMessage
+	GetInnerEnum() ExampleTable1_InnerEnum
+	GetStringArray() []string
+	GetBytesField() []byte
+	GetStartTime() *timestamp.Timestamp
+	GetTestField() *test.Test
+	GetMyyenum() MyEnum
+	GetTestsenum() test.TestEnum
+	GetMappedenum() MappedEnum
+}
+type Testservice1_UnaryExample1Row struct {
+	item Testservice1_UnaryExample1Out
+	err  error
+}
+
+func newTestservice1_UnaryExample1Row(item Testservice1_UnaryExample1Out, err error) *Testservice1_UnaryExample1Row {
+	return &Testservice1_UnaryExample1Row{item, err}
+}
+
+// Unwrap takes an address to a proto.Message as its only parameter
+// Unwrap can only set into output protos of that match method return types + the out option on the query itself
+func (this *Testservice1_UnaryExample1Row) Unwrap(pointerToMsg proto.Message) error {
+	if this.err != nil {
+		return this.err
+	}
+	if o, ok := (pointerToMsg).(*ExampleTable1); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
+		}
+		res, _ := this.ExampleTable1()
+		_ = res
+		o.TableId = res.TableId
+		o.Key = res.Key
+		o.Value = res.Value
+		o.InnerMessage = res.InnerMessage
+		o.InnerEnum = res.InnerEnum
+		o.StringArray = res.StringArray
+		o.BytesField = res.BytesField
+		o.StartTime = res.StartTime
+		o.TestField = res.TestField
+		o.Myyenum = res.Myyenum
+		o.Testsenum = res.Testsenum
+		o.Mappedenum = res.Mappedenum
+		return nil
+	}
+	return nil
+}
+func (this *Testservice1_UnaryExample1Row) ExampleTable1() (*ExampleTable1, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &ExampleTable1{
+		TableId:      this.item.GetTableId(),
+		Key:          this.item.GetKey(),
+		Value:        this.item.GetValue(),
+		InnerMessage: this.item.GetInnerMessage(),
+		InnerEnum:    this.item.GetInnerEnum(),
+		StringArray:  this.item.GetStringArray(),
+		BytesField:   this.item.GetBytesField(),
+		StartTime:    this.item.GetStartTime(),
+		TestField:    this.item.GetTestField(),
+		Myyenum:      this.item.GetMyyenum(),
+		Testsenum:    this.item.GetTestsenum(),
+		Mappedenum:   this.item.GetMappedenum(),
+	}, nil
+}
+
+func (this *Testservice1_UnaryExample1Row) Proto() (*ExampleTable1, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &ExampleTable1{
+		TableId:      this.item.GetTableId(),
+		Key:          this.item.GetKey(),
+		Value:        this.item.GetValue(),
+		InnerMessage: this.item.GetInnerMessage(),
+		InnerEnum:    this.item.GetInnerEnum(),
+		StringArray:  this.item.GetStringArray(),
+		BytesField:   this.item.GetBytesField(),
+		StartTime:    this.item.GetStartTime(),
+		TestField:    this.item.GetTestField(),
+		Myyenum:      this.item.GetMyyenum(),
+		Testsenum:    this.item.GetTestsenum(),
+		Mappedenum:   this.item.GetMappedenum(),
+	}, nil
+}
+
+type Testservice1_UnaryExample2In interface {
+	GetId() int32
+	GetName() string
+}
+type Testservice1_UnaryExample2Out interface {
+	GetTableId() int32
+	GetKey() string
+	GetValue() string
+	GetInnerMessage() *ExampleTable1_InnerMessage
+	GetInnerEnum() ExampleTable1_InnerEnum
+	GetStringArray() []string
+	GetBytesField() []byte
+	GetStartTime() *timestamp.Timestamp
+	GetTestField() *test.Test
+	GetMyyenum() MyEnum
+	GetTestsenum() test.TestEnum
+	GetMappedenum() MappedEnum
+}
+type Testservice1_UnaryExample2Row struct {
+	item Testservice1_UnaryExample2Out
+	err  error
+}
+
+func newTestservice1_UnaryExample2Row(item Testservice1_UnaryExample2Out, err error) *Testservice1_UnaryExample2Row {
+	return &Testservice1_UnaryExample2Row{item, err}
+}
+
+// Unwrap takes an address to a proto.Message as its only parameter
+// Unwrap can only set into output protos of that match method return types + the out option on the query itself
+func (this *Testservice1_UnaryExample2Row) Unwrap(pointerToMsg proto.Message) error {
+	if this.err != nil {
+		return this.err
+	}
+	if o, ok := (pointerToMsg).(*ExampleTable1); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
+		}
+		res, _ := this.ExampleTable1()
+		_ = res
+		o.TableId = res.TableId
+		o.Key = res.Key
+		o.Value = res.Value
+		o.InnerMessage = res.InnerMessage
+		o.InnerEnum = res.InnerEnum
+		o.StringArray = res.StringArray
+		o.BytesField = res.BytesField
+		o.StartTime = res.StartTime
+		o.TestField = res.TestField
+		o.Myyenum = res.Myyenum
+		o.Testsenum = res.Testsenum
+		o.Mappedenum = res.Mappedenum
+		return nil
+	}
+	return nil
+}
+func (this *Testservice1_UnaryExample2Row) ExampleTable1() (*ExampleTable1, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &ExampleTable1{
+		TableId:      this.item.GetTableId(),
+		Key:          this.item.GetKey(),
+		Value:        this.item.GetValue(),
+		InnerMessage: this.item.GetInnerMessage(),
+		InnerEnum:    this.item.GetInnerEnum(),
+		StringArray:  this.item.GetStringArray(),
+		BytesField:   this.item.GetBytesField(),
+		StartTime:    this.item.GetStartTime(),
+		TestField:    this.item.GetTestField(),
+		Myyenum:      this.item.GetMyyenum(),
+		Testsenum:    this.item.GetTestsenum(),
+		Mappedenum:   this.item.GetMappedenum(),
+	}, nil
+}
+
+func (this *Testservice1_UnaryExample2Row) Proto() (*ExampleTable1, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &ExampleTable1{
+		TableId:      this.item.GetTableId(),
+		Key:          this.item.GetKey(),
+		Value:        this.item.GetValue(),
+		InnerMessage: this.item.GetInnerMessage(),
+		InnerEnum:    this.item.GetInnerEnum(),
+		StringArray:  this.item.GetStringArray(),
+		BytesField:   this.item.GetBytesField(),
+		StartTime:    this.item.GetStartTime(),
+		TestField:    this.item.GetTestField(),
+		Myyenum:      this.item.GetMyyenum(),
+		Testsenum:    this.item.GetTestsenum(),
+		Mappedenum:   this.item.GetMappedenum(),
+	}, nil
+}
+
+type Testservice1_ServerStreamSelectIn interface {
+	GetTableId() int32
+	GetKey() string
+	GetValue() string
+	GetInnerMessage() *ExampleTable1_InnerMessage
+	GetInnerEnum() ExampleTable1_InnerEnum
+	GetStringArray() []string
+	GetBytesField() []byte
+	GetStartTime() *timestamp.Timestamp
+	GetTestField() *test.Test
+	GetMyyenum() MyEnum
+	GetTestsenum() test.TestEnum
+	GetMappedenum() MappedEnum
+}
+type Testservice1_ServerStreamSelectOut interface {
+	GetTableId() int32
+	GetKey() string
+	GetValue() string
+	GetInnerMessage() *ExampleTable1_InnerMessage
+	GetInnerEnum() ExampleTable1_InnerEnum
+	GetStringArray() []string
+	GetBytesField() []byte
+	GetStartTime() *timestamp.Timestamp
+	GetTestField() *test.Test
+	GetMyyenum() MyEnum
+	GetTestsenum() test.TestEnum
+	GetMappedenum() MappedEnum
+}
+type Testservice1_ServerStreamSelectRow struct {
+	item Testservice1_ServerStreamSelectOut
+	err  error
+}
+
+func newTestservice1_ServerStreamSelectRow(item Testservice1_ServerStreamSelectOut, err error) *Testservice1_ServerStreamSelectRow {
+	return &Testservice1_ServerStreamSelectRow{item, err}
+}
+
+// Unwrap takes an address to a proto.Message as its only parameter
+// Unwrap can only set into output protos of that match method return types + the out option on the query itself
+func (this *Testservice1_ServerStreamSelectRow) Unwrap(pointerToMsg proto.Message) error {
+	if this.err != nil {
+		return this.err
+	}
+	if o, ok := (pointerToMsg).(*ExampleTable1); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
+		}
+		res, _ := this.ExampleTable1()
+		_ = res
+		o.TableId = res.TableId
+		o.Key = res.Key
+		o.Value = res.Value
+		o.InnerMessage = res.InnerMessage
+		o.InnerEnum = res.InnerEnum
+		o.StringArray = res.StringArray
+		o.BytesField = res.BytesField
+		o.StartTime = res.StartTime
+		o.TestField = res.TestField
+		o.Myyenum = res.Myyenum
+		o.Testsenum = res.Testsenum
+		o.Mappedenum = res.Mappedenum
+		return nil
+	}
+	return nil
+}
+func (this *Testservice1_ServerStreamSelectRow) ExampleTable1() (*ExampleTable1, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &ExampleTable1{
+		TableId:      this.item.GetTableId(),
+		Key:          this.item.GetKey(),
+		Value:        this.item.GetValue(),
+		InnerMessage: this.item.GetInnerMessage(),
+		InnerEnum:    this.item.GetInnerEnum(),
+		StringArray:  this.item.GetStringArray(),
+		BytesField:   this.item.GetBytesField(),
+		StartTime:    this.item.GetStartTime(),
+		TestField:    this.item.GetTestField(),
+		Myyenum:      this.item.GetMyyenum(),
+		Testsenum:    this.item.GetTestsenum(),
+		Mappedenum:   this.item.GetMappedenum(),
+	}, nil
+}
+
+func (this *Testservice1_ServerStreamSelectRow) Proto() (*ExampleTable1, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &ExampleTable1{
+		TableId:      this.item.GetTableId(),
+		Key:          this.item.GetKey(),
+		Value:        this.item.GetValue(),
+		InnerMessage: this.item.GetInnerMessage(),
+		InnerEnum:    this.item.GetInnerEnum(),
+		StringArray:  this.item.GetStringArray(),
+		BytesField:   this.item.GetBytesField(),
+		StartTime:    this.item.GetStartTime(),
+		TestField:    this.item.GetTestField(),
+		Myyenum:      this.item.GetMyyenum(),
+		Testsenum:    this.item.GetTestsenum(),
+		Mappedenum:   this.item.GetMappedenum(),
+	}, nil
+}
+
+type Testservice1_ClientStreamingExampleIn interface {
+	GetTableId() int32
+	GetKey() string
+	GetValue() string
+	GetInnerMessage() *ExampleTable1_InnerMessage
+	GetInnerEnum() ExampleTable1_InnerEnum
+	GetStringArray() []string
+	GetBytesField() []byte
+	GetStartTime() *timestamp.Timestamp
+	GetTestField() *test.Test
+	GetMyyenum() MyEnum
+	GetTestsenum() test.TestEnum
+	GetMappedenum() MappedEnum
+}
+type Testservice1_ClientStreamingExampleOut interface {
+	GetCount() int64
+}
+type Testservice1_ClientStreamingExampleRow struct {
+	item Testservice1_ClientStreamingExampleOut
+	err  error
+}
+
+func newTestservice1_ClientStreamingExampleRow(item Testservice1_ClientStreamingExampleOut, err error) *Testservice1_ClientStreamingExampleRow {
+	return &Testservice1_ClientStreamingExampleRow{item, err}
+}
+
+// Unwrap takes an address to a proto.Message as its only parameter
+// Unwrap can only set into output protos of that match method return types + the out option on the query itself
+func (this *Testservice1_ClientStreamingExampleRow) Unwrap(pointerToMsg proto.Message) error {
+	if this.err != nil {
+		return this.err
+	}
+	if o, ok := (pointerToMsg).(*CountRows); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *CountRows before giving to Unwrap()")
+		}
+		res, _ := this.CountRows()
+		_ = res
+		o.Count = res.Count
+		return nil
+	}
+	return nil
+}
+func (this *Testservice1_ClientStreamingExampleRow) CountRows() (*CountRows, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &CountRows{
+		Count: this.item.GetCount(),
+	}, nil
+}
+
+func (this *Testservice1_ClientStreamingExampleRow) Proto() (*CountRows, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &CountRows{
+		Count: this.item.GetCount(),
+	}, nil
+}
+
+type Testservice1_Hooks interface {
 }
 type Testservice1_DefaultHooks struct{}
-type Testservice1_TypeMappings interface{
-TimestampTimestamp() Testservice1TimestampTimestampMappingImpl
-MappedEnum() Testservice1MappedEnumMappingImpl
+type Testservice1_TypeMappings interface {
+	TimestampTimestamp() Testservice1TimestampTimestampMappingImpl
+	MappedEnum() Testservice1MappedEnumMappingImpl
 }
 type Testservice1_DefaultTypeMappings struct{}
-	func (this *Testservice1_DefaultTypeMappings) TimestampTimestamp() Testservice1TimestampTimestampMappingImpl {
-			return &Testservice1_DefaultTimestampTimestampMappingImpl{}
-		}
-		type Testservice1_DefaultTimestampTimestampMappingImpl struct{}
-		func (this *Testservice1_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
-			return nil
-		}
-		func (this *Testservice1_DefaultTimestampTimestampMappingImpl) Empty() Testservice1TimestampTimestampMappingImpl {
-			return this
-		}
-		func (this *Testservice1_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
-			return this
-		}
-		func (this *Testservice1_DefaultTimestampTimestampMappingImpl) Scan(interface{}) error {
-			return nil
-		}
-		func (this *Testservice1_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
-			return "DEFAULT_TYPE_MAPPING_VALUE", nil
-		}
-		type Testservice1TimestampTimestampMappingImpl interface {
-            ToProto(**timestamp.Timestamp) error
-            Empty() Testservice1TimestampTimestampMappingImpl
-            ToSql(*timestamp.Timestamp) sql.Scanner
-            sql.Scanner
-            driver.Valuer
-        }
+
+func (this *Testservice1_DefaultTypeMappings) TimestampTimestamp() Testservice1TimestampTimestampMappingImpl {
+	return &Testservice1_DefaultTimestampTimestampMappingImpl{}
+}
+
+type Testservice1_DefaultTimestampTimestampMappingImpl struct{}
+
+func (this *Testservice1_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
+	return nil
+}
+func (this *Testservice1_DefaultTimestampTimestampMappingImpl) Empty() Testservice1TimestampTimestampMappingImpl {
+	return this
+}
+func (this *Testservice1_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
+	return this
+}
+func (this *Testservice1_DefaultTimestampTimestampMappingImpl) Scan(interface{}) error {
+	return nil
+}
+func (this *Testservice1_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
+	return "DEFAULT_TYPE_MAPPING_VALUE", nil
+}
+
+type Testservice1TimestampTimestampMappingImpl interface {
+	ToProto(**timestamp.Timestamp) error
+	Empty() Testservice1TimestampTimestampMappingImpl
+	ToSql(*timestamp.Timestamp) sql.Scanner
+	sql.Scanner
+	driver.Valuer
+}
+
 func (this *Testservice1_DefaultTypeMappings) MappedEnum() Testservice1MappedEnumMappingImpl {
-			return &Testservice1_DefaultMappedEnumMappingImpl{}
-		}
-		type Testservice1_DefaultMappedEnumMappingImpl struct{}
-		func (this *Testservice1_DefaultMappedEnumMappingImpl) ToProto(**MappedEnum) error {
-			return nil
-		}
-		func (this *Testservice1_DefaultMappedEnumMappingImpl) Empty() Testservice1MappedEnumMappingImpl {
-			return this
-		}
-		func (this *Testservice1_DefaultMappedEnumMappingImpl) ToSql(*MappedEnum) sql.Scanner {
-			return this
-		}
-		func (this *Testservice1_DefaultMappedEnumMappingImpl) Scan(interface{}) error {
-			return nil
-		}
-		func (this *Testservice1_DefaultMappedEnumMappingImpl) Value() (driver.Value, error) {
-			return "DEFAULT_TYPE_MAPPING_VALUE", nil
-		}
-		type Testservice1MappedEnumMappingImpl interface {
-            ToProto(**MappedEnum) error
-            Empty() Testservice1MappedEnumMappingImpl
-            ToSql(*MappedEnum) sql.Scanner
-            sql.Scanner
-            driver.Valuer
-        }
+	return &Testservice1_DefaultMappedEnumMappingImpl{}
+}
+
+type Testservice1_DefaultMappedEnumMappingImpl struct{}
+
+func (this *Testservice1_DefaultMappedEnumMappingImpl) ToProto(**MappedEnum) error {
+	return nil
+}
+func (this *Testservice1_DefaultMappedEnumMappingImpl) Empty() Testservice1MappedEnumMappingImpl {
+	return this
+}
+func (this *Testservice1_DefaultMappedEnumMappingImpl) ToSql(*MappedEnum) sql.Scanner {
+	return this
+}
+func (this *Testservice1_DefaultMappedEnumMappingImpl) Scan(interface{}) error {
+	return nil
+}
+func (this *Testservice1_DefaultMappedEnumMappingImpl) Value() (driver.Value, error) {
+	return "DEFAULT_TYPE_MAPPING_VALUE", nil
+}
+
+type Testservice1MappedEnumMappingImpl interface {
+	ToProto(**MappedEnum) error
+	Empty() Testservice1MappedEnumMappingImpl
+	ToSql(*MappedEnum) sql.Scanner
+	sql.Scanner
+	driver.Valuer
+}
 type Testservice1_Opts struct {
-    MAPPINGS Testservice1_TypeMappings
-    HOOKS    Testservice1_Hooks
+	MAPPINGS Testservice1_TypeMappings
+	HOOKS    Testservice1_Hooks
 }
+
 func Testservice1Opts(hooks Testservice1_Hooks, mappings Testservice1_TypeMappings) Testservice1_Opts {
-    opts := Testservice1_Opts{
-        HOOKS: &Testservice1_DefaultHooks{},
-        MAPPINGS: &Testservice1_DefaultTypeMappings{},
-    }
-    if hooks != nil {
-        opts.HOOKS = hooks
-    }
-    if mappings != nil {
-        opts.MAPPINGS = mappings
-    }
-    return opts
+	opts := Testservice1_Opts{
+		HOOKS:    &Testservice1_DefaultHooks{},
+		MAPPINGS: &Testservice1_DefaultTypeMappings{},
+	}
+	if hooks != nil {
+		opts.HOOKS = hooks
+	}
+	if mappings != nil {
+		opts.MAPPINGS = mappings
+	}
+	return opts
 }
+
 type Testservice1_Impl struct {
-    opts    *Testservice1_Opts
-    QUERIES *Testservice1_Queries
-    HANDLERS RestOfTestservice1Handlers
-    DB      *sql.DB
+	opts     *Testservice1_Opts
+	QUERIES  *Testservice1_Queries
+	HANDLERS RestOfTestservice1Handlers
+	DB       *sql.DB
 }
+
 func Testservice1PersistImpl(db *sql.DB, handlers RestOfTestservice1Handlers, opts ...Testservice1_Opts) *Testservice1_Impl {
-    var myOpts Testservice1_Opts
-    if len(opts) > 0 {
-        myOpts = opts[0]
-    } else {
-        myOpts = Testservice1Opts(nil, nil)
-    }
-    return &Testservice1_Impl{
-        opts:    &myOpts,
-        QUERIES: Testservice1PersistQueries(myOpts),
-        DB:      db,
-        HANDLERS: handlers,
-    }
+	var myOpts Testservice1_Opts
+	if len(opts) > 0 {
+		myOpts = opts[0]
+	} else {
+		myOpts = Testservice1Opts(nil, nil)
+	}
+	return &Testservice1_Impl{
+		opts:     &myOpts,
+		QUERIES:  Testservice1PersistQueries(myOpts),
+		DB:       db,
+		HANDLERS: handlers,
+	}
 }
-    
-    type RestOfTestservice1Handlers interface {
-    }
+
+type RestOfTestservice1Handlers interface {
+}
+
 func (this *Testservice1_Impl) UnaryExample1(ctx context.Context, req *ExampleTable1) (*ExampleTable1, error) {
-    query := this.QUERIES.UnaryExample1(ctx, this.DB)
-    
-    result := query.Execute(req)
-    res, err := result.One().ExampleTable1()
-    if err != nil {
-        return nil, err
-    }
-    
-    return res, nil
+	query := this.QUERIES.UnaryExample1(ctx, this.DB)
+
+	result := query.Execute(req)
+	res, err := result.One().ExampleTable1()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
-    
-func (this *Testservice1_Impl) UnaryExample2(ctx context.Context, req *Test) (*ExampleTable1, error) {
-    query := this.QUERIES.UnaryExample2(ctx, this.DB)
-    
-    result := query.Execute(req)
-    res, err := result.One().ExampleTable1()
-    if err != nil {
-        return nil, err
-    }
-    
-    return res, nil
+
+func (this *Testservice1_Impl) UnaryExample2(ctx context.Context, req *test.Test) (*ExampleTable1, error) {
+	query := this.QUERIES.UnaryExample2(ctx, this.DB)
+
+	result := query.Execute(req)
+	res, err := result.One().ExampleTable1()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
-    
+
 func (this *Testservice1_Impl) ServerStreamSelect(req *ExampleTable1, stream Testservice1_ServerStreamSelectServer) error {
-    tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
-    if err != nil {
-        return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-    }
-    if err := this.ServerStreamSelectTx(req, stream, tx); err != nil {
-        return gstatus.Errorf(codes.Unknown, "error executing 'server_stream_select' query: %v", err)
-    }
-    return nil
+	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.ServerStreamSelectTx(req, stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'server_stream_select' query: %v", err)
+	}
+	return nil
 }
 func (this *Testservice1_Impl) ServerStreamSelectTx(req *ExampleTable1, stream Testservice1_ServerStreamSelectServer, tx PersistTx) error {
-    ctx := stream.Context()
-    query := this.QUERIES.ServerStreamSelect(ctx, tx)
-    iter := query.Execute(req)
-    return iter.Each(func(row *Testservice1_ServerStreamSelectRow) error {
-        res, err := row.ExampleTable1()
-        if err != nil {
-            return err
-        }
-        return stream.Send(res)
-    })
+	ctx := stream.Context()
+	query := this.QUERIES.ServerStreamSelect(ctx, tx)
+	iter := query.Execute(req)
+	return iter.Each(func(row *Testservice1_ServerStreamSelectRow) error {
+		res, err := row.ExampleTable1()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
+	})
 }
-    
+
 func (this *Testservice1_Impl) ClientStreamingExample(stream Testservice1_ClientStreamingExampleServer) error {
-    tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
-    if err != nil {
-        return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-    }
-    if err := this.ClientStreamingExampleTx(stream, tx); err != nil {
-        return gstatus.Errorf(codes.Unknown, "error executing 'client_streaming_example' query: %v", err)
-    }
-    return nil
+	tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+	}
+	if err := this.ClientStreamingExampleTx(stream, tx); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'client_streaming_example' query: %v", err)
+	}
+	return nil
 }
 func (this *Testservice1_Impl) ClientStreamingExampleTx(stream Testservice1_ClientStreamingExampleServer, tx PersistTx) error {
-    query := this.QUERIES.ClientStreamingExample(stream.Context(), tx)
-    var first *ExampleTable1
-    for {
-        req, err := stream.Recv()
-        if err == io.EOF {
-            break
-        } else if err != nil {
-            return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
-        }
-        if first == nil {
-            first = req
-        }
-        
-        result := query.Execute(req)
-        if err := result.Zero(); err != nil {
-            return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
-        }
-    }
-    if err := tx.Commit(); err != nil {
-        if rollbackErr := tx.Rollback(); rollbackErr != nil {
-            return fmt.Errorf("error executing 'client_streaming_example' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
-        }
-    }
-    res := &Empty{}
-    
-    if err := stream.SendAndClose(res); err != nil {
-        return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
-    }
-    return nil
+	query := this.QUERIES.ClientStreamingExample(stream.Context(), tx)
+	var first *ExampleTable1
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return gstatus.Errorf(codes.Unknown, "error receiving request: %v", err)
+		}
+		if first == nil {
+			first = req
+		}
+
+		result := query.Execute(req)
+		if err := result.Zero(); err != nil {
+			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return fmt.Errorf("error executing 'client_streaming_example' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
+		}
+	}
+	res := &Empty{}
+
+	if err := stream.SendAndClose(res); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
+	}
+	return nil
 }
-        // NotEnabledService_Queries holds all the queries found the proto service option as methods
+
+// NotEnabledService_Queries holds all the queries found the proto service option as methods
 type NotEnabledService_Queries struct {
-opts NotEnabledService_Opts
+	opts NotEnabledService_Opts
 }
+
 // NotEnabledServicePersistQueries returns all the known 'SQL' queires for the 'NotEnabledService' service.
-    func NotEnabledServicePersistQueries(opts ...NotEnabledService_Opts) *NotEnabledService_Queries {
-        var myOpts NotEnabledService_Opts
-        if len(opts) > 0 {
-            myOpts = opts[0]
-        } else {
-            myOpts = NotEnabledServiceOpts(nil, nil)
-        }
-        return &NotEnabledService_Queries{
-            opts: myOpts,
-        }
-    }
-    type NotEnabledService_Hooks interface {
+func NotEnabledServicePersistQueries(opts ...NotEnabledService_Opts) *NotEnabledService_Queries {
+	var myOpts NotEnabledService_Opts
+	if len(opts) > 0 {
+		myOpts = opts[0]
+	} else {
+		myOpts = NotEnabledServiceOpts(nil, nil)
+	}
+	return &NotEnabledService_Queries{
+		opts: myOpts,
+	}
+}
+
+type NotEnabledService_Hooks interface {
 }
 type NotEnabledService_DefaultHooks struct{}
-type NotEnabledService_TypeMappings interface{
+type NotEnabledService_TypeMappings interface {
 }
 type NotEnabledService_DefaultTypeMappings struct{}
-	
+
 type NotEnabledService_Opts struct {
-    MAPPINGS NotEnabledService_TypeMappings
-    HOOKS    NotEnabledService_Hooks
+	MAPPINGS NotEnabledService_TypeMappings
+	HOOKS    NotEnabledService_Hooks
 }
+
 func NotEnabledServiceOpts(hooks NotEnabledService_Hooks, mappings NotEnabledService_TypeMappings) NotEnabledService_Opts {
-    opts := NotEnabledService_Opts{
-        HOOKS: &NotEnabledService_DefaultHooks{},
-        MAPPINGS: &NotEnabledService_DefaultTypeMappings{},
-    }
-    if hooks != nil {
-        opts.HOOKS = hooks
-    }
-    if mappings != nil {
-        opts.MAPPINGS = mappings
-    }
-    return opts
+	opts := NotEnabledService_Opts{
+		HOOKS:    &NotEnabledService_DefaultHooks{},
+		MAPPINGS: &NotEnabledService_DefaultTypeMappings{},
+	}
+	if hooks != nil {
+		opts.HOOKS = hooks
+	}
+	if mappings != nil {
+		opts.MAPPINGS = mappings
+	}
+	return opts
 }
+
 type NotEnabledService_Impl struct {
-    opts    *NotEnabledService_Opts
-    QUERIES *NotEnabledService_Queries
-    HANDLERS RestOfNotEnabledServiceHandlers
-    DB      *sql.DB
+	opts     *NotEnabledService_Opts
+	QUERIES  *NotEnabledService_Queries
+	HANDLERS RestOfNotEnabledServiceHandlers
+	DB       *sql.DB
 }
+
 func NotEnabledServicePersistImpl(db *sql.DB, handlers RestOfNotEnabledServiceHandlers, opts ...NotEnabledService_Opts) *NotEnabledService_Impl {
-    var myOpts NotEnabledService_Opts
-    if len(opts) > 0 {
-        myOpts = opts[0]
-    } else {
-        myOpts = NotEnabledServiceOpts(nil, nil)
-    }
-    return &NotEnabledService_Impl{
-        opts:    &myOpts,
-        QUERIES: NotEnabledServicePersistQueries(myOpts),
-        DB:      db,
-        HANDLERS: handlers,
-    }
+	var myOpts NotEnabledService_Opts
+	if len(opts) > 0 {
+		myOpts = opts[0]
+	} else {
+		myOpts = NotEnabledServiceOpts(nil, nil)
+	}
+	return &NotEnabledService_Impl{
+		opts:     &myOpts,
+		QUERIES:  NotEnabledServicePersistQueries(myOpts),
+		DB:       db,
+		HANDLERS: handlers,
+	}
 }
-    
-    type RestOfNotEnabledServiceHandlers interface {
-    }
+
+type RestOfNotEnabledServiceHandlers interface {
+}

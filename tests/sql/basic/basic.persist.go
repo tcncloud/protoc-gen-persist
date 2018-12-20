@@ -211,8 +211,8 @@ opts Amazing_Opts
             tm     Amazing_TypeMappings
             ctx    context.Context
         }
-        func (this *Amazing_SelectByIdIter) IterOutTypetest.ExampleTable() {}
-        func (this *Amazing_SelectByIdIter) IterInTypetest.PartialTable()  {}
+        func (this *Amazing_SelectByIdIter) IterOutTypetest_ExampleTable() {}
+        func (this *Amazing_SelectByIdIter) IterInTypetest_PartialTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -277,7 +277,7 @@ opts Amazing_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &Amazing_SelectByIdRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -289,10 +289,10 @@ opts Amazing_Opts
             case "start_time":
                     var converted = this.tm.TimestampTimestamp().Empty()
                     if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test.ExampleTable.StartTime: %v", err)}, true
+                        return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test_ExampleTable.StartTime: %v", err)}, true
                     }
                     if err := converted.ToProto(&res.StartTime); err != nil {
-                        return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test.ExampleTable.StartTime: %v", err)}, true
+                        return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test_ExampleTable.StartTime: %v", err)}, true
                     }
                 case "name": r, ok := (*scanned[i].i).(string)
             if !ok {
@@ -335,8 +335,8 @@ opts Amazing_Opts
             tm     Amazing_TypeMappings
             ctx    context.Context
         }
-        func (this *Amazing_SelectByNameIter) IterOutTypetest.ExampleTable() {}
-        func (this *Amazing_SelectByNameIter) IterInTypetest.Name()  {}
+        func (this *Amazing_SelectByNameIter) IterOutTypetest_ExampleTable() {}
+        func (this *Amazing_SelectByNameIter) IterInTypetest_Name()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -401,7 +401,7 @@ opts Amazing_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &Amazing_SelectByNameRow{err: this.err}, true
             }
-            res := &test.ExampleTable{}
+            res := &test_ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
@@ -413,10 +413,10 @@ opts Amazing_Opts
             case "start_time":
                     var converted = this.tm.TimestampTimestamp().Empty()
                     if err := converted.Scan(*scanned[i].i); err != nil {
-                        return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test.ExampleTable.StartTime: %v", err)}, true
+                        return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test_ExampleTable.StartTime: %v", err)}, true
                     }
                     if err := converted.ToProto(&res.StartTime); err != nil {
-                        return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test.ExampleTable.StartTime: %v", err)}, true
+                        return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test_ExampleTable.StartTime: %v", err)}, true
                     }
                 case "name": r, ok := (*scanned[i].i).(string)
             if !ok {
@@ -460,7 +460,7 @@ opts Amazing_Opts
             ctx    context.Context
         }
         func (this *Amazing_InsertIter) IterOutTypeEmpty() {}
-        func (this *Amazing_InsertIter) IterInTypetest.ExampleTable()  {}
+        func (this *Amazing_InsertIter) IterInTypetest_ExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -850,22 +850,22 @@ func AmazingPersistImpl(db *sql.DB, handlers RestOfAmazingHandlers, opts ...Amaz
 }
     
     type RestOfAmazingHandlers interface {
-    UnImplementedPersistMethod(context.Context, *ExampleTable) (*ExampleTable, error)
-NoGenerationForBadReturnTypes(context.Context, *ExampleTable) (*BadReturn, error)
+    UnImplementedPersistMethod(context.Context, *test.ExampleTable) (*test.ExampleTable, error)
+NoGenerationForBadReturnTypes(context.Context, *test.ExampleTable) (*BadReturn, error)
 }
-func (this *Amazing_Impl) UnImplementedPersistMethod(ctx context.Context, req *ExampleTable) (*ExampleTable, error) {
+func (this *Amazing_Impl) UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
     return this.HANDLERS.UnImplementedPersistMethod(ctx, req)
 }
         
-func (this *Amazing_Impl) NoGenerationForBadReturnTypes(ctx context.Context, req *ExampleTable) (*BadReturn, error) {
+func (this *Amazing_Impl) NoGenerationForBadReturnTypes(ctx context.Context, req *test.ExampleTable) (*BadReturn, error) {
     return this.HANDLERS.NoGenerationForBadReturnTypes(ctx, req)
 }
         
-func (this *Amazing_Impl) UniarySelect(ctx context.Context, req *PartialTable) (*ExampleTable, error) {
+func (this *Amazing_Impl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
     query := this.QUERIES.SelectById(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().ExampleTable()
+    res, err := result.One().test.ExampleTable()
     if err != nil {
         return nil, err
     }
@@ -873,7 +873,7 @@ func (this *Amazing_Impl) UniarySelect(ctx context.Context, req *PartialTable) (
     return res, nil
 }
     
-func (this *Amazing_Impl) UniarySelectWithHooks(ctx context.Context, req *PartialTable) (*ExampleTable, error) {
+func (this *Amazing_Impl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
     query := this.QUERIES.SelectById(ctx, this.DB)
     
     beforeRes, err := this.opts.HOOKS.UniarySelectWithHooksBeforeHook(ctx, req)
@@ -885,7 +885,7 @@ func (this *Amazing_Impl) UniarySelectWithHooks(ctx context.Context, req *Partia
     req = beforeRes
     
     result := query.Execute(req)
-    res, err := result.One().ExampleTable()
+    res, err := result.One().test.ExampleTable()
     if err != nil {
         return nil, err
     }
@@ -897,7 +897,7 @@ func (this *Amazing_Impl) UniarySelectWithHooks(ctx context.Context, req *Partia
     return res, nil
 }
     
-func (this *Amazing_Impl) ServerStream(req *Name, stream Amazing_ServerStreamServer) error {
+func (this *Amazing_Impl) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
     tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
     if err != nil {
         return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -907,12 +907,12 @@ func (this *Amazing_Impl) ServerStream(req *Name, stream Amazing_ServerStreamSer
     }
     return nil
 }
-func (this *Amazing_Impl) ServerStreamTx(req *Name, stream Amazing_ServerStreamServer, tx PersistTx) error {
+func (this *Amazing_Impl) ServerStreamTx(req *test.Name, stream Amazing_ServerStreamServer, tx PersistTx) error {
     ctx := stream.Context()
     query := this.QUERIES.SelectByName(ctx, tx)
     iter := query.Execute(req)
     return iter.Each(func(row *Amazing_SelectByNameRow) error {
-        res, err := row.ExampleTable()
+        res, err := row.test.ExampleTable()
         if err != nil {
             return err
         }
@@ -920,7 +920,7 @@ func (this *Amazing_Impl) ServerStreamTx(req *Name, stream Amazing_ServerStreamS
     })
 }
     
-func (this *Amazing_Impl) ServerStreamWithHooks(req *Name, stream Amazing_ServerStreamWithHooksServer) error {
+func (this *Amazing_Impl) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
     tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
     if err != nil {
         return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -930,12 +930,12 @@ func (this *Amazing_Impl) ServerStreamWithHooks(req *Name, stream Amazing_Server
     }
     return nil
 }
-func (this *Amazing_Impl) ServerStreamWithHooksTx(req *Name, stream Amazing_ServerStreamWithHooksServer, tx PersistTx) error {
+func (this *Amazing_Impl) ServerStreamWithHooksTx(req *test.Name, stream Amazing_ServerStreamWithHooksServer, tx PersistTx) error {
     ctx := stream.Context()
     query := this.QUERIES.SelectByName(ctx, tx)
     iter := query.Execute(req)
     return iter.Each(func(row *Amazing_SelectByNameRow) error {
-        res, err := row.ExampleTable()
+        res, err := row.test.ExampleTable()
         if err != nil {
             return err
         }
@@ -955,7 +955,7 @@ func (this *Amazing_Impl) ClientStream(stream Amazing_ClientStreamServer) error 
 }
 func (this *Amazing_Impl) ClientStreamTx(stream Amazing_ClientStreamServer, tx PersistTx) error {
     query := this.QUERIES.Insert(stream.Context(), tx)
-    var first *ExampleTable
+    var first *test.ExampleTable
     for {
         req, err := stream.Recv()
         if err == io.EOF {
@@ -997,7 +997,7 @@ func (this *Amazing_Impl) ClientStreamWithHook(stream Amazing_ClientStreamWithHo
 }
 func (this *Amazing_Impl) ClientStreamWithHookTx(stream Amazing_ClientStreamWithHookServer, tx PersistTx) error {
     query := this.QUERIES.Insert(stream.Context(), tx)
-    var first *ExampleTable
+    var first *test.ExampleTable
     for {
         req, err := stream.Recv()
         if err == io.EOF {
