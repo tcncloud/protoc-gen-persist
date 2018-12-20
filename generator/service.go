@@ -221,80 +221,101 @@ func WriteQueries(p *Printer, s *Service) error {
 	qname := func(q *QueryProtoOpts) string {
 		return q.query.GetName()
 	}
-	queryAndFields := func(q *QueryProtoOpts) (string, []string) {
-		orig := strings.Join(q.query.GetQuery(), " ")
-		pmStrat := q.query.GetPmStrategy()
-		nextParamMarker := func() func(string) string {
-			var count int
-			return func(req string) string {
-				if pmStrat == "$" {
-					count++
-					return fmt.Sprintf("$%d", count)
-				} else if pmStrat == "?" {
-					return "?"
-				}
-				return req
-			}
-		}()
 
-		newQuery := ""
-		r := regexp.MustCompile("@[a-zA-Z0-9_]*")
-		potentialFieldNames := r.FindAllString(orig, -1)
-		fieldsMap := make(map[string]bool)
-		for _, v := range q.inFields {
-			fieldsMap[v.GetName()] = true
-		}
-		params := make([]string, 0)
-		for _, pf := range potentialFieldNames {
-			start := strings.Index(orig, pf)
-			stop := start + len(pf)
-			// index into the map (removing the "@")
-			exists := fieldsMap[pf[1:]]
-			// eat up to the field name
-			newQuery += orig[:start]
-			if !exists { // it was just part of the query, not a field on input
-				newQuery += pf
-			} else { // it was a field, mark it
-				newQuery += nextParamMarker(pf)
-				params = append(params, pf[1:])
+	p.Q("// ", sName, "_Queries holds all the queries found the proto service option as methods\n")
+	p.Q("type ", sName, "_Queries struct {\n")
+	p.Q("opts ", sName, "_Opts\n")
+	p.Q("}\n")
+
+	p.Q(`// `, sName, `PersistQueries returns all the known 'SQL' queires for the '`, sName, `' service.
+func `, sName, `PersistQueries(opts ...`, sName, `_Opts) *`, sName, `_Queries {
+    var myOpts `, sName, `_Opts
+    if len(opts) > 0 {
+        myOpts = opts[0]
+    } else {
+        myOpts = `, sName, `Opts(nil, nil)
+    }
+    return &`, sName, `_Queries{
+        opts: myOpts,
+    }
+}
+    `)
+
+	if s.IsSQL() {
+		queryAndFields := func(q *QueryProtoOpts) (string, []string) {
+			orig := strings.Join(q.query.GetQuery(), " ")
+			pmStrat := q.query.GetPmStrategy()
+			nextParamMarker := func() func(string) string {
+				var count int
+				return func(req string) string {
+					if pmStrat == "$" {
+						count++
+						return fmt.Sprintf("$%d", count)
+					} else if pmStrat == "?" {
+						return "?"
+					}
+					return req
+				}
+			}()
+
+			newQuery := ""
+			r := regexp.MustCompile("@[a-zA-Z0-9_]*")
+			potentialFieldNames := r.FindAllString(orig, -1)
+			fieldsMap := make(map[string]bool)
+			for _, v := range q.inFields {
+				fieldsMap[v.GetName()] = true
 			}
-			// remove the already written stuff
-			orig = orig[stop:]
+			params := make([]string, 0)
+			for _, pf := range potentialFieldNames {
+				start := strings.Index(orig, pf)
+				stop := start + len(pf)
+				// index into the map (removing the "@")
+				exists := fieldsMap[pf[1:]]
+				// eat up to the field name
+				newQuery += orig[:start]
+				if !exists { // it was just part of the query, not a field on input
+					newQuery += pf
+				} else { // it was a field, mark it
+					newQuery += nextParamMarker(pf)
+					params = append(params, pf[1:])
+				}
+				// remove the already written stuff
+				orig = orig[stop:]
+			}
+			newQuery += orig
+			return newQuery, params
 		}
-		newQuery += orig
-		return newQuery, params
-	}
-	qstring := func(q *QueryProtoOpts) string {
-		res, _ := queryAndFields(q)
-		return res
-	}
-	resultOrRows := func(q *QueryProtoOpts) string {
-		if len(q.outFields) == 0 {
-			return "result"
+		qstring := func(q *QueryProtoOpts) string {
+			res, _ := queryAndFields(q)
+			return res
 		}
-		return "rows"
-	}
-	qmethod := func(q *QueryProtoOpts) string {
-		if len(q.outFields) == 0 {
-			return "Exec"
+		resultOrRows := func(q *QueryProtoOpts) string {
+			if len(q.outFields) == 0 {
+				return "result"
+			}
+			return "rows"
 		}
-		return "Query"
-	}
-	execParams := func(q *QueryProtoOpts) string {
-		printer := &Printer{}
-		paramStrings := make(map[string]string)
-		// basic mappping
-		m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
-			paramStrings[f.GetName()] = P(`func() (out interface{}) {
+		qmethod := func(q *QueryProtoOpts) string {
+			if len(q.outFields) == 0 {
+				return "Exec"
+			}
+			return "Query"
+		}
+		execParams := func(q *QueryProtoOpts) string {
+			printer := &Printer{}
+			paramStrings := make(map[string]string)
+			// basic mappping
+			m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+				paramStrings[f.GetName()] = P(`func() (out interface{}) {
                 out = x.Get`, _gen.CamelCase(f.GetName()), `()
                 return
             }(),
             `)
-		}, m.MatchQuery(q))
-		// all the proto message types
-		// will overwrite paramStrings if the type is a message
-		m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
-			paramStrings[f.GetName()] = P(`func() (out interface{}) {
+			}, m.MatchQuery(q))
+			// all the proto message types
+			// will overwrite paramStrings if the type is a message
+			m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+				paramStrings[f.GetName()] = P(`func() (out interface{}) {
                 raw, err := proto.Marshal(x.Get`, _gen.CamelCase(f.GetName()), `())
                 if err != nil {
                     setupErr = err
@@ -303,60 +324,42 @@ func WriteQueries(p *Printer, s *Service) error {
                 return
             }(),
             `)
-		}, m.MatchQuery(q), m.QueryFieldIsMessage)
-		// will overwrite paramStrings if type is mapped
-		m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
-			m.EachTM(func(tm *TypeMappingProtoOpts) {
-				_, titled := getGoNamesForTypeMapping(tm.tm, s.File)
-				paramStrings[f.GetName()] = P(`func() (out interface{}) {
+			}, m.MatchQuery(q), m.QueryFieldIsMessage)
+			// will overwrite paramStrings if type is mapped
+			m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+				m.EachTM(func(tm *TypeMappingProtoOpts) {
+					_, titled := getGoNamesForTypeMapping(tm.tm, s.File)
+					paramStrings[f.GetName()] = P(`func() (out interface{}) {
                     mapper := this.opts.MAPPINGS.`, titled, `()
                     out = mapper.ToSql(x.Get`, _gen.CamelCase(f.GetName()), `())
                     return
                 }(),
                 `)
-			}, m.MatchTypeMapping(f))
-		}, m.MatchQuery(q), m.QueryFieldIsMapped)
+				}, m.MatchTypeMapping(f))
+			}, m.MatchQuery(q), m.QueryFieldIsMapped)
 
-		_, paramOrdering := queryAndFields(q)
-		for _, paramName := range paramOrdering {
-			printer.Q(paramStrings[paramName])
+			_, paramOrdering := queryAndFields(q)
+			for _, paramName := range paramOrdering {
+				printer.Q(paramStrings[paramName])
+			}
+			return printer.String()
 		}
-		return printer.String()
-	}
 
-	p.Q("// ", sName, "_Queries holds all the queries found the proto service option as methods\n")
-	p.Q("type ", sName, "_Queries struct {\n")
-	p.Q("opts ", sName, "_Opts\n")
-	p.Q("}\n")
-
-	p.Q(`// `, sName, `PersistQueries returns all the known 'SQL' queires for the '`, sName, `' service.
-    func `, sName, `PersistQueries(opts ...`, sName, `_Opts) *`, sName, `_Queries {
-        var myOpts `, sName, `_Opts
-        if len(opts) > 0 {
-            myOpts = opts[0]
-        } else {
-            myOpts = `, sName, `Opts(nil, nil)
-        }
-        return &`, sName, `_Queries{
-            opts: myOpts,
-        }
-    }
-    `)
-	m.EachQuery(func(q *QueryProtoOpts) {
-		p.Q(`// `, camelQ(q), `Query returns a new struct wrapping the current `, sName, `_Opts
+		m.EachQuery(func(q *QueryProtoOpts) {
+			p.Q(`// `, camelQ(q), `Query returns a new struct wrapping the current `, sName, `_Opts
         // that will perform '`, sName, `' services '`, qname(q), `' on the database
         // when executed
         func (this *`, sName, `_Queries) `, camelQ(q), `(ctx context.Context, db Runnable) *`, sName, `_`, camelQ(q), `Query {
             return &`, sName, `_`, camelQ(q), `Query{
                 opts: this.opts,
-				ctx: ctx,
-				db: db,
+                ctx: ctx,
+                db: db,
             }
         }
         type `, sName, `_`, camelQ(q), `Query struct {
-			opts `, sName, `_Opts
-			db Runnable
-			ctx context.Context
+            opts `, sName, `_Opts
+            db Runnable
+            ctx context.Context
         }
 
         func (this *`, sName, `_`, camelQ(q), `Query) QueryInTypeUser()  {}
@@ -381,7 +384,48 @@ func WriteQueries(p *Printer, s *Service) error {
             return result
         }
         `)
-	})
+		})
+	}
+
+	if s.IsSpanner() {
+		m.EachQuery(func(q *QueryProtoOpts) {
+			p.Q(`
+// `, camelQ(q), `Query returns a new struct wrapping the current `, sName, `_Opts
+// that will perform '`, sName, `' services '`, qname(q), `' on the database
+// when executed
+func (this *`, sName, `_Queries) `, camelQ(q), `(ctx context.Context, db Runnable) *`, sName, `_`, camelQ(q), `Query {
+    return &`, sName, `_`, camelQ(q), `Query{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type `, sName, `_`, camelQ(q), `Query struct {
+    opts `, sName, `_Opts
+    db Runnable
+    ctx context.Context
+}
+
+func (this *`, sName, `_`, camelQ(q), `Query) QueryInTypeUser()  {}
+func (this *`, sName, `_`, camelQ(q), `Query) QueryOutTypeUser() {}
+
+// Executes the query with parameters retrieved from x
+func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q), `In) *`, sName, `_`, camelQ(q), `Iter {
+    var setupErr error
+    result := &`, sName, `_`, camelQ(q), `Iter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+
+    return result
+}
+        `)
+		})
+	}
 
 	return nil
 }
@@ -414,23 +458,23 @@ func WriteHooks(p *Printer, s *Service) error {
 	p.Q("type ", sName, "_DefaultHooks struct{}\n")
 	m.EachMethod(func(m *MethodProtoOpts) {
 		p.Q(`func(*`, sName, `_DefaultHooks) `, name(m), `BeforeHook(context.Context, *`, inName(m), `) ([]*`, outName(m), `, error) {
-			return nil, nil
-		}
-		`)
+            return nil, nil
+        }
+        `)
 	}, func(m *MethodProtoOpts) bool {
 		return false
 	}, m.BeforeHook, m.ServerStreaming)
 	m.EachMethod(func(m *MethodProtoOpts) {
 		p.Q(`func(*`, sName, `_DefaultHooks) `, name(m), `BeforeHook(context.Context, *`, inName(m), `) (*`, outName(m), `, error) {
-			return nil, nil
-		}
-		`)
+            return nil, nil
+        }
+        `)
 	}, m.BeforeHook)
 	m.EachMethod(func(m *MethodProtoOpts) {
 		p.Q(`func(*`, sName, `_DefaultHooks) `, name(m), `AfterHook(context.Context, *`, inName(m), `,*`, outName(m), `)error {
-			return nil
-		}
-		`)
+            return nil
+        }
+        `)
 	}, m.AfterHook)
 
 	return m.Err()
@@ -449,31 +493,31 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 	}
 	p.Q("}\n")
 	p.Q(`type `, sName, `_DefaultTypeMappings struct{}
-	`)
+    `)
 
 	for _, tm := range tms {
 		name, titled := getGoNamesForTypeMapping(tm, s.File)
 		p.Q(`func (this *`, sName, `_DefaultTypeMappings) `, titled, `() `, sName, ``, titled, `MappingImpl {
-			return &`, sName, `_Default`, titled, `MappingImpl{}
-		}
-		type `, sName, `_Default`, titled, `MappingImpl struct{}
+            return &`, sName, `_Default`, titled, `MappingImpl{}
+        }
+        type `, sName, `_Default`, titled, `MappingImpl struct{}
 
-		func (this *`, sName, `_Default`, titled, `MappingImpl) ToProto(**`, name, `) error {
-			return nil
-		}
-		func (this *`, sName, `_Default`, titled, `MappingImpl) Empty() `, sName, ``, titled, `MappingImpl {
-			return this
-		}
-		func (this *`, sName, `_Default`, titled, `MappingImpl) ToSql(*`, name, `) sql.Scanner {
-			return this
-		}
-		func (this *`, sName, `_Default`, titled, `MappingImpl) Scan(interface{}) error {
-			return nil
-		}
-		func (this *`, sName, `_Default`, titled, `MappingImpl) Value() (driver.Value, error) {
-			return "DEFAULT_TYPE_MAPPING_VALUE", nil
-		}
-		`)
+        func (this *`, sName, `_Default`, titled, `MappingImpl) ToProto(**`, name, `) error {
+            return nil
+        }
+        func (this *`, sName, `_Default`, titled, `MappingImpl) Empty() `, sName, ``, titled, `MappingImpl {
+            return this
+        }
+        func (this *`, sName, `_Default`, titled, `MappingImpl) ToSql(*`, name, `) sql.Scanner {
+            return this
+        }
+        func (this *`, sName, `_Default`, titled, `MappingImpl) Scan(interface{}) error {
+            return nil
+        }
+        func (this *`, sName, `_Default`, titled, `MappingImpl) Value() (driver.Value, error) {
+            return "DEFAULT_TYPE_MAPPING_VALUE", nil
+        }
+        `)
 		p.Q("type ", sName, titled, "MappingImpl interface {\n")
 		p.Q(fmt.Sprintf(`
             ToProto(**%[1]s) error

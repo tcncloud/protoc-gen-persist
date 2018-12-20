@@ -7,11 +7,11 @@ package pb
 
 import (
 	"fmt"
-  "time"
 	io "io"
+	"time"
 
-  spanner "cloud.google.com/go/spanner"
-  "google.golang.org/api/iterator"
+	spanner "cloud.google.com/go/spanner"
+	"google.golang.org/api/iterator"
 
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
@@ -43,7 +43,7 @@ type TimestampTimestampMappingImpl interface {
 type SliceStringParamMappingImpl interface {
 	ToProto(**SliceStringParam) error
 	Empty() SliceStringParamMappingImpl
-  ToSpanner(*SliceStringParam) SliceStringParamMappingImpl
+	ToSpanner(*SliceStringParam) SliceStringParamMappingImpl
 	SpannerScan(src *spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }
@@ -64,26 +64,26 @@ func (s *alwaysScanner) Scan(src interface{}) error {
 }
 
 type Result interface {
-  LastInsertId() (int64, error)
-  RowsAffected() (int64, error)
+	LastInsertId() (int64, error)
+	RowsAffected() (int64, error)
 }
 type SpannerResult struct {
-  iter *spanner.RowIterator
+	iter *spanner.RowIterator
 }
 
 func (sr *SpannerResult) LastInsertId() (int64, error) {
-  // sr.iter.QueryStats or sr.iter.QueryPlan
-  return -1, nil
+	// sr.iter.QueryStats or sr.iter.QueryPlan
+	return -1, nil
 }
 func (sr *SpannerResult) RowsAffected() (int64, error) {
-  // Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
-  return sr.iter.RowCount, nil
+	// Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
+	return sr.iter.RowCount, nil
 }
 
 type Runable interface {
 	// QueryContext(context.Context, string, ...interface{}) (*spanner.RowIterator, error)
 	// ExecContext(context.Context, string, ...interface{}) (SpannerResult, error)
-  ReadWriteTransaction(context.Context, func(context.Context, *spanner.ReadWriteTransaction) error)(time.Time, error)
+	ReadWriteTransaction(context.Context, func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error)
 }
 
 // func DefaultClientStreamingPersistTx(ctx context.Context, db *spanner.Client) (PersistTx, error) {
@@ -128,6 +128,7 @@ func DefaultUServQueryOpts(db Runable) UServ_QueryOpts {
 type UServ_Queries struct {
 	opts UServ_QueryOpts
 }
+
 //type PersistTx interface {
 //	Commit() error
 //	Rollback() error
@@ -135,10 +136,10 @@ type UServ_Queries struct {
 //}
 
 //func (tx *PersistTx) Commit() error {
-//  //TODO 
+//  //TODO
 //}
 //func (tx *PersistTx) Rollback() error {
-//  //TODO 
+//  //TODO
 //}
 
 // func NopPersistTx(r Runable) (PersistTx, error) {
@@ -210,7 +211,7 @@ func UServPersistQueries(db Runable, opts ...UServ_QueryOpts) *UServ_Queries {
 	var myOpts UServ_QueryOpts
 	if len(opts) > 0 {
 		myOpts = opts[0]
-    myOpts.db = db
+		myOpts.db = db
 	} else {
 		myOpts = DefaultUServQueryOpts(db)
 	}
@@ -253,12 +254,12 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 			return
 		}(),
 		func() (out interface{}) {
-      out = fmt.Sprintf(`"%s"`, x.GetName())
+			out = fmt.Sprintf(`"%s"`, x.GetName())
 			return
 		}(),
 		func() (out interface{}) {
 			raw, err := proto.Marshal(x.GetFriends())
-      fmt.Println("****",raw)
+			fmt.Println("****", raw)
 			if err != nil {
 				setupErr = err
 			}
@@ -267,12 +268,12 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 		}(),
 		func() (out interface{}) {
 			mapper := this.opts.MAPPINGS.TimestampTimestamp()
-      ts, err := mapper.ToSpanner(x.GetCreatedOn()).SpannerValue()
-      if err != nil {
-        setupErr = err
-      }
+			ts, err := mapper.ToSpanner(x.GetCreatedOn()).SpannerValue()
+			if err != nil {
+				setupErr = err
+			}
 
-      out = fmt.Sprintf(`"%s"`, ts)
+			out = fmt.Sprintf(`"%s"`, ts)
 			return
 		}(),
 	}
@@ -285,20 +286,20 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 		return result
 	}
 
-  fmt.Println("params: ", params)
-  _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-    stmt := spanner.Statement{
-      SQL: fmt.Sprintf("insert into users (id, name, friends, created_on) values (%v, %v, %v, %v);", params...)}
-    iter := txn.QueryWithStats(ctx, stmt)
-    // err, rowCount := txn.Update(ctx, stmt)
-    result.rows = iter
-    result.result = SpannerResult{
-      iter: iter,
-    }
-    // TODO consider the effects of calling "defer iter.Stop()" here
-    return nil
-  })
-  result.err = err
+	fmt.Println("params: ", params)
+	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		stmt := spanner.Statement{
+			SQL: fmt.Sprintf("insert into users (id, name, friends, created_on) values (%v, %v, %v, %v);", params...)}
+		iter := txn.QueryWithStats(ctx, stmt)
+		// err, rowCount := txn.Update(ctx, stmt)
+		result.rows = iter
+		result.result = SpannerResult{
+			iter: iter,
+		}
+		// TODO consider the effects of calling "defer iter.Stop()" here
+		return nil
+	})
+	result.err = err
 	return result
 }
 
@@ -360,35 +361,35 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 		this.err = io.EOF
 		return &UServ_InsertUsersRow{err: err}, true
 	}
-  row, err := this.rows.Next()
-  if err == iterator.Done {
-    if this.err == nil {
-      this.err = io.EOF
-      return nil, false
-    }
-  }
-  if err != nil {
+	row, err := this.rows.Next()
+	if err == iterator.Done {
+		if this.err == nil {
+			this.err = io.EOF
+			return nil, false
+		}
+	}
+	if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
-  }
+	}
 
-  var id int64
-  if err := row.ColumnByName("id", &id); err != nil {
-      return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
-  }
-  var name string
-  if err := row.ColumnByName("name", &name); err != nil {
-      return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
-  }
-  var friends *Friends
-  if err := row.ColumnByName("friends", &friends); err != nil {
-      return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
-  }
-  var created_on *timestamp.Timestamp
-  if err := row.ColumnByName("created_on", &created_on); err != nil {
-      return &UServ_InsertUsersRow{err: fmt.Errorf("could not convert mapped db column created_on to type on User.CreatedOn: %v", err)}, true
-  }
+	var id int64
+	if err := row.ColumnByName("id", &id); err != nil {
+		return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
+	}
+	var name string
+	if err := row.ColumnByName("name", &name); err != nil {
+		return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+	}
+	var friends *Friends
+	if err := row.ColumnByName("friends", &friends); err != nil {
+		return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+	}
+	var created_on *timestamp.Timestamp
+	if err := row.ColumnByName("created_on", &created_on); err != nil {
+		return &UServ_InsertUsersRow{err: fmt.Errorf("could not convert mapped db column created_on to type on User.CreatedOn: %v", err)}, true
+	}
 
-  return &UServ_InsertUsersRow{item: &User{Id: id, Name: name, Friends: friends, CreatedOn: created_on}}, true
+	return &UServ_InsertUsersRow{item: &User{Id: id, Name: name, Friends: friends, CreatedOn: created_on}}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
@@ -407,7 +408,7 @@ func (this *UServ_InsertUsersIter) Slice() []*UServ_InsertUsersRow {
 type UServ_ImplOpts struct {
 	MAPPINGS UServTypeMappings
 	HOOKS    UServHooks
-  HANDLERS RestOfUServHandlers
+	HANDLERS RestOfUServHandlers
 }
 
 func DefaultUServImplOpts() UServ_ImplOpts {
@@ -446,11 +447,11 @@ func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
 	return nil
 }
 
-func (this *UServ_Impl) UpdateAllNames(empty *Empty,  stream UServ_UpdateAllNamesServer) error {
-  // if err := this.InsertUsersTx(stream); err != nil {
-  //   return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
-  // }
-  return nil
+func (this *UServ_Impl) UpdateAllNames(empty *Empty, stream UServ_UpdateAllNamesServer) error {
+	// if err := this.InsertUsersTx(stream); err != nil {
+	//   return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
+	// }
+	return nil
 }
 
 func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
@@ -473,7 +474,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 		} else if beforeRes != nil {
 			continue
 		}
-    query.ctx = stream.Context()
+		query.ctx = stream.Context()
 		result := query.Execute(req)
 		/*for {
 		      res := new(User)
@@ -507,12 +508,12 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
 		}
 	}
-  // TODO might need to handle commits and rollbacks uniquely with spanner.
+	// TODO might need to handle commits and rollbacks uniquely with spanner.
 	// if err := tx.Commit(); err != nil {
-		// return fmt.Errorf("executed 'insert_users' query without error, but received error on commit: %v", err)
-		// if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			// return fmt.Errorf("error executing 'insert_users' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
-		// }
+	// return fmt.Errorf("executed 'insert_users' query without error, but received error on commit: %v", err)
+	// if rollbackErr := tx.Rollback(); rollbackErr != nil {
+	// return fmt.Errorf("error executing 'insert_users' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
+	// }
 	// }
 	res := &Empty{}
 	if err := this.opts.HOOKS.InsertUsersAfterHook( /*stream.Context(),*/ first, res); err != nil {
