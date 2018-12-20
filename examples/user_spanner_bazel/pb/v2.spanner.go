@@ -23,11 +23,15 @@ import (
 // WriteHandlers
 // RestOf<S>Handlers
 type RestOfUServHandlers interface {
-	UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error
+  UpdateAllNames(*Empty, UServ_UpdateAllNamesServer) error
+}
+
+func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
+  return this.opts.HANDLERS.UpdateAllNames(req, stream)
 }
 
 // WriteTypeMappigns
-type UServTypeMappings interface {
+type UServ_TypeMappings interface {
 	TimestampTimestamp() TimestampTimestampMappingImpl
 	SliceStringParam() SliceStringParamMappingImpl
 }
@@ -48,11 +52,11 @@ type SliceStringParamMappingImpl interface {
 	SpannerValue() (interface{}, error)
 }
 
-type UServHooks interface {
-	InsertUsersBeforeHook(*User) (*Empty, error)
-	InsertUsersAfterHook(*User, *Empty) error
-	GetAllUsersBeforeHook(*Empty) ([]*User, error)
-	GetAllUsersAfterHook(*Empty, *User) error
+type UServ_Hooks interface {
+	InsertUsersBeforeHook(context.Context, *User) (*Empty, error)
+	InsertUsersAfterHook(context.Context, *User, *Empty) error
+	GetAllUsersBeforeHook(context.Context, *Empty) ([]*User, error)
+	GetAllUsersAfterHook(context.Context, *Empty, *User) error
 }
 type alwaysScanner struct {
 	i *interface{}
@@ -68,6 +72,7 @@ type Result interface {
   RowsAffected() (int64, error)
 }
 type SpannerResult struct {
+  // TODO shouldn't be an iter
   iter *spanner.RowIterator
 }
 
@@ -80,10 +85,9 @@ func (sr *SpannerResult) RowsAffected() (int64, error) {
   return sr.iter.RowCount, nil
 }
 
-type Runable interface {
-	// QueryContext(context.Context, string, ...interface{}) (*spanner.RowIterator, error)
-	// ExecContext(context.Context, string, ...interface{}) (SpannerResult, error)
+type Runnable interface {
   ReadWriteTransaction(context.Context, func(context.Context, *spanner.ReadWriteTransaction) error)(time.Time, error)
+  Single() *spanner.ReadOnlyTransaction
 }
 
 // func DefaultClientStreamingPersistTx(ctx context.Context, db *spanner.Client) (PersistTx, error) {
@@ -93,15 +97,12 @@ type Runable interface {
 // func DefaultServerStreamingPersistTx(ctx context.Context, db *spanner.Client) (PersistTx, error) {
 // 	return NopPersistTx(db)
 // }
-// func DefaultBidiStreamingPersistTx(ctx context.Context, db *spanner.Client) (PersistTx, error) {
-// 	return NopPersistTx(db)
-// }
 // func DefaultUnaryPersistTx(ctx context.Context, db *spanner.Client) (PersistTx, error) {
 // 	return NopPersistTx(db)
 // }
 
 // type ignoreTx struct {
-// 	r Runable
+// 	r Runnable
 // }
 
 // func (this *ignoreTx) Commit() error   { return nil }
@@ -114,12 +115,12 @@ type Runable interface {
 // }
 
 type UServ_QueryOpts struct {
-	MAPPINGS UServTypeMappings
-	db       Runable
+	MAPPINGS UServ_TypeMappings
+	db       Runnable
 	ctx      context.Context
 }
 
-func DefaultUServQueryOpts(db Runable) UServ_QueryOpts {
+func DefaultUServQueryOpts(db Runnable) UServ_QueryOpts {
 	return UServ_QueryOpts{
 		db: db,
 	}
@@ -131,7 +132,7 @@ type UServ_Queries struct {
 //type PersistTx interface {
 //	Commit() error
 //	Rollback() error
-//	Runable
+//	Runnable
 //}
 
 //func (tx *PersistTx) Commit() error {
@@ -141,7 +142,7 @@ type UServ_Queries struct {
 //  //TODO 
 //}
 
-// func NopPersistTx(r Runable) (PersistTx, error) {
+// func NopPersistTx(r Runnable) (PersistTx, error) {
 // 	return &ignoreTx{r}, nil
 // }
 
@@ -206,7 +207,7 @@ func (this *UServ_InsertUsersRow) Friends() (*Friends, error) {
 }
 
 // UServPersistQueries returns all the known 'SQL' queires for the 'UServ' service.
-func UServPersistQueries(db Runable, opts ...UServ_QueryOpts) *UServ_Queries {
+func UServPersistQueries(db Runnable, opts ...UServ_QueryOpts) *UServ_Queries {
 	var myOpts UServ_QueryOpts
 	if len(opts) > 0 {
 		myOpts = opts[0]
@@ -258,7 +259,6 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 		}(),
 		func() (out interface{}) {
 			raw, err := proto.Marshal(x.GetFriends())
-      fmt.Println("****",raw)
 			if err != nil {
 				setupErr = err
 			}
@@ -285,13 +285,22 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 		return result
 	}
 
-  fmt.Println("params: ", params)
+  // TODO we are calling methods on the iterator outside of it's function
   _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
     stmt := spanner.Statement{
       SQL: fmt.Sprintf("insert into users (id, name, friends, created_on) values (%v, %v, %v, %v);", params...)}
-    iter := txn.QueryWithStats(ctx, stmt)
+    // iter := txn.Query(ctx, stmt)
     // err, rowCount := txn.Update(ctx, stmt)
+    iter := txn.QueryWithStats(ctx, stmt)
     result.rows = iter
+
+    // TODO for some reason zero sometimes passes. it must not be calling next on the iterator properly
+    if err := result.Zero(); err != nil {
+      // if err := result.One(); err != nil {
+      return err
+    }
+
+    // TODO having an iter in result is broken. it cant be accessed outside this function
     result.result = SpannerResult{
       iter: iter,
     }
@@ -307,7 +316,7 @@ type UServ_InsertUsersIter struct {
 	result SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     UServTypeMappings
+	tm     UServ_TypeMappings
 	ctx    context.Context
 }
 
@@ -317,6 +326,8 @@ func (this *UServ_InsertUsersIter) IterInTypeUser()  {}
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns ctx.Err() if encountered.
+// TODO this will not work outside of the transaction...
+// TODO can just call the "Do" method on spanners iterator
 func (this *UServ_InsertUsersIter) Each(fun func(*UServ_InsertUsersRow) error) error {
 	for {
 		select {
@@ -335,17 +346,21 @@ func (this *UServ_InsertUsersIter) Each(fun func(*UServ_InsertUsersRow) error) e
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
-	first, hasFirst := this.Next()
-	_, hasSecond := this.Next()
-	if !hasFirst || hasSecond {
-		return newUServ_InsertUsersRow(first.item, fmt.Errorf("expected exactly 1 result from query 'InsertUsers'"))
-	}
-	return first
+  first, hasFirst := this.Next()
+  _, hasSecond := this.Next()
+  if !hasFirst || hasSecond {
+    amount := "none"
+    if hasSecond {
+      amount = "multiple"
+    }
+    return &UServ_InsertUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'InsertUsers' found %s", amount)}
+  }
+  return first
 }
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_InsertUsersIter) Zero() error {
-	if _, ok := this.Next(); ok {
+  if _, ok := this.Next(); ok {
 		return fmt.Errorf("expected exactly 0 results from query 'InsertUsers'")
 	}
 	return nil
@@ -356,16 +371,16 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	if this.rows == nil || this.err == io.EOF {
 		return nil, false
 	} else if this.err != nil {
+    fmt.Println("********this.err in next: ", this.err)
 		err := this.err
 		this.err = io.EOF
 		return &UServ_InsertUsersRow{err: err}, true
 	}
   row, err := this.rows.Next()
   if err == iterator.Done {
-    if this.err == nil {
-      this.err = io.EOF
-      return nil, false
-    }
+    // TODO why is it setting this to eof
+    // this.err = io.EOF
+    return nil, false
   }
   if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
@@ -405,8 +420,8 @@ func (this *UServ_InsertUsersIter) Slice() []*UServ_InsertUsersRow {
 }
 
 type UServ_ImplOpts struct {
-	MAPPINGS UServTypeMappings
-	HOOKS    UServHooks
+	MAPPINGS UServ_TypeMappings
+	HOOKS    UServ_Hooks
   HANDLERS RestOfUServHandlers
 }
 
@@ -446,13 +461,6 @@ func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
 	return nil
 }
 
-func (this *UServ_Impl) UpdateAllNames(empty *Empty,  stream UServ_UpdateAllNamesServer) error {
-  // if err := this.InsertUsersTx(stream); err != nil {
-  //   return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
-  // }
-  return nil
-}
-
 func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 	query := this.QUERIES.InsertUsersQuery(stream.Context())
 	var first *User
@@ -466,46 +474,25 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 		if first == nil {
 			first = req
 		}
-		// TODO UPDATE HOOKS FOR CTX
-		beforeRes, err := this.opts.HOOKS.InsertUsersBeforeHook( /*stream.Context(),*/ req)
+
+		beforeRes, err := this.opts.HOOKS.InsertUsersBeforeHook(stream.Context(), req)
 		if err != nil {
 			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 		} else if beforeRes != nil {
 			continue
 		}
-    query.ctx = stream.Context()
+
+    // TODO had to do this to make sure context wasnt nil
+    if query.ctx == nil {
+      fmt.Println("context was nil")
+      query.ctx = stream.Context()
+    }
+
 		result := query.Execute(req)
-		/*for {
-		      res := new(User)
-		      if row, ok := result.Next(); !ok {
-		          break
-		      } else if err := row.Unwrap(res); err != nil {
-		          return err
-		      } else {
-		          stream.Send(res)
-		      }
-		  }
-		  err := result.Each(stream.Context(), func(row *UServ_InsertUsersRow) error {
-		      res, err := row.User()
-		      if err != nil {
-		          return err
-		      }
-		      return stream.Send(res)
-		  })
-		  users := result.Slice()
-		  for _, row := range users {
-		      user, err := row.User()
-		      if err != nil {
-		          return err
-		      }
-		      stream.Send(user)
-		  }
-		  res, err := result.One().Friends()
-		  err := result.Zero()*/
-		// TODO allow results to be returned here?
-		if err := result.Zero(); err != nil {
-			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
-		}
+       
+    if result.err != nil {
+      return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return results")
+    }
 	}
   // TODO might need to handle commits and rollbacks uniquely with spanner.
 	// if err := tx.Commit(); err != nil {
@@ -515,12 +502,300 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 		// }
 	// }
 	res := &Empty{}
-	if err := this.opts.HOOKS.InsertUsersAfterHook( /*stream.Context(),*/ first, res); err != nil {
+	if err := this.opts.HOOKS.InsertUsersAfterHook(stream.Context(), first, res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
 	}
+
 	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
 	}
 
 	return nil
 }
+
+// GetAllUsersQuery returns a new struct wrapping the current UServ_QueryOpts
+// that will perform 'UServ' services 'get_all_users' on the database
+// when executed
+func (this *UServ_Queries) GetAllUsersQuery(ctx context.Context) *UServ_GetAllUsersQuery {
+	return &UServ_GetAllUsersQuery{
+		opts: UServ_QueryOpts{
+			MAPPINGS: this.opts.MAPPINGS,
+			db:       this.opts.db,
+			ctx:      ctx,
+		},
+	}
+}
+
+type UServ_GetAllUsersQuery struct {
+	opts UServ_QueryOpts
+}
+
+func (this *UServ_GetAllUsersQuery) QueryInTypeUser()  {}
+func (this *UServ_GetAllUsersQuery) QueryOutTypeUser() {}
+
+// Executes the query with parameters retrieved from x
+func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAllUsersIter {
+	var setupErr error
+	params := []interface{}{}
+	result := &UServ_GetAllUsersIter{
+		tm:  this.opts.MAPPINGS,
+		ctx: this.opts.ctx,
+	}
+	if setupErr != nil {
+		result.err = setupErr
+		return result
+	}
+
+  // _, err := this.opts.db.ReadWriteTransaction(this.opts.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+    stmt := spanner.Statement{
+      SQL: fmt.Sprintf("SELECT id, name, friends, created_on FROM users", params...)}
+    iter := this.opts.db.Single().Query(this.opts.ctx, stmt)
+    // iter := txn.QueryWithStats(ctx, stmt)
+    // err, rowCount := txn.Update(ctx, stmt)
+    result.rows = iter
+
+    a, err := result.Next()
+    fmt.Println("first: ", a.item, err)
+    a, err = result.Next()
+    fmt.Println("second: ", a.item.GetId(), err)
+
+    result.result = SpannerResult{
+      iter: iter,
+    }
+    // TODO consider the effects of calling "defer iter.Stop()" here
+    // return nil
+  // })
+  // result.err = err
+  return result
+}
+
+type UServ_GetAllUsersIter struct {
+  result SpannerResult
+  rows   *spanner.RowIterator
+  err    error
+  tm     UServ_TypeMappings
+  ctx    context.Context
+}
+
+func (this *UServ_GetAllUsersIter) IterOutTypeUser() {}
+func (this *UServ_GetAllUsersIter) IterInTypeEmpty() {}
+
+// Each performs 'fun' on each row in the result set.
+// Each respects the context passed to it.
+// It will stop iteration, and returns this.ctx.Err() if encountered.
+func (this *UServ_GetAllUsersIter) Each(fun func(*UServ_GetAllUsersRow) error) error {
+  fmt.Println("in each")
+  for {
+    select {
+      // TODO start here. find where each is called, and make sure the iterator is available to use
+    case <-this.ctx.Done():
+      return this.ctx.Err()
+    default:
+      fmt.Println("getting row")
+      // it's calling next on something that can't be nexted
+      if row, ok := this.Next(); !ok {
+        fmt.Println("not ok")
+        return nil
+      } else if err := fun(row); err != nil {
+        fmt.Println("fun failed")
+        return err
+      }
+    }
+  }
+}
+
+// One returns the sole row, or ensures an error if there was not one result when this row is converted
+func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
+  first, hasFirst := this.Next()
+  _, hasSecond := this.Next()
+  if !hasFirst || hasSecond {
+    amount := "none"
+    if hasSecond {
+      amount = "multiple"
+    }
+    return &UServ_GetAllUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'GetAllUsers' found %s", amount)}
+  }
+  return first
+}
+
+// Zero returns an error if there were any rows in the result
+func (this *UServ_GetAllUsersIter) Zero() error {
+  if _, ok := this.Next(); ok {
+    return fmt.Errorf("expected exactly 0 results from query 'GetAllUsers'")
+  }
+  return nil
+}
+
+// Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
+func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
+  if this.rows == nil || this.err == io.EOF {
+    fmt.Println("1: eof", this.err)
+    return nil, false
+  } else if this.err != nil {
+    fmt.Println("2: eof", this.err)
+    fmt.Println("********this.err in next: ", this.err)
+    err := this.err
+    this.err = io.EOF
+    return &UServ_GetAllUsersRow{err: err}, true
+  }
+  row, err := this.rows.Next()
+  if err == iterator.Done {
+    fmt.Println("3: eof", err)
+    // this.err = io.EOF
+    return nil, false
+  }
+  fmt.Println("in next")
+  if err != nil {
+    return &UServ_GetAllUsersRow{err: err}, true
+  }
+
+  fmt.Println("getting id")
+  var id int64
+  if err := row.ColumnByName("id",&id); err != nil {
+      return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
+  }
+
+  fmt.Println("getting name")
+  var name string
+  if err := row.ColumnByName("name",&name); err != nil {
+      return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
+  }
+
+  fmt.Println("getting friends")
+  var tmpFriends []byte
+  if err := row.ColumnByName("friends", &tmpFriends); err != nil {
+      return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+  }
+  var friends = new(Friends)
+  if err := proto.Unmarshal(tmpFriends, friends); err != nil {
+    fmt.Println("error in unmarshalling friends")
+    // TODO finally found the error dawg. If i had a good debugger this would have been so much easier
+    return &UServ_GetAllUsersRow{err: err}, true
+  }
+
+  fmt.Println("getting created on")
+  var tmpCreatedOn spanner.GenericColumnValue
+  var created_on *timestamp.Timestamp
+  if err := row.ColumnByName("created_on", &tmpCreatedOn); err != nil {
+    return &UServ_GetAllUsersRow{err: fmt.Errorf("could not convert mapped db column created_on to type *timestamp.Timestamp: %v", err)}, true
+  }
+
+  var converted = this.tm.TimestampTimestamp().Empty()
+  if err := converted.SpannerScan(&tmpCreatedOn); err != nil {
+      return &UServ_GetAllUsersRow{err: fmt.Errorf("could not convert mapped db column created_on to type on User.CreatedOn: %v", err)}, true
+  }
+
+  if err := converted.ToProto(&created_on); err != nil {
+      return &UServ_GetAllUsersRow{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
+  }
+
+  fmt.Println("returning user")
+  return &UServ_GetAllUsersRow{item: &User{Id: id, Name: name, Friends: friends, CreatedOn: created_on}}, true
+}
+
+// Slice returns all rows found in the iterator as a Slice.
+func (this *UServ_GetAllUsersIter) Slice() []*UServ_GetAllUsersRow {
+  var results []*UServ_GetAllUsersRow
+  for {
+    if i, ok := this.Next(); ok {
+      results = append(results, i)
+    } else {
+      break
+    }
+  }
+  return results
+}
+
+type UServ_GetAllUsersIn interface {
+}
+type UServ_GetAllUsersOut interface {
+  GetId() int64
+  GetName() string
+  GetFriends() *Friends
+  GetCreatedOn() *timestamp.Timestamp
+}
+type UServ_GetAllUsersRow struct {
+  item UServ_GetAllUsersOut
+  err  error
+}
+
+func newUServ_GetAllUsersRow(item UServ_GetAllUsersOut, err error) *UServ_GetAllUsersRow {
+  return &UServ_GetAllUsersRow{item, err}
+}
+
+// Unwrap takes an address to a proto.Message as its only parameter
+// Unwrap can only set into output protos of that match method return types + the out option on the query itself
+func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
+  if this.err != nil {
+    return this.err
+  }
+  if o, ok := (pointerToMsg).(*User); ok {
+    if o == nil {
+      return fmt.Errorf("must initialize *User before giving to Unwrap()")
+    }
+    res, _ := this.User()
+    _ = res
+    o.Id = res.Id
+    o.Name = res.Name
+    o.Friends = res.Friends
+    o.CreatedOn = res.CreatedOn
+    return nil
+  }
+  return nil
+}
+func (this *UServ_GetAllUsersRow) User() (*User, error) {
+  fmt.Println("in User")
+  if this.err != nil {
+    fmt.Println("User first error", this.err)
+    return nil, this.err
+  }
+  fmt.Println("the user: ", this.item)
+  return &User{
+    Id:        this.item.GetId(),
+    Name:      this.item.GetName(),
+    Friends:   this.item.GetFriends(),
+    CreatedOn: this.item.GetCreatedOn(),
+  }, nil
+}
+
+func (this *UServ_GetAllUsersRow) Proto() (*User, error) {
+  if this.err != nil {
+    return nil, this.err
+  }
+  return &User{
+    Id:        this.item.GetId(),
+    Name:      this.item.GetName(),
+    Friends:   this.item.GetFriends(),
+    CreatedOn: this.item.GetCreatedOn(),
+  }, nil
+}
+
+// THIS is the grpc handler
+func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
+  // tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
+  // if err != nil {
+  //   return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
+  // }
+  fmt.Println("getting all users")
+  if err := this.GetAllUsersTx(req, stream); err != nil {
+    fmt.Println("error getting all users tx")
+    return gstatus.Errorf(codes.Unknown, "error executing 'get_all_users' query: %v", err)
+  }
+  return nil
+}
+func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer) error {
+  query := this.QUERIES.GetAllUsersQuery(stream.Context())
+  iter := query.Execute(req)
+  fmt.Println("executed get all users")
+  return iter.Each(func(row *UServ_GetAllUsersRow) error {
+    fmt.Println("in fun")
+    res, err := row.User()
+    if err != nil {
+      fmt.Println("fun err: ", err)
+      return err
+    }
+    fmt.Println("sending user: ", res)
+    return stream.Send(res)
+  })
+}
+

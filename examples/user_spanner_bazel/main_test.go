@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"testing"
+  "io"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,7 +16,7 @@ import (
 	ptypess "github.com/golang/protobuf/ptypes"
 	timeystamp "github.com/golang/protobuf/ptypes/timestamp"
 	main "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel"
-	pbb "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel/pb"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel/pb"
 	"golang.org/x/net/context"
 	db "google.golang.org/genproto/googleapis/spanner/admin/database/v1"
 	"google.golang.org/grpc"
@@ -28,7 +29,7 @@ func TestMain(t *testing.T) {
 
 var (
 	testServer *grpc.Server
-	client     pbb.UServClient
+	client     pb.UServClient
 )
 
 var _ = BeforeSuite(func() {
@@ -48,18 +49,18 @@ var _ = BeforeSuite(func() {
 		if err != nil {
 			Fail("could not create the client: " + err.Error())
 		}
-		client = pbb.NewUServClient(conn)
+		client = pb.NewUServClient(conn)
 	})
-	// err := CreateTable(context.Background(), main.ReadSpannerParams())
-	// Expect(err).ToNot(HaveOccurred())
+	err := CreateTable(context.Background(), main.ReadSpannerParams())
+	Expect(err).ToNot(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
 	if testServer != nil {
 		testServer.Stop()
 
-		// err := DropTable(context.Background(), main.ReadSpannerParams())
-		// Expect(err).ToNot(HaveOccurred())
+		err := DropTable(context.Background(), main.ReadSpannerParams())
+		Expect(err).ToNot(HaveOccurred())
 	}
 })
 
@@ -72,6 +73,7 @@ var _ = Describe("persist", func() {
 		stream, err := client.InsertUsers(context.Background())
 		Expect(err).To(Not(HaveOccurred()))
 
+    fmt.Println("inserted users")
 		for _, u := range users {
 			if err := stream.Send(u); err != nil {
 				Fail(err.Error())
@@ -80,24 +82,29 @@ var _ = Describe("persist", func() {
 		_, err = stream.CloseAndRecv()
 		Expect(err).ToNot(HaveOccurred())
 
-		// retStream, err := client.GetAllUsers(context.Background(), &pb.Empty{})
-		// Expect(err).ToNot(HaveOccurred())
+		retStream, err := client.GetAllUsers(context.Background(), &pb.Empty{})
+		Expect(err).ToNot(HaveOccurred())
+    fmt.Println("retStream", retStream)
+    fmt.Println("err", err)
 
-		// retUsers := make([]*pb.User, 0)
-		// for {
-		// 	u, err := retStream.Recv()
-		// 	if err == io.EOF {
-		// 		break
-		// 	}
-		// 	Expect(err).ToNot(HaveOccurred())
-		// 	Expect(u.Id).ToNot(Equal(-1))
-		// 	u.Id = -1
-		// 	retUsers = append(retUsers, u)
-		// }
-		// Expect(retUsers).To(HaveLen(len(users)))
-		// for _, u := range retUsers {
-		// 	Expect(users).To(ContainElement(BeEquivalentTo(u)))
-		// }
+		retUsers := make([]*pb.User, 0)
+		for {
+      // TODO start here. why is this getting an io.eof
+			u, err := retStream.Recv()
+      fmt.Println("u: ", u)
+      fmt.Println("err: ", err)
+			if err == io.EOF {
+				break
+			}
+			Expect(err).ToNot(HaveOccurred())
+			Expect(u.Id).ToNot(Equal(-1))
+			u.Id = -1
+			retUsers = append(retUsers, u)
+		}
+		Expect(retUsers).To(HaveLen(len(users)))
+		for _, u := range retUsers {
+			Expect(users).To(ContainElement(BeEquivalentTo(u)))
+		}
 	})
 
 	// PIt("can select a user by id", func() {
@@ -161,29 +168,29 @@ func mustTimestamp(now time.Time) *timeystamp.Timestamp {
 }
 func mustNow() *timeystamp.Timestamp { return mustTimestamp(time.Now()) }
 
-var users = []*pbb.User{
-	&pbb.User{
+var users = []*pb.User{
+	&pb.User{
 		Id:              -1,
 		Name:            "foo",
-		Friends:         &pbb.Friends{Names: []string{"bar", "baz"}},
+		Friends:         &pb.Friends{Names: []string{"bar", "baz"}},
 		CreatedOn:       mustNow(),
 	},
-	&pbb.User{
+	&pb.User{
 		Id:              -1,
 		Name:            "bar",
-		Friends:         &pbb.Friends{Names: []string{"foo", "baz"}},
+		Friends:         &pb.Friends{Names: []string{"foo", "baz"}},
 		CreatedOn:       mustNow(),
 	},
-	&pbb.User{
+	&pb.User{
 		Id:              -1,
 		Name:            "baz",
-		Friends:         &pbb.Friends{Names: []string{"foo", "bar"}},
+		Friends:         &pb.Friends{Names: []string{"foo", "bar"}},
 		CreatedOn:       mustNow(),
 	},
-	&pbb.User{
+	&pb.User{
 		Id:              -1,
 		Name:            "zed",
-		Friends:         &pbb.Friends{},
+		Friends:         &pb.Friends{},
 		CreatedOn:       mustNow(),
 	},
 }
@@ -198,7 +205,7 @@ func Serve(servFunc func(s *grpc.Server)) {
   }
   // defer conn.Close()
 
-  service := pbb.UServPersistImpl(conn, pbb.UServ_ImplOpts{
+  service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
     HOOKS: &main.HooksImpl{},
     MAPPINGS: &main.MappingImpl{},
     HANDLERS: &main.RestOfImpl{},
@@ -206,7 +213,7 @@ func Serve(servFunc func(s *grpc.Server)) {
 
   server := grpc.NewServer()
 
-  pbb.RegisterUServServer(server, service)
+  pb.RegisterUServServer(server, service)
 
 	servFunc(server)
 }
