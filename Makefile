@@ -54,9 +54,6 @@ proto-examples:
 	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 	 	tests/sql/basic/*.proto
-	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src  \
-	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
-	 	tests/spanner/bob_example/*.proto
 	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
 	 	tests/test/*.proto
@@ -82,13 +79,9 @@ test-compile:
 	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
 		--persist_out=$$GOPATH/src  tests/spanner/basic/*.proto
-	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-		--plugin=./protoc-gen-persist \
-		--persist_out=$$GOPATH/src tests/spanner/bob_example/*.proto
 	cd ./tests/sql/little_of_everything && go build
 	cd ./tests/sql/basic && go build
 	cd ./tests/spanner/basic && go build
-	cd ./tests/spanner/bob_example && go build
 
 
 deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/dep
@@ -108,5 +101,4 @@ clean:
 	rm -f tests/*.pb.go tests/*.persist.go tests/test/*.pb.go
 	rm -f tests/spanner/bob_example/*.pb.go tests/spanner/bob_example/*.persist.go
 	rm -f tests/spanner/basic/*.pb.go tests/spanner/basic/*.persist.go
-	rm -rf tests/spanner/bob_example/persist_lib
 	rm -rf tests/spanner/basic/persist_lib

@@ -151,6 +151,8 @@ func (s *StructList) GetStructByProtoName(name string) *Struct {
 	for _, str := range *s {
 		if str.GetProtoName() == name {
 			return str
+		} else if str.GetProtoName() == "."+name {
+			return str
 		}
 	}
 	return nil
