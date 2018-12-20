@@ -105,14 +105,14 @@ service Testservice1 {
             name: "unary_example1",
             query: ["SELECT id AS 'table_key', id, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = @table_id"],
             pm_strategy: "$",
-            in: "tests.ExampleTable1",
-            out: "tests.ExampleTable1",
+            in: ".tests.ExampleTable1",
+            out: ".tests.ExampleTable1",
         }, {
             name: "unary_example2",
             query: ["SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = @id"],
             pm_strategy: "$",
-            in: "tests.tests.Test",
-            out: "tests.ExampleTable1",
+            in: ".tests.test.Test",
+            out: ".tests.ExampleTable1",
         }, {
             name: "server_stream_select",
             query: ["SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = @table_id"],
@@ -140,7 +140,7 @@ service Testservice1 {
     };
     rpc ServerStreamSelect(ExampleTable1) returns (stream ExampleTable1) {
         option (persist.opts) = {
-            name: "server_stream_select",
+            query: "server_stream_select",
         };
     };
 
