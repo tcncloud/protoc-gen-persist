@@ -449,6 +449,7 @@ func (this *`, sName, `_`, camelQ(q), `Query) QueryOutTypeUser() {}
 func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q), `In) *`, sName, `_`, camelQ(q), `Iter {
     var setupErr error
     result := &`, sName, `_`, camelQ(q), `Iter{
+        result: &SpannerResult{},
         tm: this.opts.MAPPINGS,
         ctx: this.ctx,
     }
@@ -457,7 +458,7 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
         return result
     }
 
-    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+    _, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
         stmt := spanner.Statement{
             SQL: "`, qstring(q), `",
             Params: map[string]interface{}{
@@ -466,13 +467,13 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
         }
 
         iter := txn.QueryWithStats(ctx, stmt)
-        result.rows = iter
+        result.result.iter = iter
 
         if err := result.Zero(); err != nil {
             return err
         }
 
-        result.result = SpannerResult{
+        result.result = &SpannerResult{
             iter: iter,
         }
 
@@ -554,9 +555,10 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 	p.Q(`type `, sName, `_DefaultTypeMappings struct{}
     `)
 
-	for _, tm := range tms {
-		name, titled := getGoNamesForTypeMapping(tm, s.File)
-		p.Q(`func (this *`, sName, `_DefaultTypeMappings) `, titled, `() `, sName, ``, titled, `MappingImpl {
+	if s.IsSQL() {
+		for _, tm := range tms {
+			name, titled := getGoNamesForTypeMapping(tm, s.File)
+			p.Q(`func (this *`, sName, `_DefaultTypeMappings) `, titled, `() `, sName, ``, titled, `MappingImpl {
             return &`, sName, `_Default`, titled, `MappingImpl{}
         }
         type `, sName, `_Default`, titled, `MappingImpl struct{}
@@ -577,15 +579,52 @@ func WriteTypeMappings(p *Printer, s *Service) error {
             return "DEFAULT_TYPE_MAPPING_VALUE", nil
         }
         `)
-		p.Q("type ", sName, titled, "MappingImpl interface {\n")
-		p.Q(fmt.Sprintf(`
+			p.Q("type ", sName, titled, "MappingImpl interface {\n")
+			p.Q(fmt.Sprintf(`
             ToProto(**%[1]s) error
             Empty() %[3]s%[2]sMappingImpl
             ToSql(*%[1]s) sql.Scanner
             sql.Scanner
             driver.Valuer
         `, name, titled, sName))
-		p.Q("}\n")
+			p.Q("}\n")
+		}
+	}
+
+	if s.IsSpanner() {
+		for _, tm := range tms {
+			name, titled := getGoNamesForTypeMapping(tm, s.File)
+			p.Q(`func (this *`, sName, `_DefaultTypeMappings) `, titled, `() `, sName, ``, titled, `MappingImpl {
+            return &`, sName, `_Default`, titled, `MappingImpl{}
+        }
+        type `, sName, `_Default`, titled, `MappingImpl struct{}
+
+        func (this *`, sName, `_Default`, titled, `MappingImpl) ToProto(**`, name, `) error {
+            return nil
+        }
+        func (this *`, sName, `_Default`, titled, `MappingImpl) Empty() `, sName, ``, titled, `MappingImpl {
+            return this
+        }
+        func (this *`, sName, `_Default`, titled, `MappingImpl) ToSql(*`, name, `) sql.Scanner {
+            return this
+        }
+        func (this *`, sName, `_Default`, titled, `MappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
+            return nil
+        }
+        func (this *`, sName, `_Default`, titled, `MappingImpl) Value() (driver.Value, error) {
+            return "DEFAULT_TYPE_MAPPING_VALUE", nil
+        }
+        `)
+			p.Q("type ", sName, titled, "MappingImpl interface {\n")
+			p.Q(fmt.Sprintf(`
+            ToProto(**%[1]s) error
+            Empty() %[3]s%[2]sMappingImpl
+            ToSpanner(*%[1]s) %[3]s%[2]sMappingImpl
+            SpannerScan(*spanner.GenericColumnValue) error
+            SpannerValue() (interface{}, error)
+        `, name, titled, sName))
+			p.Q("}\n")
+		}
 	}
 
 	return nil
@@ -662,8 +701,8 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			if err != nil {
 				outErr = err
 			}
-			cases[f.GetName()] = P(`case "`, fName(f), `": 
-			r, ok := (*scanned[i].i).(`, typ, `)
+			cases[f.GetName()] = P(`case "`, fName(f), `":
+            r, ok := (*scanned[i].i).(`, typ, `)
             if !ok {
                 return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type `, f.GetTypeName(), `")}, true
             }
@@ -730,8 +769,11 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
 		return printer.String()
 	}
-	m.EachQuery(func(q *QueryProtoOpts) {
-		p.Q(`type `, sName, `_`, camelQ(q), `Iter struct {
+	// SQL Iterators
+	if s.IsSQL() {
+		m.EachQuery(func(q *QueryProtoOpts) {
+			p.Q(`
+        type `, sName, `_`, camelQ(q), `Iter struct {
             result sql.Result
             rows   *sql.Rows
             err    error
@@ -845,7 +887,142 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             return nil, nil
         }
         `)
-	})
+		})
+
+	}
+
+	// Spanner Iterators
+	if s.IsSpanner() {
+		m.EachQuery(func(q *QueryProtoOpts) {
+			// TODO Figure out how to get types of all fields or query output type
+			// fields, isMsg := q.outMsg.GetFieldDescriptorsIfMessage()
+
+			p.Q(`
+        type `, sName, `_`, camelQ(q), `Iter struct {
+            result *SpannerResult
+            err    error
+            tm     `, sName, `_TypeMappings
+            ctx    context.Context
+        }
+
+        func (this *`, sName, `_`, camelQ(q), `Iter) IterOutType`, outNamePkg(q), `() {}
+        func (this *`, sName, `_`, camelQ(q), `Iter) IterInType`, inNamePkg(q), `()  {}
+
+        // Each performs 'fun' on each row in the result set.
+        // Each respects the context passed to it.
+        // It will stop iteration, and returns this.ctx.Err() if encountered.
+        func (this *`, sName, `_`, camelQ(q), `Iter) Each(fun func(*`, sName, `_`, camelQ(q), `Row) error) error {
+            for {
+                select {
+                case <-this.ctx.Done():
+                    return this.ctx.Err()
+                default:
+                    if row, ok := this.Next(); !ok {
+                        return nil
+                    } else if err := fun(row); err != nil {
+                        return err
+                    }
+                }
+            }
+        }
+
+        // One returns the sole row, or ensures an error if there was not one result when this row is converted
+        func (this *`, sName, `_`, camelQ(q), `Iter) One() *`, sName, `_`, camelQ(q), `Row {
+            first, hasFirst := this.Next()
+            _, hasSecond := this.Next()
+            if !hasFirst || hasSecond {
+                amount := "none"
+                if hasSecond {
+                    amount = "multiple"
+                }
+                return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}
+            }
+            return first
+        }
+
+        // Zero returns an error if there were any rows in the result
+        func (this *`, sName, `_`, camelQ(q), `Iter) Zero() error {
+            if _, ok := this.Next(); ok {
+                return fmt.Errorf("expected exactly 0 results from query '`, camelQ(q), `'")
+            }
+            return nil
+        }
+
+        // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
+        func (this *`, sName, `_`, camelQ(q), `Iter) Next() (*`, sName, `_`, camelQ(q), `Row, bool) {
+            if this.err == io.EOF || this.result == nil || this.result.iter == nil {
+                return nil, false
+            } else if this.err != nil {
+                err := this.err
+                this.err = io.EOF
+                return &`, sName, `_`, camelQ(q), `Row{err: err}, true
+            }
+
+            row, err := this.result.iter.Next()
+            if err != nil {
+                return &`, sName, `_`, camelQ(q), `Row{err: err}, true
+            }
+
+            /*
+            cols, err := this.rows.Columns()
+            if err != nil {
+                return &`, sName, `_`, camelQ(q), `Row{err: err}, true
+            }
+            if !this.rows.Next() {
+                if this.err = this.rows.Err(); this.err == nil {
+                    this.err = io.EOF
+                    return nil, false
+                }
+            }
+            toScan := make([]interface{}, len(cols))
+            scanned := make([]alwaysScanner, len(cols))
+            for i := range scanned {
+                toScan[i] = &scanned[i]
+            }
+            if this.err = this.rows.Scan(toScan...); this.err != nil {
+                return &`, sName, `_`, camelQ(q), `Row{err: this.err}, true
+            }
+            res := &`, outName(q), `{}
+            for i, col := range cols {
+                _ = i
+                switch col {
+                `, colswitch(q), `
+                default:
+                    return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("unsupported column in output: %s", col)}, true
+                }
+            }
+            return &`, sName, `_`, camelQ(q), `Row{item: res}, true
+            */
+
+            return nil, true
+        }
+
+        // Slice returns all rows found in the iterator as a Slice.
+        func (this *`, sName, `_`, camelQ(q), `Iter) Slice() []*`, sName, `_`, camelQ(q), `Row {
+            var results []*`, sName, `_`, camelQ(q), `Row
+            for {
+                if i, ok := this.Next(); ok {
+                    results = append(results, i)
+                } else {
+                    break
+                }
+            }
+            return results
+        }
+
+        // returns the known columns for this result
+        func (r *`, sName, `_`, camelQ(q), `Iter) Columns() ([]string, error) {
+            if r.err != nil {
+                return nil, r.err
+            }
+            if r.rows != nil {
+                return r.rows.Columns()
+            }
+            return nil, nil
+        }
+        `)
+		})
+	}
 
 	if outErr == nil {
 		return m.Err()
@@ -942,8 +1119,8 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
                 _ = res
                 `, setSharedOnPointer(mopt), `
                 return nil
-			}
-			`)
+            }
+            `)
 		}, m.MatchQueryName(qopt))
 		return p.String()
 	}
@@ -1190,7 +1367,19 @@ func WriteImports(p *Printer, f *FileStruct) error {
 	}
 	p.P("%s \"%s\"\n", "proto", "github.com/golang/protobuf/proto")
 	p.P(")\n")
-	p.P(`
+
+	if hasSQL {
+		p.Q(`
+type PersistTx interface {
+    Commit() error
+    Rollback() error
+    Runnable
+}
+
+func NopPersistTx(r Runnable) (PersistTx, error) {
+    return &ignoreTx{r}, nil
+}
+
 type ignoreTx struct {
     r Runnable
 }
@@ -1203,19 +1392,7 @@ func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interfac
 func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
     return this.r.ExecContext(ctx, x, ys...)
 }
-type PersistTx interface {
-    Commit() error
-    Rollback() error
-    Runnable
-}
 
-func NopPersistTx(r Runnable) (PersistTx, error) {
-    return &ignoreTx{r}, nil
-}
-    `)
-
-	if hasSQL {
-		p.Q(`
 type Runnable interface {
     QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
     ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
@@ -1251,6 +1428,12 @@ type scanable interface {
         `)
 	} else if hasSpanner {
 		p.Q(`
+type PersistTx interface {
+    Commit() error
+    Rollback() error
+    Runnable
+}
+
 type Result interface {
     LastInsertId() (int64, error)
     RowsAffected() (int64, error)
