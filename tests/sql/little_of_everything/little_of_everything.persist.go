@@ -249,7 +249,7 @@ func (this *Testservice1_ClientStreamingExampleQuery) Execute(x Testservice1_Cli
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = $1", params...)
 	return result
 }
 
@@ -464,7 +464,7 @@ type Testservice1_UnaryExample2Iter struct {
 }
 
 func (this *Testservice1_UnaryExample2Iter) IterOutTypeExampleTable1() {}
-func (this *Testservice1_UnaryExample2Iter) IterInTypetest_Test()      {}
+func (this *Testservice1_UnaryExample2Iter) IterInTypeTestTest()       {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
@@ -867,7 +867,7 @@ type Testservice1_ClientStreamingExampleIter struct {
 	ctx    context.Context
 }
 
-func (this *Testservice1_ClientStreamingExampleIter) IterOutTypeCountRows()    {}
+func (this *Testservice1_ClientStreamingExampleIter) IterOutTypeEmpty()        {}
 func (this *Testservice1_ClientStreamingExampleIter) IterInTypeExampleTable1() {}
 
 // Each performs 'fun' on each row in the result set.
@@ -937,16 +937,10 @@ func (this *Testservice1_ClientStreamingExampleIter) Next() (*Testservice1_Clien
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &Testservice1_ClientStreamingExampleRow{err: this.err}, true
 	}
-	res := &CountRows{}
+	res := &Empty{}
 	for i, col := range cols {
 		_ = i
 		switch col {
-		case "count":
-			r, ok := (*scanned[i].i).(int64)
-			if !ok {
-				return &Testservice1_ClientStreamingExampleRow{err: fmt.Errorf("cant convert db column count to protobuf go type ")}, true
-			}
-			res.Count = r
 
 		default:
 			return &Testservice1_ClientStreamingExampleRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -1042,6 +1036,7 @@ func (this *Testservice1_UnaryExample1Row) Unwrap(pointerToMsg proto.Message) er
 		o.Mappedenum = res.Mappedenum
 		return nil
 	}
+
 	return nil
 }
 func (this *Testservice1_UnaryExample1Row) ExampleTable1() (*ExampleTable1, error) {
@@ -1137,6 +1132,7 @@ func (this *Testservice1_UnaryExample2Row) Unwrap(pointerToMsg proto.Message) er
 		o.Mappedenum = res.Mappedenum
 		return nil
 	}
+
 	return nil
 }
 func (this *Testservice1_UnaryExample2Row) ExampleTable1() (*ExampleTable1, error) {
@@ -1242,6 +1238,7 @@ func (this *Testservice1_ServerStreamSelectRow) Unwrap(pointerToMsg proto.Messag
 		o.Mappedenum = res.Mappedenum
 		return nil
 	}
+
 	return nil
 }
 func (this *Testservice1_ServerStreamSelectRow) ExampleTable1() (*ExampleTable1, error) {
@@ -1299,7 +1296,6 @@ type Testservice1_ClientStreamingExampleIn interface {
 	GetMappedenum() MappedEnum
 }
 type Testservice1_ClientStreamingExampleOut interface {
-	GetCount() int64
 }
 type Testservice1_ClientStreamingExampleRow struct {
 	item Testservice1_ClientStreamingExampleOut
@@ -1322,27 +1318,24 @@ func (this *Testservice1_ClientStreamingExampleRow) Unwrap(pointerToMsg proto.Me
 		}
 		res, _ := this.CountRows()
 		_ = res
-		o.Count = res.Count
+
 		return nil
 	}
+
 	return nil
 }
 func (this *Testservice1_ClientStreamingExampleRow) CountRows() (*CountRows, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
-	return &CountRows{
-		Count: this.item.GetCount(),
-	}, nil
+	return &CountRows{}, nil
 }
 
-func (this *Testservice1_ClientStreamingExampleRow) Proto() (*CountRows, error) {
+func (this *Testservice1_ClientStreamingExampleRow) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
-	return &CountRows{
-		Count: this.item.GetCount(),
-	}, nil
+	return &Empty{}, nil
 }
 
 type Testservice1_Hooks interface {
@@ -1538,7 +1531,7 @@ func (this *Testservice1_Impl) ClientStreamingExampleTx(stream Testservice1_Clie
 			return fmt.Errorf("error executing 'client_streaming_example' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
 		}
 	}
-	res := &Empty{}
+	res := &CountRows{}
 
 	if err := stream.SendAndClose(res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)

@@ -212,7 +212,8 @@ func (this *ExtraSrv_ExtraQuery) Execute(x ExtraSrv_ExtraIn) *ExtraSrv_ExtraIter
                     return &ExtraSrv_ExtraRow{err: err}, true
                 }
                 res.Some = converted
-            case "str": r, ok := (*scanned[i].i).(string)
+            case "str": 
+			r, ok := (*scanned[i].i).(string)
             if !ok {
                 return &ExtraSrv_ExtraRow{err: fmt.Errorf("cant convert db column str to protobuf go type ")}, true
             }
@@ -227,7 +228,8 @@ func (this *ExtraSrv_ExtraQuery) Execute(x ExtraSrv_ExtraIn) *ExtraSrv_ExtraIter
                     return &ExtraSrv_ExtraRow{err: err}, true
                 }
                 res.Table = converted
-            case "strs": r, ok := (*scanned[i].i).([]string)
+            case "strs": 
+			r, ok := (*scanned[i].i).([]string)
             if !ok {
                 return &ExtraSrv_ExtraRow{err: fmt.Errorf("cant convert db column strs to protobuf go type ")}, true
             }
@@ -321,14 +323,15 @@ GetTimes() []*timestamp.Timestamp
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *ExtraSrv_ExtraRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *ExtraSrv_ExtraRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -408,7 +411,7 @@ func (this *ExtraSrv_Impl) ExtraUnary(ctx context.Context, req *test.NumRows) (*
     query := this.QUERIES.Extra(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().test.ExampleTable()
+    res, err := result.One().TestExampleTable()
     if err != nil {
         return nil, err
     }
@@ -420,216 +423,382 @@ type MySpanner_Queries struct {
 opts MySpanner_Opts
 }
 // MySpannerPersistQueries returns all the known 'SQL' queires for the 'MySpanner' service.
-func MySpannerPersistQueries(opts ...MySpanner_Opts) *MySpanner_Queries {
-    var myOpts MySpanner_Opts
-    if len(opts) > 0 {
-        myOpts = opts[0]
-    } else {
-        myOpts = MySpannerOpts(nil, nil)
-    }
-    return &MySpanner_Queries{
-        opts: myOpts,
-    }
-}
-    
-// InsertQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'insert' on the database
-// when executed
-func (this *MySpanner_Queries) Insert(ctx context.Context, db Runnable) *MySpanner_InsertQuery {
-    return &MySpanner_InsertQuery{
-        opts: this.opts,
-        ctx: ctx,
-        db: db,
-    }
-}
-type MySpanner_InsertQuery struct {
-    opts MySpanner_Opts
-    db Runnable
-    ctx context.Context
-}
-func (this *MySpanner_InsertQuery) QueryInTypeUser()  {}
-func (this *MySpanner_InsertQuery) QueryOutTypeUser() {}
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_InsertQuery) Execute(x MySpanner_InsertIn) *MySpanner_InsertIter {
-    var setupErr error
-    result := &MySpanner_InsertIter{
-        tm: this.opts.MAPPINGS,
-        ctx: this.ctx,
-    }
-    if setupErr != nil {
-        result.err = setupErr
-        return result
-    }
-    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-        stmt := spanner.Statement{
-            SQL: "Insert into example_table (id, start_time, name) Values (@id, @start_time, "bananas")",
-            Params: map[string]interface{}{
-                "id": x.GetId(),
-"start_time": x.GetStartTime(),
-            },
+    func MySpannerPersistQueries(opts ...MySpanner_Opts) *MySpanner_Queries {
+        var myOpts MySpanner_Opts
+        if len(opts) > 0 {
+            myOpts = opts[0]
+        } else {
+            myOpts = MySpannerOpts(nil, nil)
         }
-        return nil
-    })
-    return result
-}
-        
-// SelectQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'select' on the database
-// when executed
-func (this *MySpanner_Queries) Select(ctx context.Context, db Runnable) *MySpanner_SelectQuery {
-    return &MySpanner_SelectQuery{
-        opts: this.opts,
-        ctx: ctx,
-        db: db,
-    }
-}
-type MySpanner_SelectQuery struct {
-    opts MySpanner_Opts
-    db Runnable
-    ctx context.Context
-}
-func (this *MySpanner_SelectQuery) QueryInTypeUser()  {}
-func (this *MySpanner_SelectQuery) QueryOutTypeUser() {}
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_SelectQuery) Execute(x MySpanner_SelectIn) *MySpanner_SelectIter {
-    var setupErr error
-    result := &MySpanner_SelectIter{
-        tm: this.opts.MAPPINGS,
-        ctx: this.ctx,
-    }
-    if setupErr != nil {
-        result.err = setupErr
-        return result
-    }
-    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-        stmt := spanner.Statement{
-            SQL: "SELECT * from example_table Where id=@id AND name=@name",
-            Params: map[string]interface{}{
-                "id": x.GetId(),
-"name": x.GetName(),
-            },
+        return &MySpanner_Queries{
+            opts: myOpts,
         }
-        return nil
-    })
-    return result
-}
-        
-// SelectIndexQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'select_index' on the database
-// when executed
-func (this *MySpanner_Queries) SelectIndex(ctx context.Context, db Runnable) *MySpanner_SelectIndexQuery {
-    return &MySpanner_SelectIndexQuery{
-        opts: this.opts,
-        ctx: ctx,
-        db: db,
     }
-}
-type MySpanner_SelectIndexQuery struct {
-    opts MySpanner_Opts
-    db Runnable
-    ctx context.Context
-}
-func (this *MySpanner_SelectIndexQuery) QueryInTypeUser()  {}
-func (this *MySpanner_SelectIndexQuery) QueryOutTypeUser() {}
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_SelectIndexQuery) Execute(x MySpanner_SelectIndexIn) *MySpanner_SelectIndexIter {
-    var setupErr error
-    result := &MySpanner_SelectIndexIter{
-        tm: this.opts.MAPPINGS,
-        ctx: this.ctx,
-    }
-    if setupErr != nil {
-        result.err = setupErr
-        return result
-    }
-    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-        stmt := spanner.Statement{
-            SQL: "SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name",
-            Params: map[string]interface{}{
-                "id": x.GetId(),
-"name": x.GetName(),
-            },
+    // InsertQuery returns a new struct wrapping the current MySpanner_Opts
+        // that will perform 'MySpanner' services 'insert' on the database
+        // when executed
+        func (this *MySpanner_Queries) Insert(ctx context.Context, db Runnable) *MySpanner_InsertQuery {
+            return &MySpanner_InsertQuery{
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
+            }
         }
-        return nil
-    })
-    return result
-}
-        
-// UpdateQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'update' on the database
-// when executed
-func (this *MySpanner_Queries) Update(ctx context.Context, db Runnable) *MySpanner_UpdateQuery {
-    return &MySpanner_UpdateQuery{
-        opts: this.opts,
-        ctx: ctx,
-        db: db,
-    }
-}
-type MySpanner_UpdateQuery struct {
-    opts MySpanner_Opts
-    db Runnable
-    ctx context.Context
-}
-func (this *MySpanner_UpdateQuery) QueryInTypeUser()  {}
-func (this *MySpanner_UpdateQuery) QueryOutTypeUser() {}
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_UpdateQuery) Execute(x MySpanner_UpdateIn) *MySpanner_UpdateIter {
-    var setupErr error
-    result := &MySpanner_UpdateIter{
-        tm: this.opts.MAPPINGS,
-        ctx: this.ctx,
-    }
-    if setupErr != nil {
-        result.err = setupErr
-        return result
-    }
-    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-        stmt := spanner.Statement{
-            SQL: "Update example_table  set start_time=@start_time, name="oranges" PrimaryKey(id=@id)",
-            Params: map[string]interface{}{
-                "start_time": x.GetStartTime(),
-"id": x.GetId(),
-            },
+        type MySpanner_InsertQuery struct {
+			opts MySpanner_Opts
+			db Runnable
+			ctx context.Context
         }
-        return nil
-    })
-    return result
-}
-        
-// DeleteQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'delete' on the database
-// when executed
-func (this *MySpanner_Queries) Delete(ctx context.Context, db Runnable) *MySpanner_DeleteQuery {
-    return &MySpanner_DeleteQuery{
-        opts: this.opts,
-        ctx: ctx,
-        db: db,
-    }
-}
-type MySpanner_DeleteQuery struct {
-    opts MySpanner_Opts
-    db Runnable
-    ctx context.Context
-}
-func (this *MySpanner_DeleteQuery) QueryInTypeUser()  {}
-func (this *MySpanner_DeleteQuery) QueryOutTypeUser() {}
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_DeleteQuery) Execute(x MySpanner_DeleteIn) *MySpanner_DeleteIter {
-    var setupErr error
-    result := &MySpanner_DeleteIter{
-        tm: this.opts.MAPPINGS,
-        ctx: this.ctx,
-    }
-    if setupErr != nil {
-        result.err = setupErr
-        return result
-    }
-    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-        stmt := spanner.Statement{
-            SQL: "DELETE FROM example_table START(@start_id) END(@end_id) KIND(CO)",
-            Params: map[string]interface{}{
-                
-            },
+        func (this *MySpanner_InsertQuery) QueryInTypeUser()  {}
+        func (this *MySpanner_InsertQuery) QueryOutTypeUser() {}
+        // Executes the query with parameters retrieved from x
+        func (this *MySpanner_InsertQuery) Execute(x MySpanner_InsertIn) *MySpanner_InsertIter {
+            var setupErr error
+            params := []interface{}{
+            func() (out interface{}) {
+                out = x.GetId()
+                return
+            }(),
+            func() (out interface{}) {
+                raw, err := proto.Marshal(x.GetStartTime())
+                if err != nil {
+                    setupErr = err
+                }
+                out = raw
+                return
+            }(),
+            
+            }
+            result := &MySpanner_InsertIter{
+                tm: this.opts.MAPPINGS,
+                ctx: this.ctx,
+            }
+            if setupErr != nil {
+                result.err = setupErr
+                return result
+            }
+            result.result, result.err = this.db.ExecContext(this.ctx, "Insert into example_table (id, start_time, name) Values (@id, @start_time, 'bananas')", params...)
+            return result
+        }
+        // SelectQuery returns a new struct wrapping the current MySpanner_Opts
+        // that will perform 'MySpanner' services 'select' on the database
+        // when executed
+        func (this *MySpanner_Queries) Select(ctx context.Context, db Runnable) *MySpanner_SelectQuery {
+            return &MySpanner_SelectQuery{
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
+            }
+        }
+        type MySpanner_SelectQuery struct {
+			opts MySpanner_Opts
+			db Runnable
+			ctx context.Context
+        }
+        func (this *MySpanner_SelectQuery) QueryInTypeUser()  {}
+        func (this *MySpanner_SelectQuery) QueryOutTypeUser() {}
+        // Executes the query with parameters retrieved from x
+        func (this *MySpanner_SelectQuery) Execute(x MySpanner_SelectIn) *MySpanner_SelectIter {
+            var setupErr error
+            params := []interface{}{
+            func() (out interface{}) {
+                out = x.GetId()
+                return
+            }(),
+            func() (out interface{}) {
+                out = x.GetName()
+                return
+            }(),
+            
+            }
+            result := &MySpanner_SelectIter{
+                tm: this.opts.MAPPINGS,
+                ctx: this.ctx,
+            }
+            if setupErr != nil {
+                result.err = setupErr
+                return result
+            }
+            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT * from example_table Where id=@id AND name=@name", params...)
+            return result
+        }
+        // SelectIndexQuery returns a new struct wrapping the current MySpanner_Opts
+        // that will perform 'MySpanner' services 'select_index' on the database
+        // when executed
+        func (this *MySpanner_Queries) SelectIndex(ctx context.Context, db Runnable) *MySpanner_SelectIndexQuery {
+            return &MySpanner_SelectIndexQuery{
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
+            }
+        }
+        type MySpanner_SelectIndexQuery struct {
+			opts MySpanner_Opts
+			db Runnable
+			ctx context.Context
+        }
+        func (this *MySpanner_SelectIndexQuery) QueryInTypeUser()  {}
+        func (this *MySpanner_SelectIndexQuery) QueryOutTypeUser() {}
+        // Executes the query with parameters retrieved from x
+        func (this *MySpanner_SelectIndexQuery) Execute(x MySpanner_SelectIndexIn) *MySpanner_SelectIndexIter {
+            var setupErr error
+            params := []interface{}{
+            func() (out interface{}) {
+                out = x.GetId()
+                return
+            }(),
+            func() (out interface{}) {
+                out = x.GetName()
+                return
+            }(),
+            
+            }
+            result := &MySpanner_SelectIndexIter{
+                tm: this.opts.MAPPINGS,
+                ctx: this.ctx,
+            }
+            if setupErr != nil {
+                result.err = setupErr
+                return result
+            }
+            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name", params...)
+            return result
+        }
+        // UpdateQuery returns a new struct wrapping the current MySpanner_Opts
+        // that will perform 'MySpanner' services 'update' on the database
+        // when executed
+        func (this *MySpanner_Queries) Update(ctx context.Context, db Runnable) *MySpanner_UpdateQuery {
+            return &MySpanner_UpdateQuery{
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
+            }
+        }
+        type MySpanner_UpdateQuery struct {
+			opts MySpanner_Opts
+			db Runnable
+			ctx context.Context
+        }
+        func (this *MySpanner_UpdateQuery) QueryInTypeUser()  {}
+        func (this *MySpanner_UpdateQuery) QueryOutTypeUser() {}
+        // Executes the query with parameters retrieved from x
+        func (this *MySpanner_UpdateQuery) Execute(x MySpanner_UpdateIn) *MySpanner_UpdateIter {
+            var setupErr error
+            params := []interface{}{
+            func() (out interface{}) {
+                raw, err := proto.Marshal(x.GetStartTime())
+                if err != nil {
+                    setupErr = err
+                }
+                out = raw
+                return
+            }(),
+            func() (out interface{}) {
+                out = x.GetId()
+                return
+            }(),
+            
+            }
+            result := &MySpanner_UpdateIter{
+                tm: this.opts.MAPPINGS,
+                ctx: this.ctx,
+            }
+            if setupErr != nil {
+                result.err = setupErr
+                return result
+            }
+            result.result, result.err = this.db.ExecContext(this.ctx, "Update example_table  set start_time=@start_time, name='oranges' PrimaryKey(id=@id)", params...)
+            return result
+        }
+        // DeleteQuery returns a new struct wrapping the current MySpanner_Opts
+        // that will perform 'MySpanner' services 'delete' on the database
+        // when executed
+        func (this *MySpanner_Queries) Delete(ctx context.Context, db Runnable) *MySpanner_DeleteQuery {
+            return &MySpanner_DeleteQuery{
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
+            }
+        }
+        type MySpanner_DeleteQuery struct {
+			opts MySpanner_Opts
+			db Runnable
+			ctx context.Context
+        }
+        func (this *MySpanner_DeleteQuery) QueryInTypeUser()  {}
+        func (this *MySpanner_DeleteQuery) QueryOutTypeUser() {}
+        // Executes the query with parameters retrieved from x
+        func (this *MySpanner_DeleteQuery) Execute(x MySpanner_DeleteIn) *MySpanner_DeleteIter {
+            var setupErr error
+            params := []interface{}{
+            
+            }
+            result := &MySpanner_DeleteIter{
+                tm: this.opts.MAPPINGS,
+                ctx: this.ctx,
+            }
+            if setupErr != nil {
+                result.err = setupErr
+                return result
+            }
+            result.result, result.err = this.db.ExecContext(this.ctx, "DELETE FROM example_table START(@start_id) END(@end_id) KIND(CO)", params...)
+            return result
+        }
+        // SelectAllQuery returns a new struct wrapping the current MySpanner_Opts
+        // that will perform 'MySpanner' services 'select_all' on the database
+        // when executed
+        func (this *MySpanner_Queries) SelectAll(ctx context.Context, db Runnable) *MySpanner_SelectAllQuery {
+            return &MySpanner_SelectAllQuery{
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
+            }
+        }
+        type MySpanner_SelectAllQuery struct {
+			opts MySpanner_Opts
+			db Runnable
+			ctx context.Context
+        }
+        func (this *MySpanner_SelectAllQuery) QueryInTypeUser()  {}
+        func (this *MySpanner_SelectAllQuery) QueryOutTypeUser() {}
+        // Executes the query with parameters retrieved from x
+        func (this *MySpanner_SelectAllQuery) Execute(x MySpanner_SelectAllIn) *MySpanner_SelectAllIter {
+            var setupErr error
+            params := []interface{}{
+            
+            }
+            result := &MySpanner_SelectAllIter{
+                tm: this.opts.MAPPINGS,
+                ctx: this.ctx,
+            }
+            if setupErr != nil {
+                result.err = setupErr
+                return result
+            }
+            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT * FROM example_table", params...)
+            return result
+        }
+        // Insert_3Query returns a new struct wrapping the current MySpanner_Opts
+        // that will perform 'MySpanner' services 'insert_3' on the database
+        // when executed
+        func (this *MySpanner_Queries) Insert_3(ctx context.Context, db Runnable) *MySpanner_Insert_3Query {
+            return &MySpanner_Insert_3Query{
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
+            }
+        }
+        type MySpanner_Insert_3Query struct {
+			opts MySpanner_Opts
+			db Runnable
+			ctx context.Context
+        }
+        func (this *MySpanner_Insert_3Query) QueryInTypeUser()  {}
+        func (this *MySpanner_Insert_3Query) QueryOutTypeUser() {}
+        // Executes the query with parameters retrieved from x
+        func (this *MySpanner_Insert_3Query) Execute(x MySpanner_Insert_3In) *MySpanner_Insert_3Iter {
+            var setupErr error
+            params := []interface{}{
+            func() (out interface{}) {
+                out = x.GetId()
+                return
+            }(),
+            func() (out interface{}) {
+                raw, err := proto.Marshal(x.GetStartTime())
+                if err != nil {
+                    setupErr = err
+                }
+                out = raw
+                return
+            }(),
+            
+            }
+            result := &MySpanner_Insert_3Iter{
+                tm: this.opts.MAPPINGS,
+                ctx: this.ctx,
+            }
+            if setupErr != nil {
+                result.err = setupErr
+                return result
+            }
+            result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO example_table (id, start_time, name) VALUES (@id, @start_time, 3)", params...)
+            return result
+        }
+        // DeleteIdQuery returns a new struct wrapping the current MySpanner_Opts
+        // that will perform 'MySpanner' services 'delete_id' on the database
+        // when executed
+        func (this *MySpanner_Queries) DeleteId(ctx context.Context, db Runnable) *MySpanner_DeleteIdQuery {
+            return &MySpanner_DeleteIdQuery{
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
+            }
+        }
+        type MySpanner_DeleteIdQuery struct {
+			opts MySpanner_Opts
+			db Runnable
+			ctx context.Context
+        }
+        func (this *MySpanner_DeleteIdQuery) QueryInTypeUser()  {}
+        func (this *MySpanner_DeleteIdQuery) QueryOutTypeUser() {}
+        // Executes the query with parameters retrieved from x
+        func (this *MySpanner_DeleteIdQuery) Execute(x MySpanner_DeleteIdIn) *MySpanner_DeleteIdIter {
+            var setupErr error
+            params := []interface{}{
+            func() (out interface{}) {
+                out = x.GetId()
+                return
+            }(),
+            
+            }
+            result := &MySpanner_DeleteIdIter{
+                tm: this.opts.MAPPINGS,
+                ctx: this.ctx,
+            }
+            if setupErr != nil {
+                result.err = setupErr
+                return result
+            }
+            result.result, result.err = this.db.ExecContext(this.ctx, "DELETE FROM example_table VALUES(@id)", params...)
+            return result
+        }
+        // SetNameAsdfQuery returns a new struct wrapping the current MySpanner_Opts
+        // that will perform 'MySpanner' services 'set_name_asdf' on the database
+        // when executed
+        func (this *MySpanner_Queries) SetNameAsdf(ctx context.Context, db Runnable) *MySpanner_SetNameAsdfQuery {
+            return &MySpanner_SetNameAsdfQuery{
+                opts: this.opts,
+				ctx: ctx,
+				db: db,
+            }
+        }
+        type MySpanner_SetNameAsdfQuery struct {
+			opts MySpanner_Opts
+			db Runnable
+			ctx context.Context
+        }
+        func (this *MySpanner_SetNameAsdfQuery) QueryInTypeUser()  {}
+        func (this *MySpanner_SetNameAsdfQuery) QueryOutTypeUser() {}
+        // Executes the query with parameters retrieved from x
+        func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySpanner_SetNameAsdfIter {
+            var setupErr error
+            params := []interface{}{
+            func() (out interface{}) {
+                out = x.GetId()
+                return
+            }(),
+            
+            }
+            result := &MySpanner_SetNameAsdfIter{
+                tm: this.opts.MAPPINGS,
+                ctx: this.ctx,
+            }
+            if setupErr != nil {
+                result.err = setupErr
+                return result
+            }
+            result.result, result.err = this.db.ExecContext(this.ctx, "update example_table set name='asdf' pk(id=@id)", params...)
+            return result
         }
         return nil
     })
@@ -804,7 +973,7 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             ctx    context.Context
         }
         func (this *MySpanner_InsertIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_InsertIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_InsertIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -909,8 +1078,8 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectIter) IterOutTypetest_ExampleTable() {}
-        func (this *MySpanner_SelectIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_SelectIter) IterOutTypeTestExampleTable() {}
+        func (this *MySpanner_SelectIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -975,11 +1144,12 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectRow{err: this.err}, true
             }
-            res := &test_ExampleTable{}
+            res := &test.ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
-                case "id": r, ok := (*scanned[i].i).(int64)
+                case "id": 
+			r, ok := (*scanned[i].i).(int64)
             if !ok {
                 return &MySpanner_SelectRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
             }
@@ -994,7 +1164,8 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
                     return &MySpanner_SelectRow{err: err}, true
                 }
                 res.StartTime = converted
-            case "name": r, ok := (*scanned[i].i).(string)
+            case "name": 
+			r, ok := (*scanned[i].i).(string)
             if !ok {
                 return &MySpanner_SelectRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
             }
@@ -1035,8 +1206,8 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectIndexIter) IterOutTypetest_ExampleTable() {}
-        func (this *MySpanner_SelectIndexIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_SelectIndexIter) IterOutTypeTestExampleTable() {}
+        func (this *MySpanner_SelectIndexIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1101,11 +1272,12 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectIndexRow{err: this.err}, true
             }
-            res := &test_ExampleTable{}
+            res := &test.ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
-                case "id": r, ok := (*scanned[i].i).(int64)
+                case "id": 
+			r, ok := (*scanned[i].i).(int64)
             if !ok {
                 return &MySpanner_SelectIndexRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
             }
@@ -1120,7 +1292,8 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
                     return &MySpanner_SelectIndexRow{err: err}, true
                 }
                 res.StartTime = converted
-            case "name": r, ok := (*scanned[i].i).(string)
+            case "name": 
+			r, ok := (*scanned[i].i).(string)
             if !ok {
                 return &MySpanner_SelectIndexRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
             }
@@ -1162,7 +1335,7 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             ctx    context.Context
         }
         func (this *MySpanner_UpdateIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_UpdateIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_UpdateIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1268,7 +1441,7 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             ctx    context.Context
         }
         func (this *MySpanner_DeleteIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_DeleteIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_DeleteIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1373,8 +1546,8 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectAllIter) IterOutTypetest_ExampleTable() {}
-        func (this *MySpanner_SelectAllIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_SelectAllIter) IterOutTypeTestExampleTable() {}
+        func (this *MySpanner_SelectAllIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1439,11 +1612,12 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectAllRow{err: this.err}, true
             }
-            res := &test_ExampleTable{}
+            res := &test.ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
-                case "id": r, ok := (*scanned[i].i).(int64)
+                case "id": 
+			r, ok := (*scanned[i].i).(int64)
             if !ok {
                 return &MySpanner_SelectAllRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
             }
@@ -1458,7 +1632,8 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
                     return &MySpanner_SelectAllRow{err: err}, true
                 }
                 res.StartTime = converted
-            case "name": r, ok := (*scanned[i].i).(string)
+            case "name": 
+			r, ok := (*scanned[i].i).(string)
             if !ok {
                 return &MySpanner_SelectAllRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
             }
@@ -1500,7 +1675,7 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             ctx    context.Context
         }
         func (this *MySpanner_Insert_3Iter) IterOutTypeEmpty() {}
-        func (this *MySpanner_Insert_3Iter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_Insert_3Iter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1606,7 +1781,7 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             ctx    context.Context
         }
         func (this *MySpanner_DeleteIdIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_DeleteIdIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_DeleteIdIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1712,7 +1887,7 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
             ctx    context.Context
         }
         func (this *MySpanner_SetNameAsdfIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_SetNameAsdfIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_SetNameAsdfIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1835,14 +2010,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_InsertRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_InsertRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -1886,16 +2062,17 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_SelectRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_SelectRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -1943,26 +2120,28 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
+			}
+			if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_SelectIndexRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_SelectIndexRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2008,14 +2187,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.PartialTable before giving to Unwrap()")
                 }
-                res, _ := this.test.PartialTable()
+                res, _ := this.TestPartialTable()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_UpdateRow) test.PartialTable() (*test.PartialTable, error) {
+        func (this *MySpanner_UpdateRow) TestPartialTable() (*test.PartialTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2057,14 +2237,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_DeleteRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_DeleteRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2108,26 +2289,28 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
+			}
+			if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_SelectAllRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_SelectAllRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2173,14 +2356,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
                 }
-                res, _ := this.test.NumRows()
+                res, _ := this.TestNumRows()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_Insert_3Row) test.NumRows() (*test.NumRows, error) {
+        func (this *MySpanner_Insert_3Row) TestNumRows() (*test.NumRows, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2222,14 +2406,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
                 }
-                res, _ := this.test.NumRows()
+                res, _ := this.TestNumRows()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_DeleteIdRow) test.NumRows() (*test.NumRows, error) {
+        func (this *MySpanner_DeleteIdRow) TestNumRows() (*test.NumRows, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2271,14 +2456,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
                 }
-                res, _ := this.test.NumRows()
+                res, _ := this.TestNumRows()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_SetNameAsdfRow) test.NumRows() (*test.NumRows, error) {
+        func (this *MySpanner_SetNameAsdfRow) TestNumRows() (*test.NumRows, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2438,7 +2624,7 @@ func (this *MySpanner_Impl) UniarySelect(ctx context.Context, req *test.ExampleT
     query := this.QUERIES.Select(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().test.ExampleTable()
+    res, err := result.One().TestExampleTable()
     if err != nil {
         return nil, err
     }
@@ -2450,7 +2636,7 @@ func (this *MySpanner_Impl) UniarySelectWithDirectives(ctx context.Context, req 
     query := this.QUERIES.SelectIndex(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().test.ExampleTable()
+    res, err := result.One().TestExampleTable()
     if err != nil {
         return nil, err
     }
@@ -2503,7 +2689,7 @@ func (this *MySpanner_Impl) ServerStreamTx(req *test.Name, stream MySpanner_Serv
     query := this.QUERIES.SelectAll(ctx, tx)
     iter := query.Execute(req)
     return iter.Each(func(row *MySpanner_SelectAllRow) error {
-        res, err := row.test.ExampleTable()
+        res, err := row.TestExampleTable()
         if err != nil {
             return err
         }
@@ -2545,7 +2731,7 @@ func (this *MySpanner_Impl) ClientStreamInsertTx(stream MySpanner_ClientStreamIn
             return fmt.Errorf("error executing 'insert_3' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
         }
     }
-    res := &Empty{}
+    res := &test.NumRows{}
     
     if err := stream.SendAndClose(res); err != nil {
         return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
@@ -2587,7 +2773,7 @@ func (this *MySpanner_Impl) ClientStreamDeleteTx(stream MySpanner_ClientStreamDe
             return fmt.Errorf("error executing 'delete_id' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
         }
     }
-    res := &Empty{}
+    res := &test.NumRows{}
     
     if err := stream.SendAndClose(res); err != nil {
         return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
@@ -2602,12 +2788,11 @@ func (this *MySpanner_Impl) UniarySelectWithHooks(ctx context.Context, req *test
     if err != nil {
         return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
     } else if beforeRes != nil {
-        return gstatus.Error(codes.Unknown, "before hook returned nil")
+        return beforeRes, nil
     }
-    req = beforeRes
     
     result := query.Execute(req)
-    res, err := result.One().test.ExampleTable()
+    res, err := result.One().TestExampleTable()
     if err != nil {
         return nil, err
     }
@@ -2634,7 +2819,7 @@ func (this *MySpanner_Impl) ServerStreamWithHooksTx(req *test.Name, stream MySpa
     query := this.QUERIES.SelectAll(ctx, tx)
     iter := query.Execute(req)
     return iter.Each(func(row *MySpanner_SelectAllRow) error {
-        res, err := row.test.ExampleTable()
+        res, err := row.TestExampleTable()
         if err != nil {
             return err
         }
@@ -2683,7 +2868,7 @@ func (this *MySpanner_Impl) ClientStreamUpdateWithHooksTx(stream MySpanner_Clien
             return fmt.Errorf("error executing 'set_name_asdf' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
         }
     }
-    res := &Empty{}
+    res := &test.NumRows{}
     
     if err := this.opts.HOOKS.ClientStreamUpdateWithHooksAfterHook(stream.Context(), first, res); err != nil {
         return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
