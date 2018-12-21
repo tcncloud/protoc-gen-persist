@@ -22,14 +22,20 @@ type handlerParams struct {
 	After        bool
 }
 
-func OneOrZero(response string, zero bool) string {
-	if zero {
+func OneOrZero(hp handlerParams) string {
+	respPkg := _gen.CamelCase(strings.Map(func(r rune) rune {
+		if r == '.' {
+			return -1
+		}
+		return r
+	}, hp.Response))
+	if hp.ZeroResponse {
 		return strings.Join([]string{`
 err := result.Zero()
-res := &`, response, `{}
+res := &`, hp.Response, `{}
         `}, "")
 	}
-	return "res, err := result.One()." + response + "()"
+	return "res, err := result.One()." + respPkg + "()"
 }
 
 func (h *printerProxy) Write(data []byte) (int, error) {
@@ -139,7 +145,7 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
             return fmt.Errorf("error executing '{{.Query}}' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
         }
     }
-    res := &Empty{}
+    res := &{{.Response}}{}
 
     {{if .After}}
     if err := this.opts.HOOKS.{{.Method}}AfterHook(stream.Context(), first, res); err != nil {
@@ -177,7 +183,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
     {{end}}
 
     result := query.Execute(req)
-    {{oneOrZero .Response .ZeroResponse}}
+    {{oneOrZero .}}
     if err != nil {
         return nil, err
     }

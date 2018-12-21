@@ -1483,6 +1483,7 @@ func (this *UServ_CreateUsersTableRow) Unwrap(pointerToMsg proto.Message) error 
 
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_CreateUsersTableRow) Empty() (*Empty, error) {
@@ -1531,6 +1532,7 @@ func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
 
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_InsertUsersRow) Empty() (*Empty, error) {
@@ -1582,6 +1584,7 @@ func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
 		o.CreatedOn = res.CreatedOn
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_GetAllUsersRow) User() (*User, error) {
@@ -1647,6 +1650,7 @@ func (this *UServ_SelectUserByIdRow) Unwrap(pointerToMsg proto.Message) error {
 		o.CreatedOn = res.CreatedOn
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_SelectUserByIdRow) User() (*User, error) {
@@ -1712,6 +1716,7 @@ func (this *UServ_UpdateUserNameRow) Unwrap(pointerToMsg proto.Message) error {
 		o.CreatedOn = res.CreatedOn
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_UpdateUserNameRow) User() (*User, error) {
@@ -1770,6 +1775,7 @@ func (this *UServ_UpdateNameToFooRow) Unwrap(pointerToMsg proto.Message) error {
 
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_UpdateNameToFooRow) Empty() (*Empty, error) {
@@ -1822,6 +1828,7 @@ func (this *UServ_GetFriendsRow) Unwrap(pointerToMsg proto.Message) error {
 		o.CreatedOn = res.CreatedOn
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_GetFriendsRow) User() (*User, error) {
@@ -1876,6 +1883,7 @@ func (this *UServ_DropRow) Unwrap(pointerToMsg proto.Message) error {
 
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_DropRow) Empty() (*Empty, error) {

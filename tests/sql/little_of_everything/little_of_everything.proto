@@ -50,6 +50,7 @@ enum MappedEnum {
 	OPT_1 = 1;
 }
 
+message Empty{}
 message ExampleTable1 {
     enum InnerEnum {
         OP_0 = 0;
@@ -123,7 +124,7 @@ service Testservice1 {
             query: ["SELECT id AS 'table_id', key, value, msg as inner_message, status as inner_enum FROM test_table WHERE id = @table_id"],
             pm_strategy: "$",
             in: ".tests.ExampleTable1",
-            out: ".tests.CountRows",
+            out: ".tests.Empty",
         }]
     };
     rpc UnaryExample1(ExampleTable1) returns (ExampleTable1) {

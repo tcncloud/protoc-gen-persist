@@ -206,7 +206,8 @@ opts ExtraSrv_Opts
                     return &ExtraSrv_ExtraRow{err: err}, true
                 }
                 res.Some = converted
-            case "str": r, ok := (*scanned[i].i).(string)
+            case "str": 
+			r, ok := (*scanned[i].i).(string)
             if !ok {
                 return &ExtraSrv_ExtraRow{err: fmt.Errorf("cant convert db column str to protobuf go type ")}, true
             }
@@ -221,7 +222,8 @@ opts ExtraSrv_Opts
                     return &ExtraSrv_ExtraRow{err: err}, true
                 }
                 res.Table = converted
-            case "strs": r, ok := (*scanned[i].i).([]string)
+            case "strs": 
+			r, ok := (*scanned[i].i).([]string)
             if !ok {
                 return &ExtraSrv_ExtraRow{err: fmt.Errorf("cant convert db column strs to protobuf go type ")}, true
             }
@@ -315,14 +317,15 @@ GetTimes() []*timestamp.Timestamp
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *ExtraSrv_ExtraRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *ExtraSrv_ExtraRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -402,7 +405,7 @@ func (this *ExtraSrv_Impl) ExtraUnary(ctx context.Context, req *test.NumRows) (*
     query := this.QUERIES.Extra(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().test.ExampleTable()
+    res, err := result.One().TestExampleTable()
     if err != nil {
         return nil, err
     }
@@ -468,7 +471,7 @@ opts MySpanner_Opts
                 result.err = setupErr
                 return result
             }
-            result.result, result.err = this.db.ExecContext(this.ctx, "Insert into example_table (id, start_time, name) Values (@id, @start_time, "bananas")", params...)
+            result.result, result.err = this.db.ExecContext(this.ctx, "Insert into example_table (id, start_time, name) Values (@id, @start_time, 'bananas')", params...)
             return result
         }
         // SelectQuery returns a new struct wrapping the current MySpanner_Opts
@@ -598,7 +601,7 @@ opts MySpanner_Opts
                 result.err = setupErr
                 return result
             }
-            result.result, result.err = this.db.ExecContext(this.ctx, "Update example_table  set start_time=@start_time, name="oranges" PrimaryKey(id=@id)", params...)
+            result.result, result.err = this.db.ExecContext(this.ctx, "Update example_table  set start_time=@start_time, name='oranges' PrimaryKey(id=@id)", params...)
             return result
         }
         // DeleteQuery returns a new struct wrapping the current MySpanner_Opts
@@ -799,7 +802,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_InsertIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_InsertIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_InsertIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -904,8 +907,8 @@ opts MySpanner_Opts
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectIter) IterOutTypetest_ExampleTable() {}
-        func (this *MySpanner_SelectIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_SelectIter) IterOutTypeTestExampleTable() {}
+        func (this *MySpanner_SelectIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -970,11 +973,12 @@ opts MySpanner_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectRow{err: this.err}, true
             }
-            res := &test_ExampleTable{}
+            res := &test.ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
-                case "id": r, ok := (*scanned[i].i).(int64)
+                case "id": 
+			r, ok := (*scanned[i].i).(int64)
             if !ok {
                 return &MySpanner_SelectRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
             }
@@ -989,7 +993,8 @@ opts MySpanner_Opts
                     return &MySpanner_SelectRow{err: err}, true
                 }
                 res.StartTime = converted
-            case "name": r, ok := (*scanned[i].i).(string)
+            case "name": 
+			r, ok := (*scanned[i].i).(string)
             if !ok {
                 return &MySpanner_SelectRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
             }
@@ -1030,8 +1035,8 @@ opts MySpanner_Opts
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectIndexIter) IterOutTypetest_ExampleTable() {}
-        func (this *MySpanner_SelectIndexIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_SelectIndexIter) IterOutTypeTestExampleTable() {}
+        func (this *MySpanner_SelectIndexIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1096,11 +1101,12 @@ opts MySpanner_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectIndexRow{err: this.err}, true
             }
-            res := &test_ExampleTable{}
+            res := &test.ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
-                case "id": r, ok := (*scanned[i].i).(int64)
+                case "id": 
+			r, ok := (*scanned[i].i).(int64)
             if !ok {
                 return &MySpanner_SelectIndexRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
             }
@@ -1115,7 +1121,8 @@ opts MySpanner_Opts
                     return &MySpanner_SelectIndexRow{err: err}, true
                 }
                 res.StartTime = converted
-            case "name": r, ok := (*scanned[i].i).(string)
+            case "name": 
+			r, ok := (*scanned[i].i).(string)
             if !ok {
                 return &MySpanner_SelectIndexRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
             }
@@ -1157,7 +1164,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_UpdateIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_UpdateIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_UpdateIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1263,7 +1270,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_DeleteIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_DeleteIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_DeleteIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1368,8 +1375,8 @@ opts MySpanner_Opts
             tm     MySpanner_TypeMappings
             ctx    context.Context
         }
-        func (this *MySpanner_SelectAllIter) IterOutTypetest_ExampleTable() {}
-        func (this *MySpanner_SelectAllIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_SelectAllIter) IterOutTypeTestExampleTable() {}
+        func (this *MySpanner_SelectAllIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1434,11 +1441,12 @@ opts MySpanner_Opts
             if this.err = this.rows.Scan(toScan...); this.err != nil {
                 return &MySpanner_SelectAllRow{err: this.err}, true
             }
-            res := &test_ExampleTable{}
+            res := &test.ExampleTable{}
             for i, col := range cols {
                 _ = i
                 switch col {
-                case "id": r, ok := (*scanned[i].i).(int64)
+                case "id": 
+			r, ok := (*scanned[i].i).(int64)
             if !ok {
                 return &MySpanner_SelectAllRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
             }
@@ -1453,7 +1461,8 @@ opts MySpanner_Opts
                     return &MySpanner_SelectAllRow{err: err}, true
                 }
                 res.StartTime = converted
-            case "name": r, ok := (*scanned[i].i).(string)
+            case "name": 
+			r, ok := (*scanned[i].i).(string)
             if !ok {
                 return &MySpanner_SelectAllRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
             }
@@ -1495,7 +1504,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_Insert_3Iter) IterOutTypeEmpty() {}
-        func (this *MySpanner_Insert_3Iter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_Insert_3Iter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1601,7 +1610,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_DeleteIdIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_DeleteIdIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_DeleteIdIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1707,7 +1716,7 @@ opts MySpanner_Opts
             ctx    context.Context
         }
         func (this *MySpanner_SetNameAsdfIter) IterOutTypeEmpty() {}
-        func (this *MySpanner_SetNameAsdfIter) IterInTypetest_ExampleTable()  {}
+        func (this *MySpanner_SetNameAsdfIter) IterInTypeTestExampleTable()  {}
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
@@ -1830,14 +1839,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_InsertRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_InsertRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -1881,16 +1891,17 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_SelectRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_SelectRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -1938,26 +1949,28 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
+			}
+			if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_SelectIndexRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_SelectIndexRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2003,14 +2016,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.PartialTable before giving to Unwrap()")
                 }
-                res, _ := this.test.PartialTable()
+                res, _ := this.TestPartialTable()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_UpdateRow) test.PartialTable() (*test.PartialTable, error) {
+        func (this *MySpanner_UpdateRow) TestPartialTable() (*test.PartialTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2052,14 +2066,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_DeleteRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_DeleteRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2103,26 +2118,28 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
+			}
+			if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
                 if o == nil {
                     return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
                 }
-                res, _ := this.test.ExampleTable()
+                res, _ := this.TestExampleTable()
                 _ = res
                 o.Id = res.Id
 o.StartTime = res.StartTime
 o.Name = res.Name
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_SelectAllRow) test.ExampleTable() (*test.ExampleTable, error) {
+        func (this *MySpanner_SelectAllRow) TestExampleTable() (*test.ExampleTable, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2168,14 +2185,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
                 }
-                res, _ := this.test.NumRows()
+                res, _ := this.TestNumRows()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_Insert_3Row) test.NumRows() (*test.NumRows, error) {
+        func (this *MySpanner_Insert_3Row) TestNumRows() (*test.NumRows, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2217,14 +2235,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
                 }
-                res, _ := this.test.NumRows()
+                res, _ := this.TestNumRows()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_DeleteIdRow) test.NumRows() (*test.NumRows, error) {
+        func (this *MySpanner_DeleteIdRow) TestNumRows() (*test.NumRows, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2266,14 +2285,15 @@ GetName() string
                 if o == nil {
                     return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
                 }
-                res, _ := this.test.NumRows()
+                res, _ := this.TestNumRows()
                 _ = res
                 
                 return nil
-            }
+			}
+			
             return nil
         }
-        func (this *MySpanner_SetNameAsdfRow) test.NumRows() (*test.NumRows, error) {
+        func (this *MySpanner_SetNameAsdfRow) TestNumRows() (*test.NumRows, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -2433,7 +2453,7 @@ func (this *MySpanner_Impl) UniarySelect(ctx context.Context, req *test.ExampleT
     query := this.QUERIES.Select(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().test.ExampleTable()
+    res, err := result.One().TestExampleTable()
     if err != nil {
         return nil, err
     }
@@ -2445,7 +2465,7 @@ func (this *MySpanner_Impl) UniarySelectWithDirectives(ctx context.Context, req 
     query := this.QUERIES.SelectIndex(ctx, this.DB)
     
     result := query.Execute(req)
-    res, err := result.One().test.ExampleTable()
+    res, err := result.One().TestExampleTable()
     if err != nil {
         return nil, err
     }
@@ -2540,7 +2560,7 @@ func (this *MySpanner_Impl) ClientStreamInsertTx(stream MySpanner_ClientStreamIn
             return fmt.Errorf("error executing 'insert_3' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
         }
     }
-    res := &Empty{}
+    res := &test.NumRows{}
     
     if err := stream.SendAndClose(res); err != nil {
         return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
@@ -2582,7 +2602,7 @@ func (this *MySpanner_Impl) ClientStreamDeleteTx(stream MySpanner_ClientStreamDe
             return fmt.Errorf("error executing 'delete_id' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
         }
     }
-    res := &Empty{}
+    res := &test.NumRows{}
     
     if err := stream.SendAndClose(res); err != nil {
         return gstatus.Errorf(codes.Unknown, "error sending back response: %v", err)
@@ -2602,7 +2622,7 @@ func (this *MySpanner_Impl) UniarySelectWithHooks(ctx context.Context, req *test
     req = beforeRes
     
     result := query.Execute(req)
-    res, err := result.One().test.ExampleTable()
+    res, err := result.One().TestExampleTable()
     if err != nil {
         return nil, err
     }
@@ -2678,7 +2698,7 @@ func (this *MySpanner_Impl) ClientStreamUpdateWithHooksTx(stream MySpanner_Clien
             return fmt.Errorf("error executing 'set_name_asdf' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
         }
     }
-    res := &Empty{}
+    res := &test.NumRows{}
     
     if err := this.opts.HOOKS.ClientStreamUpdateWithHooksAfterHook(stream.Context(), first, res); err != nil {
         return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
