@@ -18,13 +18,27 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-type alwaysScanner struct {
-	i *interface{}
+type ignoreTx struct {
+	r Runnable
 }
 
-func (s *alwaysScanner) Scan(src interface{}) error {
-	s.i = &src
-	return nil
+func (this *ignoreTx) Commit() error   { return nil }
+func (this *ignoreTx) Rollback() error { return nil }
+func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
+	return this.r.QueryContext(ctx, x, ys...)
+}
+func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
+	return this.r.ExecContext(ctx, x, ys...)
+}
+
+type PersistTx interface {
+	Commit() error
+	Rollback() error
+	Runnable
+}
+
+func NopPersistTx(r Runnable) (PersistTx, error) {
+	return &ignoreTx{r}, nil
 }
 
 type Result interface {
@@ -48,6 +62,10 @@ func (sr *SpannerResult) RowsAffected() (int64, error) {
 type Runnable interface {
 	ReadWriteTransaction(context.Context, func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error)
 	Single() *spanner.ReadOnlyTransaction
+}
+type scanable interface {
+	SpannerScan(...interface{}) error
+	Columns() ([]string, error)
 }
 
 // UServ_Queries holds all the queries found the proto service option as methods

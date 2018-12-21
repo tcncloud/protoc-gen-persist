@@ -1174,40 +1174,6 @@ func WriteImports(p *Printer, f *FileStruct) error {
 	p.P("%s \"%s\"\n", "proto", "github.com/golang/protobuf/proto")
 	p.P(")\n")
 	p.P(`
-type alwaysScanner struct {
-    i *interface{}
-}
-
-func (s *alwaysScanner) Scan(src interface{}) error {
-    s.i = &src
-    return nil
-}
-    `)
-
-	if hasSQL {
-		p.Q(`
-type scanable interface {
-    Scan(...interface{}) error
-    Columns() ([]string, error)
-}
-type Runnable interface {
-    QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-    ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-}
-
-func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-    return db.BeginTx(ctx, nil)
-}
-func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-    return NopPersistTx(db)
-}
-func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-    return NopPersistTx(db)
-}
-func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-    return NopPersistTx(db)
-}
-
 type ignoreTx struct {
     r Runnable
 }
@@ -1229,30 +1195,71 @@ type PersistTx interface {
 func NopPersistTx(r Runnable) (PersistTx, error) {
     return &ignoreTx{r}, nil
 }
+    `)
+
+	if hasSQL {
+		p.Q(`
+type Runnable interface {
+    QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+    ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+}
+
+func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+    return db.BeginTx(ctx, nil)
+}
+func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+    return NopPersistTx(db)
+}
+func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+    return NopPersistTx(db)
+}
+func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+    return NopPersistTx(db)
+}
+
+type alwaysScanner struct {
+    i *interface{}
+}
+
+func (s *alwaysScanner) Scan(src interface{}) error {
+    s.i = &src
+    return nil
+}
+
+type scanable interface {
+    Scan(...interface{}) error
+    Columns() ([]string, error)
+}
+
         `)
 	} else if hasSpanner {
 		p.Q(`
 type Result interface {
-	LastInsertId() (int64, error)
-	RowsAffected() (int64, error)
+    LastInsertId() (int64, error)
+    RowsAffected() (int64, error)
 }
 type SpannerResult struct {
-	// TODO shouldn't be an iter
-	iter *spanner.RowIterator
+    // TODO shouldn't be an iter
+    iter *spanner.RowIterator
 }
 
 func (sr *SpannerResult) LastInsertId() (int64, error) {
-	// sr.iter.QueryStats or sr.iter.QueryPlan
-	return -1, nil
+    // sr.iter.QueryStats or sr.iter.QueryPlan
+    return -1, nil
 }
 func (sr *SpannerResult) RowsAffected() (int64, error) {
-	// Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
-	return sr.iter.RowCount, nil
+    // Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
+    return sr.iter.RowCount, nil
 }
 
 type Runnable interface {
-	ReadWriteTransaction(context.Context, func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error)
-	Single() *spanner.ReadOnlyTransaction
+    ReadWriteTransaction(context.Context, func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error)
+    Single() *spanner.ReadOnlyTransaction
+}
+
+type scanable interface {
+    SpannerScan(...interface{}) error
+    Columns() ([]string, error)
 }
         `)
 	}

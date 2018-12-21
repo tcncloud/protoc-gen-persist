@@ -34,14 +34,14 @@ import (
 	"cloud.google.com/go/spanner"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-  "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 type TimeString struct {
 	t *timestamp.Timestamp
 }
 
-func (ts TimeString) ToSpanner(t *timestamp.Timestamp) TimestampTimestampMappingImpl {
+func (ts TimeString) ToSpanner(t *timestamp.Timestamp) UServTimestampTimestampMappingImpl {
 	ts.t = t
 	return &ts
 }
@@ -70,37 +70,37 @@ func (t *TimeString) SpannerScan(src *spanner.GenericColumnValue) error {
 func (t *TimeString) SpannerValue() (interface{}, error) {
 	return ptypes.TimestampString(t.t), nil
 }
-func (t TimeString) Empty() TimestampTimestampMappingImpl {
+func (t TimeString) Empty() UServTimestampTimestampMappingImpl {
 	return new(TimeString)
 }
 
 type SliceStringConverter struct {
-  v *SliceStringParam
+	v *SliceStringParam
 }
 
-func (s *SliceStringConverter) ToSpanner(v *SliceStringParam) SliceStringParamMappingImpl {
-  s.v = v
-  return s
+func (s *SliceStringConverter) ToSpanner(v *SliceStringParam) UServSliceStringParamMappingImpl {
+	s.v = v
+	return s
 }
 func (s *SliceStringConverter) ToProto(req **SliceStringParam) error {
-  *req = s.v
-  return nil
+	*req = s.v
+	return nil
 }
 
 func (s *SliceStringConverter) SpannerScan(src *spanner.GenericColumnValue) error {
-  var in pq.StringArray
-  if err := in.Scan(src); err != nil {
-    return err
-  }
-  s.v = &SliceStringParam{Slice: []string(in)}
-  return nil
+	var in pq.StringArray
+	if err := in.Scan(src); err != nil {
+		return err
+	}
+	s.v = &SliceStringParam{Slice: []string(in)}
+	return nil
 }
 
 func (s *SliceStringConverter) SpannerValue() (interface{}, error) {
-  return pq.StringArray(s.v.Slice).Value()
+	return pq.StringArray(s.v.Slice).Value()
 }
-func (s *SliceStringConverter) Empty() SliceStringParamMappingImpl {
-  return new(SliceStringConverter)
+func (s *SliceStringConverter) Empty() UServSliceStringParamMappingImpl {
+	return new(SliceStringConverter)
 }
 
 var inc int64
