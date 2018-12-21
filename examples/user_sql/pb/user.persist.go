@@ -16,37 +16,6 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-type alwaysScanner struct {
-	i *interface{}
-}
-
-func (s *alwaysScanner) Scan(src interface{}) error {
-	s.i = &src
-	return nil
-}
-
-type scanable interface {
-	Scan(...interface{}) error
-	Columns() ([]string, error)
-}
-type Runnable interface {
-	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-}
-
-func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return db.BeginTx(ctx, nil)
-}
-func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return NopPersistTx(db)
-}
-func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return NopPersistTx(db)
-}
-func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return NopPersistTx(db)
-}
-
 type ignoreTx struct {
 	r Runnable
 }
@@ -68,6 +37,38 @@ type PersistTx interface {
 
 func NopPersistTx(r Runnable) (PersistTx, error) {
 	return &ignoreTx{r}, nil
+}
+
+type Runnable interface {
+	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+}
+
+func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+	return db.BeginTx(ctx, nil)
+}
+func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+	return NopPersistTx(db)
+}
+func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+	return NopPersistTx(db)
+}
+func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+	return NopPersistTx(db)
+}
+
+type alwaysScanner struct {
+	i *interface{}
+}
+
+func (s *alwaysScanner) Scan(src interface{}) error {
+	s.i = &src
+	return nil
+}
+
+type scanable interface {
+	Scan(...interface{}) error
+	Columns() ([]string, error)
 }
 
 // UServ_Queries holds all the queries found the proto service option as methods

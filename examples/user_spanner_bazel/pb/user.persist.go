@@ -1594,6 +1594,7 @@ func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
 
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_InsertUsersRow) Empty() (*Empty, error) {
@@ -1645,6 +1646,7 @@ func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
 		o.CreatedOn = res.CreatedOn
 		return nil
 	}
+
 	return nil
 }
 func (this *UServ_GetAllUsersRow) User() (*User, error) {
