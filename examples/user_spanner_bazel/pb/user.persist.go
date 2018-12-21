@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	fmt "fmt"
 	io "io"
+	"time"
 
 	spanner "cloud.google.com/go/spanner"
 	proto "github.com/golang/protobuf/proto"
@@ -26,49 +27,27 @@ func (s *alwaysScanner) Scan(src interface{}) error {
 	return nil
 }
 
-type scanable interface {
-	Scan(...interface{}) error
-	Columns() ([]string, error)
+type Result interface {
+	LastInsertId() (int64, error)
+	RowsAffected() (int64, error)
 }
+type SpannerResult struct {
+	// TODO shouldn't be an iter
+	iter *spanner.RowIterator
+}
+
+func (sr *SpannerResult) LastInsertId() (int64, error) {
+	// sr.iter.QueryStats or sr.iter.QueryPlan
+	return -1, nil
+}
+func (sr *SpannerResult) RowsAffected() (int64, error) {
+	// Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
+	return sr.iter.RowCount, nil
+}
+
 type Runnable interface {
-	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-}
-
-func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return db.BeginTx(ctx, nil)
-}
-func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return NopPersistTx(db)
-}
-func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return NopPersistTx(db)
-}
-func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return NopPersistTx(db)
-}
-
-type ignoreTx struct {
-	r Runnable
-}
-
-func (this *ignoreTx) Commit() error   { return nil }
-func (this *ignoreTx) Rollback() error { return nil }
-func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
-	return this.r.QueryContext(ctx, x, ys...)
-}
-func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
-	return this.r.ExecContext(ctx, x, ys...)
-}
-
-type PersistTx interface {
-	Commit() error
-	Rollback() error
-	Runnable
-}
-
-func NopPersistTx(r Runnable) (PersistTx, error) {
-	return &ignoreTx{r}, nil
+	ReadWriteTransaction(context.Context, func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error)
+	Single() *spanner.ReadOnlyTransaction
 }
 
 // UServ_Queries holds all the queries found the proto service option as methods
@@ -125,8 +104,17 @@ func (this *UServ_CreateUsersTableQuery) Execute(x UServ_CreateUsersTableIn) *US
 			SQL:    "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))",
 			Params: map[string]interface{}{},
 		}
+		iter := txn.QueryWithStats(ctx, stmt)
+		result.rows = iter
+		if err := result.Zero(); err != nil {
+			return err
+		}
+		result.result = SpannerResult{
+			iter: iter,
+		}
 		return nil
 	})
+	result.err = err
 	return result
 }
 
@@ -163,11 +151,25 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersIn) *UServ_Insert
 	}
 	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
-			SQL:    "INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)",
-			Params: map[string]interface{}{},
+			SQL: "INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)",
+			Params: map[string]interface{}{
+				"id":         x.GetId(),
+				"name":       x.GetName(),
+				"friends":    x.GetFriends(),
+				"created_on": x.GetCreatedOn(),
+			},
+		}
+		iter := txn.QueryWithStats(ctx, stmt)
+		result.rows = iter
+		if err := result.Zero(); err != nil {
+			return err
+		}
+		result.result = SpannerResult{
+			iter: iter,
 		}
 		return nil
 	})
+	result.err = err
 	return result
 }
 
@@ -207,8 +209,17 @@ func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAll
 			SQL:    "SELECT id, name, friends, created_on FROM users",
 			Params: map[string]interface{}{},
 		}
+		iter := txn.QueryWithStats(ctx, stmt)
+		result.rows = iter
+		if err := result.Zero(); err != nil {
+			return err
+		}
+		result.result = SpannerResult{
+			iter: iter,
+		}
 		return nil
 	})
+	result.err = err
 	return result
 }
 
@@ -250,8 +261,17 @@ func (this *UServ_SelectUserByIdQuery) Execute(x UServ_SelectUserByIdIn) *UServ_
 				"id": x.GetId(),
 			},
 		}
+		iter := txn.QueryWithStats(ctx, stmt)
+		result.rows = iter
+		if err := result.Zero(); err != nil {
+			return err
+		}
+		result.result = SpannerResult{
+			iter: iter,
+		}
 		return nil
 	})
+	result.err = err
 	return result
 }
 
@@ -294,8 +314,17 @@ func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameIn) *UServ_
 				"id":   x.GetId(),
 			},
 		}
+		iter := txn.QueryWithStats(ctx, stmt)
+		result.rows = iter
+		if err := result.Zero(); err != nil {
+			return err
+		}
+		result.result = SpannerResult{
+			iter: iter,
+		}
 		return nil
 	})
+	result.err = err
 	return result
 }
 
@@ -337,8 +366,17 @@ func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *USer
 				"id": x.GetId(),
 			},
 		}
+		iter := txn.QueryWithStats(ctx, stmt)
+		result.rows = iter
+		if err := result.Zero(); err != nil {
+			return err
+		}
+		result.result = SpannerResult{
+			iter: iter,
+		}
 		return nil
 	})
+	result.err = err
 	return result
 }
 
@@ -380,8 +418,17 @@ func (this *UServ_GetFriendsQuery) Execute(x UServ_GetFriendsIn) *UServ_GetFrien
 				"names": x.GetNames(),
 			},
 		}
+		iter := txn.QueryWithStats(ctx, stmt)
+		result.rows = iter
+		if err := result.Zero(); err != nil {
+			return err
+		}
+		result.result = SpannerResult{
+			iter: iter,
+		}
 		return nil
 	})
+	result.err = err
 	return result
 }
 
@@ -421,8 +468,17 @@ func (this *UServ_DropQuery) Execute(x UServ_DropIn) *UServ_DropIter {
 			SQL:    "drop table users",
 			Params: map[string]interface{}{},
 		}
+		iter := txn.QueryWithStats(ctx, stmt)
+		result.rows = iter
+		if err := result.Zero(); err != nil {
+			return err
+		}
+		result.result = SpannerResult{
+			iter: iter,
+		}
 		return nil
 	})
+	result.err = err
 	return result
 }
 
@@ -548,8 +604,8 @@ type UServ_InsertUsersIter struct {
 	ctx    context.Context
 }
 
-func (this *UServ_InsertUsersIter) IterOutTypeUser() {}
-func (this *UServ_InsertUsersIter) IterInTypeEmpty() {}
+func (this *UServ_InsertUsersIter) IterOutTypeEmpty() {}
+func (this *UServ_InsertUsersIter) IterInTypeUser()   {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
@@ -618,40 +674,10 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
 		return &UServ_InsertUsersRow{err: this.err}, true
 	}
-	res := &User{}
+	res := &Empty{}
 	for i, col := range cols {
 		_ = i
 		switch col {
-		case "id":
-			r, ok := (*scanned[i].i).(int64)
-			if !ok {
-				return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
-			}
-			res.Id = r
-		case "name":
-			r, ok := (*scanned[i].i).(string)
-			if !ok {
-				return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
-			}
-			res.Name = r
-		case "friends":
-			r, ok := (*scanned[i].i).([]byte)
-			if !ok {
-				return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
-			}
-			var converted = new(Friends)
-			if err := proto.Unmarshal(r, converted); err != nil {
-				return &UServ_InsertUsersRow{err: err}, true
-			}
-			res.Friends = converted
-		case "created_on":
-			var converted = this.tm.TimestampTimestamp().Empty()
-			if err := converted.Scan(*scanned[i].i); err != nil {
-				return &UServ_InsertUsersRow{err: fmt.Errorf("could not convert mapped db column created_on to type on User.CreatedOn: %v", err)}, true
-			}
-			if err := converted.ToProto(&res.CreatedOn); err != nil {
-				return &UServ_InsertUsersRow{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
-			}
 
 		default:
 			return &UServ_InsertUsersRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -1519,12 +1545,12 @@ func (this *UServ_CreateUsersTableRow) Proto() (*Empty, error) {
 }
 
 type UServ_InsertUsersIn interface {
-}
-type UServ_InsertUsersOut interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+}
+type UServ_InsertUsersOut interface {
 }
 type UServ_InsertUsersRow struct {
 	item UServ_InsertUsersOut
@@ -1559,16 +1585,11 @@ func (this *UServ_InsertUsersRow) Empty() (*Empty, error) {
 	return &Empty{}, nil
 }
 
-func (this *UServ_InsertUsersRow) Proto() (*User, error) {
+func (this *UServ_InsertUsersRow) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
-	return &User{
-		Id:        this.item.GetId(),
-		Name:      this.item.GetName(),
-		Friends:   this.item.GetFriends(),
-		CreatedOn: this.item.GetCreatedOn(),
-	}, nil
+	return &Empty{}, nil
 }
 
 type UServ_GetAllUsersIn interface {
