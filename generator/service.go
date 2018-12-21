@@ -934,22 +934,14 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 func WriteHandlers(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	serviceName := s.GetName()
-	mustDefaultMapping := func(f *desc.FieldDescriptorProto) string {
-		typ, err := defaultMapping(f, s.File)
-		if err != nil {
-			outErr = err
-		}
-		return typ
-	}
-	mustDefaultMappingNoStar := func(f *desc.FieldDescriptorProto) string {
-		return strings.Map(func(r rune) rune {
-			if r == '*' {
+	methOutNamePkg := func(opt *MethodProtoOpts) string {
+		return _gen.CamelCase(strings.Map(func(r rune) rune {
+			if r == '.' {
 				return -1
 			}
 			return r
-		}, mustDefaultMapping(f))
+		}, convertedMsgTypeByProtoName(opt.method.GetOutputType(), s.File)))
 	}
-	_ = mustDefaultMappingNoStar
 	err := WritePersistServerStruct(p, s.GetName())
 	if err != nil {
 		return err
@@ -1035,14 +1027,15 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 
 		zeroResponse := len(queryOptions.outFields) == 0
 		params := &handlerParams{
-			Service:      serviceName,
-			Method:       mpo.method.GetName(),
-			Request:      inMsg,  //mpo.inMsg.GetName(),
-			Response:     outMsg, //mpo.outMsg.GetName(),
-			ZeroResponse: zeroResponse,
-			Query:        mpo.option.GetQuery(),
-			Before:       mpo.option.GetBefore(),
-			After:        mpo.option.GetAfter(),
+			Service:        serviceName,
+			Method:         mpo.method.GetName(),
+			Request:        inMsg,  //mpo.inMsg.GetName(),
+			Response:       outMsg, //mpo.outMsg.GetName(),
+			RespMethodCall: methOutNamePkg(mpo),
+			ZeroResponse:   zeroResponse,
+			Query:          mpo.option.GetQuery(),
+			Before:         mpo.option.GetBefore(),
+			After:          mpo.option.GetAfter(),
 		}
 
 		if m.Unary(mpo) {

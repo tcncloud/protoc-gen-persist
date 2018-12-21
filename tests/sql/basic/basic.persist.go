@@ -948,9 +948,8 @@ func (this *Amazing_Impl) UniarySelectWithHooks(ctx context.Context, req *test.P
 	if err != nil {
 		return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
 	} else if beforeRes != nil {
-		return gstatus.Error(codes.Unknown, "before hook returned nil")
+		return beforeRes, nil
 	}
-	req = beforeRes
 
 	result := query.Execute(req)
 	res, err := result.One().TestExampleTable()
@@ -980,7 +979,7 @@ func (this *Amazing_Impl) ServerStreamTx(req *test.Name, stream Amazing_ServerSt
 	query := this.QUERIES.SelectByName(ctx, tx)
 	iter := query.Execute(req)
 	return iter.Each(func(row *Amazing_SelectByNameRow) error {
-		res, err := row.test.ExampleTable()
+		res, err := row.TestExampleTable()
 		if err != nil {
 			return err
 		}
@@ -1003,7 +1002,7 @@ func (this *Amazing_Impl) ServerStreamWithHooksTx(req *test.Name, stream Amazing
 	query := this.QUERIES.SelectByName(ctx, tx)
 	iter := query.Execute(req)
 	return iter.Each(func(row *Amazing_SelectByNameRow) error {
-		res, err := row.test.ExampleTable()
+		res, err := row.TestExampleTable()
 		if err != nil {
 			return err
 		}

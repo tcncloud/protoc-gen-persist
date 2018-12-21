@@ -12,30 +12,25 @@ type printerProxy struct {
 }
 
 type handlerParams struct {
-	Service      string
-	Method       string
-	Query        string
-	Request      string
-	Response     string
-	ZeroResponse bool
-	Before       bool
-	After        bool
+	Service        string
+	Method         string
+	Query          string
+	Request        string
+	Response       string
+	RespMethodCall string
+	ZeroResponse   bool
+	Before         bool
+	After          bool
 }
 
 func OneOrZero(hp handlerParams) string {
-	respPkg := _gen.CamelCase(strings.Map(func(r rune) rune {
-		if r == '.' {
-			return -1
-		}
-		return r
-	}, hp.Response))
 	if hp.ZeroResponse {
 		return strings.Join([]string{`
 err := result.Zero()
 res := &`, hp.Response, `{}
         `}, "")
 	}
-	return "res, err := result.One()." + respPkg + "()"
+	return "res, err := result.One()." + hp.RespMethodCall + "()"
 }
 
 func (h *printerProxy) Write(data []byte) (int, error) {
@@ -177,9 +172,8 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
     if err != nil {
         return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
     } else if beforeRes != nil {
-        return gstatus.Error(codes.Unknown, "before hook returned nil")
+        return beforeRes, nil
     }
-    req = beforeRes
     {{end}}
 
     result := query.Execute(req)
@@ -225,7 +219,7 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Servic
 
     iter := query.Execute(req)
     return iter.Each(func(row *{{.Service}}_{{camelCase .Query}}Row) error {
-        res, err := row.{{.Response}}()
+        res, err := row.{{.RespMethodCall}}()
         if err != nil {
             return err
         }

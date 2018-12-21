@@ -2518,7 +2518,7 @@ func (this *MySpanner_Impl) ServerStreamTx(req *test.Name, stream MySpanner_Serv
     query := this.QUERIES.SelectAll(ctx, tx)
     iter := query.Execute(req)
     return iter.Each(func(row *MySpanner_SelectAllRow) error {
-        res, err := row.test.ExampleTable()
+        res, err := row.TestExampleTable()
         if err != nil {
             return err
         }
@@ -2617,9 +2617,8 @@ func (this *MySpanner_Impl) UniarySelectWithHooks(ctx context.Context, req *test
     if err != nil {
         return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
     } else if beforeRes != nil {
-        return gstatus.Error(codes.Unknown, "before hook returned nil")
+        return beforeRes, nil
     }
-    req = beforeRes
     
     result := query.Execute(req)
     res, err := result.One().TestExampleTable()
@@ -2649,7 +2648,7 @@ func (this *MySpanner_Impl) ServerStreamWithHooksTx(req *test.Name, stream MySpa
     query := this.QUERIES.SelectAll(ctx, tx)
     iter := query.Execute(req)
     return iter.Each(func(row *MySpanner_SelectAllRow) error {
-        res, err := row.test.ExampleTable()
+        res, err := row.TestExampleTable()
         if err != nil {
             return err
         }
