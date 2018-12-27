@@ -1,8 +1,8 @@
 package main_test
 
 import (
+	"io"
 	"testing"
-  "io"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,7 +11,7 @@ import (
 	"net"
 	"time"
 
-  spanner "cloud.google.com/go/spanner"
+	spanner "cloud.google.com/go/spanner"
 	admin "cloud.google.com/go/spanner/admin/database/apiv1"
 	ptypess "github.com/golang/protobuf/ptypes"
 	timeystamp "github.com/golang/protobuf/ptypes/timestamp"
@@ -73,7 +73,7 @@ var _ = Describe("persist", func() {
 		stream, err := client.InsertUsers(context.Background())
 		Expect(err).To(Not(HaveOccurred()))
 
-    fmt.Println("inserted users")
+		fmt.Println("inserted users")
 		for _, u := range users {
 			if err := stream.Send(u); err != nil {
 				Fail(err.Error())
@@ -84,15 +84,15 @@ var _ = Describe("persist", func() {
 
 		retStream, err := client.GetAllUsers(context.Background(), &pb.Empty{})
 		Expect(err).ToNot(HaveOccurred())
-    fmt.Println("retStream", retStream)
-    fmt.Println("err", err)
+		fmt.Println("retStream", retStream)
+		fmt.Println("err", err)
 
 		retUsers := make([]*pb.User, 0)
 		for {
-      // TODO start here. why is this getting an io.eof
+			// TODO start here. why is this getting an io.eof
 			u, err := retStream.Recv()
-      fmt.Println("u: ", u)
-      fmt.Println("err: ", err)
+			fmt.Println("u: ", u)
+			fmt.Println("err: ", err)
 			if err == io.EOF {
 				break
 			}
@@ -170,50 +170,49 @@ func mustNow() *timeystamp.Timestamp { return mustTimestamp(time.Now()) }
 
 var users = []*pb.User{
 	&pb.User{
-		Id:              -1,
-		Name:            "foo",
-		Friends:         &pb.Friends{Names: []string{"bar", "baz"}},
-		CreatedOn:       mustNow(),
+		Id:        -1,
+		Name:      "foo",
+		Friends:   &pb.Friends{Names: []string{"bar", "baz"}},
+		CreatedOn: mustNow(),
 	},
 	&pb.User{
-		Id:              -1,
-		Name:            "bar",
-		Friends:         &pb.Friends{Names: []string{"foo", "baz"}},
-		CreatedOn:       mustNow(),
+		Id:        -1,
+		Name:      "bar",
+		Friends:   &pb.Friends{Names: []string{"foo", "baz"}},
+		CreatedOn: mustNow(),
 	},
 	&pb.User{
-		Id:              -1,
-		Name:            "baz",
-		Friends:         &pb.Friends{Names: []string{"foo", "bar"}},
-		CreatedOn:       mustNow(),
+		Id:        -1,
+		Name:      "baz",
+		Friends:   &pb.Friends{Names: []string{"foo", "bar"}},
+		CreatedOn: mustNow(),
 	},
 	&pb.User{
-		Id:              -1,
-		Name:            "zed",
-		Friends:         &pb.Friends{},
-		CreatedOn:       mustNow(),
+		Id:        -1,
+		Name:      "zed",
+		Friends:   &pb.Friends{},
+		CreatedOn: mustNow(),
 	},
 }
 
 func Serve(servFunc func(s *grpc.Server)) {
-  params := main.ReadSpannerParams()
-  ctx := context.Background()
-  conn, err := spanner.NewClient(ctx, params.URI())
-  if err != nil {
-    fmt.Printf("error connecting to db: %v\n", err)
-    return
-  }
-  // defer conn.Close()
+	params := main.ReadSpannerParams()
+	ctx := context.Background()
+	conn, err := spanner.NewClient(ctx, params.URI())
+	if err != nil {
+		fmt.Printf("error connecting to db: %v\n", err)
+		return
+	}
+	// defer conn.Close()
 
-  service := pb.UServPersistImpl(conn, pb.UServ_ImplOpts{
-    HOOKS: &main.HooksImpl{},
-    MAPPINGS: &main.MappingImpl{},
-    HANDLERS: &main.RestOfImpl{},
-  })
+	service := pb.UServPersistImpl(conn, &main.RestOfImpl{}, pb.UServ_Opts{
+		HOOKS:    &main.HooksImpl{},
+		MAPPINGS: &main.MappingImpl{},
+	})
 
-  server := grpc.NewServer()
+	server := grpc.NewServer()
 
-  pb.RegisterUServServer(server, service)
+	pb.RegisterUServServer(server, service)
 
 	servFunc(server)
 }
