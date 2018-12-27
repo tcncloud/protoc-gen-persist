@@ -4,8 +4,6 @@
 package pb
 
 import (
-	"database/sql"
-	"database/sql/driver"
 	fmt "fmt"
 	io "io"
 	"time"
@@ -23,6 +21,36 @@ type PersistTx interface {
 	Rollback() error
 	Runnable
 }
+
+func NopPersistTx(r Runnable) (PersistTx, error) {
+	return &ignoreTx{r}, nil
+}
+
+type ignoreTx struct {
+	r Runnable
+}
+
+func (this *ignoreTx) Commit() error   { return nil }
+func (this *ignoreTx) Rollback() error { return nil }
+func (this *ignoreTx) ReadWriteTransaction(ctx context.Context, do func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error) {
+	return this.r.ReadWriteTransaction(ctx, do)
+}
+func (this *ignoreTx) Single() *spanner.ReadOnlyTransaction {
+	return this.r.Single()
+}
+func DefaultClientStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
+	return NopPersistTx(r)
+}
+func DefaultServerStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
+	return NopPersistTx(r)
+}
+func DefaultBidiStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
+	return NopPersistTx(r)
+}
+func DefaultUnaryPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
+	return NopPersistTx(r)
+}
+
 type Result interface {
 	LastInsertId() (int64, error)
 	RowsAffected() (int64, error)
@@ -549,7 +577,7 @@ func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool
 		this.err = io.EOF
 		return &UServ_CreateUsersTableRow{err: err}, true
 	}
-	row, err := this.result.iter.Next()
+	_, err := this.result.iter.Next()
 	if err != nil {
 		return &UServ_CreateUsersTableRow{err: err}, true
 	}
@@ -599,16 +627,18 @@ func (this *UServ_CreateUsersTableIter) Slice() []*UServ_CreateUsersTableRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_CreateUsersTableIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
+/*
+   // returns the known columns for this result
+   func (r *UServ_CreateUsersTableIter) Columns() ([]string, error) {
+       if r.err != nil {
+           return nil, r.err
+       }
+       if r.rows != nil {
+           return r.rows.Columns()
+       }
+       return nil, nil
+   }
+*/
 
 type UServ_InsertUsersIter struct {
 	result *SpannerResult
@@ -669,7 +699,7 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 		this.err = io.EOF
 		return &UServ_InsertUsersRow{err: err}, true
 	}
-	row, err := this.result.iter.Next()
+	_, err := this.result.iter.Next()
 	if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
 	}
@@ -719,16 +749,18 @@ func (this *UServ_InsertUsersIter) Slice() []*UServ_InsertUsersRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_InsertUsersIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
+/*
+   // returns the known columns for this result
+   func (r *UServ_InsertUsersIter) Columns() ([]string, error) {
+       if r.err != nil {
+           return nil, r.err
+       }
+       if r.rows != nil {
+           return r.rows.Columns()
+       }
+       return nil, nil
+   }
+*/
 
 type UServ_GetAllUsersIter struct {
 	result *SpannerResult
@@ -789,7 +821,7 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		this.err = io.EOF
 		return &UServ_GetAllUsersRow{err: err}, true
 	}
-	row, err := this.result.iter.Next()
+	_, err := this.result.iter.Next()
 	if err != nil {
 		return &UServ_GetAllUsersRow{err: err}, true
 	}
@@ -869,16 +901,18 @@ func (this *UServ_GetAllUsersIter) Slice() []*UServ_GetAllUsersRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_GetAllUsersIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
+/*
+   // returns the known columns for this result
+   func (r *UServ_GetAllUsersIter) Columns() ([]string, error) {
+       if r.err != nil {
+           return nil, r.err
+       }
+       if r.rows != nil {
+           return r.rows.Columns()
+       }
+       return nil, nil
+   }
+*/
 
 type UServ_SelectUserByIdIter struct {
 	result *SpannerResult
@@ -939,7 +973,7 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		this.err = io.EOF
 		return &UServ_SelectUserByIdRow{err: err}, true
 	}
-	row, err := this.result.iter.Next()
+	_, err := this.result.iter.Next()
 	if err != nil {
 		return &UServ_SelectUserByIdRow{err: err}, true
 	}
@@ -1019,16 +1053,18 @@ func (this *UServ_SelectUserByIdIter) Slice() []*UServ_SelectUserByIdRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_SelectUserByIdIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
+/*
+   // returns the known columns for this result
+   func (r *UServ_SelectUserByIdIter) Columns() ([]string, error) {
+       if r.err != nil {
+           return nil, r.err
+       }
+       if r.rows != nil {
+           return r.rows.Columns()
+       }
+       return nil, nil
+   }
+*/
 
 type UServ_UpdateUserNameIter struct {
 	result *SpannerResult
@@ -1089,7 +1125,7 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		this.err = io.EOF
 		return &UServ_UpdateUserNameRow{err: err}, true
 	}
-	row, err := this.result.iter.Next()
+	_, err := this.result.iter.Next()
 	if err != nil {
 		return &UServ_UpdateUserNameRow{err: err}, true
 	}
@@ -1169,16 +1205,18 @@ func (this *UServ_UpdateUserNameIter) Slice() []*UServ_UpdateUserNameRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_UpdateUserNameIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
+/*
+   // returns the known columns for this result
+   func (r *UServ_UpdateUserNameIter) Columns() ([]string, error) {
+       if r.err != nil {
+           return nil, r.err
+       }
+       if r.rows != nil {
+           return r.rows.Columns()
+       }
+       return nil, nil
+   }
+*/
 
 type UServ_UpdateNameToFooIter struct {
 	result *SpannerResult
@@ -1239,7 +1277,7 @@ func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) 
 		this.err = io.EOF
 		return &UServ_UpdateNameToFooRow{err: err}, true
 	}
-	row, err := this.result.iter.Next()
+	_, err := this.result.iter.Next()
 	if err != nil {
 		return &UServ_UpdateNameToFooRow{err: err}, true
 	}
@@ -1289,16 +1327,18 @@ func (this *UServ_UpdateNameToFooIter) Slice() []*UServ_UpdateNameToFooRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_UpdateNameToFooIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
+/*
+   // returns the known columns for this result
+   func (r *UServ_UpdateNameToFooIter) Columns() ([]string, error) {
+       if r.err != nil {
+           return nil, r.err
+       }
+       if r.rows != nil {
+           return r.rows.Columns()
+       }
+       return nil, nil
+   }
+*/
 
 type UServ_GetFriendsIter struct {
 	result *SpannerResult
@@ -1359,7 +1399,7 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		this.err = io.EOF
 		return &UServ_GetFriendsRow{err: err}, true
 	}
-	row, err := this.result.iter.Next()
+	_, err := this.result.iter.Next()
 	if err != nil {
 		return &UServ_GetFriendsRow{err: err}, true
 	}
@@ -1439,16 +1479,18 @@ func (this *UServ_GetFriendsIter) Slice() []*UServ_GetFriendsRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_GetFriendsIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
+/*
+   // returns the known columns for this result
+   func (r *UServ_GetFriendsIter) Columns() ([]string, error) {
+       if r.err != nil {
+           return nil, r.err
+       }
+       if r.rows != nil {
+           return r.rows.Columns()
+       }
+       return nil, nil
+   }
+*/
 
 type UServ_DropIter struct {
 	result *SpannerResult
@@ -1509,7 +1551,7 @@ func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
 		this.err = io.EOF
 		return &UServ_DropRow{err: err}, true
 	}
-	row, err := this.result.iter.Next()
+	_, err := this.result.iter.Next()
 	if err != nil {
 		return &UServ_DropRow{err: err}, true
 	}
@@ -1559,17 +1601,18 @@ func (this *UServ_DropIter) Slice() []*UServ_DropRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_DropIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
-
+/*
+   // returns the known columns for this result
+   func (r *UServ_DropIter) Columns() ([]string, error) {
+       if r.err != nil {
+           return nil, r.err
+       }
+       if r.rows != nil {
+           return r.rows.Columns()
+       }
+       return nil, nil
+   }
+*/
 type UServ_CreateUsersTableIn interface {
 }
 type UServ_CreateUsersTableOut interface {
@@ -1940,13 +1983,13 @@ func (this *UServ_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Time
 func (this *UServ_DefaultTimestampTimestampMappingImpl) Empty() UServTimestampTimestampMappingImpl {
 	return this
 }
-func (this *UServ_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
+func (this *UServ_DefaultTimestampTimestampMappingImpl) ToSpanner(*timestamp.Timestamp) UServTimestampTimestampMappingImpl {
 	return this
 }
 func (this *UServ_DefaultTimestampTimestampMappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
 	return nil
 }
-func (this *UServ_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
+func (this *UServ_DefaultTimestampTimestampMappingImpl) SpannerValue() (interface{}, error) {
 	return "DEFAULT_TYPE_MAPPING_VALUE", nil
 }
 
@@ -1970,13 +2013,13 @@ func (this *UServ_DefaultSliceStringParamMappingImpl) ToProto(**SliceStringParam
 func (this *UServ_DefaultSliceStringParamMappingImpl) Empty() UServSliceStringParamMappingImpl {
 	return this
 }
-func (this *UServ_DefaultSliceStringParamMappingImpl) ToSql(*SliceStringParam) sql.Scanner {
+func (this *UServ_DefaultSliceStringParamMappingImpl) ToSpanner(*SliceStringParam) UServSliceStringParamMappingImpl {
 	return this
 }
 func (this *UServ_DefaultSliceStringParamMappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
 	return nil
 }
-func (this *UServ_DefaultSliceStringParamMappingImpl) Value() (driver.Value, error) {
+func (this *UServ_DefaultSliceStringParamMappingImpl) SpannerValue() (interface{}, error) {
 	return "DEFAULT_TYPE_MAPPING_VALUE", nil
 }
 
@@ -2010,10 +2053,10 @@ type UServ_Impl struct {
 	opts     *UServ_Opts
 	QUERIES  *UServ_Queries
 	HANDLERS RestOfUServHandlers
-	DB       *sql.DB
+	DB       *spanner.Client
 }
 
-func UServPersistImpl(db *sql.DB, handlers RestOfUServHandlers, opts ...UServ_Opts) *UServ_Impl {
+func UServPersistImpl(db *spanner.Client, handlers RestOfUServHandlers, opts ...UServ_Opts) *UServ_Impl {
 	var myOpts UServ_Opts
 	if len(opts) > 0 {
 		myOpts = opts[0]

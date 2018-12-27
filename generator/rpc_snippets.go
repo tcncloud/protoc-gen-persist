@@ -44,7 +44,7 @@ func NewPrinterProxy(printer *Printer) *printerProxy {
 	}
 }
 
-func WritePersistServerStruct(printer *Printer, service string) error {
+func WritePersistServerStruct(printer *Printer, service, db string) error {
 	printerProxy := NewPrinterProxy(printer)
 	structFormat := `
 type {{.Service}}_Opts struct {
@@ -71,10 +71,10 @@ type {{.Service}}_Impl struct {
     opts    *{{.Service}}_Opts
     QUERIES *{{.Service}}_Queries
     HANDLERS RestOf{{.Service}}Handlers
-    DB      *sql.DB
+    DB      *{{.DB}}
 }
 
-func {{.Service}}PersistImpl(db *sql.DB, handlers RestOf{{.Service}}Handlers, opts ...{{.Service}}_Opts) *{{.Service}}_Impl {
+func {{.Service}}PersistImpl(db *{{.DB}}, handlers RestOf{{.Service}}Handlers, opts ...{{.Service}}_Opts) *{{.Service}}_Impl {
     var myOpts {{.Service}}_Opts
     if len(opts) > 0 {
         myOpts = opts[0]
@@ -92,6 +92,7 @@ func {{.Service}}PersistImpl(db *sql.DB, handlers RestOf{{.Service}}Handlers, op
 	t := template.Must(template.New("PersistServerStruct").Parse(structFormat))
 	return t.Execute(printerProxy, map[string]string{
 		"Service": service,
+		"DB":      db,
 	})
 }
 
