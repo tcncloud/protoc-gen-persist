@@ -106,5 +106,6 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 		//   return err
 		// }
 		// return stream.Send(res)
+
 	})
 }

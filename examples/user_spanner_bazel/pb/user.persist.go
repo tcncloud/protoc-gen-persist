@@ -12,6 +12,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	context "golang.org/x/net/context"
+	iterator "google.golang.org/api/iterator"
 	codes "google.golang.org/grpc/codes"
 	gstatus "google.golang.org/grpc/status"
 )
@@ -32,6 +33,7 @@ type ignoreTx struct {
 
 func (this *ignoreTx) Commit() error   { return nil }
 func (this *ignoreTx) Rollback() error { return nil }
+
 func (this *ignoreTx) ReadWriteTransaction(ctx context.Context, do func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error) {
 	return this.r.ReadWriteTransaction(ctx, do)
 }
@@ -118,26 +120,26 @@ func (this *UServ_CreateUsersTableQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_CreateUsersTableQuery) Execute(x UServ_CreateUsersTableIn) *UServ_CreateUsersTableIter {
-	var setupErr error
 	result := &UServ_CreateUsersTableIter{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    this.ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	_, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
 			SQL:    "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))",
-			Params: map[string]interface{}{},
+			Params: params,
 		}
 		iter := txn.QueryWithStats(ctx, stmt)
-		result.result.iter = iter
-		if err := result.Zero(); err != nil {
-			return err
-		}
 		result.result = &SpannerResult{
 			iter: iter,
 		}
@@ -169,31 +171,38 @@ func (this *UServ_InsertUsersQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersIn) *UServ_InsertUsersIter {
-	var setupErr error
 	result := &UServ_InsertUsersIter{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    this.ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		result["id"] = x.GetId()
+		result["name"] = x.GetName()
+		friends, err := proto.Marshal(x.GetFriends())
+		if err != nil {
+			return nil, err
+		}
+		result["friends"] = friends
+		created_on, err := this.opts.MAPPINGS.TimestampTimestamp().ToSpanner(x.GetCreatedOn()).SpannerValue()
+		if err != nil {
+			return nil, err
+		}
+		result["created_on"] = created_on
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	_, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
-			SQL: "INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)",
-			Params: map[string]interface{}{
-				"id":         x.GetId(),
-				"name":       x.GetName(),
-				"friends":    x.GetFriends(),
-				"created_on": x.GetCreatedOn(),
-			},
+			SQL:    "INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)",
+			Params: params,
 		}
 		iter := txn.QueryWithStats(ctx, stmt)
-		result.result.iter = iter
-		if err := result.Zero(); err != nil {
-			return err
-		}
 		result.result = &SpannerResult{
 			iter: iter,
 		}
@@ -225,26 +234,26 @@ func (this *UServ_GetAllUsersQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAllUsersIter {
-	var setupErr error
 	result := &UServ_GetAllUsersIter{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    this.ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	_, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
 			SQL:    "SELECT id, name, friends, created_on FROM users",
-			Params: map[string]interface{}{},
+			Params: params,
 		}
 		iter := txn.QueryWithStats(ctx, stmt)
-		result.result.iter = iter
-		if err := result.Zero(); err != nil {
-			return err
-		}
 		result.result = &SpannerResult{
 			iter: iter,
 		}
@@ -276,28 +285,26 @@ func (this *UServ_SelectUserByIdQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_SelectUserByIdQuery) Execute(x UServ_SelectUserByIdIn) *UServ_SelectUserByIdIter {
-	var setupErr error
 	result := &UServ_SelectUserByIdIter{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    this.ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		result["id"] = x.GetId()
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	_, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
-			SQL: "SELECT id, name, friends, created_on FROM users WHERE id = @id",
-			Params: map[string]interface{}{
-				"id": x.GetId(),
-			},
+			SQL:    "SELECT id, name, friends, created_on FROM users WHERE id = @id",
+			Params: params,
 		}
 		iter := txn.QueryWithStats(ctx, stmt)
-		result.result.iter = iter
-		if err := result.Zero(); err != nil {
-			return err
-		}
 		result.result = &SpannerResult{
 			iter: iter,
 		}
@@ -329,29 +336,27 @@ func (this *UServ_UpdateUserNameQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameIn) *UServ_UpdateUserNameIter {
-	var setupErr error
 	result := &UServ_UpdateUserNameIter{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    this.ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		result["name"] = x.GetName()
+		result["id"] = x.GetId()
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	_, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
-			SQL: "Update users set name = @name PK(id = @id) ",
-			Params: map[string]interface{}{
-				"name": x.GetName(),
-				"id":   x.GetId(),
-			},
+			SQL:    "Update users set name = @name PK(id = @id) ",
+			Params: params,
 		}
 		iter := txn.QueryWithStats(ctx, stmt)
-		result.result.iter = iter
-		if err := result.Zero(); err != nil {
-			return err
-		}
 		result.result = &SpannerResult{
 			iter: iter,
 		}
@@ -383,28 +388,26 @@ func (this *UServ_UpdateNameToFooQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *UServ_UpdateNameToFooIter {
-	var setupErr error
 	result := &UServ_UpdateNameToFooIter{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    this.ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		result["id"] = x.GetId()
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	_, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
-			SQL: "Update users set name = 'foo' PRIMARY_KEY(id = @id)",
-			Params: map[string]interface{}{
-				"id": x.GetId(),
-			},
+			SQL:    "Update users set name = 'foo' PRIMARY_KEY(id = @id)",
+			Params: params,
 		}
 		iter := txn.QueryWithStats(ctx, stmt)
-		result.result.iter = iter
-		if err := result.Zero(); err != nil {
-			return err
-		}
 		result.result = &SpannerResult{
 			iter: iter,
 		}
@@ -436,28 +439,31 @@ func (this *UServ_GetFriendsQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_GetFriendsQuery) Execute(x UServ_GetFriendsIn) *UServ_GetFriendsIter {
-	var setupErr error
 	result := &UServ_GetFriendsIter{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    this.ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		names, err := this.opts.MAPPINGS.SliceStringParam().ToSpanner(x.GetNames()).SpannerValue()
+		if err != nil {
+			return nil, err
+		}
+		result["names"] = names
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	_, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
-			SQL: "SELECT id, name, friends, created_on  FROM users WHERE name IN UNNEST(@names)",
-			Params: map[string]interface{}{
-				"names": x.GetNames(),
-			},
+			SQL:    "SELECT id, name, friends, created_on  FROM users WHERE name IN UNNEST(@names)",
+			Params: params,
 		}
 		iter := txn.QueryWithStats(ctx, stmt)
-		result.result.iter = iter
-		if err := result.Zero(); err != nil {
-			return err
-		}
 		result.result = &SpannerResult{
 			iter: iter,
 		}
@@ -489,26 +495,26 @@ func (this *UServ_DropQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_DropQuery) Execute(x UServ_DropIn) *UServ_DropIter {
-	var setupErr error
 	result := &UServ_DropIter{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    this.ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	_, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
 			SQL:    "drop table users",
-			Params: map[string]interface{}{},
+			Params: params,
 		}
 		iter := txn.QueryWithStats(ctx, stmt)
-		result.result.iter = iter
-		if err := result.Zero(); err != nil {
-			return err
-		}
 		result.result = &SpannerResult{
 			iter: iter,
 		}
@@ -562,7 +568,11 @@ func (this *UServ_CreateUsersTableIter) One() *UServ_CreateUsersTableRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_CreateUsersTableIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'CreateUsersTable'")
 	}
 	return nil
@@ -578,8 +588,9 @@ func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool
 		return &UServ_CreateUsersTableRow{err: err}, true
 	}
 	_, err := this.result.iter.Next()
-	if err != nil {
-		return &UServ_CreateUsersTableRow{err: err}, true
+	if err == iterator.Done {
+		this.err = io.EOF
+		return nil, false
 	}
 	/*
 	   cols, err := this.rows.Columns()
@@ -684,7 +695,12 @@ func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_InsertUsersIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	fmt.Println(row, ok)
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'InsertUsers'")
 	}
 	return nil
@@ -692,17 +708,30 @@ func (this *UServ_InsertUsersIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
-	if this.err == io.EOF || this.result == nil || this.result.iter == nil {
-		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_InsertUsersRow{err: err}, true
-	}
 	_, err := this.result.iter.Next()
-	if err != nil {
-		return &UServ_InsertUsersRow{err: err}, true
+	fmt.Println("error from next", err)
+	if err == iterator.Done {
+		return nil, false
+	} else if err != nil {
+		fmt.Println("Returning err")
+		return &UServ_InsertUsersRow{err: err}, false
 	}
+
+	// if this.err == io.EOF || this.result == nil || this.result.iter == nil {
+	// 	return nil, false
+	// } else if this.err != nil {
+	// 	err := this.err
+	// 	this.err = io.EOF
+	// 	return &UServ_InsertUsersRow{err: err}, true
+	// }
+
+	// this.result.iter.Next()
+	// _, err := this.result.iter.Next()
+	// if err == iterator.Done {
+	// 	this.err = io.EOF
+	// 	return nil, false
+	// }
+
 	/*
 	   cols, err := this.rows.Columns()
 	   if err != nil {
@@ -726,13 +755,13 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	   for i, col := range cols {
 	       _ = i
 	       switch col {
-
 	       default:
 	           return &UServ_InsertUsersRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
 	       }
 	   }
 	   return &UServ_InsertUsersRow{item: res}, true
 	*/
+
 	return nil, true
 }
 
@@ -806,7 +835,11 @@ func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_GetAllUsersIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'GetAllUsers'")
 	}
 	return nil
@@ -822,8 +855,9 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		return &UServ_GetAllUsersRow{err: err}, true
 	}
 	_, err := this.result.iter.Next()
-	if err != nil {
-		return &UServ_GetAllUsersRow{err: err}, true
+	if err == iterator.Done {
+		this.err = io.EOF
+		return nil, false
 	}
 	/*
 	   cols, err := this.rows.Columns()
@@ -958,7 +992,11 @@ func (this *UServ_SelectUserByIdIter) One() *UServ_SelectUserByIdRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_SelectUserByIdIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'SelectUserById'")
 	}
 	return nil
@@ -974,8 +1012,9 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		return &UServ_SelectUserByIdRow{err: err}, true
 	}
 	_, err := this.result.iter.Next()
-	if err != nil {
-		return &UServ_SelectUserByIdRow{err: err}, true
+	if err == iterator.Done {
+		this.err = io.EOF
+		return nil, false
 	}
 	/*
 	   cols, err := this.rows.Columns()
@@ -1110,7 +1149,11 @@ func (this *UServ_UpdateUserNameIter) One() *UServ_UpdateUserNameRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_UpdateUserNameIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'UpdateUserName'")
 	}
 	return nil
@@ -1126,8 +1169,9 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		return &UServ_UpdateUserNameRow{err: err}, true
 	}
 	_, err := this.result.iter.Next()
-	if err != nil {
-		return &UServ_UpdateUserNameRow{err: err}, true
+	if err == iterator.Done {
+		this.err = io.EOF
+		return nil, false
 	}
 	/*
 	   cols, err := this.rows.Columns()
@@ -1262,7 +1306,11 @@ func (this *UServ_UpdateNameToFooIter) One() *UServ_UpdateNameToFooRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_UpdateNameToFooIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'UpdateNameToFoo'")
 	}
 	return nil
@@ -1278,8 +1326,9 @@ func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) 
 		return &UServ_UpdateNameToFooRow{err: err}, true
 	}
 	_, err := this.result.iter.Next()
-	if err != nil {
-		return &UServ_UpdateNameToFooRow{err: err}, true
+	if err == iterator.Done {
+		this.err = io.EOF
+		return nil, false
 	}
 	/*
 	   cols, err := this.rows.Columns()
@@ -1384,7 +1433,11 @@ func (this *UServ_GetFriendsIter) One() *UServ_GetFriendsRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_GetFriendsIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'GetFriends'")
 	}
 	return nil
@@ -1400,8 +1453,9 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		return &UServ_GetFriendsRow{err: err}, true
 	}
 	_, err := this.result.iter.Next()
-	if err != nil {
-		return &UServ_GetFriendsRow{err: err}, true
+	if err == iterator.Done {
+		this.err = io.EOF
+		return nil, false
 	}
 	/*
 	   cols, err := this.rows.Columns()
@@ -1536,7 +1590,11 @@ func (this *UServ_DropIter) One() *UServ_DropRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_DropIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'Drop'")
 	}
 	return nil
@@ -1552,8 +1610,9 @@ func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
 		return &UServ_DropRow{err: err}, true
 	}
 	_, err := this.result.iter.Next()
-	if err != nil {
-		return &UServ_DropRow{err: err}, true
+	if err == iterator.Done {
+		this.err = io.EOF
+		return nil, false
 	}
 	/*
 	   cols, err := this.rows.Columns()
@@ -2112,7 +2171,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 
 		result := query.Execute(req)
 		if err := result.Zero(); err != nil {
-			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
+			return gstatus.Errorf(codes.InvalidArgument, err.Error())
 		}
 	}
 	if err := tx.Commit(); err != nil {

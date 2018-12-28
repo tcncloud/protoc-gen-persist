@@ -1,15 +1,14 @@
 package main_test
 
 import (
+	"fmt"
 	"io"
+	"net"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"fmt"
-	"net"
-	"time"
 
 	spanner "cloud.google.com/go/spanner"
 	admin "cloud.google.com/go/spanner/admin/database/apiv1"
@@ -244,6 +243,7 @@ func CreateTable(ctx context.Context, params main.SpannerParams) error {
 
 	return nil
 }
+
 func DropTable(ctx context.Context, params main.SpannerParams) error {
 	adminClient, err := admin.NewDatabaseAdminClient(ctx)
 	if err != nil {

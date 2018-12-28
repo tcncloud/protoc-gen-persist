@@ -367,6 +367,7 @@ func (this *`, sName, `_Queries) `, camelQ(q), `(ctx context.Context, db Runnabl
         db: db,
     }
 }
+
 type `, sName, `_`, camelQ(q), `Query struct {
     opts `, sName, `_Opts
     db Runnable
@@ -399,29 +400,62 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
 	}
 
 	if s.IsSpanner() {
+
 		populateParams := func(q *QueryProtoOpts) string {
 			orig := strings.Join(q.query.GetQuery(), " ")
-			result := ""
+			result := make([]string, 0)
 
 			r := regexp.MustCompile("@[a-zA-Z0-9_]*")
 			potentialFieldNames := r.FindAllString(orig, -1)
-			fieldsMap := make(map[string]bool)
+			mappedField := make(map[string]string)
+			fieldsMap := make(map[string]desc.FieldDescriptorProto_Type)
 			for _, v := range q.inFields {
-				fieldsMap[v.GetName()] = true
+				m.EachTM(func(opts *TypeMappingProtoOpts) {
+					if v.GetLabel() != opts.tm.GetProtoLabel() {
+						return
+					} else if v.GetTypeName() != opts.tm.GetProtoTypeName() {
+						return
+					} else if v.GetType() != opts.tm.GetProtoType() {
+						return
+					}
+					_, titled := getGoNamesForTypeMapping(opts.tm, s.File)
+					mappedField[v.GetName()] = titled
+				})
+
+				fieldsMap[v.GetName()] = v.GetType()
 			}
 
 			for _, pf := range potentialFieldNames {
 				start := strings.Index(orig, pf)
 				stop := start + len(pf)
-				exists := fieldsMap[pf[1:]]
-				if exists { // it was a field, mark it
+				fieldType, ok := fieldsMap[pf[1:]]
+				if ok { // it was a field, mark it
 					key := pf[1:]
-					result += fmt.Sprintf("\"%s\": x.Get%s(),\n", key, _gen.CamelCase(key))
+					mappingType, isMapped := mappedField[key]
+					if isMapped {
+						result = append(result,
+							key+`, err := this.opts.MAPPINGS.`+mappingType+`().ToSpanner(x.Get`+_gen.CamelCase(key)+`()).SpannerValue()
+                            if err != nil {
+                                return nil, err
+                            }
+                            result["`+key+`"] = `+key+`
+                            `,
+						)
+					} else if fieldType == desc.FieldDescriptorProto_TYPE_MESSAGE {
+						result = append(result, `
+                        `+key+`, err := proto.Marshal(x.Get`+_gen.CamelCase(key)+`())
+                        if err != nil {
+                            return nil, err
+                        }
+                         result["`+key+`"] = `+key)
+					} else {
+						result = append(result, `result["`+key+`"] = x.Get`+_gen.CamelCase(key)+`()`)
+					}
 				}
 				orig = orig[stop:]
 			}
 
-			return result
+			return strings.Join(result, "\n")
 		}
 
 		m.EachQuery(func(q *QueryProtoOpts) {
@@ -447,31 +481,27 @@ func (this *`, sName, `_`, camelQ(q), `Query) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q), `In) *`, sName, `_`, camelQ(q), `Iter {
-    var setupErr error
     result := &`, sName, `_`, camelQ(q), `Iter{
         result: &SpannerResult{},
         tm: this.opts.MAPPINGS,
         ctx: this.ctx,
     }
-    if setupErr != nil {
-        result.err = setupErr
+    params, err  := func() (map[string]interface{}, error) {
+        result := make(map[string]interface{})
+        `, populateParams(q), `
+        return result, nil
+    }()
+    if err != nil {
+        result.err = err
         return result
     }
-
-    _, err := this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+    _, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
         stmt := spanner.Statement{
             SQL: "`, qstring(q), `",
-            Params: map[string]interface{}{
-                `, populateParams(q), `
-            },
+            Params: params,
         }
 
-        iter := txn.QueryWithStats(ctx, stmt)
-        result.result.iter = iter
-
-        if err := result.Zero(); err != nil {
-            return err
-        }
+		iter := txn.QueryWithStats(ctx, stmt)
 
         result.result = &SpannerResult{
             iter: iter,
@@ -912,7 +942,11 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
         // Zero returns an error if there were any rows in the result
         func (this *`, sName, `_`, camelQ(q), `Iter) Zero() error {
-            if _, ok := this.Next(); ok {
+			row, ok := this.Next()
+			if row != nil && row.err != nil {
+                return row.err
+			}
+            if ok {
                 return fmt.Errorf("expected exactly 0 results from query '`, camelQ(q), `'")
             }
             return nil
@@ -1033,7 +1067,11 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
         // Zero returns an error if there were any rows in the result
         func (this *`, sName, `_`, camelQ(q), `Iter) Zero() error {
-            if _, ok := this.Next(); ok {
+			row, ok := this.Next()
+			if row != nil && row.err != nil {
+                return row.err
+			}
+            if ok {
                 return fmt.Errorf("expected exactly 0 results from query '`, camelQ(q), `'")
             }
             return nil
@@ -1050,8 +1088,9 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             }
 
             _, err := this.result.iter.Next()
-            if err != nil {
-                return &`, sName, `_`, camelQ(q), `Row{err: err}, true
+            if err == iterator.Done {
+				this.err = io.EOF
+				return nil, false
             }
 
             /*
@@ -1462,6 +1501,11 @@ func WriteImports(p *Printer, f *FileStruct) error {
 		}
 	}
 	p.P("%s \"%s\"\n", "proto", "github.com/golang/protobuf/proto")
+
+	if hasSpanner {
+		p.P("%s \"%s\"\n", "iterator", "google.golang.org/api/iterator")
+	}
+
 	p.P(")\n")
 
 	if hasSQL {
