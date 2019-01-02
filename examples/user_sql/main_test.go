@@ -95,6 +95,7 @@ var _ = Describe("persist", func() {
 		for _, u := range users {
 			strUsers = append(strUsers, proto.MarshalTextString(u))
 		}
+
 		for _, u := range retUsers {
 			Expect(strUsers).To(ContainElement(proto.MarshalTextString(u)))
 		}

@@ -12,6 +12,7 @@ import (
 
 	spanner "cloud.google.com/go/spanner"
 	admin "cloud.google.com/go/spanner/admin/database/apiv1"
+	"github.com/golang/protobuf/proto"
 	ptypess "github.com/golang/protobuf/ptypes"
 	timeystamp "github.com/golang/protobuf/ptypes/timestamp"
 	main "github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel"
@@ -72,7 +73,6 @@ var _ = Describe("persist", func() {
 		stream, err := client.InsertUsers(context.Background())
 		Expect(err).To(Not(HaveOccurred()))
 
-		fmt.Println("inserted users")
 		for _, u := range users {
 			if err := stream.Send(u); err != nil {
 				Fail(err.Error())
@@ -83,15 +83,10 @@ var _ = Describe("persist", func() {
 
 		retStream, err := client.GetAllUsers(context.Background(), &pb.Empty{})
 		Expect(err).ToNot(HaveOccurred())
-		fmt.Println("retStream", retStream)
-		fmt.Println("err", err)
 
 		retUsers := make([]*pb.User, 0)
 		for {
-			// TODO start here. why is this getting an io.eof
 			u, err := retStream.Recv()
-			fmt.Println("u: ", u)
-			fmt.Println("err: ", err)
 			if err == io.EOF {
 				break
 			}
@@ -101,9 +96,16 @@ var _ = Describe("persist", func() {
 			retUsers = append(retUsers, u)
 		}
 		Expect(retUsers).To(HaveLen(len(users)))
-		for _, u := range retUsers {
-			Expect(users).To(ContainElement(BeEquivalentTo(u)))
+
+		strUsers := make([]string, 0)
+		for _, u := range users {
+			strUsers = append(strUsers, proto.MarshalTextString(u))
 		}
+
+		for _, u := range retUsers {
+			Expect(strUsers).To(ContainElement(proto.MarshalTextString(u)))
+		}
+
 	})
 
 	// PIt("can select a user by id", func() {

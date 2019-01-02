@@ -297,48 +297,81 @@ func (this *UServ_InsertUsersQuery) QueryOutTypeUser() {}
 
 // the main execute function
 func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_InsertUsersIter {
-	var setupErr error
-	params := []interface{}{
-		func() (out interface{}) {
-			out = x.GetId()
-			return
-		}(),
-		func() (out interface{}) {
-			out = fmt.Sprintf(`"%s"`, x.GetName())
-			return
-		}(),
-		func() (out interface{}) {
-			raw, err := proto.Marshal(x.GetFriends())
-			if err != nil {
-				setupErr = err
-			}
-			out = fmt.Sprintf(`CAST("%v" as BYTES)`, raw)
-			return
-		}(),
-		func() (out interface{}) {
-			mapper := this.opts.MAPPINGS.TimestampTimestamp()
-			ts, err := mapper.ToSpanner(x.GetCreatedOn()).SpannerValue()
-			if err != nil {
-				setupErr = err
-			}
-
-			out = fmt.Sprintf(`"%s"`, ts)
-			return
-		}(),
-	}
 	result := &UServ_InsertUsersIter{
-		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		result: SpannerResult{},
+		tm:     this.opts.MAPPINGS,
+		ctx:    this.ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+
+		result["id"] = x.GetId()
+		result["name"] = x.GetName()
+		result["name"] = x.GetName()
+		created_on, err := this.opts.MAPPINGS.TimestampTimestamp().ToSpanner(x.GetCreatedOn()).SpannerValue()
+		if err != nil {
+			return nil, err
+		}
+		result["created_on"] = created_on
+
+		friends, err := proto.Marshal(x.GetFriends())
+		if err != nil {
+			return nil, err
+		}
+		result["friends"] = friends
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
 
+	// params := []interface{}{
+	// 	func() (out interface{}) {
+	// 		out = x.GetId()
+	// 		return
+	// 	}(),
+	// 	func() (out interface{}) {
+	// 		out = fmt.Sprintf(`"%s"`, x.GetName())
+	// 		return
+	// 	}(),
+	// 	func() (out interface{}) {
+	// 		raw, err := proto.Marshal(x.GetFriends())
+	// 		if err != nil {
+	// 			setupErr = err
+	// 		}
+	// 		out = fmt.Sprintf(`CAST("%v" as BYTES)`, raw)
+	// 		return
+	// 	}(),
+	// 	func() (out interface{}) {
+	// 		mapper := this.opts.MAPPINGS.TimestampTimestamp()
+	// 		ts, err := mapper.ToSpanner(x.GetCreatedOn()).SpannerValue()
+	// 		if err != nil {
+	// 			setupErr = err
+	// 		}
+
+	// 		out = fmt.Sprintf(`"%s"`, ts)
+	// 		return
+	// 	}(),
+	// }
+
+	// result := &UServ_InsertUsersIter{
+	// 	tm:  this.opts.MAPPINGS,
+	// 	ctx: this.ctx,
+	// }
+	// if setupErr != nil {
+	// 	result.err = setupErr
+	// 	return result
+	// }
+
 	// TODO we are calling methods on the iterator outside of it's function
-	_, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err = this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		stmt := spanner.Statement{
-			SQL: fmt.Sprintf("insert into users (id, name, friends, created_on) values (%v, %v, %v, %v);", params...)}
+			SQL:    "insert into users (id, name, friends, created_on) values (@id, @name, @friends, @created_on)",
+			Params: params,
+		}
 		// iter := txn.Query(ctx, stmt)
 		// err, rowCount := txn.Update(ctx, stmt)
 		iter := txn.QueryWithStats(ctx, stmt)
@@ -421,7 +454,6 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	if this.rows == nil || this.err == io.EOF {
 		return nil, false
 	} else if this.err != nil {
-		fmt.Println("********this.err in next: ", this.err)
 		err := this.err
 		this.err = io.EOF
 		return &UServ_InsertUsersRow{err: err}, true
@@ -555,7 +587,6 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 
 		// TODO had to do this to make sure context wasnt nil
 		if query.ctx == nil {
-			fmt.Println("context was nil")
 			query.ctx = stream.Context()
 		}
 
@@ -617,26 +648,16 @@ func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAll
 		return result
 	}
 
-	// _, err := this.opts.db.ReadWriteTransaction(this.opts.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 	stmt := spanner.Statement{
 		SQL: fmt.Sprintf("SELECT id, name, friends, created_on FROM users", params...)}
 	iter := this.opts.db.Single().Query(this.opts.ctx, stmt)
-	// iter := txn.QueryWithStats(ctx, stmt)
-	// err, rowCount := txn.Update(ctx, stmt)
-	result.rows = iter
 
-	a, err := result.Next()
-	fmt.Println("first: ", a.item, err)
-	a, err = result.Next()
-	fmt.Println("second: ", a.item.GetId(), err)
+	result.rows = iter
 
 	result.result = SpannerResult{
 		iter: iter,
 	}
-	// TODO consider the effects of calling "defer iter.Stop()" here
-	// return nil
-	// })
-	// result.err = err
+
 	return result
 }
 
@@ -655,20 +676,16 @@ func (this *UServ_GetAllUsersIter) IterInTypeEmpty() {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *UServ_GetAllUsersIter) Each(fun func(*UServ_GetAllUsersRow) error) error {
-	fmt.Println("in each")
 	for {
 		select {
 		// TODO start here. find where each is called, and make sure the iterator is available to use
 		case <-this.ctx.Done():
 			return this.ctx.Err()
 		default:
-			fmt.Println("getting row")
 			// it's calling next on something that can't be nexted
 			if row, ok := this.Next(); !ok {
-				fmt.Println("not ok")
 				return nil
 			} else if err := fun(row); err != nil {
-				fmt.Println("fun failed")
 				return err
 			}
 		}
@@ -700,51 +717,41 @@ func (this *UServ_GetAllUsersIter) Zero() error {
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 	if this.rows == nil || this.err == io.EOF {
-		fmt.Println("1: eof", this.err)
 		return nil, false
 	} else if this.err != nil {
-		fmt.Println("2: eof", this.err)
-		fmt.Println("********this.err in next: ", this.err)
 		err := this.err
 		this.err = io.EOF
 		return &UServ_GetAllUsersRow{err: err}, true
 	}
 	row, err := this.rows.Next()
 	if err == iterator.Done {
-		fmt.Println("3: eof", err)
 		// this.err = io.EOF
 		return nil, false
 	}
-	fmt.Println("in next")
 	if err != nil {
 		return &UServ_GetAllUsersRow{err: err}, true
 	}
 
-	fmt.Println("getting id")
 	var id int64
 	if err := row.ColumnByName("id", &id); err != nil {
 		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 	}
 
-	fmt.Println("getting name")
 	var name string
 	if err := row.ColumnByName("name", &name); err != nil {
 		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 	}
 
-	fmt.Println("getting friends")
 	var tmpFriends []byte
 	if err := row.ColumnByName("friends", &tmpFriends); err != nil {
 		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
 	}
 	var friends = new(Friends)
 	if err := proto.Unmarshal(tmpFriends, friends); err != nil {
-		fmt.Println("error in unmarshalling friends")
 		// TODO finally found the error dawg. If i had a good debugger this would have been so much easier
 		return &UServ_GetAllUsersRow{err: err}, true
 	}
 
-	fmt.Println("getting created on")
 	var tmpCreatedOn spanner.GenericColumnValue
 	var created_on *timestamp.Timestamp
 	if err := row.ColumnByName("created_on", &tmpCreatedOn); err != nil {
@@ -760,7 +767,6 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		return &UServ_GetAllUsersRow{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
 	}
 
-	fmt.Println("returning user")
 	return &UServ_GetAllUsersRow{item: &User{Id: id, Name: name, Friends: friends, CreatedOn: created_on}}, true
 }
 
@@ -815,12 +821,9 @@ func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
 	return nil
 }
 func (this *UServ_GetAllUsersRow) User() (*User, error) {
-	fmt.Println("in User")
 	if this.err != nil {
-		fmt.Println("User first error", this.err)
 		return nil, this.err
 	}
-	fmt.Println("the user: ", this.item)
 	return &User{
 		Id:        this.item.GetId(),
 		Name:      this.item.GetName(),
@@ -847,9 +850,7 @@ func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) 
 	// if err != nil {
 	//   return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
 	// }
-	fmt.Println("getting all users")
 	if err := this.GetAllUsersTx(req, stream); err != nil {
-		fmt.Println("error getting all users tx")
 		return gstatus.Errorf(codes.Unknown, "error executing 'get_all_users' query: %v", err)
 	}
 	return nil
@@ -858,15 +859,11 @@ func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) 
 func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer) error {
 	query := this.QUERIES.GetAllUsers(stream.Context(), this.DB)
 	iter := query.Execute(req)
-	fmt.Println("executed get all users")
 	return iter.Each(func(row *UServ_GetAllUsersRow) error {
-		fmt.Println("in fun")
 		res, err := row.User()
 		if err != nil {
-			fmt.Println("fun err: ", err)
 			return err
 		}
-		fmt.Println("sending user: ", res)
 		return stream.Send(res)
 	})
 }
