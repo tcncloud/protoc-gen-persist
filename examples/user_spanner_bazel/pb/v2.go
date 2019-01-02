@@ -27,35 +27,85 @@ type RestOfUServHandlers interface {
 }
 
 func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
-	return this.opts.HANDLERS.UpdateAllNames(req, stream)
+	return this.HANDLERS.UpdateAllNames(req, stream)
 }
 
 // WriteTypeMappigns
 type UServ_TypeMappings interface {
-	TimestampTimestamp() TimestampTimestampMappingImpl
-	SliceStringParam() SliceStringParamMappingImpl
+	TimestampTimestamp() UServTimestampTimestampMappingImpl
+	SliceStringParam() UServSliceStringParamMappingImpl
+}
+type UServ_DefaultTypeMappings struct{}
+
+func (this *UServ_DefaultTypeMappings) TimestampTimestamp() UServTimestampTimestampMappingImpl {
+	return &UServ_DefaultTimestampTimestampMappingImpl{}
 }
 
-type TimestampTimestampMappingImpl interface {
+type UServ_DefaultTimestampTimestampMappingImpl struct{}
+
+func (this *UServ_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
+	return nil
+}
+func (this *UServ_DefaultTimestampTimestampMappingImpl) Empty() UServTimestampTimestampMappingImpl {
+	return this
+}
+func (this *UServ_DefaultTimestampTimestampMappingImpl) ToSpanner(*timestamp.Timestamp) UServTimestampTimestampMappingImpl {
+	return this
+}
+func (this *UServ_DefaultTimestampTimestampMappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
+	return nil
+}
+func (this *UServ_DefaultTimestampTimestampMappingImpl) SpannerValue() (interface{}, error) {
+	return "DEFAULT_TYPE_MAPPING_VALUE", nil
+}
+
+type UServTimestampTimestampMappingImpl interface {
 	ToProto(**timestamp.Timestamp) error
-	Empty() TimestampTimestampMappingImpl
-	ToSpanner(*timestamp.Timestamp) TimestampTimestampMappingImpl
+	Empty() UServTimestampTimestampMappingImpl
+	ToSpanner(*timestamp.Timestamp) UServTimestampTimestampMappingImpl
+	SpannerScan(*spanner.GenericColumnValue) error
+	SpannerValue() (interface{}, error)
+}
+
+func (this *UServ_DefaultTypeMappings) SliceStringParam() UServSliceStringParamMappingImpl {
+	return &UServ_DefaultSliceStringParamMappingImpl{}
+}
+
+type UServ_DefaultSliceStringParamMappingImpl struct{}
+
+func (this *UServ_DefaultSliceStringParamMappingImpl) ToProto(**SliceStringParam) error {
+	return nil
+}
+func (this *UServ_DefaultSliceStringParamMappingImpl) Empty() UServSliceStringParamMappingImpl {
+	return this
+}
+func (this *UServ_DefaultSliceStringParamMappingImpl) ToSpanner(*SliceStringParam) UServSliceStringParamMappingImpl {
+	return this
+}
+func (this *UServ_DefaultSliceStringParamMappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
+	return nil
+}
+func (this *UServ_DefaultSliceStringParamMappingImpl) SpannerValue() (interface{}, error) {
+	return "DEFAULT_TYPE_MAPPING_VALUE", nil
+}
+
+type UServSliceStringParamMappingImpl interface {
+	ToProto(**SliceStringParam) error
+	Empty() UServSliceStringParamMappingImpl
+	ToSpanner(*SliceStringParam) UServSliceStringParamMappingImpl
 	SpannerScan(src *spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }
 
-type SliceStringParamMappingImpl interface {
-	ToProto(**SliceStringParam) error
-	Empty() SliceStringParamMappingImpl
-	ToSpanner(*SliceStringParam) SliceStringParamMappingImpl
-	SpannerScan(src *spanner.GenericColumnValue) error
-	SpannerValue() (interface{}, error)
+type UServ_Opts struct {
+	MAPPINGS UServ_TypeMappings
+	HOOKS    UServ_Hooks
 }
 
 type UServ_Hooks interface {
 	InsertUsersBeforeHook(context.Context, *User) (*Empty, error)
 	InsertUsersAfterHook(context.Context, *User, *Empty) error
-	GetAllUsersBeforeHook(context.Context, *Empty) ([]*User, error)
+	GetAllUsersBeforeHook(context.Context, *Empty) (*User, error)
 	GetAllUsersAfterHook(context.Context, *Empty, *User) error
 }
 type alwaysScanner struct {
@@ -127,7 +177,7 @@ func DefaultUServQueryOpts(db Runnable) UServ_QueryOpts {
 }
 
 type UServ_Queries struct {
-	opts UServ_QueryOpts
+	opts UServ_Opts
 }
 
 //type PersistTx interface {
@@ -208,13 +258,12 @@ func (this *UServ_InsertUsersRow) Friends() (*Friends, error) {
 }
 
 // UServPersistQueries returns all the known 'SQL' queires for the 'UServ' service.
-func UServPersistQueries(db Runnable, opts ...UServ_QueryOpts) *UServ_Queries {
-	var myOpts UServ_QueryOpts
+func UServPersistQueries(opts ...UServ_Opts) *UServ_Queries {
+	var myOpts UServ_Opts
 	if len(opts) > 0 {
 		myOpts = opts[0]
-		myOpts.db = db
 	} else {
-		myOpts = DefaultUServQueryOpts(db)
+		myOpts = UServOpts(nil, nil)
 	}
 	return &UServ_Queries{
 		opts: myOpts,
@@ -227,12 +276,12 @@ func UServPersistQueries(db Runnable, opts ...UServ_QueryOpts) *UServ_Queries {
 // InsertUsersQuery returns a new struct wrapping the current UServ_QueryOpts
 // that will perform 'UServ' services 'insert_users_query' on the database
 // when executed
-func (this *UServ_Queries) InsertUsersQuery(ctx context.Context) *UServ_InsertUsersQuery {
+func (this *UServ_Queries) InsertUsers(ctx context.Context, db Runnable) *UServ_InsertUsersQuery {
 	return &UServ_InsertUsersQuery{
 		opts: UServ_QueryOpts{
 			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
 			ctx:      ctx,
+			db:       db,
 		},
 	}
 }
@@ -420,34 +469,55 @@ func (this *UServ_InsertUsersIter) Slice() []*UServ_InsertUsersRow {
 	return results
 }
 
-type UServ_ImplOpts struct {
-	MAPPINGS UServ_TypeMappings
-	HOOKS    UServ_Hooks
-	HANDLERS RestOfUServHandlers
-}
-
-func DefaultUServImplOpts() UServ_ImplOpts {
-	return UServ_ImplOpts{}
+func UServOpts(hooks UServ_Hooks, mappings UServ_TypeMappings) UServ_Opts {
+	opts := UServ_Opts{
+		HOOKS:    &UServ_DefaultHooks{},
+		MAPPINGS: &UServ_DefaultTypeMappings{},
+	}
+	if hooks != nil {
+		opts.HOOKS = hooks
+	}
+	if mappings != nil {
+		opts.MAPPINGS = mappings
+	}
+	return opts
 }
 
 type UServ_Impl struct {
-	opts    *UServ_ImplOpts
-	QUERIES *UServ_Queries
-	DB      *spanner.Client
+	opts     *UServ_Opts
+	QUERIES  *UServ_Queries
+	HANDLERS RestOfUServHandlers
+	DB       *spanner.Client
 }
 
-func UServPersistImpl(db *spanner.Client, opts ...UServ_ImplOpts) *UServ_Impl {
-	var myOpts UServ_ImplOpts
+func UServPersistImpl(db *spanner.Client, handlers RestOfUServHandlers, opts ...UServ_Opts) *UServ_Impl {
+	var myOpts UServ_Opts
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = DefaultUServImplOpts()
+		myOpts = UServOpts(nil, nil)
 	}
 	return &UServ_Impl{
-		opts:    &myOpts,
-		QUERIES: UServPersistQueries(db, UServ_QueryOpts{MAPPINGS: myOpts.MAPPINGS}),
-		DB:      db,
+		opts:     &myOpts,
+		QUERIES:  UServPersistQueries(myOpts),
+		DB:       db,
+		HANDLERS: handlers,
 	}
+}
+
+type UServ_DefaultHooks struct{}
+
+func (*UServ_DefaultHooks) InsertUsersBeforeHook(context.Context, *User) (*Empty, error) {
+	return nil, nil
+}
+func (*UServ_DefaultHooks) GetAllUsersBeforeHook(context.Context, *Empty) (*User, error) {
+	return nil, nil
+}
+func (*UServ_DefaultHooks) InsertUsersAfterHook(context.Context, *User, *Empty) error {
+	return nil
+}
+func (*UServ_DefaultHooks) GetAllUsersAfterHook(context.Context, *Empty, *User) error {
+	return nil
 }
 
 // THIS is the grpc handler
@@ -463,7 +533,7 @@ func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
 }
 
 func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
-	query := this.QUERIES.InsertUsersQuery(stream.Context())
+	query := this.QUERIES.InsertUsers(stream.Context(), this.DB)
 	var first *User
 	for {
 		req, err := stream.Recv()
@@ -517,12 +587,12 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 // GetAllUsersQuery returns a new struct wrapping the current UServ_QueryOpts
 // that will perform 'UServ' services 'get_all_users' on the database
 // when executed
-func (this *UServ_Queries) GetAllUsersQuery(ctx context.Context) *UServ_GetAllUsersQuery {
+func (this *UServ_Queries) GetAllUsers(ctx context.Context, db Runnable) *UServ_GetAllUsersQuery {
 	return &UServ_GetAllUsersQuery{
 		opts: UServ_QueryOpts{
 			MAPPINGS: this.opts.MAPPINGS,
-			db:       this.opts.db,
 			ctx:      ctx,
+			db:       db,
 		},
 	}
 }
@@ -784,8 +854,9 @@ func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) 
 	}
 	return nil
 }
+
 func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer) error {
-	query := this.QUERIES.GetAllUsersQuery(stream.Context())
+	query := this.QUERIES.GetAllUsers(stream.Context(), this.DB)
 	iter := query.Execute(req)
 	fmt.Println("executed get all users")
 	return iter.Each(func(row *UServ_GetAllUsersRow) error {
