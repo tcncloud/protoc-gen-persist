@@ -12,24 +12,25 @@ type printerProxy struct {
 }
 
 type handlerParams struct {
-	Service      string
-	Method       string
-	Query        string
-	Request      string
-	Response     string
-	ZeroResponse bool
-	Before       bool
-	After        bool
+	Service        string
+	Method         string
+	Query          string
+	Request        string
+	Response       string
+	RespMethodCall string
+	ZeroResponse   bool
+	Before         bool
+	After          bool
 }
 
-func OneOrZero(response string, zero bool) string {
-	if zero {
+func OneOrZero(hp handlerParams) string {
+	if hp.ZeroResponse {
 		return strings.Join([]string{`
 err := result.Zero()
-res := &`, response, `{}
+res := &`, hp.Response, `{}
         `}, "")
 	}
-	return "res, err := result.One()." + response + "()"
+	return "res, err := result.One()." + hp.RespMethodCall + "()"
 }
 
 func (h *printerProxy) Write(data []byte) (int, error) {
@@ -139,7 +140,7 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
             return fmt.Errorf("error executing '{{.Query}}' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
         }
     }
-    res := &Empty{}
+    res := &{{.Response}}{}
 
     {{if .After}}
     if err := this.opts.HOOKS.{{.Method}}AfterHook(stream.Context(), first, res); err != nil {
@@ -171,13 +172,12 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
     if err != nil {
         return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
     } else if beforeRes != nil {
-        return gstatus.Error(codes.Unknown, "before hook returned nil")
+        return beforeRes, nil
     }
-    req = beforeRes
     {{end}}
 
     result := query.Execute(req)
-    {{oneOrZero .Response .ZeroResponse}}
+    {{oneOrZero .}}
     if err != nil {
         return nil, err
     }
@@ -219,7 +219,7 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Servic
 
     iter := query.Execute(req)
     return iter.Each(func(row *{{.Service}}_{{camelCase .Query}}Row) error {
-        res, err := row.{{.Response}}()
+        res, err := row.{{.RespMethodCall}}()
         if err != nil {
             return err
         }

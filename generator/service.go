@@ -508,9 +508,23 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 	camelF := func(f *desc.FieldDescriptorProto) string {
 		return _gen.CamelCase(f.GetName())
 	}
-	inName := func(opt *QueryProtoOpts) string {
-		return convertedMsgTypeByProtoName(opt.inMsg.GetProtoName(), s.File)
+	inNamePkg := func(opt *QueryProtoOpts) string {
+		return _gen.CamelCase(strings.Map(func(r rune) rune {
+			if r == '.' {
+				return -1
+			}
+			return r
+		}, convertedMsgTypeByProtoName(opt.inMsg.GetProtoName(), s.File)))
 	}
+	outNamePkg := func(opt *QueryProtoOpts) string {
+		return _gen.CamelCase(strings.Map(func(r rune) rune {
+			if r == '.' {
+				return -1
+			}
+			return r
+		}, convertedMsgTypeByProtoName(opt.outMsg.GetProtoName(), s.File)))
+	}
+	_ = outNamePkg
 	outName := func(opt *QueryProtoOpts) string {
 		return convertedMsgTypeByProtoName(opt.outMsg.GetProtoName(), s.File)
 	}
@@ -553,14 +567,29 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			if err != nil {
 				outErr = err
 			}
-			cases[f.GetName()] = P(`case "`, fName(f), `": r, ok := (*scanned[i].i).(`, typ, `)
+			cases[f.GetName()] = P(`case "`, fName(f), `": 
+			r, ok := (*scanned[i].i).(`, typ, `)
             if !ok {
                 return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type `, f.GetTypeName(), `")}, true
             }
             res.`, camelF(f), `= r
             `)
 		}, m.MatchQuery(opt), m.QueryFieldFitsDB)
-
+		// enum case
+		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			ename := convertedMsgTypeByProtoName(f.GetTypeName(), s.File)
+			cases[fName(f)] = P(`case "`, fName(f), `":
+				r, ok := (*scanned[i].i).(int32)
+				if !ok {
+					return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type *`, mustDefaultMappingNoStar(f), `")}, true
+				}
+                var converted = (`, ename, `)(r)
+				res.`, camelF(f), ` = converted
+			`)
+		}, m.MatchQuery(opt), func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
+			str := s.AllStructs.GetStructByProtoName(f.GetTypeName())
+			return str != nil && str.EnumDesc != nil
+		})
 		// mapping case
 		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
 			m.EachTM(func(opt *TypeMappingProtoOpts) {
@@ -576,6 +605,26 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                 `)
 			}, m.MatchTypeMapping(f))
 		}, m.MatchQuery(opt), m.QueryFieldIsMapped)
+		// mapped enum
+		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			m.EachTM(func(opt *TypeMappingProtoOpts) {
+				_, titled := getGoNamesForTypeMapping(opt.tm, s.File)
+				cases[fName(f)] = P(`case "`, fName(f), `":
+                    var converted = this.tm.`, titled, `().Empty()
+                    if err := converted.Scan(*scanned[i].i); err != nil {
+                        return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("could not convert mapped db column `, fName(f), ` to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
+					}
+					pToRes := &res.`, camelF(f), `
+
+                    if err := converted.ToProto(&pToRes); err != nil {
+                        return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("could not convert mapped db column `, fName(f), `to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
+                    }
+                `)
+			}, m.MatchTypeMapping(f))
+		}, m.MatchQuery(opt), m.QueryFieldIsMapped, func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
+			str := s.AllStructs.GetStructByProtoName(f.GetTypeName())
+			return str != nil && str.EnumDesc != nil
+		})
 
 		printer := &Printer{}
 
@@ -595,8 +644,8 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             ctx    context.Context
         }
 
-        func (this *`, sName, `_`, camelQ(q), `Iter) IterOutType`, outName(q), `() {}
-        func (this *`, sName, `_`, camelQ(q), `Iter) IterInType`, inName(q), `()  {}
+        func (this *`, sName, `_`, camelQ(q), `Iter) IterOutType`, outNamePkg(q), `() {}
+        func (this *`, sName, `_`, camelQ(q), `Iter) IterInType`, inNamePkg(q), `()  {}
 
         // Each performs 'fun' on each row in the result set.
         // Each respects the context passed to it.
@@ -721,6 +770,24 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 	methOutName := func(opt *MethodProtoOpts) string {
 		return convertedMsgTypeByProtoName(opt.method.GetOutputType(), s.File)
 	}
+	methOutNamePkg := func(opt *MethodProtoOpts) string {
+		return _gen.CamelCase(strings.Map(func(r rune) rune {
+			if r == '.' {
+				return -1
+			}
+			return r
+		}, convertedMsgTypeByProtoName(opt.method.GetOutputType(), s.File)))
+	}
+	_ = methOutNamePkg
+	outNamePkg := func(opt *QueryProtoOpts) string {
+		return _gen.CamelCase(strings.Map(func(r rune) rune {
+			if r == '.' {
+				return -1
+			}
+			return r
+		}, convertedMsgTypeByProtoName(opt.outMsg.GetProtoName(), s.File)))
+	}
+	_ = outNamePkg
 	outName := func(opt *QueryProtoOpts) string {
 		return convertedMsgTypeByProtoName(opt.outMsg.GetProtoName(), s.File)
 	}
@@ -776,11 +843,12 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
                 if o == nil {
                     return fmt.Errorf("must initialize *`, methOutName(mopt), ` before giving to Unwrap()")
                 }
-                res, _ := this.`, methOutName(mopt), `()
+                res, _ := this.`, methOutNamePkg(mopt), `()
                 _ = res
                 `, setSharedOnPointer(mopt), `
                 return nil
-            }`)
+			}
+			`)
 		}, m.MatchQueryName(qopt))
 		return p.String()
 	}
@@ -802,7 +870,7 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 		printer := &Printer{}
 		did := make(map[string]bool)
 		m.EachMethod(func(mopt *MethodProtoOpts) {
-			printer.Q(`func (this *`, sName, `_`, camelQ(q), `Row) `, methOutName(mopt), `() (*`, methOutName(mopt), `, error) {
+			printer.Q(`func (this *`, sName, `_`, camelQ(q), `Row) `, methOutNamePkg(mopt), `() (*`, methOutName(mopt), `, error) {
                 if this.err != nil {
                     return nil, this.err
                 }
@@ -866,6 +934,14 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 func WriteHandlers(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	serviceName := s.GetName()
+	methOutNamePkg := func(opt *MethodProtoOpts) string {
+		return _gen.CamelCase(strings.Map(func(r rune) rune {
+			if r == '.' {
+				return -1
+			}
+			return r
+		}, convertedMsgTypeByProtoName(opt.method.GetOutputType(), s.File)))
+	}
 	err := WritePersistServerStruct(p, s.GetName())
 	if err != nil {
 		return err
@@ -877,8 +953,10 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
 		method := mpo.method.GetName()
-		inMsg := mpo.inMsg.GetName()
-		outMsg := mpo.outMsg.GetName()
+		// inMsg := mpo.inMsg.GetName()
+		// outMsg := mpo.outMsg.GetName()
+		inMsg := s.File.GetGoTypeName(mpo.inStruct.GetProtoName())
+		outMsg := s.File.GetGoTypeName(mpo.outStruct.GetProtoName())
 		if m.ServerStreaming(mpo) {
 			p.Q(method, `(*`, inMsg, `, `, serviceName, `_`, method, `Server) error`, "\n")
 		}
@@ -896,8 +974,8 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
 		method := mpo.method.GetName()
-		inMsg := mpo.inMsg.GetName()
-		outMsg := mpo.outMsg.GetName()
+		inMsg := s.File.GetGoTypeName(mpo.inStruct.GetProtoName())
+		outMsg := s.File.GetGoTypeName(mpo.outStruct.GetProtoName())
 
 		if m.ServerStreaming(mpo) {
 			p.Q(`
@@ -936,6 +1014,8 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 
 	m.EachMethod(func(mpo *MethodProtoOpts) {
 		var queryOptions *QueryProtoOpts
+		inMsg := s.File.GetGoTypeName(mpo.inStruct.GetProtoName())
+		outMsg := s.File.GetGoTypeName(mpo.outStruct.GetProtoName())
 		m.EachQuery(func(qpo *QueryProtoOpts) {
 			queryOptions = qpo
 		}, func(qpo *QueryProtoOpts) bool {
@@ -947,14 +1027,15 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 
 		zeroResponse := len(queryOptions.outFields) == 0
 		params := &handlerParams{
-			Service:      serviceName,
-			Method:       mpo.method.GetName(),
-			Request:      mpo.inMsg.GetName(),
-			Response:     mpo.outMsg.GetName(),
-			ZeroResponse: zeroResponse,
-			Query:        mpo.option.GetQuery(),
-			Before:       mpo.option.GetBefore(),
-			After:        mpo.option.GetAfter(),
+			Service:        serviceName,
+			Method:         mpo.method.GetName(),
+			Request:        inMsg,  //mpo.inMsg.GetName(),
+			Response:       outMsg, //mpo.outMsg.GetName(),
+			RespMethodCall: methOutNamePkg(mpo),
+			ZeroResponse:   zeroResponse,
+			Query:          mpo.option.GetQuery(),
+			Before:         mpo.option.GetBefore(),
+			After:          mpo.option.GetAfter(),
 		}
 
 		if m.Unary(mpo) {

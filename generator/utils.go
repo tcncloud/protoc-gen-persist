@@ -127,13 +127,18 @@ func convertedMsgTypeByProtoName(protoName string, f *FileStruct) string {
 }
 func defaultMapping(typ *descriptor.FieldDescriptorProto, file *FileStruct) (string, error) {
 	switch typ.GetType() {
-	case descriptor.FieldDescriptorProto_TYPE_ENUM:
-		return "int32", nil
 	case descriptor.FieldDescriptorProto_TYPE_GROUP:
 		return "__unsupported__type__", fmt.Errorf("one of is unsupported")
 		//logrus.Fatalf("we currently don't support groups/oneof structures %s", typ.GetName())
+	case descriptor.FieldDescriptorProto_TYPE_ENUM:
+		if ret := file.GetGoTypeName(typ.GetTypeName()); ret != "" {
+			if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+				return "[]" + ret, nil
+			} else {
+				return ret, nil
+			}
+		}
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
-
 		if ret := file.GetGoTypeName(typ.GetTypeName()); ret != "" {
 			if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
 				return "[]*" + ret, nil

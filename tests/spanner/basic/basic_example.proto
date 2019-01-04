@@ -103,7 +103,7 @@ service MySpanner {
       queries: [{
       name: "insert"
       query: ["Insert into example_table (id, start_time, name)",
-          "Values (@id, @start_time, \"bananas\")"]
+          "Values (@id, @start_time, 'bananas')"]
       in: "tests.test.ExampleTable",
       out: ".tests.Empty"
     },{
@@ -119,7 +119,7 @@ service MySpanner {
     },{
       name: "update",
       query: ["Update example_table ",
-        "set start_time=@start_time, name=\"oranges\"",
+        "set start_time=@start_time, name='oranges'",
         "PrimaryKey(id=@id)"]
       in: "tests.test.ExampleTable",
       out: ".tests.Empty",
