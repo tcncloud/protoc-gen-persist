@@ -497,7 +497,7 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
 		return result
 	}
 
-	iter := txn.QueryWithStats(ctx, spanner.Statement{
+	iter := this.db.QueryWithStats(ctx, spanner.Statement{
 		SQL: "`, qstring(q), `",
 		Params: params,
 	})
@@ -1138,8 +1138,9 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			}
 			return &`, sName, `_`, camelQ(q), `Row{item: res}, true
 			*/
+			res := &`, outName(q), `{}
 
-			return nil, true
+			return &`, sName, `_`, camelQ(q), `Row{item: res}, true
 		}
 
 		// Slice returns all rows found in the iterator as a Slice.
@@ -1584,11 +1585,10 @@ type scanable interface {
 	} else if hasSpanner {
 		p.Q(`
 type PersistTx interface {
-	Commit() error
-	Rollback() error
 	Runnable
 }
 
+/*
 func NopPersistTx(r Runnable) (PersistTx, error) {
 	return &ignoreTx{r}, nil
 }
@@ -1620,6 +1620,7 @@ func DefaultBidiStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, 
 func DefaultUnaryPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
 	return NopPersistTx(r)
 }
+*/
 
 type Result interface {
 	LastInsertId() (int64, error)
@@ -1640,8 +1641,7 @@ func (sr *SpannerResult) RowsAffected() (int64, error) {
 }
 
 type Runnable interface {
-	ReadWriteTransaction(context.Context, func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error)
-	Single() *spanner.ReadOnlyTransaction
+	QueryWithStats(context.Context, spanner.Statement) *spanner.RowIterator
 }
 
 type scanable interface {

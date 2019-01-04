@@ -195,11 +195,13 @@ type UServ_Queries struct {
 // 	return &ignoreTx{r}, nil
 // }
 
-type UServ_InsertUsersOut interface {
+type UServ_InsertUsersIn interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+}
+type UServ_InsertUsersOut interface {
 }
 
 type UServ_InsertUsersRow struct {
@@ -217,23 +219,14 @@ func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
-	// for each known method result
-	if o, ok := (pointerToMsg).(*User); ok {
+	if o, ok := (pointerToMsg).(*Empty); ok {
 		if o == nil {
-			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
 		}
-		res, _ := this.User()
-		// set shared fields
-		o.Id = res.Id
-		o.Name = res.Name
-		o.Friends = res.Friends
-		o.CreatedOn = res.CreatedOn
+		res, _ := this.Empty()
+		_ = res
+
 		return nil
-	}
-	if o, ok := (pointerToMsg).(*Friends); ok {
-		if o == nil {
-			return fmt.Errorf("must initialize *Friends before giving to Unwrap()")
-		}
 	}
 
 	return nil
@@ -241,18 +234,18 @@ func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
 
 // one for each Output type of the methods that use this query + the output proto itself
 
-func (this *UServ_InsertUsersRow) User() (*User, error) {
-	return &User{
-		Id:        this.item.GetId(),
-		Name:      this.item.GetName(),
-		Friends:   this.item.GetFriends(),
-		CreatedOn: this.item.GetCreatedOn(),
-	}, nil
+func (this *UServ_InsertUsersRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
-// just for example
-func (this *UServ_InsertUsersRow) Friends() (*Friends, error) {
-	return nil, nil
+func (this *UServ_InsertUsersRow) Proto() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 // UServPersistQueries returns all the known 'SQL' queires for the 'UServ' service.
@@ -295,30 +288,27 @@ func (this *UServ_InsertUsersQuery) QueryInTypeUser()  {}
 func (this *UServ_InsertUsersQuery) QueryOutTypeUser() {}
 
 // the main execute function
-func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_InsertUsersIter {
+func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersIn) *UServ_InsertUsersIter {
+	ctx := this.ctx
 	result := &UServ_InsertUsersIter{
 		result: SpannerResult{},
 		tm:     this.opts.MAPPINGS,
-		ctx:    this.ctx,
+		ctx:    ctx,
 	}
-
 	params, err := func() (map[string]interface{}, error) {
 		result := make(map[string]interface{})
-
 		result["id"] = x.GetId()
 		result["name"] = x.GetName()
-		result["name"] = x.GetName()
-		created_on, err := this.opts.MAPPINGS.TimestampTimestamp().ToSpanner(x.GetCreatedOn()).SpannerValue()
-		if err != nil {
-			return nil, err
-		}
-		result["created_on"] = created_on
-
 		friends, err := proto.Marshal(x.GetFriends())
 		if err != nil {
 			return nil, err
 		}
 		result["friends"] = friends
+		created_on, err := this.opts.MAPPINGS.TimestampTimestamp().ToSpanner(x.GetCreatedOn()).SpannerValue()
+		if err != nil {
+			return nil, err
+		}
+		result["created_on"] = created_on
 
 		return result, nil
 	}()
@@ -326,7 +316,6 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 		result.err = err
 		return result
 	}
-
 	iter := this.db.QueryWithStats(this.ctx, spanner.Statement{
 		SQL:    "INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)",
 		Params: params,
@@ -401,33 +390,16 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 		return &UServ_InsertUsersRow{err: err}, true
 	}
 	row, err := this.rows.Next()
+	_ = row
 	if err == iterator.Done {
-		// TODO why is it setting this to eof
-		// this.err = io.EOF
 		return nil, false
 	}
 	if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
 	}
 
-	var id int64
-	if err := row.ColumnByName("id", &id); err != nil {
-		return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
-	}
-	var name string
-	if err := row.ColumnByName("name", &name); err != nil {
-		return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
-	}
-	var friends *Friends
-	if err := row.ColumnByName("friends", &friends); err != nil {
-		return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
-	}
-	var created_on *timestamp.Timestamp
-	if err := row.ColumnByName("created_on", &created_on); err != nil {
-		return &UServ_InsertUsersRow{err: fmt.Errorf("could not convert mapped db column created_on to type on User.CreatedOn: %v", err)}, true
-	}
-
-	return &UServ_InsertUsersRow{item: &User{Id: id, Name: name, Friends: friends, CreatedOn: created_on}}, true
+	res := &Empty{}
+	return &UServ_InsertUsersRow{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
