@@ -248,34 +248,36 @@ func (this *UServ_InsertUsersQuery) QueryOutTypeUser() {}
 // the main execute function
 func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_InsertUsersIter {
 	var setupErr error
-	params := []interface{}{
-		func() (out interface{}) {
-			out = x.GetId()
-			return
-		}(),
-		func() (out interface{}) {
-      out = fmt.Sprintf(`"%s"`, x.GetName())
-			return
-		}(),
-		func() (out interface{}) {
-			raw, err := proto.Marshal(x.GetFriends())
-			if err != nil {
-				setupErr = err
-			}
-			out = fmt.Sprintf(`CAST("%v" as BYTES)`, raw)
-			return
-		}(),
-		func() (out interface{}) {
-			mapper := this.opts.MAPPINGS.TimestampTimestamp()
-      ts, err := mapper.ToSpanner(x.GetCreatedOn()).SpannerValue()
-      if err != nil {
-        setupErr = err
-      }
+	// params := []interface{}{
+	// 	func() (out interface{}) {
+	// 		out = x.GetId()
+	// 		return
+	// 	}(),
+	// 	func() (out interface{}) {
+      // out = fmt.Sprintf(`"%s"`, x.GetName())
+	// 		return
+	// 	}(),
+	// 	func() (out interface{}) {
+	// 		raw, err := proto.Marshal(x.GetFriends())
+	// 		if err != nil {
+	// 			setupErr = err
+	// 		}
+      // fmt.Println("raw: ", raw)
+      // fmt.Println("hex: ", hex.EncodeToString(raw))
+	// 		out = fmt.Sprintf(`b'%v'`, raw)
+	// 		return
+	// 	}(),
+	// 	func() (out interface{}) {
+	// 		mapper := this.opts.MAPPINGS.TimestampTimestamp()
+      // ts, err := mapper.ToSpanner(x.GetCreatedOn()).SpannerValue()
+      // if err != nil {
+        // setupErr = err
+      // }
 
-      out = fmt.Sprintf(`"%s"`, ts)
-			return
-		}(),
-	}
+      // out = fmt.Sprintf(`"%s"`, ts)
+	// 		return
+	// 	}(),
+	// }
 	result := &UServ_InsertUsersIter{
 		tm:  this.opts.MAPPINGS,
 		ctx: this.ctx,
@@ -285,26 +287,70 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersOut) *UServ_Inser
 		return result
 	}
 
-  // TODO we are calling methods on the iterator outside of it's function
+  // TODO we are calling methods on the iterator outside of it's transaction function, which is not possible
   _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+    var initErr error
     stmt := spanner.Statement{
-      SQL: fmt.Sprintf("insert into users (id, name, friends, created_on) values (%v, %v, %v, %v);", params...)}
+      SQL: `insert into users (id, name, friends, created_on) values (@id, @name, @friends, @created_on);`,
+      Params: map[string]interface{}{
+        "id": x.GetId(),
+        "name": x.GetName(),
+        "friends": func() interface{} {
+          var bytesOfBytes [][]byte
+          raw, err := proto.Marshal(x.GetFriends())
+          if err != nil {
+            initErr = err
+          }
+          bytesOfBytes = append(bytesOfBytes, raw)
+          fmt.Println("raw: ", raw)
+          fmt.Println("bytesOfBytes: ", bytesOfBytes)
+          fmt.Println("unmarshalled: ", x.GetFriends())
+          return raw
+          // return bytesOfBytes
+        }(),
+        "created_on": func() interface{} {
+          mapper := this.opts.MAPPINGS.TimestampTimestamp()
+          ts, err := mapper.ToSpanner(x.GetCreatedOn()).SpannerValue()
+          if err != nil {
+            initErr = err
+          }
+
+          return fmt.Sprintf(`"%s"`, ts)
+        }(),
+      },
+    }
+
+    if initErr != nil {
+      fmt.Println("init err: ", initErr)
+      return initErr
+    }
+    fmt.Println("doing query")
+
     // iter := txn.Query(ctx, stmt)
     // err, rowCount := txn.Update(ctx, stmt)
     iter := txn.QueryWithStats(ctx, stmt)
+    // fmt.Println("yay: ", iter)
+    // a, err := iter.Next()
+    // fmt.Println("next: ", a, err)
     result.rows = iter
 
-    // TODO for some reason zero sometimes passes. it must not be calling next on the iterator properly
+    fmt.Println(iter.RowCount)
+    // result.rows.Next()
+    fmt.Println("done query")
+
     if err := result.Zero(); err != nil {
       // if err := result.One(); err != nil {
+      fmt.Println("errrror")
       return err
     }
+
 
     // TODO having an iter in result is broken. it cant be accessed outside this function
     result.result = SpannerResult{
       iter: iter,
     }
-    // TODO consider the effects of calling "defer iter.Stop()" here
+
+    defer iter.Stop()
     return nil
   })
   result.err = err
@@ -360,7 +406,11 @@ func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_InsertUsersIter) Zero() error {
-  if _, ok := this.Next(); ok {
+  row, ok := this.Next()
+  if row.err != nil {
+    return fmt.Errorf("error in database transaction: %v", row.err)
+  }
+  if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'InsertUsers'")
 	}
 	return nil
@@ -368,6 +418,7 @@ func (this *UServ_InsertUsersIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
+  fmt.Println("in next")
 	if this.rows == nil || this.err == io.EOF {
 		return nil, false
 	} else if this.err != nil {
@@ -376,16 +427,20 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 		this.err = io.EOF
 		return &UServ_InsertUsersRow{err: err}, true
 	}
+  fmt.Println("2")
+  // TODO it is failing here. iter shouldnt be done
   row, err := this.rows.Next()
   if err == iterator.Done {
     // TODO why is it setting this to eof
     // this.err = io.EOF
     return nil, false
   }
+  fmt.Println("3")
   if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
   }
 
+  fmt.Println("4")
   var id int64
   if err := row.ColumnByName("id", &id); err != nil {
       return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
@@ -394,6 +449,7 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
   if err := row.ColumnByName("name", &name); err != nil {
       return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
   }
+  fmt.Println("getting friends")
   var friends *Friends
   if err := row.ColumnByName("friends", &friends); err != nil {
       return &UServ_InsertUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
@@ -491,7 +547,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 		result := query.Execute(req)
        
     if result.err != nil {
-      return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return results")
+      return gstatus.Errorf(codes.InvalidArgument, "client streaming query failed: %v", result.err)
     }
 	}
   // TODO might need to handle commits and rollbacks uniquely with spanner.
@@ -667,8 +723,10 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
       return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
   }
   var friends = new(Friends)
+  fmt.Println("tmpFriends: ", tmpFriends)
+  fmt.Println("Friends: ", friends)
   if err := proto.Unmarshal(tmpFriends, friends); err != nil {
-    fmt.Println("error in unmarshalling friends")
+    fmt.Println("error in unmarshalling friends", err)
     // TODO finally found the error dawg. If i had a good debugger this would have been so much easier
     return &UServ_GetAllUsersRow{err: err}, true
   }
