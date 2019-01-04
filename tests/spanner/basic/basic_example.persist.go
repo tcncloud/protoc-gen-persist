@@ -12,7 +12,7 @@ spanner "cloud.google.com/go/spanner"
 test "github.com/tcncloud/protoc-gen-persist/tests/test"
 timestamp "github.com/golang/protobuf/ptypes/timestamp"
 )
-type alwaysScanner struct {
+    type alwaysScanner struct {
         i *interface{}
     }
     func (s *alwaysScanner) Scan(src interface{}) error {
@@ -64,51 +64,57 @@ type ExtraSrv_Queries struct {
 opts ExtraSrv_Opts
 }
 // ExtraSrvPersistQueries returns all the known 'SQL' queires for the 'ExtraSrv' service.
-    func ExtraSrvPersistQueries(opts ...ExtraSrv_Opts) *ExtraSrv_Queries {
-        var myOpts ExtraSrv_Opts
-        if len(opts) > 0 {
-            myOpts = opts[0]
-        } else {
-            myOpts = ExtraSrvOpts(nil, nil)
-        }
-        return &ExtraSrv_Queries{
-            opts: myOpts,
-        }
+func ExtraSrvPersistQueries(opts ...ExtraSrv_Opts) *ExtraSrv_Queries {
+    var myOpts ExtraSrv_Opts
+    if len(opts) > 0 {
+        myOpts = opts[0]
+    } else {
+        myOpts = ExtraSrvOpts(nil, nil)
     }
-    // ExtraQuery returns a new struct wrapping the current ExtraSrv_Opts
-        // that will perform 'ExtraSrv' services 'extra' on the database
-        // when executed
-        func (this *ExtraSrv_Queries) Extra(ctx context.Context, db Runnable) *ExtraSrv_ExtraQuery {
-            return &ExtraSrv_ExtraQuery{
-                opts: this.opts,
-				ctx: ctx,
-				db: db,
-            }
+    return &ExtraSrv_Queries{
+        opts: myOpts,
+    }
+}
+    
+// ExtraQuery returns a new struct wrapping the current ExtraSrv_Opts
+// that will perform 'ExtraSrv' services 'extra' on the database
+// when executed
+func (this *ExtraSrv_Queries) Extra(ctx context.Context, db Runnable) *ExtraSrv_ExtraQuery {
+    return &ExtraSrv_ExtraQuery{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type ExtraSrv_ExtraQuery struct {
+    opts ExtraSrv_Opts
+    db Runnable
+    ctx context.Context
+}
+func (this *ExtraSrv_ExtraQuery) QueryInTypeUser()  {}
+func (this *ExtraSrv_ExtraQuery) QueryOutTypeUser() {}
+// Executes the query with parameters retrieved from x
+func (this *ExtraSrv_ExtraQuery) Execute(x ExtraSrv_ExtraIn) *ExtraSrv_ExtraIter {
+    var setupErr error
+    result := &ExtraSrv_ExtraIter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+        stmt := spanner.Statement{
+            SQL: "SELECT * FROM extra_unary",
+            Params: map[string]interface{}{
+                
+            },
         }
-        type ExtraSrv_ExtraQuery struct {
-			opts ExtraSrv_Opts
-			db Runnable
-			ctx context.Context
-        }
-        func (this *ExtraSrv_ExtraQuery) QueryInTypeUser()  {}
-        func (this *ExtraSrv_ExtraQuery) QueryOutTypeUser() {}
-        // Executes the query with parameters retrieved from x
-        func (this *ExtraSrv_ExtraQuery) Execute(x ExtraSrv_ExtraIn) *ExtraSrv_ExtraIter {
-            var setupErr error
-            params := []interface{}{
-            
-            }
-            result := &ExtraSrv_ExtraIter{
-                tm: this.opts.MAPPINGS,
-                ctx: this.ctx,
-            }
-            if setupErr != nil {
-                result.err = setupErr
-                return result
-            }
-            result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT * FROM extra_unary", params...)
-            return result
-        }
+        return nil
+    })
+    return result
+}
         type ExtraSrv_ExtraIter struct {
             result sql.Result
             rows   *sql.Rows
@@ -355,7 +361,7 @@ type ExtraSrv_DefaultHooks struct{}
 type ExtraSrv_TypeMappings interface{
 }
 type ExtraSrv_DefaultTypeMappings struct{}
-	
+    
 type ExtraSrv_Opts struct {
     MAPPINGS ExtraSrv_TypeMappings
     HOOKS    ExtraSrv_Hooks
@@ -794,6 +800,171 @@ opts MySpanner_Opts
             result.result, result.err = this.db.ExecContext(this.ctx, "update example_table set name='asdf' pk(id=@id)", params...)
             return result
         }
+        return nil
+    })
+    return result
+}
+        
+// SelectAllQuery returns a new struct wrapping the current MySpanner_Opts
+// that will perform 'MySpanner' services 'select_all' on the database
+// when executed
+func (this *MySpanner_Queries) SelectAll(ctx context.Context, db Runnable) *MySpanner_SelectAllQuery {
+    return &MySpanner_SelectAllQuery{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type MySpanner_SelectAllQuery struct {
+    opts MySpanner_Opts
+    db Runnable
+    ctx context.Context
+}
+func (this *MySpanner_SelectAllQuery) QueryInTypeUser()  {}
+func (this *MySpanner_SelectAllQuery) QueryOutTypeUser() {}
+// Executes the query with parameters retrieved from x
+func (this *MySpanner_SelectAllQuery) Execute(x MySpanner_SelectAllIn) *MySpanner_SelectAllIter {
+    var setupErr error
+    result := &MySpanner_SelectAllIter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+        stmt := spanner.Statement{
+            SQL: "SELECT * FROM example_table",
+            Params: map[string]interface{}{
+                
+            },
+        }
+        return nil
+    })
+    return result
+}
+        
+// Insert_3Query returns a new struct wrapping the current MySpanner_Opts
+// that will perform 'MySpanner' services 'insert_3' on the database
+// when executed
+func (this *MySpanner_Queries) Insert_3(ctx context.Context, db Runnable) *MySpanner_Insert_3Query {
+    return &MySpanner_Insert_3Query{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type MySpanner_Insert_3Query struct {
+    opts MySpanner_Opts
+    db Runnable
+    ctx context.Context
+}
+func (this *MySpanner_Insert_3Query) QueryInTypeUser()  {}
+func (this *MySpanner_Insert_3Query) QueryOutTypeUser() {}
+// Executes the query with parameters retrieved from x
+func (this *MySpanner_Insert_3Query) Execute(x MySpanner_Insert_3In) *MySpanner_Insert_3Iter {
+    var setupErr error
+    result := &MySpanner_Insert_3Iter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+        stmt := spanner.Statement{
+            SQL: "INSERT INTO example_table (id, start_time, name) VALUES (@id, @start_time, 3)",
+            Params: map[string]interface{}{
+                "id": x.GetId(),
+"start_time": x.GetStartTime(),
+            },
+        }
+        return nil
+    })
+    return result
+}
+        
+// DeleteIdQuery returns a new struct wrapping the current MySpanner_Opts
+// that will perform 'MySpanner' services 'delete_id' on the database
+// when executed
+func (this *MySpanner_Queries) DeleteId(ctx context.Context, db Runnable) *MySpanner_DeleteIdQuery {
+    return &MySpanner_DeleteIdQuery{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type MySpanner_DeleteIdQuery struct {
+    opts MySpanner_Opts
+    db Runnable
+    ctx context.Context
+}
+func (this *MySpanner_DeleteIdQuery) QueryInTypeUser()  {}
+func (this *MySpanner_DeleteIdQuery) QueryOutTypeUser() {}
+// Executes the query with parameters retrieved from x
+func (this *MySpanner_DeleteIdQuery) Execute(x MySpanner_DeleteIdIn) *MySpanner_DeleteIdIter {
+    var setupErr error
+    result := &MySpanner_DeleteIdIter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+        stmt := spanner.Statement{
+            SQL: "DELETE FROM example_table VALUES(@id)",
+            Params: map[string]interface{}{
+                "id": x.GetId(),
+            },
+        }
+        return nil
+    })
+    return result
+}
+        
+// SetNameAsdfQuery returns a new struct wrapping the current MySpanner_Opts
+// that will perform 'MySpanner' services 'set_name_asdf' on the database
+// when executed
+func (this *MySpanner_Queries) SetNameAsdf(ctx context.Context, db Runnable) *MySpanner_SetNameAsdfQuery {
+    return &MySpanner_SetNameAsdfQuery{
+        opts: this.opts,
+        ctx: ctx,
+        db: db,
+    }
+}
+type MySpanner_SetNameAsdfQuery struct {
+    opts MySpanner_Opts
+    db Runnable
+    ctx context.Context
+}
+func (this *MySpanner_SetNameAsdfQuery) QueryInTypeUser()  {}
+func (this *MySpanner_SetNameAsdfQuery) QueryOutTypeUser() {}
+// Executes the query with parameters retrieved from x
+func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySpanner_SetNameAsdfIter {
+    var setupErr error
+    result := &MySpanner_SetNameAsdfIter{
+        tm: this.opts.MAPPINGS,
+        ctx: this.ctx,
+    }
+    if setupErr != nil {
+        result.err = setupErr
+        return result
+    }
+    _, err := this.opts.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+        stmt := spanner.Statement{
+            SQL: "update example_table set name='asdf' pk(id=@id)",
+            Params: map[string]interface{}{
+                "id": x.GetId(),
+            },
+        }
+        return nil
+    })
+    return result
+}
         type MySpanner_InsertIter struct {
             result sql.Result
             rows   *sql.Rows
@@ -2320,48 +2491,48 @@ ClientStreamUpdateWithHooksAfterHook(context.Context, *test.ExampleTable,*test.N
 }
 type MySpanner_DefaultHooks struct{}
 func(*MySpanner_DefaultHooks) UniarySelectWithHooksBeforeHook(context.Context, *test.ExampleTable) (*test.ExampleTable, error) {
-			return nil, nil
-		}
-		func(*MySpanner_DefaultHooks) ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error) {
-			return nil, nil
-		}
-		func(*MySpanner_DefaultHooks) ClientStreamUpdateWithHooksBeforeHook(context.Context, *test.ExampleTable) (*test.NumRows, error) {
-			return nil, nil
-		}
-		func(*MySpanner_DefaultHooks) UniarySelectWithHooksAfterHook(context.Context, *test.ExampleTable,*test.ExampleTable)error {
-			return nil
-		}
-		func(*MySpanner_DefaultHooks) ServerStreamWithHooksAfterHook(context.Context, *test.Name,*test.ExampleTable)error {
-			return nil
-		}
-		func(*MySpanner_DefaultHooks) ClientStreamUpdateWithHooksAfterHook(context.Context, *test.ExampleTable,*test.NumRows)error {
-			return nil
-		}
-		type MySpanner_TypeMappings interface{
+            return nil, nil
+        }
+        func(*MySpanner_DefaultHooks) ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error) {
+            return nil, nil
+        }
+        func(*MySpanner_DefaultHooks) ClientStreamUpdateWithHooksBeforeHook(context.Context, *test.ExampleTable) (*test.NumRows, error) {
+            return nil, nil
+        }
+        func(*MySpanner_DefaultHooks) UniarySelectWithHooksAfterHook(context.Context, *test.ExampleTable,*test.ExampleTable)error {
+            return nil
+        }
+        func(*MySpanner_DefaultHooks) ServerStreamWithHooksAfterHook(context.Context, *test.Name,*test.ExampleTable)error {
+            return nil
+        }
+        func(*MySpanner_DefaultHooks) ClientStreamUpdateWithHooksAfterHook(context.Context, *test.ExampleTable,*test.NumRows)error {
+            return nil
+        }
+        type MySpanner_TypeMappings interface{
 TimestampTimestamp() MySpannerTimestampTimestampMappingImpl
 () MySpannerMappingImpl
 }
 type MySpanner_DefaultTypeMappings struct{}
-	func (this *MySpanner_DefaultTypeMappings) TimestampTimestamp() MySpannerTimestampTimestampMappingImpl {
-			return &MySpanner_DefaultTimestampTimestampMappingImpl{}
-		}
-		type MySpanner_DefaultTimestampTimestampMappingImpl struct{}
-		func (this *MySpanner_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
-			return nil
-		}
-		func (this *MySpanner_DefaultTimestampTimestampMappingImpl) Empty() MySpannerTimestampTimestampMappingImpl {
-			return this
-		}
-		func (this *MySpanner_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
-			return this
-		}
-		func (this *MySpanner_DefaultTimestampTimestampMappingImpl) Scan(interface{}) error {
-			return nil
-		}
-		func (this *MySpanner_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
-			return "DEFAULT_TYPE_MAPPING_VALUE", nil
-		}
-		type MySpannerTimestampTimestampMappingImpl interface {
+    func (this *MySpanner_DefaultTypeMappings) TimestampTimestamp() MySpannerTimestampTimestampMappingImpl {
+            return &MySpanner_DefaultTimestampTimestampMappingImpl{}
+        }
+        type MySpanner_DefaultTimestampTimestampMappingImpl struct{}
+        func (this *MySpanner_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
+            return nil
+        }
+        func (this *MySpanner_DefaultTimestampTimestampMappingImpl) Empty() MySpannerTimestampTimestampMappingImpl {
+            return this
+        }
+        func (this *MySpanner_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
+            return this
+        }
+        func (this *MySpanner_DefaultTimestampTimestampMappingImpl) Scan(interface{}) error {
+            return nil
+        }
+        func (this *MySpanner_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
+            return "DEFAULT_TYPE_MAPPING_VALUE", nil
+        }
+        type MySpannerTimestampTimestampMappingImpl interface {
             ToProto(**timestamp.Timestamp) error
             Empty() MySpannerTimestampTimestampMappingImpl
             ToSql(*timestamp.Timestamp) sql.Scanner
@@ -2369,25 +2540,25 @@ type MySpanner_DefaultTypeMappings struct{}
             driver.Valuer
         }
 func (this *MySpanner_DefaultTypeMappings) () MySpannerMappingImpl {
-			return &MySpanner_DefaultMappingImpl{}
-		}
-		type MySpanner_DefaultMappingImpl struct{}
-		func (this *MySpanner_DefaultMappingImpl) ToProto(**) error {
-			return nil
-		}
-		func (this *MySpanner_DefaultMappingImpl) Empty() MySpannerMappingImpl {
-			return this
-		}
-		func (this *MySpanner_DefaultMappingImpl) ToSql(*) sql.Scanner {
-			return this
-		}
-		func (this *MySpanner_DefaultMappingImpl) Scan(interface{}) error {
-			return nil
-		}
-		func (this *MySpanner_DefaultMappingImpl) Value() (driver.Value, error) {
-			return "DEFAULT_TYPE_MAPPING_VALUE", nil
-		}
-		type MySpannerMappingImpl interface {
+            return &MySpanner_DefaultMappingImpl{}
+        }
+        type MySpanner_DefaultMappingImpl struct{}
+        func (this *MySpanner_DefaultMappingImpl) ToProto(**) error {
+            return nil
+        }
+        func (this *MySpanner_DefaultMappingImpl) Empty() MySpannerMappingImpl {
+            return this
+        }
+        func (this *MySpanner_DefaultMappingImpl) ToSql(*) sql.Scanner {
+            return this
+        }
+        func (this *MySpanner_DefaultMappingImpl) Scan(interface{}) error {
+            return nil
+        }
+        func (this *MySpanner_DefaultMappingImpl) Value() (driver.Value, error) {
+            return "DEFAULT_TYPE_MAPPING_VALUE", nil
+        }
+        type MySpannerMappingImpl interface {
             ToProto(**) error
             Empty() MySpannerMappingImpl
             ToSql(*) sql.Scanner
