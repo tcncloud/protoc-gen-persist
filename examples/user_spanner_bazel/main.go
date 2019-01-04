@@ -85,7 +85,7 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 		MAPPINGS: &MappingImpl{},
 	})
 	// renameToFoo := queries.UpdateNameToFooQuery(ctx)
-	allUsers := queries.GetAllUsers(ctx, d.DB).Execute(req)
+	allUsers := queries.GetAllUsers(ctx, d.DB.Single()).Execute(req)
 	// selectUser := queries.SelectUserByIdQuery(ctx)
 
 	return allUsers.Each(func(row *pb.UServ_GetAllUsersRow) error {

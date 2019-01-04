@@ -481,10 +481,11 @@ func (this *`, sName, `_`, camelQ(q), `Query) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q), `In) *`, sName, `_`, camelQ(q), `Iter {
+	ctx := this.ctx
 	result := &`, sName, `_`, camelQ(q), `Iter{
 		result: &SpannerResult{},
 		tm: this.opts.MAPPINGS,
-		ctx: this.ctx,
+		ctx: ctx,
 	}
 	params, err  := func() (map[string]interface{}, error) {
 		result := make(map[string]interface{})
@@ -495,21 +496,12 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
 		result.err = err
 		return result
 	}
-	_, err = this.db.ReadWriteTransaction(this.ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-		stmt := spanner.Statement{
-			SQL: "`, qstring(q), `",
-			Params: params,
-		}
 
-		iter := txn.QueryWithStats(ctx, stmt)
-		result.rows = iter
-
-		result.result = &SpannerResult{
-			iter: iter,
-		}
-
-		return nil
+	iter := txn.QueryWithStats(ctx, spanner.Statement{
+		SQL: "`, qstring(q), `",
+		Params: params,
 	})
+	result.rows = iter
 
 	result.err = err
 	return result

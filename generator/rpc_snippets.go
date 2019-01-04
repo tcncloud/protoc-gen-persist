@@ -133,7 +133,7 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
         {{end}}
         result := query.Execute(req)
         if err := result.Zero(); err != nil {
-            return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
+            return err
         }
     }
     if err := tx.Commit(); err != nil {
