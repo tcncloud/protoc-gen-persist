@@ -701,99 +701,6 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 		}, mustDefaultMapping(f))
 	}
 
-	colswitchSpanner := func(opt *QueryProtoOpts) string {
-		cases := make(map[string]string)
-		// message case
-		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
-			cases[fName(f)] = P(`case "`, fName(f), `":
-				r, ok := (*scanned[i].i).([]byte)
-				if !ok {
-					return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type *`, mustDefaultMappingNoStar(f), `")}, true
-				}
-				var converted = new(`, mustDefaultMappingNoStar(f), `)
-				if err := proto.Unmarshal(r, converted); err != nil {
-					return &`, sName, `_`, camelQ(q), `Row{err: err}, true
-				}
-				res.`, camelF(f), ` = converted
-			`)
-		}, m.MatchQuery(opt))
-
-		// fits case
-		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
-			typ, err := defaultMapping(f, s.File)
-			// SET OUT ERR
-			if err != nil {
-				outErr = err
-			}
-			cases[f.GetName()] = P(`case "`, fName(f), `":
-			r, ok := (*scanned[i].i).(`, typ, `)
-			if !ok {
-				return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type `, f.GetTypeName(), `")}, true
-			}
-			res.`, camelF(f), `= r
-			`)
-		}, m.MatchQuery(opt), m.QueryFieldFitsDB)
-		// enum case
-		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
-			ename := convertedMsgTypeByProtoName(f.GetTypeName(), s.File)
-			cases[fName(f)] = P(`case "`, fName(f), `":
-				r, ok := (*scanned[i].i).(int32)
-				if !ok {
-					return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type *`, mustDefaultMappingNoStar(f), `")}, true
-				}
-				var converted = (`, ename, `)(r)
-				res.`, camelF(f), ` = converted
-			`)
-		}, m.MatchQuery(opt), func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
-			str := s.AllStructs.GetStructByProtoName(f.GetTypeName())
-			return str != nil && str.EnumDesc != nil
-		})
-		// mapping case
-		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
-			m.EachTM(func(opt *TypeMappingProtoOpts) {
-				_, titled := getGoNamesForTypeMapping(opt.tm, s.File)
-				cases[fName(f)] = P(`case "`, fName(f), `":
-					var converted = this.tm.`, titled, `().Empty()
-					if err := converted.Scan(*scanned[i].i); err != nil {
-						return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("could not convert mapped db column `, fName(f), ` to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
-					}
-					if err := converted.ToProto(&res.`, camelF(f), `); err != nil {
-						return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("could not convert mapped db column `, fName(f), `to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
-					}
-				`)
-			}, m.MatchTypeMapping(f))
-		}, m.MatchQuery(opt), m.QueryFieldIsMapped)
-		// mapped enum
-		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
-			m.EachTM(func(opt *TypeMappingProtoOpts) {
-				_, titled := getGoNamesForTypeMapping(opt.tm, s.File)
-				cases[fName(f)] = P(`case "`, fName(f), `":
-					var converted = this.tm.`, titled, `().Empty()
-					if err := converted.Scan(*scanned[i].i); err != nil {
-						return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("could not convert mapped db column `, fName(f), ` to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
-					}
-					pToRes := &res.`, camelF(f), `
-
-					if err := converted.ToProto(&pToRes); err != nil {
-						return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("could not convert mapped db column `, fName(f), `to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
-					}
-				`)
-			}, m.MatchTypeMapping(f))
-		}, m.MatchQuery(opt), m.QueryFieldIsMapped, func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
-			str := s.AllStructs.GetStructByProtoName(f.GetTypeName())
-			return str != nil && str.EnumDesc != nil
-		})
-
-		printer := &Printer{}
-
-		// loop this way to prevent random order write because map ordering iteration is random
-		m.EachQueryOut(func(f *desc.FieldDescriptorProto, _ *QueryProtoOpts) {
-			printer.Q(cases[fName(f)])
-		}, m.MatchQuery(opt))
-
-		return printer.String()
-	}
-
 	colswitch := func(opt *QueryProtoOpts) string {
 		cases := make(map[string]string)
 		// message case
@@ -1089,18 +996,9 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
 		// Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 		func (this *`, sName, `_`, camelQ(q), `Iter) Next() (*`, sName, `_`, camelQ(q), `Row, bool) {
-			if this.err == io.EOF || this.result == nil || this.result.iter == nil {
-				return nil, false
-			} else if this.err != nil {
-				err := this.err
-				this.err = io.EOF
-				return &`, sName, `_`, camelQ(q), `Row{err: err}, true
-			}
-
 			row, err := this.rows.Next()
 			_ = row
 			if err == iterator.Done {
-				// this.err = io.EOF
 				return nil, false
 			}
 			if err != nil {
@@ -1108,36 +1006,6 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			}
 
 			`, rowToProto(q), `
-			/*
-			cols, err := this.rows.Columns()
-			if err != nil {
-				return &`, sName, `_`, camelQ(q), `Row{err: err}, true
-			}
-			if !this.rows.Next() {
-				if this.err = this.rows.Err(); this.err == nil {
-					this.err = io.EOF
-					return nil, false
-				}
-			}
-			toScan := make([]interface{}, len(cols))
-			scanned := make([]alwaysScanner, len(cols))
-			for i := range scanned {
-				toScan[i] = &scanned[i]
-			}
-			if this.err = this.rows.Scan(toScan...); this.err != nil {
-				return &`, sName, `_`, camelQ(q), `Row{err: this.err}, true
-			}
-			res := &`, outName(q), `{}
-			for i, col := range cols {
-				_ = i
-				switch col {
-				`, colswitchSpanner(q), `
-				default:
-					return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-				}
-			}
-			return &`, sName, `_`, camelQ(q), `Row{item: res}, true
-			*/
 			res := &`, outName(q), `{}
 
 			return &`, sName, `_`, camelQ(q), `Row{item: res}, true
@@ -1155,19 +1023,6 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			}
 			return results
 		}
-
-		/*
-		// returns the known columns for this result
-		func (r *`, sName, `_`, camelQ(q), `Iter) Columns() ([]string, error) {
-			if r.err != nil {
-				return nil, r.err
-			}
-			if r.rows != nil {
-				return r.rows.Columns()
-			}
-			return nil, nil
-		}
-		*/
 
 		`)
 		})

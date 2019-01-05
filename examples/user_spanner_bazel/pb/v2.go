@@ -382,13 +382,6 @@ func (this *UServ_InsertUsersIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
-	if this.rows == nil || this.err == io.EOF {
-		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_InsertUsersRow{err: err}, true
-	}
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
