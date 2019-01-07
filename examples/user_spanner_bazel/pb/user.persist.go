@@ -1268,8 +1268,23 @@ func (this *UServ_CreateUsersTableRow) Unwrap(pointerToMsg proto.Message) error 
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_CreateUsersTableRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 func (this *UServ_CreateUsersTableRow) Proto() (*Empty, error) {
@@ -1483,8 +1498,31 @@ func (this *UServ_UpdateUserNameRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_UpdateUserNameRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_UpdateUserNameRow) Proto() (*User, error) {
@@ -1522,8 +1560,23 @@ func (this *UServ_UpdateNameToFooRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_UpdateNameToFooRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 func (this *UServ_UpdateNameToFooRow) Proto() (*Empty, error) {
@@ -1557,8 +1610,31 @@ func (this *UServ_GetFriendsRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_GetFriendsRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_GetFriendsRow) Proto() (*User, error) {
@@ -1592,8 +1668,23 @@ func (this *UServ_DropRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_DropRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 func (this *UServ_DropRow) Proto() (*Empty, error) {
@@ -1731,11 +1822,31 @@ func UServPersistImpl(db *spanner.Client, handlers RestOfUServHandlers, opts ...
 }
 
 type RestOfUServHandlers interface {
+	UpdateUserNames(UServ_UpdateUserNamesServer) error
 	UpdateAllNames(*Empty, UServ_UpdateAllNamesServer) error
+}
+
+func (this *UServ_Impl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
+	return this.HANDLERS.UpdateUserNames(stream)
 }
 
 func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
 	return this.HANDLERS.UpdateAllNames(req, stream)
+}
+
+func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
+	query := this.QUERIES.CreateUsersTable(ctx, this.DB.Single())
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
@@ -1816,6 +1927,55 @@ func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, e
 
 	result := query.Execute(req)
 	res, err := result.One().User()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
+	query := this.QUERIES.UpdateNameToFoo(ctx, this.DB.Single())
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (this *UServ_Impl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
+	if err := this.GetFriendsTx(req, stream, this.DB.Single()); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'get_friends' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsServer, tx PersistTx) error {
+	ctx := stream.Context()
+	query := this.QUERIES.GetFriends(ctx, tx)
+	iter := query.Execute(req)
+	return iter.Each(func(row *UServ_GetFriendsRow) error {
+		res, err := row.User()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
+	})
+}
+
+func (this *UServ_Impl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
+	query := this.QUERIES.Drop(ctx, this.DB.Single())
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
 	if err != nil {
 		return nil, err
 	}

@@ -34,7 +34,6 @@ import (
 	"cloud.google.com/go/spanner"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/lib/pq"
 )
 
 type TimeString struct {
@@ -88,17 +87,20 @@ func (s *SliceStringConverter) ToProto(req **SliceStringParam) error {
 }
 
 func (s *SliceStringConverter) SpannerScan(src *spanner.GenericColumnValue) error {
-	var in pq.StringArray
-	if err := in.Scan(src); err != nil {
+	values := make([]string, 0)
+	if err := src.Decode(values); err != nil {
 		return err
 	}
-	s.v = &SliceStringParam{Slice: []string(in)}
+
+	s.v = &SliceStringParam{Slice: []string(values)}
+
 	return nil
 }
 
 func (s *SliceStringConverter) SpannerValue() (interface{}, error) {
-	return pq.StringArray(s.v.Slice).Value()
+	return s.v.GetSlice(), nil
 }
+
 func (s *SliceStringConverter) Empty() UServSliceStringParamMappingImpl {
 	return new(SliceStringConverter)
 }

@@ -109,3 +109,7 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 
 	})
 }
+
+func (d *RestOfImpl) UpdateUserNames(stream pb.UServ_UpdateUserNamesServer) error {
+	return nil
+}

@@ -128,11 +128,11 @@ service UServ {
       out: ".pb.Empty"
     }]
   };
-  // rpc CreateTable(Empty) returns (Empty) {
-  //   option (persist.opts) = {
-  //     query: "create_users_table"
-  //   };
-  // };
+  rpc CreateTable(Empty) returns (Empty) {
+    option (persist.opts) = {
+      query: "create_users_table"
+    };
+  };
   rpc InsertUsers(stream User) returns (Empty) {
     option (persist.opts) = {
       query: "insert_users",
@@ -152,25 +152,25 @@ service UServ {
       query: "select_user_by_id"
     };
   };
-  // rpc UpdateUserNames(stream User) returns (stream User) {
-  //   option (persist.opts) = {
-  //     query: "update_user_name"
-  //   };
-  // };
-  // rpc UpdateNameToFoo(User) returns (Empty) {
-  //   option (persist.opts) = {
-  //     query: "update_name_to_foo"
-  //   };
-  // };
+  rpc UpdateUserNames(stream User) returns (stream User) {
+    option (persist.opts) = {
+      query: "update_user_name"
+    };
+  };
+  rpc UpdateNameToFoo(User) returns (Empty) {
+    option (persist.opts) = {
+      query: "update_name_to_foo"
+    };
+  };
   rpc UpdateAllNames(Empty) returns (stream User) {};
-  // rpc GetFriends(FriendsReq) returns(stream User) {
-  //   option (persist.opts) = {
-  //     query: "get_friends"
-  //   };
-  // };
-  // rpc DropTable(Empty) returns (Empty) {
-  //   option (persist.opts) = {
-  //     query: "drop"
-  //   };
-  // };
+  rpc GetFriends(FriendsReq) returns(stream User) {
+    option (persist.opts) = {
+      query: "get_friends"
+    };
+  };
+  rpc DropTable(Empty) returns (Empty) {
+    option (persist.opts) = {
+      query: "drop"
+    };
+  };
 }
