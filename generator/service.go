@@ -1330,7 +1330,7 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 		}
 
 		if m.ServerStreaming(mpo) {
-			err = WriteSeverStream(p, params)
+			err = WriteServerStream(p, params, s.IsSQL())
 			if err != nil {
 				outErr = err
 			}

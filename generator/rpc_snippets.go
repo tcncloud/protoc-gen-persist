@@ -214,10 +214,11 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
 }
         `
 
+  var clientStreamingFormat string
   if (isSql) {
-    clientStreamingFormat := sqlClientStreamingFormat
+    clientStreamingFormat = sqlClientStreamingFormat
   } else {
-    clientStreamingFormat := spannerClientStreamingFormat
+    clientStreamingFormat = spannerClientStreamingFormat
   }
 
 	funcMap := template.FuncMap{
@@ -288,17 +289,18 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
 		"oneOrZero": OneOrZero,
 	}
 
+  var unaryFormat string
   if (isSql) {
-    unaryFormat := sqlUnaryFormat
+    unaryFormat = sqlUnaryFormat
   } else {
-    unaryFormat := spannerUnaryFormat
+    unaryFormat = spannerUnaryFormat
   }
 
 	t := template.Must(template.New("UnaryRequest").Funcs(funcMap).Parse(unaryFormat))
 	return t.Execute(printerProxy, params)
 }
 
-func WriteServerStream(printer *Printer, params *handlerParams) error {
+func WriteServerStream(printer *Printer, params *handlerParams, isSql bool) error {
 	printerProxy := NewPrinterProxy(printer)
   sqlServerFormat := `
 func (this *{{.Service}}_Impl) {{.Method}}(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server) error {
@@ -357,10 +359,11 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Servic
 		"camelCase": _gen.CamelCase,
 	}
 
+  var serverFormat string
   if (isSql) {
-    serverFormat := sqlServerFormat
+    serverFormat = sqlServerFormat
   } else {
-    serverFormat := spannerServerFormat
+    serverFormat = spannerServerFormat
   }
 
 	t := template.Must(template.New("ServerStream").Funcs(funcMap).Parse(serverFormat))
