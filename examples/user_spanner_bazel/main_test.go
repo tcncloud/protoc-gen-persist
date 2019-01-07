@@ -108,12 +108,12 @@ var _ = Describe("persist", func() {
 
 	})
 
-	// PIt("can select a user by id", func() {
-	// 	u, err := client.SelectUserById(context.Background(), &pb.User{Id: 0})
-	// 	Expect(err).ToNot(HaveOccurred())
-	// 	u.Id = -1
-	// 	Expect(u).To(BeEquivalentTo(users[0]))
-	// })
+	It("can select a user by id", func() {
+		u, err := client.SelectUserById(context.Background(), &pb.User{Id: 0})
+		Expect(err).ToNot(HaveOccurred())
+		u.Id = -1
+		Expect(proto.MarshalTextString(u)).To(BeEquivalentTo(proto.MarshalTextString(users[0])))
+	})
 
 	// PIt("can select all friends of foo", func() {
 	// 	foo, err := client.SelectUserById(context.Background(), &pb.User{Id: 0}) // foo

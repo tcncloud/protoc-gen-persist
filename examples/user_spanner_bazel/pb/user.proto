@@ -147,11 +147,11 @@ service UServ {
       before: true
     };
   };
-  // rpc SelectUserById(User) returns (User) {
-  //   option (persist.opts) = {
-  //     query: "select_user_by_id"
-  //   };
-  // };
+  rpc SelectUserById(User) returns (User) {
+    option (persist.opts) = {
+      query: "select_user_by_id"
+    };
+  };
   // rpc UpdateUserNames(stream User) returns (stream User) {
   //   option (persist.opts) = {
   //     query: "update_user_name"

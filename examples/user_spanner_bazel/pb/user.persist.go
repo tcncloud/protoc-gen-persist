@@ -1417,8 +1417,31 @@ func (this *UServ_SelectUserByIdRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_SelectUserByIdRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_SelectUserByIdRow) Proto() (*User, error) {
@@ -1786,4 +1809,16 @@ func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer
 		}
 		return stream.Send(res)
 	})
+}
+
+func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, error) {
+	query := this.QUERIES.SelectUserById(ctx, this.DB.Single())
+
+	result := query.Execute(req)
+	res, err := result.One().User()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

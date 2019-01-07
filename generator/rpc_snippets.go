@@ -263,7 +263,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
   `
 	spannerUnaryFormat := `
 func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
-    query := this.QUERIES.{{camelCase .Query}}(ctx, this.DB)
+    query := this.QUERIES.{{camelCase .Query}}(ctx, this.DB.Single())
     {{if .Before}}
     beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(ctx, req)
     if err != nil {
