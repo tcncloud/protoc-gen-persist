@@ -6,7 +6,6 @@ package pb
 import (
 	fmt "fmt"
 	io "io"
-	"time"
 
 	spanner "cloud.google.com/go/spanner"
 	proto "github.com/golang/protobuf/proto"
@@ -20,26 +19,6 @@ import (
 type PersistTx interface {
 	Runnable
 }
-
-func (this *ignoreTx) ReadWriteTransaction(ctx context.Context, do func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error) {
-	return this.r.ReadWriteTransaction(ctx, do)
-}
-func (this *ignoreTx) Single() *spanner.ReadOnlyTransaction {
-	return this.r.Single()
-}
-
-// func DefaultClientStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-// 	return NopPersistTx(r)
-// }
-// func DefaultServerStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-// 	return NopPersistTx(r)
-// }
-// func DefaultBidiStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-// 	return NopPersistTx(r)
-// }
-// func DefaultUnaryPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-// 	return NopPersistTx(r)
-// }
 type Result interface {
 	LastInsertId() (int64, error)
 	RowsAffected() (int64, error)
@@ -713,8 +692,16 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 	}
 
 	var created_on *timestamp.Timestamp
-	if err := row.ColumnByName("created_on", &created_on); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column created_on to protobuf go type *timestamp.Timestamp")}, true
+	var created_on_col spanner.GenericColumnValue
+	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+	}
+	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+	}
+	if err := convert_created_on.ToProto(&created_on); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
 	res := &User{}
@@ -815,8 +802,16 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 	}
 
 	var created_on *timestamp.Timestamp
-	if err := row.ColumnByName("created_on", &created_on); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column created_on to protobuf go type *timestamp.Timestamp")}, true
+	var created_on_col spanner.GenericColumnValue
+	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+	}
+	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+	}
+	if err := convert_created_on.ToProto(&created_on); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
 	res := &User{}
@@ -917,8 +912,16 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 	}
 
 	var created_on *timestamp.Timestamp
-	if err := row.ColumnByName("created_on", &created_on); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column created_on to protobuf go type *timestamp.Timestamp")}, true
+	var created_on_col spanner.GenericColumnValue
+	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+	}
+	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+	}
+	if err := convert_created_on.ToProto(&created_on); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
 	res := &User{}
@@ -1102,8 +1105,16 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 	}
 
 	var created_on *timestamp.Timestamp
-	if err := row.ColumnByName("created_on", &created_on); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column created_on to protobuf go type *timestamp.Timestamp")}, true
+	var created_on_col spanner.GenericColumnValue
+	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+	}
+	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+	}
+	if err := convert_created_on.ToProto(&created_on); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
 	res := &User{}
@@ -1225,23 +1236,8 @@ func (this *UServ_CreateUsersTableRow) Unwrap(pointerToMsg proto.Message) error 
 	if this.err != nil {
 		return this.err
 	}
-	if o, ok := (pointerToMsg).(*Empty); ok {
-		if o == nil {
-			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
-		}
-		res, _ := this.Empty()
-		_ = res
-
-		return nil
-	}
 
 	return nil
-}
-func (this *UServ_CreateUsersTableRow) Empty() (*Empty, error) {
-	if this.err != nil {
-		return nil, this.err
-	}
-	return &Empty{}, nil
 }
 
 func (this *UServ_CreateUsersTableRow) Proto() (*Empty, error) {
@@ -1687,33 +1683,14 @@ func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesSe
 	return this.HANDLERS.UpdateAllNames(req, stream)
 }
 
-func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
-	query := this.QUERIES.CreateUsersTable(ctx, this.DB)
-
-	result := query.Execute(req)
-
-	err := result.Zero()
-	res := &Empty{}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
 func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
-	tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
-	if err != nil {
-		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-	}
-	if err := this.InsertUsersTx(stream, tx); err != nil {
+	if err := this.InsertUsersTx(stream); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
 	}
 	return nil
 }
-func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx PersistTx) error {
-	query := this.QUERIES.InsertUsers(stream.Context(), tx)
+func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
+	items := make([]*User, 0)
 	var first *User
 	for {
 		req, err := stream.Recv()
@@ -1733,15 +1710,20 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 			continue
 		}
 
-		result := query.Execute(req)
-		if err := result.Zero(); err != nil {
-			return err
-		}
+		items = append(items, req)
 	}
-	if err := tx.Commit(); err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return fmt.Errorf("error executing 'insert_users' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
+	_, err := this.DB.ReadWriteTransaction(stream.Context(), func(ctx context.Context, tx *spanner.ReadWriteTransaction) error {
+		for _, item := range items {
+			query := this.QUERIES.InsertUsers(ctx, tx)
+			result := query.Execute(item)
+			if err := result.Zero(); err != nil {
+				return err
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error in read write transaction: %v", err)
 	}
 	res := &Empty{}
 
@@ -1756,11 +1738,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 }
 
 func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
-	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
-	if err != nil {
-		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-	}
-	if err := this.GetAllUsersTx(req, stream, tx); err != nil {
+	if err := this.GetAllUsersTx(req, stream, this.DB.Single()); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'get_all_users' query: %v", err)
 	}
 	return nil

@@ -1348,7 +1348,7 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 			}
 		}
 		if m.ClientStreaming(mpo) {
-      err = WriteClientStreaming(p, params, s.IsSQL())
+			err = WriteClientStreaming(p, params, s.IsSQL())
 			if err != nil {
 				outErr = err
 			}
@@ -1467,27 +1467,6 @@ type scanable interface {
 type PersistTx interface {
 	Runnable
 }
-
-func (this *ignoreTx) ReadWriteTransaction(ctx context.Context, do func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error) {
-	return this.r.ReadWriteTransaction(ctx, do)
-}
-
-func (this *ignoreTx) Single() *spanner.ReadOnlyTransaction {
-	return this.r.Single()
-}
-
-// func DefaultClientStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-// 	return NopPersistTx(r)
-// }
-// func DefaultServerStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-// 	return NopPersistTx(r)
-// }
-// func DefaultBidiStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-// 	return NopPersistTx(r)
-// }
-// func DefaultUnaryPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-// 	return NopPersistTx(r)
-// }
 
 type Result interface {
 	LastInsertId() (int64, error)

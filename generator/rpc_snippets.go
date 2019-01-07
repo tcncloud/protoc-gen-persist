@@ -156,20 +156,16 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
 }
         `
 
-  spannerClientStreamingFormat := `
+	spannerClientStreamingFormat := `
 func (this *{{.Service}}_Impl) {{.Method}}(stream {{.Service}}_{{.Method}}Server) error {
-    tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
-    if err != nil {
-        return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-    }
-    if err := this.{{.Method}}Tx(stream, tx); err != nil {
+    if err := this.{{.Method}}Tx(stream); err != nil {
         return gstatus.Errorf(codes.Unknown, "error executing '{{.Query}}' query: %v", err)
     }
     return nil
 }
 
-func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
-    query := this.QUERIES.{{camelCase .Query}}(stream.Context(), tx)
+func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server) error {
+    items := make([]*{{.Request}}, 0)
     var first *{{.Request}}
     for {
         req, err := stream.Recv()
@@ -189,16 +185,24 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
             continue
         }
         {{end}}
-        result := query.Execute(req)
-        if err := result.Zero(); err != nil {
-            return err
-        }
+
+        items = append(items, req)
     }
-    if err := tx.Commit(); err != nil {
-        if rollbackErr := tx.Rollback(); rollbackErr != nil {
-            return fmt.Errorf("error executing '{{.Query}}' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
+
+    _, err := this.DB.ReadWriteTransaction(stream.Context(), func(ctx context.Context, tx *spanner.ReadWriteTransaction) error {
+        for _, item := range items {
+            query := this.QUERIES.{{camelCase .Query}}(ctx, tx)
+            result := query.Execute(item)
+            if err := result.Zero(); err != nil {
+                return err
+            }
         }
-    }
+        return nil
+    })
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error in read write transaction: %v", err)
+	}
+
     res := &{{.Response}}{}
 
     {{if .After}}
@@ -214,12 +218,12 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
 }
         `
 
-  var clientStreamingFormat string
-  if (isSql) {
-    clientStreamingFormat = sqlClientStreamingFormat
-  } else {
-    clientStreamingFormat = spannerClientStreamingFormat
-  }
+	var clientStreamingFormat string
+	if isSql {
+		clientStreamingFormat = sqlClientStreamingFormat
+	} else {
+		clientStreamingFormat = spannerClientStreamingFormat
+	}
 
 	funcMap := template.FuncMap{
 		"camelCase": _gen.CamelCase,
@@ -257,7 +261,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
     return res, nil
 }
   `
-  spannerUnaryFormat := `
+	spannerUnaryFormat := `
 func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
     query := this.QUERIES.{{camelCase .Query}}(ctx, this.DB)
     {{if .Before}}
@@ -289,12 +293,12 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
 		"oneOrZero": OneOrZero,
 	}
 
-  var unaryFormat string
-  if (isSql) {
-    unaryFormat = sqlUnaryFormat
-  } else {
-    unaryFormat = spannerUnaryFormat
-  }
+	var unaryFormat string
+	if isSql {
+		unaryFormat = sqlUnaryFormat
+	} else {
+		unaryFormat = spannerUnaryFormat
+	}
 
 	t := template.Must(template.New("UnaryRequest").Funcs(funcMap).Parse(unaryFormat))
 	return t.Execute(printerProxy, params)
@@ -302,7 +306,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
 
 func WriteServerStream(printer *Printer, params *handlerParams, isSql bool) error {
 	printerProxy := NewPrinterProxy(printer)
-  sqlServerFormat := `
+	sqlServerFormat := `
 func (this *{{.Service}}_Impl) {{.Method}}(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server) error {
     tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
     if err != nil {
@@ -331,11 +335,7 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Servic
 
 	spannerServerFormat := `
 func (this *{{.Service}}_Impl) {{.Method}}(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server) error {
-    tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
-    if err != nil {
-        return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-    }
-    if err := this.{{.Method}}Tx(req, stream, tx); err != nil {
+    if err := this.{{.Method}}Tx(req, stream, this.DB.Single()); err != nil {
         return gstatus.Errorf(codes.Unknown, "error executing '{{.Query}}' query: %v", err)
     }
     return nil
@@ -359,12 +359,12 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Servic
 		"camelCase": _gen.CamelCase,
 	}
 
-  var serverFormat string
-  if (isSql) {
-    serverFormat = sqlServerFormat
-  } else {
-    serverFormat = spannerServerFormat
-  }
+	var serverFormat string
+	if isSql {
+		serverFormat = sqlServerFormat
+	} else {
+		serverFormat = spannerServerFormat
+	}
 
 	t := template.Must(template.New("ServerStream").Funcs(funcMap).Parse(serverFormat))
 	return t.Execute(printerProxy, params)
