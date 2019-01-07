@@ -927,12 +927,37 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			for _, field := range q.outFields {
 				name := field.GetName()
 				goType := mustDefaultMapping(field)
-				acc = append(acc, "var "+name+" "+goType)
-				acc = append(acc, `
+
+				if m.QueryFieldIsMapped(field, q) {
+					m.EachTM(func(opt *TypeMappingProtoOpts) {
+						_, titled := getGoNamesForTypeMapping(opt.tm, s.File)
+						acc = append(acc, `
+						var `+name+` `+goType+`
+						var `+name+`_col spanner.GenericColumnValue
+						if err := row.ColumnByName("`+name+`", &`+name+`_col); err != nil {
+							return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to convert db column `+name+` to spanner.GenericColumnValue")}, true
+						}
+
+						convert_`+name+` := this.tm.`+titled+`().Empty()
+						if err := convert_`+name+`.SpannerScan(&`+name+`_col); err != nil {
+							return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("SpannerScan failed for `+name+`")}, true
+						}
+
+						if err := convert_`+name+`.ToProto(&`+name+`); err != nil {
+							return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("ToProto for `+name+` when reading from spanner")}, true
+						}
+						`)
+
+					}, m.MatchTypeMapping(field))
+				} else {
+					acc = append(acc, "var "+name+" "+goType)
+					acc = append(acc, `
 			if err := row.ColumnByName("`+name+`", &`+name+`); err != nil {
 				return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("cant convert db column `+name+` to protobuf go type `+goType+`")}, true
 			}
 				`)
+
+				}
 			}
 			return strings.Join(acc, "\n")
 		}
