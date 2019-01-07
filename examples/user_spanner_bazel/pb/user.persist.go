@@ -510,7 +510,6 @@ func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool
 	if err != nil {
 		return &UServ_CreateUsersTableRow{err: err}, true
 	}
-
 	res := &Empty{}
 	return &UServ_CreateUsersTableRow{item: res}, true
 }
@@ -593,7 +592,6 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
 	}
-
 	res := &Empty{}
 	return &UServ_InsertUsersRow{item: res}, true
 }
@@ -686,9 +684,13 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
-	var friends *Friends
-	if err := row.ColumnByName("friends", &friends); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
@@ -704,7 +706,12 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		return &UServ_GetAllUsersRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
-	res := &User{}
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
+	}
 	return &UServ_GetAllUsersRow{item: res}, true
 }
 
@@ -796,9 +803,13 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
-	var friends *Friends
-	if err := row.ColumnByName("friends", &friends); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
@@ -814,7 +825,12 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		return &UServ_SelectUserByIdRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
-	res := &User{}
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
+	}
 	return &UServ_SelectUserByIdRow{item: res}, true
 }
 
@@ -906,9 +922,13 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
-	var friends *Friends
-	if err := row.ColumnByName("friends", &friends); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
@@ -924,7 +944,12 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		return &UServ_UpdateUserNameRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
-	res := &User{}
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
+	}
 	return &UServ_UpdateUserNameRow{item: res}, true
 }
 
@@ -1006,7 +1031,6 @@ func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) 
 	if err != nil {
 		return &UServ_UpdateNameToFooRow{err: err}, true
 	}
-
 	res := &Empty{}
 	return &UServ_UpdateNameToFooRow{item: res}, true
 }
@@ -1099,9 +1123,13 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
-	var friends *Friends
-	if err := row.ColumnByName("friends", &friends); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
@@ -1117,7 +1145,12 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		return &UServ_GetFriendsRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
-	res := &User{}
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
+	}
 	return &UServ_GetFriendsRow{item: res}, true
 }
 
@@ -1199,7 +1232,6 @@ func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
 	if err != nil {
 		return &UServ_DropRow{err: err}, true
 	}
-
 	res := &Empty{}
 	return &UServ_DropRow{item: res}, true
 }
