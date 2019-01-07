@@ -1461,7 +1461,7 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 		}
 
 		if m.Unary(mpo) {
-			err = WriteUnary(p, params)
+			err = WriteUnary(p, params, s.IsSQL())
 			if err != nil {
 				outErr = err
 			}
@@ -1584,21 +1584,9 @@ type scanable interface {
 	} else if hasSpanner {
 		p.Q(`
 type PersistTx interface {
-	Commit() error
-	Rollback() error
 	Runnable
 }
 
-func NopPersistTx(r Runnable) (PersistTx, error) {
-	return &ignoreTx{r}, nil
-}
-
-type ignoreTx struct {
-	r Runnable
-}
-
-func (this *ignoreTx) Commit() error   { return nil }
-func (this *ignoreTx) Rollback() error { return nil }
 
 func (this *ignoreTx) ReadWriteTransaction(ctx context.Context, do func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error) {
 	return this.r.ReadWriteTransaction(ctx, do)
@@ -1608,18 +1596,18 @@ func (this *ignoreTx) Single() *spanner.ReadOnlyTransaction {
 	return this.r.Single()
 }
 
-func DefaultClientStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-	return NopPersistTx(r)
-}
-func DefaultServerStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-	return NopPersistTx(r)
-}
-func DefaultBidiStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-	return NopPersistTx(r)
-}
-func DefaultUnaryPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
-	return NopPersistTx(r)
-}
+// func DefaultClientStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
+// 	return NopPersistTx(r)
+// }
+// func DefaultServerStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
+// 	return NopPersistTx(r)
+// }
+// func DefaultBidiStreamingPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
+// 	return NopPersistTx(r)
+// }
+// func DefaultUnaryPersistTx(ctx context.Context, r Runnable) (PersistTx, error) {
+// 	return NopPersistTx(r)
+// }
 
 type Result interface {
 	LastInsertId() (int64, error)
@@ -1640,14 +1628,9 @@ func (sr *SpannerResult) RowsAffected() (int64, error) {
 }
 
 type Runnable interface {
-	ReadWriteTransaction(context.Context, func(context.Context, *spanner.ReadWriteTransaction) error) (time.Time, error)
-	Single() *spanner.ReadOnlyTransaction
+  QueryWithStats(context.Context, spanner.Statement) *spanner.RowIterator
 }
 
-type scanable interface {
-	SpannerScan(...interface{}) error
-	Columns() ([]string, error)
-}
 		`)
 	}
 	return nil
