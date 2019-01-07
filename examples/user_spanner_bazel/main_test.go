@@ -226,7 +226,7 @@ func CreateTable(ctx context.Context, params main.SpannerParams) error {
 	op, err := adminClient.CreateDatabase(ctx, &db.CreateDatabaseRequest{
 		Parent:          params.Parent(),
 		CreateStatement: fmt.Sprintf("CREATE DATABASE %s", params.DatabaseId),
-    // TODO this probably needs to be an array of bytes because it is MULTIPLE friends, and not just one
+		// TODO this probably needs to be an array of bytes because it is MULTIPLE friends, and not just one
 		ExtraStatements: []string{
 			`CREATE TABLE users (
 				id INT64 NOT NULL,
