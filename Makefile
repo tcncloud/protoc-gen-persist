@@ -59,7 +59,6 @@ proto-examples:
 	 	tests/test/*.proto
 
 build: generate
-	dep ensure
 	go build
 
 install: build
