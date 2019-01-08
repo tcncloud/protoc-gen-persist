@@ -955,7 +955,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                         `)
 
 					}, m.MatchTypeMapping(field))
-				} else if field.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE {
+				} else if field.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE && field.GetLabel() != desc.FieldDescriptorProto_LABEL_REPEATED {
 					msg := mustDefaultMappingNoStar(field)
 					acc = append(acc, `
                     `+name+` :=  &`+msg+`{}
@@ -964,10 +964,27 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                         return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to convert db column `+name+` to []byte")}, true
                     }
 
-                    if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+                    if err := proto.Unmarshal(`+name+`Bytes, `+name+`); err != nil {
                         return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to unmarshal column `+name+` to proto message")}, true
                     }
                     `)
+				} else if field.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE && field.GetLabel() == desc.FieldDescriptorProto_LABEL_REPEATED {
+					goType := s.File.GetGoTypeName(field.GetTypeName())
+					msg := mustDefaultMapping(field)
+					acc = append(acc, `
+					`+name+` := make(`+msg+`, 0)
+					`+name+`Bytes := make([][]byte, 0)
+					if err := row.ColumnByName("`+name+`", &`+name+`Bytes); err != nil {
+						return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to convert db column `+name+` to [][]byte")}, true
+					}
+					for _, x := range `+name+`Bytes {
+						tmp := &`+goType+`{}
+						if err := proto.Unmarshal(x, tmp); err != nil {
+							return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+						}
+						`+name+` = append(`+name+`, tmp)
+					}
+					`)
 				} else {
 					acc = append(acc, "var "+name+" "+goType)
 					acc = append(acc, `
