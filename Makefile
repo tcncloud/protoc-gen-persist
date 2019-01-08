@@ -59,7 +59,7 @@ proto-examples:
 	 	tests/test/*.proto
 
 build: generate
-	dep ensure
+	go mod download
 	go build
 
 install: build
@@ -98,6 +98,7 @@ $(GOPATH)/bin/dep:
 	go get -u github.com/golang/dep/cmd/dep
 
 clean:
+	go clean -modcache
 	rm -f tests/*.pb.go tests/*.persist.go tests/test/*.pb.go
 	rm -f tests/spanner/bob_example/*.pb.go tests/spanner/bob_example/*.persist.go
 	rm -f tests/spanner/basic/*.pb.go tests/spanner/basic/*.persist.go
