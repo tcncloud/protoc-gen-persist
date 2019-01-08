@@ -112,7 +112,7 @@ service UServ {
       out: ".pb.User"
     }, {
       name: "update_name_to_foo",
-      query: ["Update users set name = 'foo' PRIMARY_KEY(id = @id)"],
+      query: ["Update users set name = 'foo' where id = @id"],
       in: ".pb.User",
       out: ".pb.Empty"
     }, {

@@ -149,6 +149,8 @@ var _ = Describe("persist", func() {
 		}
 		err = stream.CloseSend()
 		Expect(err).ToNot(HaveOccurred())
+
+		userCount := 0
 		for {
 			u, err := stream.Recv()
 			if err == io.EOF {
@@ -156,10 +158,12 @@ var _ = Describe("persist", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(u.Name).To(Equal("zed"))
+			userCount++
 		}
+		Expect(userCount).To(Equal(len(users)), "Failed to respond with all updated users")
 	})
 
-	PIt("can change all names to foo", func() {
+	It("can change all names to foo", func() {
 		stream, err := client.UpdateAllNames(context.Background(), &pb.Empty{})
 		Expect(err).ToNot(HaveOccurred())
 		var resps int
@@ -219,7 +223,7 @@ func Serve(servFunc func(s *grpc.Server)) {
 	}
 	// defer conn.Close()
 
-	service := pb.UServPersistImpl(conn, &main.RestOfImpl{}, pb.UServ_Opts{
+	service := pb.UServPersistImpl(conn, &main.RestOfImpl{DB: conn}, pb.UServ_Opts{
 		HOOKS:    &main.HooksImpl{},
 		MAPPINGS: &main.MappingImpl{},
 	})

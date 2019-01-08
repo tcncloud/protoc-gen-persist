@@ -340,7 +340,7 @@ func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *USer
 		return result
 	}
 	iter := this.db.QueryWithStats(ctx, spanner.Statement{
-		SQL:    "Update users set name = 'foo' PRIMARY_KEY(id = @id)",
+		SQL:    "Update users set name = 'foo' where id = @id",
 		Params: params,
 	})
 	result.rows = iter
