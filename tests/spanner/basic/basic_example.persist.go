@@ -213,31 +213,42 @@ func (this *ExtraSrv_ExtraIter) Next() (*ExtraSrv_ExtraRow, bool) {
 	}
 
 	tables := make([]*test.ExampleTable, 0)
-	tablesTmp := make([][]byte, 0)
-	if err := row.ColumnByName("tables", &tablesTmp); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column tables to []byte")}, true
+	tablesBytes := make([][]byte, 0)
+	if err := row.ColumnByName("tables", &tablesBytes); err != nil {
+		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column tables to [][]byte")}, true
+	}
+	for _, x := range tablesBytes {
+		tmp := &test.ExampleTable{}
+		if err := proto.Unmarshal(x, tmp); err != nil {
+			return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+		}
+		tables := append(tables, tmp)
 	}
 
-	if err := proto.Unmarshal(tablesBytes, tables); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column tables to proto message")}, true
-	}
-
-	somes := &[]Something{}
-	somesBytes := make([]byte, 0)
+	somes := make([]*Something, 0)
+	somesBytes := make([][]byte, 0)
 	if err := row.ColumnByName("somes", &somesBytes); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column somes to []byte")}, true
+		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column somes to [][]byte")}, true
 	}
-	if err := proto.Unmarshal(somesBytes, somes); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column somes to proto message")}, true
+	for _, x := range somesBytes {
+		tmp := &Something{}
+		if err := proto.Unmarshal(x, tmp); err != nil {
+			return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+		}
+		somes := append(somes, tmp)
 	}
 
-	times := &[]timestamp.Timestamp{}
-	timesBytes := make([]byte, 0)
+	times := make([]*timestamp.Timestamp, 0)
+	timesBytes := make([][]byte, 0)
 	if err := row.ColumnByName("times", &timesBytes); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column times to []byte")}, true
+		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column times to [][]byte")}, true
 	}
-	if err := proto.Unmarshal(timesBytes, times); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column times to proto message")}, true
+	for _, x := range timesBytes {
+		tmp := &timestamp.Timestamp{}
+		if err := proto.Unmarshal(x, tmp); err != nil {
+			return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+		}
+		times := append(times, tmp)
 	}
 
 	res := &HasTimestamp{
