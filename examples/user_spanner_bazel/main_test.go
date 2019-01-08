@@ -139,7 +139,7 @@ var _ = Describe("persist", func() {
 		}
 	})
 
-	PIt("can use a client stream to update names", func() {
+	It("can use a client stream to update names", func() {
 		stream, err := client.UpdateUserNames(context.Background())
 		Expect(err).ToNot(HaveOccurred())
 
