@@ -123,12 +123,12 @@ service MySpanner {
     },{
       name: "delete",
       query: ["DELETE FROM example_table START(@start_id) END(@end_id) KIND(CO)"]
-      in: "tests.test.ExampleTable",
+      in: "tests.test.ExampleTableRange",
       out: ".tests.Empty",
     }, {
       name: "select_all",
       query: ["SELECT * FROM example_table"]
-      in: "tests.test.ExampleTable",
+      in: ".tests.Empty",
       out: "tests.test.ExampleTable",
     }, {
       name: "insert_3",

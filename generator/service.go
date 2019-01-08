@@ -982,7 +982,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 						if err := proto.Unmarshal(x, tmp); err != nil {
 							return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
 						}
-						`+name+` := append(`+name+`, tmp)
+						`+name+` = append(`+name+`, tmp)
 					}
 					`)
 				} else {

@@ -222,7 +222,7 @@ func (this *ExtraSrv_ExtraIter) Next() (*ExtraSrv_ExtraRow, bool) {
 		if err := proto.Unmarshal(x, tmp); err != nil {
 			return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
 		}
-		tables := append(tables, tmp)
+		tables = append(tables, tmp)
 	}
 
 	somes := make([]*Something, 0)
@@ -235,7 +235,7 @@ func (this *ExtraSrv_ExtraIter) Next() (*ExtraSrv_ExtraRow, bool) {
 		if err := proto.Unmarshal(x, tmp); err != nil {
 			return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
 		}
-		somes := append(somes, tmp)
+		somes = append(somes, tmp)
 	}
 
 	times := make([]*timestamp.Timestamp, 0)
@@ -248,7 +248,7 @@ func (this *ExtraSrv_ExtraIter) Next() (*ExtraSrv_ExtraRow, bool) {
 		if err := proto.Unmarshal(x, tmp); err != nil {
 			return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
 		}
-		times := append(times, tmp)
+		times = append(times, tmp)
 	}
 
 	res := &HasTimestamp{
@@ -652,7 +652,8 @@ func (this *MySpanner_DeleteQuery) Execute(x MySpanner_DeleteIn) *MySpanner_Dele
 	}
 	params, err := func() (map[string]interface{}, error) {
 		result := make(map[string]interface{})
-
+		result["start_id"] = x.GetStartId()
+		result["end_id"] = x.GetEndId()
 		return result, nil
 	}()
 	if err != nil {
@@ -1251,8 +1252,8 @@ type MySpanner_DeleteIter struct {
 	ctx    context.Context
 }
 
-func (this *MySpanner_DeleteIter) IterOutTypeEmpty()           {}
-func (this *MySpanner_DeleteIter) IterInTypeTestExampleTable() {}
+func (this *MySpanner_DeleteIter) IterOutTypeEmpty()                {}
+func (this *MySpanner_DeleteIter) IterInTypeTestExampleTableRange() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
@@ -1337,7 +1338,7 @@ type MySpanner_SelectAllIter struct {
 }
 
 func (this *MySpanner_SelectAllIter) IterOutTypeTestExampleTable() {}
-func (this *MySpanner_SelectAllIter) IterInTypeTestExampleTable()  {}
+func (this *MySpanner_SelectAllIter) IterInTypeEmpty()             {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
@@ -1921,9 +1922,8 @@ func (this *MySpanner_UpdateRow) Proto() (*Empty, error) {
 }
 
 type MySpanner_DeleteIn interface {
-	GetId() int64
-	GetStartTime() *timestamp.Timestamp
-	GetName() string
+	GetStartId() int64
+	GetEndId() int64
 }
 type MySpanner_DeleteOut interface {
 }
@@ -1969,9 +1969,6 @@ func (this *MySpanner_DeleteRow) Proto() (*Empty, error) {
 }
 
 type MySpanner_SelectAllIn interface {
-	GetId() int64
-	GetStartTime() *timestamp.Timestamp
-	GetName() string
 }
 type MySpanner_SelectAllOut interface {
 	GetId() int64
