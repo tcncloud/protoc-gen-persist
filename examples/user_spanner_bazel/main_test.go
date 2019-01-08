@@ -65,10 +65,6 @@ var _ = AfterSuite(func() {
 })
 
 var _ = Describe("persist", func() {
-	It("can create a table", func() {
-
-	})
-
 	It("can insert a lot of users and set their ids with before hook", func() {
 		stream, err := client.InsertUsers(context.Background())
 		Expect(err).To(Not(HaveOccurred()))

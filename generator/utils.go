@@ -96,6 +96,7 @@ func FormatCode(filename string, buffer []byte) []byte {
 	}
 	return buf
 }
+
 func getGoNamesForTypeMapping(tm *persist.TypeMapping_TypeDescriptor, file *FileStruct) (string, string) {
 	name := file.GetGoTypeName(tm.GetProtoTypeName())
 	nameParts := strings.Split(name, ".")

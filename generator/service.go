@@ -955,7 +955,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                         `)
 
 					}, m.MatchTypeMapping(field))
-				} else if field.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE {
+				} else if field.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE && field.GetLabel() != desc.FieldDescriptorProto_LABEL_REPEATED {
 					msg := mustDefaultMappingNoStar(field)
 					acc = append(acc, `
                     `+name+` :=  &`+msg+`{}
@@ -964,7 +964,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                         return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to convert db column `+name+` to []byte")}, true
                     }
 
-                    if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+                    if err := proto.Unmarshal(`+name+`Bytes, `+name+`); err != nil {
                         return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to unmarshal column `+name+` to proto message")}, true
                     }
                     `)

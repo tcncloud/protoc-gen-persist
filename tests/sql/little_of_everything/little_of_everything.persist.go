@@ -17,19 +17,29 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-type alwaysScanner struct {
-	i *interface{}
+type PersistTx interface {
+	Commit() error
+	Rollback() error
+	Runnable
 }
 
-func (s *alwaysScanner) Scan(src interface{}) error {
-	s.i = &src
-	return nil
+func NopPersistTx(r Runnable) (PersistTx, error) {
+	return &ignoreTx{r}, nil
 }
 
-type scanable interface {
-	Scan(...interface{}) error
-	Columns() ([]string, error)
+type ignoreTx struct {
+	r Runnable
 }
+
+func (this *ignoreTx) Commit() error   { return nil }
+func (this *ignoreTx) Rollback() error { return nil }
+func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
+	return this.r.QueryContext(ctx, x, ys...)
+}
+func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
+	return this.r.ExecContext(ctx, x, ys...)
+}
+
 type Runnable interface {
 	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
 	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
@@ -48,27 +58,18 @@ func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
 	return NopPersistTx(db)
 }
 
-type ignoreTx struct {
-	r Runnable
+type alwaysScanner struct {
+	i *interface{}
 }
 
-func (this *ignoreTx) Commit() error   { return nil }
-func (this *ignoreTx) Rollback() error { return nil }
-func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
-	return this.r.QueryContext(ctx, x, ys...)
-}
-func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
-	return this.r.ExecContext(ctx, x, ys...)
+func (s *alwaysScanner) Scan(src interface{}) error {
+	s.i = &src
+	return nil
 }
 
-type PersistTx interface {
-	Commit() error
-	Rollback() error
-	Runnable
-}
-
-func NopPersistTx(r Runnable) (PersistTx, error) {
-	return &ignoreTx{r}, nil
+type scanable interface {
+	Scan(...interface{}) error
+	Columns() ([]string, error)
 }
 
 // Testservice1_Queries holds all the queries found the proto service option as methods
@@ -285,6 +286,9 @@ func (this *Testservice1_UnaryExample1Iter) Each(fun func(*Testservice1_UnaryExa
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Testservice1_UnaryExample1Iter) One() *Testservice1_UnaryExample1Row {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &Testservice1_UnaryExample1Row{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -298,7 +302,11 @@ func (this *Testservice1_UnaryExample1Iter) One() *Testservice1_UnaryExample1Row
 
 // Zero returns an error if there were any rows in the result
 func (this *Testservice1_UnaryExample1Iter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'UnaryExample1'")
 	}
 	return nil
@@ -487,6 +495,9 @@ func (this *Testservice1_UnaryExample2Iter) Each(fun func(*Testservice1_UnaryExa
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Testservice1_UnaryExample2Iter) One() *Testservice1_UnaryExample2Row {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &Testservice1_UnaryExample2Row{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -500,7 +511,11 @@ func (this *Testservice1_UnaryExample2Iter) One() *Testservice1_UnaryExample2Row
 
 // Zero returns an error if there were any rows in the result
 func (this *Testservice1_UnaryExample2Iter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'UnaryExample2'")
 	}
 	return nil
@@ -689,6 +704,9 @@ func (this *Testservice1_ServerStreamSelectIter) Each(fun func(*Testservice1_Ser
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Testservice1_ServerStreamSelectIter) One() *Testservice1_ServerStreamSelectRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &Testservice1_ServerStreamSelectRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -702,7 +720,11 @@ func (this *Testservice1_ServerStreamSelectIter) One() *Testservice1_ServerStrea
 
 // Zero returns an error if there were any rows in the result
 func (this *Testservice1_ServerStreamSelectIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'ServerStreamSelect'")
 	}
 	return nil
@@ -891,6 +913,9 @@ func (this *Testservice1_ClientStreamingExampleIter) Each(fun func(*Testservice1
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Testservice1_ClientStreamingExampleIter) One() *Testservice1_ClientStreamingExampleRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &Testservice1_ClientStreamingExampleRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -904,7 +929,11 @@ func (this *Testservice1_ClientStreamingExampleIter) One() *Testservice1_ClientS
 
 // Zero returns an error if there were any rows in the result
 func (this *Testservice1_ClientStreamingExampleIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'ClientStreamingExample'")
 	}
 	return nil
@@ -1523,7 +1552,7 @@ func (this *Testservice1_Impl) ClientStreamingExampleTx(stream Testservice1_Clie
 
 		result := query.Execute(req)
 		if err := result.Zero(); err != nil {
-			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
+			return err
 		}
 	}
 	if err := tx.Commit(); err != nil {

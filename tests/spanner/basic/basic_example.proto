@@ -94,9 +94,6 @@ service MySpanner {
     types: [{
       proto_type_name: "google.protobuf.Timestamp"
       proto_type:  TYPE_MESSAGE
-    }, {
-      proto_type_name: "tests.MyMappedEnum"
-      proto_type: TYPE_ENUM
     }]
   };
   option (persist.ql) = {

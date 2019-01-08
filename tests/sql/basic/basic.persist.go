@@ -17,19 +17,29 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-type alwaysScanner struct {
-	i *interface{}
+type PersistTx interface {
+	Commit() error
+	Rollback() error
+	Runnable
 }
 
-func (s *alwaysScanner) Scan(src interface{}) error {
-	s.i = &src
-	return nil
+func NopPersistTx(r Runnable) (PersistTx, error) {
+	return &ignoreTx{r}, nil
 }
 
-type scanable interface {
-	Scan(...interface{}) error
-	Columns() ([]string, error)
+type ignoreTx struct {
+	r Runnable
 }
+
+func (this *ignoreTx) Commit() error   { return nil }
+func (this *ignoreTx) Rollback() error { return nil }
+func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
+	return this.r.QueryContext(ctx, x, ys...)
+}
+func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
+	return this.r.ExecContext(ctx, x, ys...)
+}
+
 type Runnable interface {
 	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
 	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
@@ -48,27 +58,18 @@ func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
 	return NopPersistTx(db)
 }
 
-type ignoreTx struct {
-	r Runnable
+type alwaysScanner struct {
+	i *interface{}
 }
 
-func (this *ignoreTx) Commit() error   { return nil }
-func (this *ignoreTx) Rollback() error { return nil }
-func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
-	return this.r.QueryContext(ctx, x, ys...)
-}
-func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
-	return this.r.ExecContext(ctx, x, ys...)
+func (s *alwaysScanner) Scan(src interface{}) error {
+	s.i = &src
+	return nil
 }
 
-type PersistTx interface {
-	Commit() error
-	Rollback() error
-	Runnable
-}
-
-func NopPersistTx(r Runnable) (PersistTx, error) {
-	return &ignoreTx{r}, nil
+type scanable interface {
+	Scan(...interface{}) error
+	Columns() ([]string, error)
 }
 
 // Amazing_Queries holds all the queries found the proto service option as methods
@@ -258,6 +259,9 @@ func (this *Amazing_SelectByIdIter) Each(fun func(*Amazing_SelectByIdRow) error)
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Amazing_SelectByIdIter) One() *Amazing_SelectByIdRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &Amazing_SelectByIdRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -271,7 +275,11 @@ func (this *Amazing_SelectByIdIter) One() *Amazing_SelectByIdRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *Amazing_SelectByIdIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'SelectById'")
 	}
 	return nil
@@ -392,6 +400,9 @@ func (this *Amazing_SelectByNameIter) Each(fun func(*Amazing_SelectByNameRow) er
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Amazing_SelectByNameIter) One() *Amazing_SelectByNameRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &Amazing_SelectByNameRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -405,7 +416,11 @@ func (this *Amazing_SelectByNameIter) One() *Amazing_SelectByNameRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *Amazing_SelectByNameIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'SelectByName'")
 	}
 	return nil
@@ -526,6 +541,9 @@ func (this *Amazing_InsertIter) Each(fun func(*Amazing_InsertRow) error) error {
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Amazing_InsertIter) One() *Amazing_InsertRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &Amazing_InsertRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -539,7 +557,11 @@ func (this *Amazing_InsertIter) One() *Amazing_InsertRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *Amazing_InsertIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'Insert'")
 	}
 	return nil
@@ -1036,7 +1058,7 @@ func (this *Amazing_Impl) ClientStreamTx(stream Amazing_ClientStreamServer, tx P
 
 		result := query.Execute(req)
 		if err := result.Zero(); err != nil {
-			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
+			return err
 		}
 	}
 	if err := tx.Commit(); err != nil {
@@ -1085,7 +1107,7 @@ func (this *Amazing_Impl) ClientStreamWithHookTx(stream Amazing_ClientStreamWith
 
 		result := query.Execute(req)
 		if err := result.Zero(); err != nil {
-			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
+			return err
 		}
 	}
 	if err := tx.Commit(); err != nil {
