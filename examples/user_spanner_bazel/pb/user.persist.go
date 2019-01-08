@@ -294,7 +294,7 @@ func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameIn) *UServ_
 		return result
 	}
 	iter := this.db.QueryWithStats(ctx, spanner.Statement{
-		SQL:    "Update users set name = @name PK(id = @id) ",
+		SQL:    "UPDATE users SET name = @name WHERE id = @id ",
 		Params: params,
 	})
 	result.rows = iter
@@ -340,7 +340,7 @@ func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *USer
 		return result
 	}
 	iter := this.db.QueryWithStats(ctx, spanner.Statement{
-		SQL:    "Update users set name = 'foo' where id = @id",
+		SQL:    "UPDATE users SET name = 'foo' WHERE id = @id",
 		Params: params,
 	})
 	result.rows = iter
@@ -477,6 +477,9 @@ func (this *UServ_CreateUsersTableIter) Each(fun func(*UServ_CreateUsersTableRow
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_CreateUsersTableIter) One() *UServ_CreateUsersTableRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_CreateUsersTableRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -559,6 +562,9 @@ func (this *UServ_InsertUsersIter) Each(fun func(*UServ_InsertUsersRow) error) e
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_InsertUsersRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -641,6 +647,9 @@ func (this *UServ_GetAllUsersIter) Each(fun func(*UServ_GetAllUsersRow) error) e
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_GetAllUsersRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -760,6 +769,9 @@ func (this *UServ_SelectUserByIdIter) Each(fun func(*UServ_SelectUserByIdRow) er
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_SelectUserByIdIter) One() *UServ_SelectUserByIdRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_SelectUserByIdRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -879,6 +891,9 @@ func (this *UServ_UpdateUserNameIter) Each(fun func(*UServ_UpdateUserNameRow) er
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_UpdateUserNameIter) One() *UServ_UpdateUserNameRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_UpdateUserNameRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -998,6 +1013,9 @@ func (this *UServ_UpdateNameToFooIter) Each(fun func(*UServ_UpdateNameToFooRow) 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_UpdateNameToFooIter) One() *UServ_UpdateNameToFooRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_UpdateNameToFooRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -1080,6 +1098,9 @@ func (this *UServ_GetFriendsIter) Each(fun func(*UServ_GetFriendsRow) error) err
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_GetFriendsIter) One() *UServ_GetFriendsRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_GetFriendsRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -1199,6 +1220,9 @@ func (this *UServ_DropIter) Each(fun func(*UServ_DropRow) error) error {
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_DropIter) One() *UServ_DropRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_DropRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"

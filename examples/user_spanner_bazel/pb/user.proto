@@ -107,12 +107,12 @@ service UServ {
       out: ".pb.User"
     }, {
       name: "update_user_name",
-      query: ["Update users set name = @name PK(id = @id) "],
+      query: ["UPDATE users SET name = @name WHERE id = @id "],
       in: ".pb.User",
       out: ".pb.User"
     }, {
       name: "update_name_to_foo",
-      query: ["Update users set name = 'foo' where id = @id"],
+      query: ["UPDATE users SET name = 'foo' WHERE id = @id"],
       in: ".pb.User",
       out: ".pb.Empty"
     }, {
