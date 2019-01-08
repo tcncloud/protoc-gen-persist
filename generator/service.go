@@ -924,8 +924,10 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
 		rowToProto := func(q *QueryProtoOpts) string {
 			acc := make([]string, 0)
+			names := make([]string, 0)
 			for _, field := range q.outFields {
 				name := field.GetName()
+				names = append(names, name)
 				goType := mustDefaultMapping(field)
 
 				if m.QueryFieldIsMapped(field, q) {
@@ -949,6 +951,19 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 						`)
 
 					}, m.MatchTypeMapping(field))
+				} else if field.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE {
+					msg := mustDefaultMappingNoStar(field)
+					acc = append(acc, `
+					`+name+` :=  &`+msg+`{}
+					`+name+`Bytes := make([]byte, 0)
+					if err := row.ColumnByName("`+name+`", &`+name+`Bytes); err != nil {
+						return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to convert db column `+name+` to []byte")}, true
+					}
+
+					if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+						return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to unmarshal column `+name+` to proto message")}, true
+					}
+					`)
 				} else {
 					acc = append(acc, "var "+name+" "+goType)
 					acc = append(acc, `
@@ -959,6 +974,13 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
 				}
 			}
+
+			acc = append(acc, `res := &`+outName(q)+`{`)
+			for _, name := range names {
+				acc = append(acc, _gen.CamelCase(name)+": "+name+",")
+			}
+			acc = append(acc, "}")
+
 			return strings.Join(acc, "\n")
 		}
 
@@ -1031,7 +1053,6 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			}
 
 			`, rowToProto(q), `
-			res := &`, outName(q), `{}
 
 			return &`, sName, `_`, camelQ(q), `Row{item: res}, true
 		}
@@ -1348,7 +1369,7 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 			}
 		}
 		if m.ClientStreaming(mpo) {
-      err = WriteClientStreaming(p, params, s.IsSQL())
+			err = WriteClientStreaming(p, params, s.IsSQL())
 			if err != nil {
 				outErr = err
 			}

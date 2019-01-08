@@ -108,59 +108,76 @@ var _ = Describe("persist", func() {
 
 	})
 
-	// PIt("can select a user by id", func() {
-	// 	u, err := client.SelectUserById(context.Background(), &pb.User{Id: 0})
-	// 	Expect(err).ToNot(HaveOccurred())
-	// 	u.Id = -1
-	// 	Expect(u).To(BeEquivalentTo(users[0]))
-	// })
+	It("can select a user by id", func() {
+		u, err := client.SelectUserById(context.Background(), &pb.User{Id: 0})
+		Expect(err).ToNot(HaveOccurred())
+		u.Id = -1
+		Expect(proto.MarshalTextString(u)).To(BeEquivalentTo(proto.MarshalTextString(users[0])))
+	})
 
-	// PIt("can select all friends of foo", func() {
-	// 	foo, err := client.SelectUserById(context.Background(), &pb.User{Id: 0}) // foo
-	// 	Expect(err).ToNot(HaveOccurred())
-	// 	stream, err := client.GetFriends(context.Background(), foo.Friends)
-	// 	Expect(err).ToNot(HaveOccurred())
+	It("can select all friends of foo", func() {
+		foo, err := client.SelectUserById(context.Background(), &pb.User{Id: 0}) // foo
+		Expect(err).ToNot(HaveOccurred())
+		stream, err := client.GetFriends(context.Background(), &pb.FriendsReq{
+			Names: &pb.SliceStringParam{Slice: foo.Friends.Names},
+		})
+		Expect(err).ToNot(HaveOccurred())
 
-	// 	friends := make([]*pb.User, 0)
-	// 	for {
-	// 		u, err := stream.Recv()
-	// 		if err == io.EOF {
-	// 			break
-	// 		}
-	// 		Expect(err).ToNot(HaveOccurred())
-	// 		friends = append(friends, u)
-	// 	}
-	// 	Expect(friends).To(HaveLen(2))
+		friends := make([]*pb.User, 0)
+		for {
+			u, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			Expect(err).ToNot(HaveOccurred())
+			friends = append(friends, u)
+		}
+		Expect(friends).To(HaveLen(2))
 
-	// 	for _, u := range friends {
-	// 		Expect(u.Friends.Names).To(ContainElement("foo"))
-	// 	}
-	// })
+		for _, u := range friends {
+			Expect(u.Friends.Names).To(ContainElement("foo"))
+		}
+	})
 
-	// PIt("can use a client stream to update names", func() {
-	// 	stream, err := client.UpdateUserNames(context.Background())
-	// 	Expect(err).ToNot(HaveOccurred())
+	It("can use a client stream to update names", func() {
+		stream, err := client.UpdateUserNames(context.Background())
+		Expect(err).ToNot(HaveOccurred())
 
-	// 	for i := 0; i < len(users); i++ {
-	// 		err := stream.Send(&pb.User{Id: int64(i), Name: "zed"})
-	// 		Expect(err).ToNot(HaveOccurred())
-	// 	}
-	// 	_, err = stream.CloseAndRecv()
-	// 	Expect(err).ToNot(HaveOccurred())
+		for i := 0; i < len(users); i++ {
+			err := stream.Send(&pb.User{Id: int64(i), Name: "zed"})
+			Expect(err).ToNot(HaveOccurred())
+		}
+		err = stream.CloseSend()
+		Expect(err).ToNot(HaveOccurred())
 
-	// 	// verify changes
-	// 	retStream, err := client.GetAllUsers(context.Background(), &pb.Empty{})
-	// 	Expect(err).ToNot(HaveOccurred())
+		userCount := 0
+		for {
+			u, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			Expect(err).ToNot(HaveOccurred())
+			Expect(u.Name).To(Equal("zed"))
+			userCount++
+		}
+		Expect(userCount).To(Equal(len(users)), "Failed to respond with all updated users")
+	})
 
-	// 	for {
-	// 		u, err := retStream.Recv()
-	// 		if err == io.EOF {
-	// 			break
-	// 		}
-	// 		Expect(err).ToNot(HaveOccurred())
-	// 		Expect(u.Name).To(Equal("zed"))
-	// 	}
-	// })
+	It("can change all names to foo", func() {
+		stream, err := client.UpdateAllNames(context.Background(), &pb.Empty{})
+		Expect(err).ToNot(HaveOccurred())
+		var resps int
+		for {
+			u, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			Expect(err).ToNot(HaveOccurred())
+			Expect(u.Name).To(Equal("foo"))
+			resps++
+		}
+		Expect(resps).To(BeNumerically(">", 0))
+	})
 })
 
 func mustTimestamp(now time.Time) *timeystamp.Timestamp {
@@ -206,7 +223,7 @@ func Serve(servFunc func(s *grpc.Server)) {
 	}
 	// defer conn.Close()
 
-	service := pb.UServPersistImpl(conn, &main.RestOfImpl{}, pb.UServ_Opts{
+	service := pb.UServPersistImpl(conn, &main.RestOfImpl{DB: conn}, pb.UServ_Opts{
 		HOOKS:    &main.HooksImpl{},
 		MAPPINGS: &main.MappingImpl{},
 	})
@@ -229,11 +246,11 @@ func CreateTable(ctx context.Context, params main.SpannerParams) error {
 		// TODO this probably needs to be an array of bytes because it is MULTIPLE friends, and not just one
 		ExtraStatements: []string{
 			`CREATE TABLE users (
-				id INT64 NOT NULL,
-				name STRING(MAX) NOT NULL,
-				friends BYTES(MAX) NOT NULL,
-				created_on STRING(MAX) NOT NULL,
-			) PRIMARY KEY (id)`,
+                id INT64 NOT NULL,
+                name STRING(MAX) NOT NULL,
+                friends BYTES(MAX) NOT NULL,
+                created_on STRING(MAX) NOT NULL,
+            ) PRIMARY KEY (id)`,
 		},
 	})
 	if err != nil {

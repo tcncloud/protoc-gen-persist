@@ -340,7 +340,7 @@ func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *USer
 		return result
 	}
 	iter := this.db.QueryWithStats(ctx, spanner.Statement{
-		SQL:    "Update users set name = 'foo' PRIMARY_KEY(id = @id)",
+		SQL:    "Update users set name = 'foo' where id = @id",
 		Params: params,
 	})
 	result.rows = iter
@@ -510,7 +510,6 @@ func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool
 	if err != nil {
 		return &UServ_CreateUsersTableRow{err: err}, true
 	}
-
 	res := &Empty{}
 	return &UServ_CreateUsersTableRow{item: res}, true
 }
@@ -593,7 +592,6 @@ func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
 	if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
 	}
-
 	res := &Empty{}
 	return &UServ_InsertUsersRow{item: res}, true
 }
@@ -686,9 +684,13 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
-	var friends *Friends
-	if err := row.ColumnByName("friends", &friends); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
@@ -704,7 +706,12 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		return &UServ_GetAllUsersRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
-	res := &User{}
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
+	}
 	return &UServ_GetAllUsersRow{item: res}, true
 }
 
@@ -796,9 +803,13 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
-	var friends *Friends
-	if err := row.ColumnByName("friends", &friends); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
@@ -814,7 +825,12 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		return &UServ_SelectUserByIdRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
-	res := &User{}
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
+	}
 	return &UServ_SelectUserByIdRow{item: res}, true
 }
 
@@ -906,9 +922,13 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
-	var friends *Friends
-	if err := row.ColumnByName("friends", &friends); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
@@ -924,7 +944,12 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		return &UServ_UpdateUserNameRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
-	res := &User{}
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
+	}
 	return &UServ_UpdateUserNameRow{item: res}, true
 }
 
@@ -1006,7 +1031,6 @@ func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) 
 	if err != nil {
 		return &UServ_UpdateNameToFooRow{err: err}, true
 	}
-
 	res := &Empty{}
 	return &UServ_UpdateNameToFooRow{item: res}, true
 }
@@ -1099,9 +1123,13 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
-	var friends *Friends
-	if err := row.ColumnByName("friends", &friends); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
@@ -1117,7 +1145,12 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		return &UServ_GetFriendsRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
-	res := &User{}
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
+	}
 	return &UServ_GetFriendsRow{item: res}, true
 }
 
@@ -1199,7 +1232,6 @@ func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
 	if err != nil {
 		return &UServ_DropRow{err: err}, true
 	}
-
 	res := &Empty{}
 	return &UServ_DropRow{item: res}, true
 }
@@ -1400,8 +1432,31 @@ func (this *UServ_SelectUserByIdRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_SelectUserByIdRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_SelectUserByIdRow) Proto() (*User, error) {
@@ -1443,8 +1498,31 @@ func (this *UServ_UpdateUserNameRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_UpdateUserNameRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_UpdateUserNameRow) Proto() (*User, error) {
@@ -1482,8 +1560,23 @@ func (this *UServ_UpdateNameToFooRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_UpdateNameToFooRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 func (this *UServ_UpdateNameToFooRow) Proto() (*Empty, error) {
@@ -1517,8 +1610,31 @@ func (this *UServ_GetFriendsRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_GetFriendsRow) User() (*User, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &User{
+		Id:        this.item.GetId(),
+		Name:      this.item.GetName(),
+		Friends:   this.item.GetFriends(),
+		CreatedOn: this.item.GetCreatedOn(),
+	}, nil
 }
 
 func (this *UServ_GetFriendsRow) Proto() (*User, error) {
@@ -1552,8 +1668,23 @@ func (this *UServ_DropRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
 
 	return nil
+}
+func (this *UServ_DropRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 
 func (this *UServ_DropRow) Proto() (*Empty, error) {
@@ -1691,7 +1822,12 @@ func UServPersistImpl(db *spanner.Client, handlers RestOfUServHandlers, opts ...
 }
 
 type RestOfUServHandlers interface {
+	UpdateUserNames(UServ_UpdateUserNamesServer) error
 	UpdateAllNames(*Empty, UServ_UpdateAllNamesServer) error
+}
+
+func (this *UServ_Impl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
+	return this.HANDLERS.UpdateUserNames(stream)
 }
 
 func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
@@ -1699,7 +1835,7 @@ func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesSe
 }
 
 func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
-	query := this.QUERIES.CreateUsersTable(ctx, this.DB)
+	query := this.QUERIES.CreateUsersTable(ctx, this.DB.Single())
 
 	result := query.Execute(req)
 
@@ -1720,7 +1856,7 @@ func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
 	return nil
 }
 func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
-	query := this.QUERIES.InsertUsers(stream.Context())
+	items := make([]*User, 0)
 	var first *User
 	for {
 		req, err := stream.Recv()
@@ -1740,13 +1876,20 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 			continue
 		}
 
-		if query.ctx == nil {
-			query.ctx = stream.Context()
+		items = append(items, req)
+	}
+	_, err := this.DB.ReadWriteTransaction(stream.Context(), func(ctx context.Context, tx *spanner.ReadWriteTransaction) error {
+		for _, item := range items {
+			query := this.QUERIES.InsertUsers(ctx, tx)
+			result := query.Execute(item)
+			if err := result.Zero(); err != nil {
+				return err
+			}
 		}
-		result := query.Execute(req)
-		if result.err != nil {
-			return gstatus.Errorf(codes.InvalidArgument, "client streaming query failed: %v", result.err)
-		}
+		return nil
+	})
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error in read write transaction: %v", err)
 	}
 	res := &Empty{}
 
@@ -1761,11 +1904,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 }
 
 func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
-	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
-	if err != nil {
-		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-	}
-	if err := this.GetAllUsersTx(req, stream, tx); err != nil {
+	if err := this.GetAllUsersTx(req, stream, this.DB.Single()); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'get_all_users' query: %v", err)
 	}
 	return nil
@@ -1781,4 +1920,65 @@ func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer
 		}
 		return stream.Send(res)
 	})
+}
+
+func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, error) {
+	query := this.QUERIES.SelectUserById(ctx, this.DB.Single())
+
+	result := query.Execute(req)
+	res, err := result.One().User()
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
+	query := this.QUERIES.UpdateNameToFoo(ctx, this.DB.Single())
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (this *UServ_Impl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
+	if err := this.GetFriendsTx(req, stream, this.DB.Single()); err != nil {
+		return gstatus.Errorf(codes.Unknown, "error executing 'get_friends' query: %v", err)
+	}
+	return nil
+}
+func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsServer, tx PersistTx) error {
+	ctx := stream.Context()
+	query := this.QUERIES.GetFriends(ctx, tx)
+	iter := query.Execute(req)
+	return iter.Each(func(row *UServ_GetFriendsRow) error {
+		res, err := row.User()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
+	})
+}
+
+func (this *UServ_Impl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
+	query := this.QUERIES.Drop(ctx, this.DB.Single())
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

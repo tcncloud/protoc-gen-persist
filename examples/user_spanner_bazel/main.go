@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 
 	"cloud.google.com/go/spanner"
@@ -84,28 +85,90 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 	queries := pb.UServPersistQueries(pb.UServ_Opts{
 		MAPPINGS: &MappingImpl{},
 	})
-	// renameToFoo := queries.UpdateNameToFooQuery(ctx)
-	allUsers := queries.GetAllUsers(ctx, d.DB.Single()).Execute(req)
-	// selectUser := queries.SelectUserByIdQuery(ctx)
 
-	return allUsers.Each(func(row *pb.UServ_GetAllUsersRow) error {
-		user, err := row.User()
+	var users []*pb.User
+
+	_, err := d.DB.ReadWriteTransaction(ctx, func(ctx context.Context, tx *spanner.ReadWriteTransaction) error {
+		users = make([]*pb.User, 0)
+		renameToFoo := queries.UpdateNameToFoo(ctx, tx)
+		selectUser := queries.SelectUserById(ctx, tx)
+		allUsers := queries.GetAllUsers(ctx, tx).Execute(req)
+
+		return allUsers.Each(func(row *pb.UServ_GetAllUsersRow) error {
+			user, err := row.User()
+			if err != nil {
+				return err
+			}
+
+			err = renameToFoo.Execute(user).Zero()
+			if err != nil {
+				return err
+			}
+
+			res, err := selectUser.Execute(user).One().User()
+			if err != nil {
+				return err
+			}
+			users = append(users, res)
+
+			return nil
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	for _, user := range users {
+		err := stream.Send(user)
 		if err != nil {
 			return err
 		}
-		fmt.Println("this rows name: ", user.Name)
-		return nil
+	}
 
-		// err = renameToFoo.Execute(user).Zero()
-		// if err != nil {
-		//   return err
-		// }
+	return nil
+}
 
-		// res, err := selectUser.Execute(user).One().User()
-		// if err != nil {
-		//   return err
-		// }
-		// return stream.Send(res)
-
+func (d *RestOfImpl) UpdateUserNames(stream pb.UServ_UpdateUserNamesServer) error {
+	ctx := stream.Context()
+	queries := pb.UServPersistQueries(pb.UServ_Opts{
+		MAPPINGS: &MappingImpl{},
 	})
+
+	users := make([]*pb.User, 0)
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+		users = append(users, req)
+	}
+
+	responses := make([]*pb.User, 0)
+	_, err := d.DB.ReadWriteTransaction(ctx, func(ctx context.Context, tx *spanner.ReadWriteTransaction) error {
+		updateUserName := queries.UpdateUserName(stream.Context(), tx)
+
+		for _, user := range users {
+			resp, err := updateUserName.Execute(user).One().User()
+			if err != nil {
+				return err
+			}
+			responses = append(responses, resp)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, user := range responses {
+		if err := stream.Send(user); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
