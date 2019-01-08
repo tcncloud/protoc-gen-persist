@@ -158,18 +158,14 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
 
   spannerClientStreamingFormat := `
 func (this *{{.Service}}_Impl) {{.Method}}(stream {{.Service}}_{{.Method}}Server) error {
-    tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
-    if err != nil {
-        return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-    }
-    if err := this.{{.Method}}Tx(stream, tx); err != nil {
+    if err := this.{{.Method}}Tx(stream); err != nil {
         return gstatus.Errorf(codes.Unknown, "error executing '{{.Query}}' query: %v", err)
     }
     return nil
 }
 
-func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
-    query := this.QUERIES.{{camelCase .Query}}(stream.Context(), tx)
+func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server) error {
+    query := this.QUERIES.{{camelCase .Query}}(stream.Context())
     var first *{{.Request}}
     for {
         req, err := stream.Recv()
@@ -189,14 +185,12 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
             continue
         }
         {{end}}
-        result := query.Execute(req)
-        if err := result.Zero(); err != nil {
-            return err
+        if query.ctx == nil {
+          query.ctx = stream.Context()
         }
-    }
-    if err := tx.Commit(); err != nil {
-        if rollbackErr := tx.Rollback(); rollbackErr != nil {
-            return fmt.Errorf("error executing '{{.Query}}' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
+        result := query.Execute(req)
+        if result.err != nil {
+          return gstatus.Errorf(codes.InvalidArgument, "client streaming query failed: %v", result.err)
         }
     }
     res := &{{.Response}}{}
