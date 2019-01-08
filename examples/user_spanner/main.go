@@ -6,7 +6,7 @@ import (
 	"net"
 
 	"cloud.google.com/go/spanner"
-	"github.com/tcncloud/protoc-gen-persist/examples/user_spanner_bazel/pb"
+	"github.com/tcncloud/protoc-gen-persist/examples/user_spanner/pb"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -148,10 +148,15 @@ func (d *RestOfImpl) UpdateUserNames(stream pb.UServ_UpdateUserNamesServer) erro
 
 	responses := make([]*pb.User, 0)
 	_, err := d.DB.ReadWriteTransaction(ctx, func(ctx context.Context, tx *spanner.ReadWriteTransaction) error {
-		updateUserName := queries.UpdateUserName(stream.Context(), tx)
+		updateUserName := queries.UpdateUserName(ctx, tx)
+		selectUser := queries.SelectUserById(ctx, tx)
 
 		for _, user := range users {
-			resp, err := updateUserName.Execute(user).One().User()
+			err := updateUserName.Execute(user).Zero()
+			if err != nil {
+				return err
+			}
+			resp, err := selectUser.Execute(user).One().User()
 			if err != nil {
 				return err
 			}
