@@ -53,23 +53,22 @@ type Struct struct {
 }
 
 func (s *Struct) GetGoPath() string {
-	if s.File.Desc.Options != nil {
-		if s.File.Desc.GetOptions().GoPackage != nil {
-			pkg := s.File.Desc.GetOptions().GetGoPackage()
-			if strings.Contains(pkg, ";") {
-				idx := strings.LastIndex(pkg, ";")
-				return pkg[0:idx]
-			} else if strings.Contains(pkg, "/") {
-				return pkg
-			} else {
-				return strings.Replace(pkg, ".", "_", -1)
-			}
+	if s == nil || s.File == nil || s.File.Desc == nil || s.File.Desc.Options == nil {
+		return "__unknown__path__error__"
+	}
+	if s.File.Desc.GetOptions().GoPackage != nil {
+		pkg := s.File.Desc.GetOptions().GetGoPackage()
+		if strings.Contains(pkg, ";") {
+			idx := strings.LastIndex(pkg, ";")
+			return pkg[0:idx]
+		} else if strings.Contains(pkg, "/") {
+			return pkg
 		} else {
-			// return the package name
-			return strings.Replace(s.Package, ".", "_", -1)
+			return strings.Replace(pkg, ".", "_", -1)
 		}
 	} else {
-		return "__unknown__path__error__"
+		// return the package name
+		return strings.Replace(s.Package, ".", "_", -1)
 	}
 }
 
@@ -118,15 +117,41 @@ func (s *Struct) GetImportedFiles() *FileList {
 	return fl
 }
 
+// GetFieldDescriptors returns a slice of FieldDescriptors that exist
+// on this message.  If this is not a message, it returns empty slice, false
+func (s *Struct) GetFieldDescriptorsIfMessage() ([]*desc.FieldDescriptorProto, bool) {
+	ret := make([]*desc.FieldDescriptorProto, 0)
+	if s == nil || !s.IsMessage {
+		return ret, false
+	}
+
+	for _, f := range s.MsgDesc.GetField() {
+		if f.OneofIndex == nil {
+			ret = append(ret, f)
+		}
+	}
+	return ret, true
+}
+
 type StructList []*Struct
 
 func NewStructList() *StructList {
 	return &StructList{}
 }
 
+func (s *StructList) GetStructByName(name string) *Struct {
+	for _, str := range *s {
+		if str.Descriptor != nil && str.Descriptor.GetName() == name {
+			return str
+		}
+	}
+	return nil
+}
 func (s *StructList) GetStructByProtoName(name string) *Struct {
 	for _, str := range *s {
 		if str.GetProtoName() == name {
+			return str
+		} else if str.GetProtoName() == "."+name {
 			return str
 		}
 	}

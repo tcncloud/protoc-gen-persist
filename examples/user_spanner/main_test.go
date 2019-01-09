@@ -1,23 +1,24 @@
 package main_test
 
 import (
-	"database/sql"
-	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/tcncloud/protoc-gen-persist/examples/user_sql"
-
 	"fmt"
 	"io"
 	"net"
+	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	spanner "cloud.google.com/go/spanner"
+	admin "cloud.google.com/go/spanner/admin/database/apiv1"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
+	ptypess "github.com/golang/protobuf/ptypes"
+	timeystamp "github.com/golang/protobuf/ptypes/timestamp"
+	main "github.com/tcncloud/protoc-gen-persist/examples/user_spanner"
+	pb "github.com/tcncloud/protoc-gen-persist/examples/user_spanner/pb"
 	"golang.org/x/net/context"
+	db "google.golang.org/genproto/googleapis/spanner/admin/database/v1"
 	"google.golang.org/grpc"
 )
 
@@ -50,20 +51,20 @@ var _ = BeforeSuite(func() {
 		}
 		client = pb.NewUServClient(conn)
 	})
+	err := CreateTable(context.Background(), main.ReadSpannerParams())
+	Expect(err).ToNot(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
 	if testServer != nil {
 		testServer.Stop()
+
+		err := DropTable(context.Background(), main.ReadSpannerParams())
+		Expect(err).ToNot(HaveOccurred())
 	}
 })
 
 var _ = Describe("persist", func() {
-	It("can create a table", func() {
-		_, err := client.CreateTable(context.Background(), &pb.Empty{})
-		Expect(err).ToNot(HaveOccurred())
-	})
-
 	It("can insert a lot of users and set their ids with before hook", func() {
 		stream, err := client.InsertUsers(context.Background())
 		Expect(err).To(Not(HaveOccurred()))
@@ -91,6 +92,7 @@ var _ = Describe("persist", func() {
 			retUsers = append(retUsers, u)
 		}
 		Expect(retUsers).To(HaveLen(len(users)))
+
 		strUsers := make([]string, 0)
 		for _, u := range users {
 			strUsers = append(strUsers, proto.MarshalTextString(u))
@@ -99,12 +101,12 @@ var _ = Describe("persist", func() {
 		for _, u := range retUsers {
 			Expect(strUsers).To(ContainElement(proto.MarshalTextString(u)))
 		}
+
 	})
 
 	It("can select a user by id", func() {
 		u, err := client.SelectUserById(context.Background(), &pb.User{Id: 0})
 		Expect(err).ToNot(HaveOccurred())
-		Expect(u.Id).To(BeEquivalentTo(0))
 		u.Id = -1
 		Expect(proto.MarshalTextString(u)).To(BeEquivalentTo(proto.MarshalTextString(users[0])))
 	})
@@ -133,7 +135,7 @@ var _ = Describe("persist", func() {
 		}
 	})
 
-	It("can use a bidirectional stream to update names", func() {
+	It("can use a client stream to update names", func() {
 		stream, err := client.UpdateUserNames(context.Background())
 		Expect(err).ToNot(HaveOccurred())
 
@@ -143,6 +145,8 @@ var _ = Describe("persist", func() {
 		}
 		err = stream.CloseSend()
 		Expect(err).ToNot(HaveOccurred())
+
+		userCount := 0
 		for {
 			u, err := stream.Recv()
 			if err == io.EOF {
@@ -150,7 +154,9 @@ var _ = Describe("persist", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(u.Name).To(Equal("zed"))
+			userCount++
 		}
+		Expect(userCount).To(Equal(len(users)), "Failed to respond with all updated users")
 	})
 
 	It("can change all names to foo", func() {
@@ -168,18 +174,13 @@ var _ = Describe("persist", func() {
 		}
 		Expect(resps).To(BeNumerically(">", 0))
 	})
-
-	It("can drop a table", func() {
-		_, err := client.DropTable(context.Background(), &pb.Empty{})
-		Expect(err).ToNot(HaveOccurred())
-	})
 })
 
-func mustTimestamp(now time.Time) *timestamp.Timestamp {
-	t, _ := ptypes.TimestampProto(now)
+func mustTimestamp(now time.Time) *timeystamp.Timestamp {
+	t, _ := ptypess.TimestampProto(now)
 	return t
 }
-func mustNow() *timestamp.Timestamp { return mustTimestamp(time.Now()) }
+func mustNow() *timeystamp.Timestamp { return mustTimestamp(time.Now()) }
 
 var users = []*pb.User{
 	&pb.User{
@@ -209,20 +210,66 @@ var users = []*pb.User{
 }
 
 func Serve(servFunc func(s *grpc.Server)) {
-	conn, err := sql.Open("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable")
+	params := main.ReadSpannerParams()
+	ctx := context.Background()
+	conn, err := spanner.NewClient(ctx, params.URI())
 	if err != nil {
-		panic(err)
+		fmt.Printf("error connecting to db: %v\n", err)
+		return
 	}
-	opts := pb.UServOpts(&HooksImpl{}, &MappingImpl{})
-	handlers := &RestOfImpl{
-		DB:      conn,
-		QUERIES: pb.UServPersistQueries(opts),
-	}
-	service := pb.UServPersistImpl(conn, handlers, opts)
+	// defer conn.Close()
+
+	service := pb.UServPersistImpl(conn, &main.RestOfImpl{DB: conn}, pb.UServ_Opts{
+		HOOKS:    &main.HooksImpl{},
+		MAPPINGS: &main.MappingImpl{},
+	})
 
 	server := grpc.NewServer()
 
 	pb.RegisterUServServer(server, service)
 
 	servFunc(server)
+}
+
+func CreateTable(ctx context.Context, params main.SpannerParams) error {
+	adminClient, err := admin.NewDatabaseAdminClient(ctx)
+	if err != nil {
+		return err
+	}
+	op, err := adminClient.CreateDatabase(ctx, &db.CreateDatabaseRequest{
+		Parent:          params.Parent(),
+		CreateStatement: fmt.Sprintf("CREATE DATABASE %s", params.DatabaseId),
+		// TODO this probably needs to be an array of bytes because it is MULTIPLE friends, and not just one
+		ExtraStatements: []string{
+			`CREATE TABLE users (
+                id INT64 NOT NULL,
+                name STRING(MAX) NOT NULL,
+                friends BYTES(MAX) NOT NULL,
+                created_on STRING(MAX) NOT NULL,
+            ) PRIMARY KEY (id)`,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if _, err := op.Wait(ctx); err != nil {
+		return err
+	}
+	// adminClient.Close()
+
+	return nil
+}
+
+func DropTable(ctx context.Context, params main.SpannerParams) error {
+	adminClient, err := admin.NewDatabaseAdminClient(ctx)
+	if err != nil {
+		return err
+	}
+	err = adminClient.DropDatabase(ctx, &db.DropDatabaseRequest{Database: params.URI()})
+	if err != nil {
+		return err
+	}
+	// adminClient.Close()
+
+	return nil
 }

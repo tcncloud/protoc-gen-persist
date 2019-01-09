@@ -42,14 +42,13 @@ import (
 )
 
 type FileStruct struct {
-	Desc            *descriptor.FileDescriptorProto
-	ImportList      *Imports
-	Dependency      bool        // if is dependency
-	Structures      *StructList // all structures in the file
-	AllStructures   *StructList // all structures in all the files
-	ServiceList     *Services
-	PersistStringer *PersistStringer // print our persist file
-	Opts            PersistOpts      // options passed in via parameter
+	Desc          *descriptor.FileDescriptorProto
+	ImportList    *Imports
+	Dependency    bool        // if is dependency
+	Structures    *StructList // all structures in the file
+	AllStructures *StructList // all structures in all the files
+	ServiceList   *Services
+	Opts          PersistOpts // options passed in via parameter
 }
 
 func NewFileStruct(
@@ -64,7 +63,6 @@ func NewFileStruct(
 		Dependency:    dependency,
 		Opts:          opts,
 	}
-	ret.PersistStringer = &PersistStringer{}
 
 	return ret
 }
@@ -86,7 +84,7 @@ func (f *FileStruct) NotSameAsMyPackage(pkg string) bool {
 // extract the persist.package file option
 // or return "" as default
 func (f *FileStruct) GetPersistPackageOption() string {
-	if f.Desc == nil || f.Desc.GetOptions() == nil {
+	if f == nil || f.Desc == nil || f.Desc.GetOptions() == nil {
 		return ""
 	}
 	if proto.HasExtension(f.Desc.GetOptions(), persist.E_Pkg) {
@@ -177,7 +175,7 @@ func (f *FileStruct) GetServices() *Services {
 }
 
 func (f *FileStruct) GetFullGoPackage() string {
-	if f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
+	if f.Desc != nil && f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
 		switch {
 		case strings.Contains(f.Desc.GetOptions().GetGoPackage(), ";"):
 			idx := strings.Index(f.Desc.GetOptions().GetGoPackage(), ";")
@@ -195,7 +193,7 @@ func (f *FileStruct) DifferentImpl() bool {
 }
 
 func (f *FileStruct) GetGoPackage() string {
-	if f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
+	if f.Desc != nil && f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
 		switch {
 		case strings.Contains(f.Desc.GetOptions().GetGoPackage(), ";"):
 			idx := strings.LastIndex(f.Desc.GetOptions().GetGoPackage(), ";")
@@ -212,7 +210,7 @@ func (f *FileStruct) GetGoPackage() string {
 }
 
 func (f *FileStruct) GetGoPath() string {
-	if f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
+	if f.Desc != nil && f.Desc.Options != nil && f.Desc.GetOptions().GoPackage != nil {
 		switch {
 		case strings.Contains(f.Desc.GetOptions().GetGoPackage(), ";"):
 			idx := strings.LastIndex(f.Desc.GetOptions().GetGoPackage(), ";")
@@ -241,7 +239,7 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 }
 
 func (f *FileStruct) ProcessImports() {
-	importsForStructName := func(name string, m *Method) {
+	importsForStructName := func(name string) {
 		// first get imports for this struct
 		f.ProcessImportsForType(name)
 
@@ -283,25 +281,9 @@ func (f *FileStruct) ProcessImports() {
 			f.ImportList.GetOrAddImport("sql", "database/sql")
 			f.ImportList.GetOrAddImport("driver", "database/sql/driver")
 		}
-		// if opt := srv.GetServiceOption(); opt != nil {
-		// 	for _, m := range opt.GetTypes() {
-		// 		pkg := m.GetGoPackage()
-		// 		f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
-		// 	}
-		// }
-		for _, m := range *srv.Methods {
-			importsForStructName(m.Desc.GetInputType(), m)
-			importsForStructName(m.Desc.GetOutputType(), m)
-			// opts := m.GetMethodOption()
-			// if opts == nil {
-			// 	continue
-			// }
-			// if mappingOpt := opts.GetMapping(); mappingOpt != nil {
-			// 	for _, typMap := range mappingOpt.GetTypes() {
-			// 		pkg := typMap.GetGoPackage()
-			// 		f.ImportList.GetOrAddImport(GetGoPackage(pkg), GetGoPath(pkg))
-			// 	}
-			// }
+		for _, m := range srv.Desc.GetMethod() {
+			importsForStructName(m.GetInputType())
+			importsForStructName(m.GetOutputType())
 		}
 	}
 }
@@ -350,12 +332,6 @@ func (f *FileStruct) Process() error {
 	for _, s := range f.Desc.GetService() {
 		f.ServiceList.AddService(f.GetPackageName(), s, f.AllStructures, f)
 	}
-	if f.NeedsPersistLibDir() {
-		f.ImportList.GetOrAddImport("persist_lib", f.GetPersistLibFullFilepath().importStr)
-		for _, i := range *f.ImportList {
-			logrus.Debugf("IMPORT LIST: %+v, %#v\n", i.GoPackageName, i.GoImportPath)
-		}
-	}
 	return nil
 }
 func (f *FileStruct) NeedImport(pkg string) bool {
@@ -390,67 +366,36 @@ func (f *FileStruct) GetGoTypeName(typ string) string {
 	return str.GetGoName()
 }
 
-// the generator may need to make an extra package in the directory beneath ours
-// this library will not be imported by our persist code, so it is safe to use
-// anywhere the client wants
-func (f *FileStruct) NeedsPersistLibDir() bool {
-	if !f.Dependency && f.ServiceList.HasPersistService() {
-		return true
-	}
-	return false
-}
-
 func (f *FileStruct) Generate() ([]byte, error) {
-	err := f.ServiceList.PreGenerate()
-	if err != nil {
+	p := &Printer{}
+	for _, s := range *f.ServiceList {
+		if err := WriteQueries(p, s); err != nil {
+			return nil, err
+		}
+		if err := WriteIters(p, s); err != nil {
+			return nil, err
+		}
+		if err := WriteRows(p, s); err != nil {
+			return nil, err
+		}
+		if err := WriteHooks(p, s); err != nil {
+			return nil, err
+		}
+		if err := WriteTypeMappings(p, s); err != nil {
+			return nil, err
+		}
+		if err := WriteHandlers(p, s); err != nil {
+			return nil, err
+		}
+
+	}
+	importP := &Printer{}
+	if err := WriteImports(importP, f); err != nil {
 		return nil, err
 	}
-	printer := &Printer{}
-	printer.P(")\n")
-	cacheForTypeMappingNames := make(map[string]bool)
-	for _, s := range *f.ServiceList {
-		processed := make(map[string]bool)
-		if s.IsSpanner() || s.IsSQL() {
-			printer.P("%s\n", s.PrintBuilder(cacheForTypeMappingNames))
-		}
-		for _, m := range *s.Methods {
-			if m.IsSQL() || m.IsSpanner() {
-				if !processed[ToParamsFuncName(m)] {
-					printer.P("%s\n", m.backend.MapRequestToParams())
-					processed[ToParamsFuncName(m)] = true
-				}
-				if !processed[FromScanableFuncName(m)] {
-					printer.P("%s\n", m.backend.TranslateRowToResult())
-					processed[FromScanableFuncName(m)] = true
-				}
-				if !processed[IterProtoName(m)] {
-					printer.P("%s\n", IteratorHelper(m))
-					processed[IterProtoName(m)] = true
-				}
-			}
-		}
-		for _, m := range *s.Methods {
-			printer.P("%s\n", m)
-		}
-	}
-	// prin the imports last, because the above code might have added to our files imports
-	importPrinter := &Printer{}
-	importPrinter.PA([]string{
-		"// This file is generated by protoc-gen-persist\n",
-		"// Source File: %s\n",
-		"// DO NOT EDIT !\n",
-		"package %s\n",
-	}, f.GetOrigName(), f.GetImplPackage())
-	f.SanatizeImports()
-	importPrinter.P("import(\n")
-	for _, i := range *f.ImportList {
-		if f.NotSameAsMyPackage(i.GoImportPath) {
-			importPrinter.P("%s \"%s\"\n", i.GoPackageName, i.GoImportPath)
-		}
-	}
-	importPrinter.P("%s", printer.String())
+	importP.Q("\n", p.String())
 
-	return []byte(importPrinter.String()), nil
+	return ([]byte)(importP.String()), nil
 }
 
 // FileList ----------------

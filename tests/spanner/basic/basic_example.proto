@@ -50,6 +50,7 @@ enum MappedEnum {
 	OPT_1 = 1;
 }
 
+message Empty {}
 message Something {
 	message SomethingElse {
 		string thing = 1;
@@ -71,171 +72,141 @@ message HasTimestamp {
 }
 
 service ExtraSrv {
-	option (persist.service_type) = SPANNER;
+  option (persist.service_type) = SPANNER;
+  option (persist.ql) = {
+    queries: [{
+      name: "extra",
+      query: ["SELECT * FROM extra_unary"],
+      in: ".tests.Empty",
+      out: ".tests.HasTimestamp",
+    }]
+  };
 
 	rpc ExtraUnary(test.NumRows) returns (test.ExampleTable) {
-		option (persist.ql) = {
-			query: ["SELECT * FROM extra_unary"]
-		};
+		option (persist.opts) = { query: "extra" };
 	};
 	rpc ExtraMethod(test.ExampleTable) returns (test.ExampleTable);
 }
 
 service MySpanner {
   option (persist.service_type) = SPANNER;
-
   option (persist.mapping) = {
-    types: [
-      {
-        proto_type_name: "google.protobuf.Timestamp"
-        proto_type:  TYPE_MESSAGE
-      },
-      {
-        proto_type_name: "tests.MyMappedEnum"
-        proto_type: TYPE_ENUM
-      }
-    ]
+    types: [{
+      proto_type_name: "google.protobuf.Timestamp"
+      proto_type:  TYPE_MESSAGE
+    }]
+  };
+  option (persist.ql) = {
+      queries: [{
+      name: "insert"
+      query: ["Insert into example_table (id, start_time, name)",
+          "Values (@id, @start_time, 'bananas')"]
+      in: "tests.test.ExampleTable",
+      out: ".tests.Empty"
+    },{
+      name: "select",
+      query: ["SELECT * from example_table Where id=@id AND name=@name"]
+      in: "tests.test.ExampleTable",
+      out: ".tests.test.ExampleTable"
+    },{
+      name: "select_index",
+      query: ["SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name"]
+      in: "tests.test.ExampleTable",
+      out: "tests.test.ExampleTable"
+    },{
+      name: "update",
+      query: ["Update example_table ",
+        "set start_time=@start_time, name='oranges'",
+        "PrimaryKey(id=@id)"]
+      in: "tests.test.ExampleTable",
+      out: ".tests.Empty",
+    },{
+      name: "delete",
+      query: ["DELETE FROM example_table START(@start_id) END(@end_id) KIND(CO)"]
+      in: "tests.test.ExampleTableRange",
+      out: ".tests.Empty",
+    }, {
+      name: "select_all",
+      query: ["SELECT * FROM example_table"]
+      in: ".tests.Empty",
+      out: "tests.test.ExampleTable",
+    }, {
+      name: "insert_3",
+      query: ["INSERT INTO example_table (id, start_time, name) VALUES (@id, @start_time, 3)"]
+      in: "tests.test.ExampleTable",
+      out: ".tests.Empty",
+    }, {
+      name: "delete_id",
+      query: ["DELETE FROM example_table VALUES(@id)"]
+      in: "tests.test.ExampleTable",
+      out: ".tests.Empty",
+    }, {
+      name: "set_name_asdf",
+      query: ["update example_table set name='asdf' pk(id=@id)"]
+      in: "tests.test.ExampleTable",
+      out: ".tests.Empty",
+    }]
   };
   rpc UniaryInsert(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["Insert into example_table (id, start_time, name)",
-              "Values (@id, @start_time, \"bananas\")"]
-      arguments: ["id", "start_time"]
+    option (persist.opts) = {
+      query: "insert",
     };
   };
   rpc UniarySelect(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table Where id=@id AND name=@name"]
-      arguments: ["id", "name"]
-    };
-  };
-  rpc TestNest(Something) returns (Something) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table Where id=@thing"]
-    };
-  };
-  rpc TestEverything(HasTimestamp) returns (HasTimestamp) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table",
-							"Where id=@time AND some=@some AND str=@str AND table=@table",
-							"AND times = @times AND somes = @somes AND strs = @strs AND tables = @tables"]
+    option (persist.opts) = {
+      query: "select"
     };
   };
 
   rpc UniarySelectWithDirectives(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table@{FORCE_INDEX=index} Where id=@id AND name=@name"]
-      arguments: ["id", "name"]
+    option (persist.opts) = {
+      query: "select_index"
     };
   };
   rpc UniaryUpdate(test.ExampleTable) returns (test.PartialTable) {
-    option (persist.ql) = {
-      query: ["Update example_table ",
-              "set start_time=@start_time, name=\"oranges\"",
-              "PrimaryKey(id=@id)"]
-      arguments: ["start_time", "id"],
+    option (persist.opts) = {
+      query: "update"
     };
   };
   rpc UniaryDeleteRange(test.ExampleTableRange) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["DELETE FROM example_table START(@start_id) END(@end_id) KIND(CO)"]
-      arguments: ["start_id", "end_id"]
-    };
-  };
-  rpc UniaryDeleteSingle(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["DELETE FROM example_table VALUES('abc', 123, @id)"]
-    };
-  };
-  rpc NoArgs(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["select * from example_table limit 1"]
-      arguments: []
+    option (persist.opts) = {
+      query: "delete"
     };
   };
   rpc ServerStream(test.Name) returns (stream test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * FROM example_table"]
-      arguments: []
+    option (persist.opts) = {
+      query: "select_all",
     };
   };
   rpc ClientStreamInsert(stream test.ExampleTable) returns (test.NumRows) {
-    option (persist.ql) = {
-      query: ["INSERT INTO example_table (id, start_time, name) VALUES (@id, @start_time, 3)"]
-      arguments: ["id", "start_time", "name"]
+    option (persist.opts) = {
+      query: "insert_3"
     };
   };
   rpc ClientStreamDelete(stream test.ExampleTable) returns (test.NumRows) {
-    option (persist.ql) = {
-      query: ["DELETE FROM example_table VALUES(@id)"]
-      arguments: ["id", "id"],
-    };
-  };
-  rpc ClientStreamUpdate(stream test.ExampleTable) returns (test.NumRows) {
-    option (persist.ql) = {
-      query: ["update example_table set start_time=@start_time, name=@name PK(id=@id)"]
-      arguments: ["start_time", "name", "id"]
-    };
-  }
-  // hook tests
-  rpc UniaryInsertWithHooks(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["insert into example_table (id, start_time, name)  Values (@id, @start_time, \"bananas\")"]
-      arguments: ["id", "start_time"]
-      before: true
-      after: true
+    option (persist.opts) = {
+      query: "delete_id"
     };
   };
   rpc UniarySelectWithHooks(test.ExampleTable) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * from example_table Where id=@id"]
-      arguments: ["id"]
-      before: true
-      after: true
-    };
-  };
-  rpc UniaryUpdateWithHooks(test.ExampleTable) returns (test.PartialTable) {
-    option (persist.ql) = {
-      query: ["Update example_table set start_time=@start_time, name=\"oranges\" PRIMARY_KEY(id=@id)"]
-      arguments: ["start_time", "id"]
-      before: true
-      after: true
-    };
-  };
-  //really ugly, but tests multi-line
-  rpc UniaryDeleteWithHooks(test.ExampleTableRange) returns (test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["DELETE",
-      "FROM",
-      "example_table",
-      "START(@start_id ",
-      ") END(@end_id) ",
-      "KIND(CO)"]
-      arguments: ["start_id", "end_id"]
+    option (persist.opts) = {
+      query: "select_index"
       before: true
       after: true
     };
   };
   rpc ServerStreamWithHooks(test.Name) returns (stream test.ExampleTable) {
-    option (persist.ql) = {
-      query: ["SELECT * FROM example_table"]
-      arguments: []
+    option (persist.opts) = {
+      query: "select_all"
       before: true
       after: true
     };
   };
   rpc ClientStreamUpdateWithHooks(stream test.ExampleTable) returns (test.NumRows) {
-    option (persist.ql) = {
-      query: ["update example_table set name='asdf' pk(id=@id)"]
-      arguments: ["start_time", "name", "id"]
+    option (persist.opts) = {
+      query: "set_name_asdf",
       before: true
       after: true
     };
   };
-  // rpc TestMultiMappedFields(test.TwoMappedAndEnum) returns (test.TwoMappedAndEnum) {
-  //   option (persist.ql) = {
-  //     query: ["SELECT * FROM example_table WHERE start_time = ? AND end_time = ? AND gen_enum = ?"]
-  //     arguments: ["start_time", "end_time", "gen_enum"]
-  //   };
-  // };
 }

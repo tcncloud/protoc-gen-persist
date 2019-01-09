@@ -1,28 +1,31 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"net"
 
 	_ "github.com/lib/pq"
 	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
-	pl "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb/persist_lib"
 	"google.golang.org/grpc"
 )
 
 func main() {
-	restOfHandlers := &RestOfImpl{
-		Mappings: &MappingImpl{},
-		Hooks:    &HooksImpl{},
+	conn, err := sql.Open("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable")
+	if err != nil {
+		panic(err)
 	}
-	service := pb.NewUServBuilder().
-		WithDefaultQueryHandlers().
-		WithNewSqlDb("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable").
-		WithRestOfGrpcHandlers(restOfHandlers).
-		WithHooks(restOfHandlers.Hooks).
-		WithTypeMapping(restOfHandlers.Mappings).
-		MustBuild()
+
+	hooks := &HooksImpl{}
+	mapping := &MappingImpl{}
+	opts := pb.UServOpts(hooks, mapping)
+	handlers := &RestOfImpl{
+		DB:      conn,
+		QUERIES: pb.UServPersistQueries(opts),
+	}
+	service := pb.UServPersistImpl(conn, handlers, opts)
 	server := grpc.NewServer()
 
 	pb.RegisterUServServer(server, service)
@@ -38,17 +41,17 @@ func main() {
 
 type HooksImpl struct{}
 
-func (h *HooksImpl) InsertUsersBeforeHook(req *pb.User) (*pb.Empty, error) {
+func (h *HooksImpl) InsertUsersBeforeHook(ctx context.Context, req *pb.User) (*pb.Empty, error) {
 	pb.IncId(req)
 	return nil, nil
 }
-func (h *HooksImpl) InsertUsersAfterHook(*pb.User, *pb.Empty) error {
+func (h *HooksImpl) InsertUsersAfterHook(context.Context, *pb.User, *pb.Empty) error {
 	return nil
 }
-func (h *HooksImpl) GetAllUsersBeforeHook(*pb.Empty) ([]*pb.User, error) {
+func (h *HooksImpl) GetAllUsersBeforeHook(context.Context, *pb.Empty) (*pb.User, error) {
 	return nil, nil
 }
-func (h *HooksImpl) GetAllUsersAfterHook(*pb.Empty, *pb.User) error {
+func (h *HooksImpl) GetAllUsersAfterHook(context.Context, *pb.Empty, *pb.User) error {
 	return nil
 }
 
@@ -56,46 +59,64 @@ type MyTimestampImpl struct{}
 
 type MappingImpl struct{}
 
-func (m *MappingImpl) TimestampTimestamp() pb.TimestampTimestampMappingImpl {
+func (m *MappingImpl) TimestampTimestamp() pb.UServTimestampTimestampMappingImpl {
 	return &pb.TimeString{}
 }
-func (m *MappingImpl) SliceStringParam() pb.SliceStringParamMappingImpl {
+func (m *MappingImpl) SliceStringParam() pb.UServSliceStringParamMappingImpl {
 	return &pb.SliceStringConverter{}
 }
 
+// Type Aliasing to remove redundency
+type Queries = pb.UServ_Queries
 type RestOfImpl struct {
-	Mappings *MappingImpl
-	Hooks    *HooksImpl
+	DB      *sql.DB
+	QUERIES *Queries
 }
 
-func (d *RestOfImpl) UpdateAllNames(r *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {
-	db, err := sql.Open(
-		"postgres",
-		"user=postgres password=postgres dbname=postgres sslmode=disable",
-	)
-	if err != nil {
-		return err
+func (d *RestOfImpl) UpdateUserNames(stream pb.UServ_UpdateUserNamesServer) error {
+	query := d.QUERIES.UpdateUserName(stream.Context(), d.DB)
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+		res := new(pb.User)
+		if err := query.Execute(req).One().Unwrap(res); err != nil {
+			return err
+		}
+		if err := stream.Send(res); err != nil {
+			return err
+		}
 	}
-	params, err := pb.EmptyToUServPersistType(d.Mappings, r)
-	if err != nil {
-		return err
-	}
-	res := pl.UServGetAllUsersQuery(db, params)
-	err = pb.IterUServUserProto(d.Mappings, res, func(user *pb.User) error {
-		params, err := pb.UserToUServPersistType(d.Mappings, user)
+	return nil
+
+}
+
+func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {
+	ctx := stream.Context()
+	// tests that we can use both queries made from two different calls
+	testOpts := pb.UServ_Opts{MAPPINGS: &MappingImpl{}}
+	renameToFoo := pb.UServPersistQueries(testOpts).UpdateNameToFoo(ctx, d.DB)
+	allUsers := d.QUERIES.GetAllUsers(ctx, d.DB).Execute(req)
+	selectUser := d.QUERIES.SelectUserById(ctx, d.DB)
+
+	return allUsers.Each(func(row *pb.UServ_GetAllUsersRow) error {
+		user, err := row.User()
 		if err != nil {
 			return err
 		}
-		// unlike spanner, the query is actually run here.
-		res := pl.UServUpdateNameToFooQuery(db, params)
-		return res.Err()
+
+		err = renameToFoo.Execute(user).Zero()
+		if err != nil {
+			return err
+		}
+
+		res, err := selectUser.Execute(user).One().User()
+		if err != nil {
+			return err
+		}
+		return stream.Send(res)
 	})
-	if err != nil {
-		return err
-	}
-	res = pl.UServGetAllUsersQuery(db, params)
-	if res.Err() != nil {
-		return res.Err()
-	}
-	return pb.IterUServUserProto(d.Mappings, res, stream.Send)
 }

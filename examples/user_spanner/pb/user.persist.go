@@ -4,71 +4,41 @@
 package pb
 
 import (
-	sql "database/sql"
-	driver "database/sql/driver"
 	fmt "fmt"
 	io "io"
 
+	spanner "cloud.google.com/go/spanner"
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	context "golang.org/x/net/context"
+	iterator "google.golang.org/api/iterator"
 	codes "google.golang.org/grpc/codes"
 	gstatus "google.golang.org/grpc/status"
 )
 
 type PersistTx interface {
-	Commit() error
-	Rollback() error
 	Runnable
 }
-
-func NopPersistTx(r Runnable) (PersistTx, error) {
-	return &ignoreTx{r}, nil
+type Result interface {
+	LastInsertId() (int64, error)
+	RowsAffected() (int64, error)
+}
+type SpannerResult struct {
+	// TODO shouldn't be an iter
+	iter *spanner.RowIterator
 }
 
-type ignoreTx struct {
-	r Runnable
+func (sr *SpannerResult) LastInsertId() (int64, error) {
+	// sr.iter.QueryStats or sr.iter.QueryPlan
+	return -1, nil
 }
-
-func (this *ignoreTx) Commit() error   { return nil }
-func (this *ignoreTx) Rollback() error { return nil }
-func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
-	return this.r.QueryContext(ctx, x, ys...)
-}
-func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
-	return this.r.ExecContext(ctx, x, ys...)
+func (sr *SpannerResult) RowsAffected() (int64, error) {
+	// Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
+	return sr.iter.RowCount, nil
 }
 
 type Runnable interface {
-	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-}
-
-func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return db.BeginTx(ctx, nil)
-}
-func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return NopPersistTx(db)
-}
-func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return NopPersistTx(db)
-}
-func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
-	return NopPersistTx(db)
-}
-
-type alwaysScanner struct {
-	i *interface{}
-}
-
-func (s *alwaysScanner) Scan(src interface{}) error {
-	s.i = &src
-	return nil
-}
-
-type scanable interface {
-	Scan(...interface{}) error
-	Columns() ([]string, error)
+	QueryWithStats(context.Context, spanner.Statement) *spanner.RowIterator
 }
 
 // UServ_Queries holds all the queries found the proto service option as methods
@@ -111,17 +81,27 @@ func (this *UServ_CreateUsersTableQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_CreateUsersTableQuery) Execute(x UServ_CreateUsersTableIn) *UServ_CreateUsersTableIter {
-	var setupErr error
-	params := []interface{}{}
+	ctx := this.ctx
 	result := &UServ_CreateUsersTableIter{
-		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		result: &SpannerResult{},
+		tm:     this.opts.MAPPINGS,
+		ctx:    ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))", params...)
+	iter := this.db.QueryWithStats(ctx, spanner.Statement{
+		SQL:    "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))",
+		Params: params,
+	})
+	result.rows = iter
+	result.err = err
 	return result
 }
 
@@ -147,39 +127,39 @@ func (this *UServ_InsertUsersQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersIn) *UServ_InsertUsersIter {
-	var setupErr error
-	params := []interface{}{
-		func() (out interface{}) {
-			out = x.GetId()
-			return
-		}(),
-		func() (out interface{}) {
-			out = x.GetName()
-			return
-		}(),
-		func() (out interface{}) {
-			raw, err := proto.Marshal(x.GetFriends())
-			if err != nil {
-				setupErr = err
-			}
-			out = raw
-			return
-		}(),
-		func() (out interface{}) {
-			mapper := this.opts.MAPPINGS.TimestampTimestamp()
-			out = mapper.ToSql(x.GetCreatedOn())
-			return
-		}(),
-	}
+	ctx := this.ctx
 	result := &UServ_InsertUsersIter{
-		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		result: &SpannerResult{},
+		tm:     this.opts.MAPPINGS,
+		ctx:    ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		result["id"] = x.GetId()
+		result["name"] = x.GetName()
+		friends, err := proto.Marshal(x.GetFriends())
+		if err != nil {
+			return nil, err
+		}
+		result["friends"] = friends
+		created_on, err := this.opts.MAPPINGS.TimestampTimestamp().ToSpanner(x.GetCreatedOn()).SpannerValue()
+		if err != nil {
+			return nil, err
+		}
+		result["created_on"] = created_on
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)", params...)
+	iter := this.db.QueryWithStats(ctx, spanner.Statement{
+		SQL:    "INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)",
+		Params: params,
+	})
+	result.rows = iter
+	result.err = err
 	return result
 }
 
@@ -205,17 +185,27 @@ func (this *UServ_GetAllUsersQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAllUsersIter {
-	var setupErr error
-	params := []interface{}{}
+	ctx := this.ctx
 	result := &UServ_GetAllUsersIter{
-		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		result: &SpannerResult{},
+		tm:     this.opts.MAPPINGS,
+		ctx:    ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users", params...)
+	iter := this.db.QueryWithStats(ctx, spanner.Statement{
+		SQL:    "SELECT id, name, friends, created_on FROM users",
+		Params: params,
+	})
+	result.rows = iter
+	result.err = err
 	return result
 }
 
@@ -241,22 +231,27 @@ func (this *UServ_SelectUserByIdQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_SelectUserByIdQuery) Execute(x UServ_SelectUserByIdIn) *UServ_SelectUserByIdIter {
-	var setupErr error
-	params := []interface{}{
-		func() (out interface{}) {
-			out = x.GetId()
-			return
-		}(),
-	}
+	ctx := this.ctx
 	result := &UServ_SelectUserByIdIter{
-		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		result: &SpannerResult{},
+		tm:     this.opts.MAPPINGS,
+		ctx:    ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		result["id"] = x.GetId()
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users WHERE id = $1", params...)
+	iter := this.db.QueryWithStats(ctx, spanner.Statement{
+		SQL:    "SELECT id, name, friends, created_on FROM users WHERE id = @id",
+		Params: params,
+	})
+	result.rows = iter
+	result.err = err
 	return result
 }
 
@@ -282,26 +277,28 @@ func (this *UServ_UpdateUserNameQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameIn) *UServ_UpdateUserNameIter {
-	var setupErr error
-	params := []interface{}{
-		func() (out interface{}) {
-			out = x.GetName()
-			return
-		}(),
-		func() (out interface{}) {
-			out = x.GetId()
-			return
-		}(),
-	}
+	ctx := this.ctx
 	result := &UServ_UpdateUserNameIter{
-		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		result: &SpannerResult{},
+		tm:     this.opts.MAPPINGS,
+		ctx:    ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		result["name"] = x.GetName()
+		result["id"] = x.GetId()
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	result.rows, result.err = this.db.QueryContext(this.ctx, "Update users set name = $1 WHERE id = $2  RETURNING id, name, friends, created_on", params...)
+	iter := this.db.QueryWithStats(ctx, spanner.Statement{
+		SQL:    "UPDATE users SET name = @name WHERE id = @id ",
+		Params: params,
+	})
+	result.rows = iter
+	result.err = err
 	return result
 }
 
@@ -327,22 +324,27 @@ func (this *UServ_UpdateNameToFooQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *UServ_UpdateNameToFooIter {
-	var setupErr error
-	params := []interface{}{
-		func() (out interface{}) {
-			out = x.GetId()
-			return
-		}(),
-	}
+	ctx := this.ctx
 	result := &UServ_UpdateNameToFooIter{
-		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		result: &SpannerResult{},
+		tm:     this.opts.MAPPINGS,
+		ctx:    ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		result["id"] = x.GetId()
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "Update users set name = 'foo' WHERE id = $1", params...)
+	iter := this.db.QueryWithStats(ctx, spanner.Statement{
+		SQL:    "UPDATE users SET name = 'foo' WHERE id = @id",
+		Params: params,
+	})
+	result.rows = iter
+	result.err = err
 	return result
 }
 
@@ -368,23 +370,32 @@ func (this *UServ_GetFriendsQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_GetFriendsQuery) Execute(x UServ_GetFriendsIn) *UServ_GetFriendsIter {
-	var setupErr error
-	params := []interface{}{
-		func() (out interface{}) {
-			mapper := this.opts.MAPPINGS.SliceStringParam()
-			out = mapper.ToSql(x.GetNames())
-			return
-		}(),
-	}
+	ctx := this.ctx
 	result := &UServ_GetFriendsIter{
-		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		result: &SpannerResult{},
+		tm:     this.opts.MAPPINGS,
+		ctx:    ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+		names, err := this.opts.MAPPINGS.SliceStringParam().ToSpanner(x.GetNames()).SpannerValue()
+		if err != nil {
+			return nil, err
+		}
+		result["names"] = names
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)", params...)
+	iter := this.db.QueryWithStats(ctx, spanner.Statement{
+		SQL:    "SELECT id, name, friends, created_on  FROM users WHERE name IN UNNEST(@names)",
+		Params: params,
+	})
+	result.rows = iter
+	result.err = err
 	return result
 }
 
@@ -410,23 +421,33 @@ func (this *UServ_DropQuery) QueryOutTypeUser() {}
 
 // Executes the query with parameters retrieved from x
 func (this *UServ_DropQuery) Execute(x UServ_DropIn) *UServ_DropIter {
-	var setupErr error
-	params := []interface{}{}
+	ctx := this.ctx
 	result := &UServ_DropIter{
-		tm:  this.opts.MAPPINGS,
-		ctx: this.ctx,
+		result: &SpannerResult{},
+		tm:     this.opts.MAPPINGS,
+		ctx:    ctx,
 	}
-	if setupErr != nil {
-		result.err = setupErr
+	params, err := func() (map[string]interface{}, error) {
+		result := make(map[string]interface{})
+
+		return result, nil
+	}()
+	if err != nil {
+		result.err = err
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "drop table users", params...)
+	iter := this.db.QueryWithStats(ctx, spanner.Statement{
+		SQL:    "drop table users",
+		Params: params,
+	})
+	result.rows = iter
+	result.err = err
 	return result
 }
 
 type UServ_CreateUsersTableIter struct {
-	result sql.Result
-	rows   *sql.Rows
+	result *SpannerResult
+	rows   *spanner.RowIterator
 	err    error
 	tm     UServ_TypeMappings
 	ctx    context.Context
@@ -484,40 +505,15 @@ func (this *UServ_CreateUsersTableIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool) {
-	if this.rows == nil || this.err == io.EOF {
+	row, err := this.rows.Next()
+	_ = row
+	if err == iterator.Done {
 		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_CreateUsersTableRow{err: err}, true
 	}
-	cols, err := this.rows.Columns()
 	if err != nil {
 		return &UServ_CreateUsersTableRow{err: err}, true
 	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
-	}
-	toScan := make([]interface{}, len(cols))
-	scanned := make([]alwaysScanner, len(cols))
-	for i := range scanned {
-		toScan[i] = &scanned[i]
-	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_CreateUsersTableRow{err: this.err}, true
-	}
 	res := &Empty{}
-	for i, col := range cols {
-		_ = i
-		switch col {
-
-		default:
-			return &UServ_CreateUsersTableRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-		}
-	}
 	return &UServ_CreateUsersTableRow{item: res}, true
 }
 
@@ -534,20 +530,9 @@ func (this *UServ_CreateUsersTableIter) Slice() []*UServ_CreateUsersTableRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_CreateUsersTableIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
-
 type UServ_InsertUsersIter struct {
-	result sql.Result
-	rows   *sql.Rows
+	result *SpannerResult
+	rows   *spanner.RowIterator
 	err    error
 	tm     UServ_TypeMappings
 	ctx    context.Context
@@ -605,40 +590,15 @@ func (this *UServ_InsertUsersIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
-	if this.rows == nil || this.err == io.EOF {
+	row, err := this.rows.Next()
+	_ = row
+	if err == iterator.Done {
 		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_InsertUsersRow{err: err}, true
 	}
-	cols, err := this.rows.Columns()
 	if err != nil {
 		return &UServ_InsertUsersRow{err: err}, true
 	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
-	}
-	toScan := make([]interface{}, len(cols))
-	scanned := make([]alwaysScanner, len(cols))
-	for i := range scanned {
-		toScan[i] = &scanned[i]
-	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_InsertUsersRow{err: this.err}, true
-	}
 	res := &Empty{}
-	for i, col := range cols {
-		_ = i
-		switch col {
-
-		default:
-			return &UServ_InsertUsersRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-		}
-	}
 	return &UServ_InsertUsersRow{item: res}, true
 }
 
@@ -655,20 +615,9 @@ func (this *UServ_InsertUsersIter) Slice() []*UServ_InsertUsersRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_InsertUsersIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
-
 type UServ_GetAllUsersIter struct {
-	result sql.Result
-	rows   *sql.Rows
+	result *SpannerResult
+	rows   *spanner.RowIterator
 	err    error
 	tm     UServ_TypeMappings
 	ctx    context.Context
@@ -726,69 +675,51 @@ func (this *UServ_GetAllUsersIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
-	if this.rows == nil || this.err == io.EOF {
+	row, err := this.rows.Next()
+	_ = row
+	if err == iterator.Done {
 		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_GetAllUsersRow{err: err}, true
 	}
-	cols, err := this.rows.Columns()
 	if err != nil {
 		return &UServ_GetAllUsersRow{err: err}, true
 	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+	var id int64
+	if err := row.ColumnByName("id", &id); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
-	toScan := make([]interface{}, len(cols))
-	scanned := make([]alwaysScanner, len(cols))
-	for i := range scanned {
-		toScan[i] = &scanned[i]
-	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_GetAllUsersRow{err: this.err}, true
-	}
-	res := &User{}
-	for i, col := range cols {
-		_ = i
-		switch col {
-		case "id":
-			r, ok := (*scanned[i].i).(int64)
-			if !ok {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
-			}
-			res.Id = r
-		case "name":
-			r, ok := (*scanned[i].i).(string)
-			if !ok {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
-			}
-			res.Name = r
-		case "friends":
-			r, ok := (*scanned[i].i).([]byte)
-			if !ok {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
-			}
-			var converted = new(Friends)
-			if err := proto.Unmarshal(r, converted); err != nil {
-				return &UServ_GetAllUsersRow{err: err}, true
-			}
-			res.Friends = converted
-		case "created_on":
-			var converted = this.tm.TimestampTimestamp().Empty()
-			if err := converted.Scan(*scanned[i].i); err != nil {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("could not convert mapped db column created_on to type on User.CreatedOn: %v", err)}, true
-			}
-			if err := converted.ToProto(&res.CreatedOn); err != nil {
-				return &UServ_GetAllUsersRow{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
-			}
 
-		default:
-			return &UServ_GetAllUsersRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-		}
+	var name string
+	if err := row.ColumnByName("name", &name); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+	}
+
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
+	}
+
+	var created_on *timestamp.Timestamp
+	var created_on_col spanner.GenericColumnValue
+	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+	}
+	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+	}
+	if err := convert_created_on.ToProto(&created_on); err != nil {
+		return &UServ_GetAllUsersRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
+	}
+
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
 	}
 	return &UServ_GetAllUsersRow{item: res}, true
 }
@@ -806,20 +737,9 @@ func (this *UServ_GetAllUsersIter) Slice() []*UServ_GetAllUsersRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_GetAllUsersIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
-
 type UServ_SelectUserByIdIter struct {
-	result sql.Result
-	rows   *sql.Rows
+	result *SpannerResult
+	rows   *spanner.RowIterator
 	err    error
 	tm     UServ_TypeMappings
 	ctx    context.Context
@@ -877,69 +797,51 @@ func (this *UServ_SelectUserByIdIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
-	if this.rows == nil || this.err == io.EOF {
+	row, err := this.rows.Next()
+	_ = row
+	if err == iterator.Done {
 		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_SelectUserByIdRow{err: err}, true
 	}
-	cols, err := this.rows.Columns()
 	if err != nil {
 		return &UServ_SelectUserByIdRow{err: err}, true
 	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+	var id int64
+	if err := row.ColumnByName("id", &id); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
-	toScan := make([]interface{}, len(cols))
-	scanned := make([]alwaysScanner, len(cols))
-	for i := range scanned {
-		toScan[i] = &scanned[i]
-	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_SelectUserByIdRow{err: this.err}, true
-	}
-	res := &User{}
-	for i, col := range cols {
-		_ = i
-		switch col {
-		case "id":
-			r, ok := (*scanned[i].i).(int64)
-			if !ok {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
-			}
-			res.Id = r
-		case "name":
-			r, ok := (*scanned[i].i).(string)
-			if !ok {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
-			}
-			res.Name = r
-		case "friends":
-			r, ok := (*scanned[i].i).([]byte)
-			if !ok {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
-			}
-			var converted = new(Friends)
-			if err := proto.Unmarshal(r, converted); err != nil {
-				return &UServ_SelectUserByIdRow{err: err}, true
-			}
-			res.Friends = converted
-		case "created_on":
-			var converted = this.tm.TimestampTimestamp().Empty()
-			if err := converted.Scan(*scanned[i].i); err != nil {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("could not convert mapped db column created_on to type on User.CreatedOn: %v", err)}, true
-			}
-			if err := converted.ToProto(&res.CreatedOn); err != nil {
-				return &UServ_SelectUserByIdRow{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
-			}
 
-		default:
-			return &UServ_SelectUserByIdRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-		}
+	var name string
+	if err := row.ColumnByName("name", &name); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+	}
+
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
+	}
+
+	var created_on *timestamp.Timestamp
+	var created_on_col spanner.GenericColumnValue
+	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+	}
+	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+	}
+	if err := convert_created_on.ToProto(&created_on); err != nil {
+		return &UServ_SelectUserByIdRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
+	}
+
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
 	}
 	return &UServ_SelectUserByIdRow{item: res}, true
 }
@@ -957,20 +859,9 @@ func (this *UServ_SelectUserByIdIter) Slice() []*UServ_SelectUserByIdRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_SelectUserByIdIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
-
 type UServ_UpdateUserNameIter struct {
-	result sql.Result
-	rows   *sql.Rows
+	result *SpannerResult
+	rows   *spanner.RowIterator
 	err    error
 	tm     UServ_TypeMappings
 	ctx    context.Context
@@ -1028,69 +919,51 @@ func (this *UServ_UpdateUserNameIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
-	if this.rows == nil || this.err == io.EOF {
+	row, err := this.rows.Next()
+	_ = row
+	if err == iterator.Done {
 		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_UpdateUserNameRow{err: err}, true
 	}
-	cols, err := this.rows.Columns()
 	if err != nil {
 		return &UServ_UpdateUserNameRow{err: err}, true
 	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+	var id int64
+	if err := row.ColumnByName("id", &id); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
-	toScan := make([]interface{}, len(cols))
-	scanned := make([]alwaysScanner, len(cols))
-	for i := range scanned {
-		toScan[i] = &scanned[i]
-	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_UpdateUserNameRow{err: this.err}, true
-	}
-	res := &User{}
-	for i, col := range cols {
-		_ = i
-		switch col {
-		case "id":
-			r, ok := (*scanned[i].i).(int64)
-			if !ok {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
-			}
-			res.Id = r
-		case "name":
-			r, ok := (*scanned[i].i).(string)
-			if !ok {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
-			}
-			res.Name = r
-		case "friends":
-			r, ok := (*scanned[i].i).([]byte)
-			if !ok {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
-			}
-			var converted = new(Friends)
-			if err := proto.Unmarshal(r, converted); err != nil {
-				return &UServ_UpdateUserNameRow{err: err}, true
-			}
-			res.Friends = converted
-		case "created_on":
-			var converted = this.tm.TimestampTimestamp().Empty()
-			if err := converted.Scan(*scanned[i].i); err != nil {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("could not convert mapped db column created_on to type on User.CreatedOn: %v", err)}, true
-			}
-			if err := converted.ToProto(&res.CreatedOn); err != nil {
-				return &UServ_UpdateUserNameRow{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
-			}
 
-		default:
-			return &UServ_UpdateUserNameRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-		}
+	var name string
+	if err := row.ColumnByName("name", &name); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+	}
+
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
+	}
+
+	var created_on *timestamp.Timestamp
+	var created_on_col spanner.GenericColumnValue
+	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+	}
+	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+	}
+	if err := convert_created_on.ToProto(&created_on); err != nil {
+		return &UServ_UpdateUserNameRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
+	}
+
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
 	}
 	return &UServ_UpdateUserNameRow{item: res}, true
 }
@@ -1108,20 +981,9 @@ func (this *UServ_UpdateUserNameIter) Slice() []*UServ_UpdateUserNameRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_UpdateUserNameIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
-
 type UServ_UpdateNameToFooIter struct {
-	result sql.Result
-	rows   *sql.Rows
+	result *SpannerResult
+	rows   *spanner.RowIterator
 	err    error
 	tm     UServ_TypeMappings
 	ctx    context.Context
@@ -1179,40 +1041,15 @@ func (this *UServ_UpdateNameToFooIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) {
-	if this.rows == nil || this.err == io.EOF {
+	row, err := this.rows.Next()
+	_ = row
+	if err == iterator.Done {
 		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_UpdateNameToFooRow{err: err}, true
 	}
-	cols, err := this.rows.Columns()
 	if err != nil {
 		return &UServ_UpdateNameToFooRow{err: err}, true
 	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
-	}
-	toScan := make([]interface{}, len(cols))
-	scanned := make([]alwaysScanner, len(cols))
-	for i := range scanned {
-		toScan[i] = &scanned[i]
-	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_UpdateNameToFooRow{err: this.err}, true
-	}
 	res := &Empty{}
-	for i, col := range cols {
-		_ = i
-		switch col {
-
-		default:
-			return &UServ_UpdateNameToFooRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-		}
-	}
 	return &UServ_UpdateNameToFooRow{item: res}, true
 }
 
@@ -1229,20 +1066,9 @@ func (this *UServ_UpdateNameToFooIter) Slice() []*UServ_UpdateNameToFooRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_UpdateNameToFooIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
-
 type UServ_GetFriendsIter struct {
-	result sql.Result
-	rows   *sql.Rows
+	result *SpannerResult
+	rows   *spanner.RowIterator
 	err    error
 	tm     UServ_TypeMappings
 	ctx    context.Context
@@ -1300,69 +1126,51 @@ func (this *UServ_GetFriendsIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
-	if this.rows == nil || this.err == io.EOF {
+	row, err := this.rows.Next()
+	_ = row
+	if err == iterator.Done {
 		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_GetFriendsRow{err: err}, true
 	}
-	cols, err := this.rows.Columns()
 	if err != nil {
 		return &UServ_GetFriendsRow{err: err}, true
 	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
+	var id int64
+	if err := row.ColumnByName("id", &id); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
-	toScan := make([]interface{}, len(cols))
-	scanned := make([]alwaysScanner, len(cols))
-	for i := range scanned {
-		toScan[i] = &scanned[i]
-	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_GetFriendsRow{err: this.err}, true
-	}
-	res := &User{}
-	for i, col := range cols {
-		_ = i
-		switch col {
-		case "id":
-			r, ok := (*scanned[i].i).(int64)
-			if !ok {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
-			}
-			res.Id = r
-		case "name":
-			r, ok := (*scanned[i].i).(string)
-			if !ok {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
-			}
-			res.Name = r
-		case "friends":
-			r, ok := (*scanned[i].i).([]byte)
-			if !ok {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column friends to protobuf go type *Friends")}, true
-			}
-			var converted = new(Friends)
-			if err := proto.Unmarshal(r, converted); err != nil {
-				return &UServ_GetFriendsRow{err: err}, true
-			}
-			res.Friends = converted
-		case "created_on":
-			var converted = this.tm.TimestampTimestamp().Empty()
-			if err := converted.Scan(*scanned[i].i); err != nil {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("could not convert mapped db column created_on to type on User.CreatedOn: %v", err)}, true
-			}
-			if err := converted.ToProto(&res.CreatedOn); err != nil {
-				return &UServ_GetFriendsRow{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
-			}
 
-		default:
-			return &UServ_GetFriendsRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-		}
+	var name string
+	if err := row.ColumnByName("name", &name); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+	}
+
+	friends := &Friends{}
+	friendsBytes := make([]byte, 0)
+	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+	}
+	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
+	}
+
+	var created_on *timestamp.Timestamp
+	var created_on_col spanner.GenericColumnValue
+	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+	}
+	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+	}
+	if err := convert_created_on.ToProto(&created_on); err != nil {
+		return &UServ_GetFriendsRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
+	}
+
+	res := &User{
+		Id:        id,
+		Name:      name,
+		Friends:   friends,
+		CreatedOn: created_on,
 	}
 	return &UServ_GetFriendsRow{item: res}, true
 }
@@ -1380,20 +1188,9 @@ func (this *UServ_GetFriendsIter) Slice() []*UServ_GetFriendsRow {
 	return results
 }
 
-// returns the known columns for this result
-func (r *UServ_GetFriendsIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
-}
-
 type UServ_DropIter struct {
-	result sql.Result
-	rows   *sql.Rows
+	result *SpannerResult
+	rows   *spanner.RowIterator
 	err    error
 	tm     UServ_TypeMappings
 	ctx    context.Context
@@ -1451,40 +1248,15 @@ func (this *UServ_DropIter) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
-	if this.rows == nil || this.err == io.EOF {
+	row, err := this.rows.Next()
+	_ = row
+	if err == iterator.Done {
 		return nil, false
-	} else if this.err != nil {
-		err := this.err
-		this.err = io.EOF
-		return &UServ_DropRow{err: err}, true
 	}
-	cols, err := this.rows.Columns()
 	if err != nil {
 		return &UServ_DropRow{err: err}, true
 	}
-	if !this.rows.Next() {
-		if this.err = this.rows.Err(); this.err == nil {
-			this.err = io.EOF
-			return nil, false
-		}
-	}
-	toScan := make([]interface{}, len(cols))
-	scanned := make([]alwaysScanner, len(cols))
-	for i := range scanned {
-		toScan[i] = &scanned[i]
-	}
-	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &UServ_DropRow{err: this.err}, true
-	}
 	res := &Empty{}
-	for i, col := range cols {
-		_ = i
-		switch col {
-
-		default:
-			return &UServ_DropRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
-		}
-	}
 	return &UServ_DropRow{item: res}, true
 }
 
@@ -1499,17 +1271,6 @@ func (this *UServ_DropIter) Slice() []*UServ_DropRow {
 		}
 	}
 	return results
-}
-
-// returns the known columns for this result
-func (r *UServ_DropIter) Columns() ([]string, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.rows != nil {
-		return r.rows.Columns()
-	}
-	return nil, nil
 }
 
 type UServ_CreateUsersTableIn interface {
@@ -1996,22 +1757,22 @@ func (this *UServ_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Time
 func (this *UServ_DefaultTimestampTimestampMappingImpl) Empty() UServTimestampTimestampMappingImpl {
 	return this
 }
-func (this *UServ_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
+func (this *UServ_DefaultTimestampTimestampMappingImpl) ToSpanner(*timestamp.Timestamp) UServTimestampTimestampMappingImpl {
 	return this
 }
-func (this *UServ_DefaultTimestampTimestampMappingImpl) Scan(interface{}) error {
+func (this *UServ_DefaultTimestampTimestampMappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
 	return nil
 }
-func (this *UServ_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
+func (this *UServ_DefaultTimestampTimestampMappingImpl) SpannerValue() (interface{}, error) {
 	return "DEFAULT_TYPE_MAPPING_VALUE", nil
 }
 
 type UServTimestampTimestampMappingImpl interface {
 	ToProto(**timestamp.Timestamp) error
 	Empty() UServTimestampTimestampMappingImpl
-	ToSql(*timestamp.Timestamp) sql.Scanner
-	sql.Scanner
-	driver.Valuer
+	ToSpanner(*timestamp.Timestamp) UServTimestampTimestampMappingImpl
+	SpannerScan(*spanner.GenericColumnValue) error
+	SpannerValue() (interface{}, error)
 }
 
 func (this *UServ_DefaultTypeMappings) SliceStringParam() UServSliceStringParamMappingImpl {
@@ -2026,22 +1787,22 @@ func (this *UServ_DefaultSliceStringParamMappingImpl) ToProto(**SliceStringParam
 func (this *UServ_DefaultSliceStringParamMappingImpl) Empty() UServSliceStringParamMappingImpl {
 	return this
 }
-func (this *UServ_DefaultSliceStringParamMappingImpl) ToSql(*SliceStringParam) sql.Scanner {
+func (this *UServ_DefaultSliceStringParamMappingImpl) ToSpanner(*SliceStringParam) UServSliceStringParamMappingImpl {
 	return this
 }
-func (this *UServ_DefaultSliceStringParamMappingImpl) Scan(interface{}) error {
+func (this *UServ_DefaultSliceStringParamMappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
 	return nil
 }
-func (this *UServ_DefaultSliceStringParamMappingImpl) Value() (driver.Value, error) {
+func (this *UServ_DefaultSliceStringParamMappingImpl) SpannerValue() (interface{}, error) {
 	return "DEFAULT_TYPE_MAPPING_VALUE", nil
 }
 
 type UServSliceStringParamMappingImpl interface {
 	ToProto(**SliceStringParam) error
 	Empty() UServSliceStringParamMappingImpl
-	ToSql(*SliceStringParam) sql.Scanner
-	sql.Scanner
-	driver.Valuer
+	ToSpanner(*SliceStringParam) UServSliceStringParamMappingImpl
+	SpannerScan(*spanner.GenericColumnValue) error
+	SpannerValue() (interface{}, error)
 }
 type UServ_Opts struct {
 	MAPPINGS UServ_TypeMappings
@@ -2066,10 +1827,10 @@ type UServ_Impl struct {
 	opts     *UServ_Opts
 	QUERIES  *UServ_Queries
 	HANDLERS RestOfUServHandlers
-	DB       *sql.DB
+	DB       *spanner.Client
 }
 
-func UServPersistImpl(db *sql.DB, handlers RestOfUServHandlers, opts ...UServ_Opts) *UServ_Impl {
+func UServPersistImpl(db *spanner.Client, handlers RestOfUServHandlers, opts ...UServ_Opts) *UServ_Impl {
 	var myOpts UServ_Opts
 	if len(opts) > 0 {
 		myOpts = opts[0]
@@ -2098,7 +1859,7 @@ func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesSe
 }
 
 func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
-	query := this.QUERIES.CreateUsersTable(ctx, this.DB)
+	query := this.QUERIES.CreateUsersTable(ctx, this.DB.Single())
 
 	result := query.Execute(req)
 
@@ -2113,17 +1874,13 @@ func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, er
 }
 
 func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
-	tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
-	if err != nil {
-		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-	}
-	if err := this.InsertUsersTx(stream, tx); err != nil {
+	if err := this.InsertUsersTx(stream); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
 	}
 	return nil
 }
-func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx PersistTx) error {
-	query := this.QUERIES.InsertUsers(stream.Context(), tx)
+func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
+	items := make([]*User, 0)
 	var first *User
 	for {
 		req, err := stream.Recv()
@@ -2143,15 +1900,20 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 			continue
 		}
 
-		result := query.Execute(req)
-		if err := result.Zero(); err != nil {
-			return err
-		}
+		items = append(items, req)
 	}
-	if err := tx.Commit(); err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return fmt.Errorf("error executing 'insert_users' query :::AND COULD NOT ROLLBACK::: rollback err: %v, query err: %v", rollbackErr, err)
+	_, err := this.DB.ReadWriteTransaction(stream.Context(), func(ctx context.Context, tx *spanner.ReadWriteTransaction) error {
+		for _, item := range items {
+			query := this.QUERIES.InsertUsers(ctx, tx)
+			result := query.Execute(item)
+			if err := result.Zero(); err != nil {
+				return err
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		return gstatus.Errorf(codes.Unknown, "error in read write transaction: %v", err)
 	}
 	res := &Empty{}
 
@@ -2166,11 +1928,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 }
 
 func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
-	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
-	if err != nil {
-		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-	}
-	if err := this.GetAllUsersTx(req, stream, tx); err != nil {
+	if err := this.GetAllUsersTx(req, stream, this.DB.Single()); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'get_all_users' query: %v", err)
 	}
 	return nil
@@ -2189,7 +1947,7 @@ func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer
 }
 
 func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, error) {
-	query := this.QUERIES.SelectUserById(ctx, this.DB)
+	query := this.QUERIES.SelectUserById(ctx, this.DB.Single())
 
 	result := query.Execute(req)
 	res, err := result.One().User()
@@ -2201,7 +1959,7 @@ func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, e
 }
 
 func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
-	query := this.QUERIES.UpdateNameToFoo(ctx, this.DB)
+	query := this.QUERIES.UpdateNameToFoo(ctx, this.DB.Single())
 
 	result := query.Execute(req)
 
@@ -2216,11 +1974,7 @@ func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty,
 }
 
 func (this *UServ_Impl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
-	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
-	if err != nil {
-		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
-	}
-	if err := this.GetFriendsTx(req, stream, tx); err != nil {
+	if err := this.GetFriendsTx(req, stream, this.DB.Single()); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'get_friends' query: %v", err)
 	}
 	return nil
@@ -2239,7 +1993,7 @@ func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsSer
 }
 
 func (this *UServ_Impl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
-	query := this.QUERIES.Drop(ctx, this.DB)
+	query := this.QUERIES.Drop(ctx, this.DB.Single())
 
 	result := query.Execute(req)
 

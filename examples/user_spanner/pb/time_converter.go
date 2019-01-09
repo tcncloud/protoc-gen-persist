@@ -29,34 +29,30 @@
 package pb
 
 import (
-	"database/sql"
-	"database/sql/driver"
-	"fmt"
 	"time"
 
+	"cloud.google.com/go/spanner"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/lib/pq"
 )
 
 type TimeString struct {
 	t *timestamp.Timestamp
 }
 
-func (ts TimeString) ToSql(t *timestamp.Timestamp) sql.Scanner {
+func (ts TimeString) ToSpanner(t *timestamp.Timestamp) UServTimestampTimestampMappingImpl {
 	ts.t = t
 	return &ts
 }
-
 func (ts TimeString) ToProto(req **timestamp.Timestamp) error {
 	*req = ts.t
 	return nil
 }
 
-func (t *TimeString) Scan(src interface{}) error {
-	tStr, ok := src.(string)
-	if !ok {
-		return fmt.Errorf("cannot scan out timestamp from not a string")
+func (t *TimeString) SpannerScan(src *spanner.GenericColumnValue) error {
+	var tStr string
+	if err := src.Decode(&tStr); err != nil {
+		return err
 	}
 	ti, err := time.Parse(time.RFC3339, tStr)
 	if err != nil {
@@ -70,10 +66,10 @@ func (t *TimeString) Scan(src interface{}) error {
 	return nil
 }
 
-func (t *TimeString) Value() (driver.Value, error) {
+func (t *TimeString) SpannerValue() (interface{}, error) {
 	return ptypes.TimestampString(t.t), nil
 }
-func (t *TimeString) Empty() UServTimestampTimestampMappingImpl {
+func (t TimeString) Empty() UServTimestampTimestampMappingImpl {
 	return new(TimeString)
 }
 
@@ -81,7 +77,7 @@ type SliceStringConverter struct {
 	v *SliceStringParam
 }
 
-func (s *SliceStringConverter) ToSql(v *SliceStringParam) sql.Scanner {
+func (s *SliceStringConverter) ToSpanner(v *SliceStringParam) UServSliceStringParamMappingImpl {
 	s.v = v
 	return s
 }
@@ -90,18 +86,21 @@ func (s *SliceStringConverter) ToProto(req **SliceStringParam) error {
 	return nil
 }
 
-func (s *SliceStringConverter) Scan(src interface{}) error {
-	var in pq.StringArray
-	if err := in.Scan(src); err != nil {
+func (s *SliceStringConverter) SpannerScan(src *spanner.GenericColumnValue) error {
+	values := make([]string, 0)
+	if err := src.Decode(values); err != nil {
 		return err
 	}
-	s.v = &SliceStringParam{Slice: []string(in)}
+
+	s.v = &SliceStringParam{Slice: []string(values)}
+
 	return nil
 }
 
-func (s *SliceStringConverter) Value() (driver.Value, error) {
-	return pq.StringArray(s.v.Slice).Value()
+func (s *SliceStringConverter) SpannerValue() (interface{}, error) {
+	return s.v.GetSlice(), nil
 }
+
 func (s *SliceStringConverter) Empty() UServSliceStringParamMappingImpl {
 	return new(SliceStringConverter)
 }

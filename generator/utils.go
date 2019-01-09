@@ -30,8 +30,11 @@
 package generator
 
 import (
+	"bytes"
+	"fmt"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/sirupsen/logrus"
@@ -93,6 +96,7 @@ func FormatCode(filename string, buffer []byte) []byte {
 	}
 	return buf
 }
+
 func getGoNamesForTypeMapping(tm *persist.TypeMapping_TypeDescriptor, file *FileStruct) (string, string) {
 	name := file.GetGoTypeName(tm.GetProtoTypeName())
 	nameParts := strings.Split(name, ".")
@@ -108,4 +112,175 @@ func needsExtraStar(tm *persist.TypeMapping_TypeDescriptor) (bool, string) {
 		return true, "*"
 	}
 	return false, ""
+}
+
+func convertedMsgTypeByProtoName(protoName string, f *FileStruct) string {
+	str := f.AllStructures.GetStructByProtoName(protoName)
+	if str == nil {
+		return ""
+	}
+	if imp := f.ImportList.GetGoNameByStruct(str); imp != nil {
+		if f.NotSameAsMyPackage(imp.GoImportPath) {
+			return imp.GoPackageName + "." + str.GetGoName()
+		}
+	}
+	return str.GetGoName()
+}
+func defaultMapping(typ *descriptor.FieldDescriptorProto, file *FileStruct) (string, error) {
+	switch typ.GetType() {
+	case descriptor.FieldDescriptorProto_TYPE_GROUP:
+		return "__unsupported__type__", fmt.Errorf("one of is unsupported")
+		//logrus.Fatalf("we currently don't support groups/oneof structures %s", typ.GetName())
+	case descriptor.FieldDescriptorProto_TYPE_ENUM:
+		if ret := file.GetGoTypeName(typ.GetTypeName()); ret != "" {
+			if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+				return "[]" + ret, nil
+			} else {
+				return ret, nil
+			}
+		}
+	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
+		if ret := file.GetGoTypeName(typ.GetTypeName()); ret != "" {
+			if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+				return "[]*" + ret, nil
+			} else {
+				return "*" + ret, nil
+			}
+		}
+	case descriptor.FieldDescriptorProto_TYPE_BOOL:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]bool", nil
+		} else {
+			return "bool", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_BYTES:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[][]byte", nil
+		} else {
+			return "[]byte", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_DOUBLE:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]float64", nil
+		} else {
+			return "float64", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_FIXED32:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]uint32", nil
+		} else {
+			return "uint32", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_FIXED64:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]uint64", nil
+		} else {
+			return "uint64", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_FLOAT:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]float32", nil
+		} else {
+			return "float32", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_INT32:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]int32", nil
+		} else {
+			return "int32", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_INT64:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]int64", nil
+		} else {
+			return "int64", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_SFIXED32:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]int32", nil
+		} else {
+			return "int32", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_SFIXED64:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]int64", nil
+		} else {
+			return "int64", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_SINT32:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]int32", nil
+		} else {
+			return "int32", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_SINT64:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]int64", nil
+		} else {
+			return "int64", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_STRING:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]string", nil
+		} else {
+			return "string", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_UINT32:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]uint32", nil
+		} else {
+			return "uint32", nil
+		}
+	case descriptor.FieldDescriptorProto_TYPE_UINT64:
+		if typ.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+			return "[]uint64", nil
+		} else {
+			return "uint64", nil
+		}
+	}
+	return "__type__", fmt.Errorf("unknown type")
+}
+
+type Printer struct {
+	str string
+}
+
+func P(args ...interface{}) string {
+	printer := &Printer{}
+	printer.Q(args...)
+
+	return printer.String()
+}
+
+func (p *Printer) P(formatString string, args ...interface{}) {
+	p.str += fmt.Sprintf(formatString, args...)
+}
+
+func (p *Printer) Q(args ...interface{}) {
+	for _, arg := range args {
+		p.str += fmt.Sprintf("%v", arg)
+	}
+}
+func (p *Printer) PA(formatStrings []string, args ...interface{}) {
+	s := strings.Join(formatStrings, "")
+	p.P(s, args...)
+}
+
+func (p *Printer) PTemplate(t string, dot interface{}) {
+	var buff bytes.Buffer
+
+	tem, err := template.New("printTemplate").Parse(t)
+	if err != nil {
+		p.P("\nPARSE ERROR:<%v>\nPARSING:<%s>\n", err, t)
+		return
+	}
+	if err := tem.Execute(&buff, dot); err != nil {
+		p.P("\nEXEC ERROR:<%v>\nEXECUTING:<%s>\n", err, t)
+		return
+	}
+	p.P("%s", buff.String())
+}
+
+func (p *Printer) String() string {
+	return p.str
 }

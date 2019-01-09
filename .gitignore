@@ -31,7 +31,7 @@ examples/*.go
 examples/test/*.go
 *.cover*
 
-examples/user_spanner/user_spanner
+examples/user_spanner_bazel/user_spanner_bazel
 examples/user_sql/user_sql
 
 # docs
