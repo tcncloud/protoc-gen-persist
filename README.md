@@ -31,12 +31,6 @@ in different packages
 - expanded default type mapping
 - lots of bug fixes
 
-## Roadmap
- 1. ~~type mapping~~
- 1. ~~before & after callback function~~
- 1. add tests, lots of tests
- 1. ~~rewrite hooks/type mappings system to be more import safe~~
-
 
 ## Authors
  * [Florin Stan](https://github.com/namtzigla)
