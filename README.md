@@ -18,8 +18,6 @@ documentation for the project can be found [Here](docs/index.md)
 The documentation goes over the persist options, how to structure your proto file,
 custom type mapping to/from the database, and spanner query parsing
 
-## NOTE: This project is under development, use it at your own risk
-
 ## Version 3.0.0
 - Complete rework of the plugin (check the [examples](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples) directory for more info)
 
