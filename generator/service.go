@@ -972,19 +972,19 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 					goType := s.File.GetGoTypeName(field.GetTypeName())
 					msg := mustDefaultMapping(field)
 					acc = append(acc, `
-					`+name+` := make(`+msg+`, 0)
-					`+name+`Bytes := make([][]byte, 0)
-					if err := row.ColumnByName("`+name+`", &`+name+`Bytes); err != nil {
-						return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to convert db column `+name+` to [][]byte")}, true
-					}
-					for _, x := range `+name+`Bytes {
-						tmp := &`+goType+`{}
-						if err := proto.Unmarshal(x, tmp); err != nil {
-							return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
-						}
-						`+name+` = append(`+name+`, tmp)
-					}
-					`)
+                    `+name+` := make(`+msg+`, 0)
+                    `+name+`Bytes := make([][]byte, 0)
+                    if err := row.ColumnByName("`+name+`", &`+name+`Bytes); err != nil {
+                        return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to convert db column `+name+` to [][]byte")}, true
+                    }
+                    for _, x := range `+name+`Bytes {
+                        tmp := &`+goType+`{}
+                        if err := proto.Unmarshal(x, tmp); err != nil {
+                            return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+                        }
+                        `+name+` = append(`+name+`, tmp)
+                    }
+                    `)
 				} else {
 					acc = append(acc, "var "+name+" "+goType)
 					acc = append(acc, `
@@ -1373,6 +1373,10 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 			}
 			return false
 		})
+
+		if queryOptions == nil {
+			logrus.Fatalf("could not find query %s for method %s", mpo.option.GetQuery(), mpo.method.GetName())
+		}
 
 		zeroResponse := len(queryOptions.outFields) == 0
 		params := &handlerParams{
