@@ -1374,7 +1374,7 @@ func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, met
 			return false
 		})
 
-		zeroResponse := len(queryOptions.outFields) == 0
+		zeroResponse := queryOptions != nil && len(queryOptions.outFields) == 0
 		params := &handlerParams{
 			Service:        serviceName,
 			Method:         mpo.method.GetName(),
