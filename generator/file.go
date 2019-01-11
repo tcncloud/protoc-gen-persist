@@ -285,6 +285,14 @@ func (f *FileStruct) ProcessImports() {
 			importsForStructName(m.GetInputType())
 			importsForStructName(m.GetOutputType())
 		}
+		qopts := srv.GetQueriesOption()
+		if qopts != nil {
+			for _, q := range qopts.Queries {
+				importsForStructName(q.GetIn())
+				importsForStructName(q.GetOut())
+			}
+		}
+
 	}
 }
 
@@ -369,21 +377,27 @@ func (f *FileStruct) GetGoTypeName(typ string) string {
 func (f *FileStruct) Generate() ([]byte, error) {
 	p := &Printer{}
 	for _, s := range *f.ServiceList {
+		logrus.WithField("service", s.Desc.GetName()).Debug("writing queries")
 		if err := WriteQueries(p, s); err != nil {
 			return nil, err
 		}
+		logrus.WithField("service", s.Desc.GetName()).Debug("writing iters")
 		if err := WriteIters(p, s); err != nil {
 			return nil, err
 		}
+		logrus.WithField("service", s.Desc.GetName()).Debug("writing rows")
 		if err := WriteRows(p, s); err != nil {
 			return nil, err
 		}
+		logrus.WithField("service", s.Desc.GetName()).Debug("writing hooks")
 		if err := WriteHooks(p, s); err != nil {
 			return nil, err
 		}
+		logrus.WithField("service", s.Desc.GetName()).Debug("writing type mappings")
 		if err := WriteTypeMappings(p, s); err != nil {
 			return nil, err
 		}
+		logrus.WithField("service", s.Desc.GetName()).Debug("writing type handlers")
 		if err := WriteHandlers(p, s); err != nil {
 			return nil, err
 		}

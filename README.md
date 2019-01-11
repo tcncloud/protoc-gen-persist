@@ -18,7 +18,8 @@ documentation for the project can be found [Here](docs/index.md)
 The documentation goes over the persist options, how to structure your proto file,
 custom type mapping to/from the database, and spanner query parsing
 
-## NOTE: This project is under development, use it at your own risk
+## Version 3.0.0
+- Complete rework of the plugin (check the [examples](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples) directory for more info)
 
 ## Version 2.0.0
 - new method for generating before and after hooks. See #82 (@iamneal)
@@ -30,17 +31,13 @@ in different packages
 - expanded default type mapping
 - lots of bug fixes
 
-## Roadmap
- 1. ~~type mapping~~
- 1. ~~before & after callback function~~
- 1. add tests, lots of tests
- 1. ~~rewrite hooks/type mappings system to be more import safe~~
-
 
 ## Authors
  * [Florin Stan](https://github.com/namtzigla)
  * [Neal Cooper](https://github.com/iamneal)
  * [Jamie Whahlin](https://github.com/jwahlin)
+ * [Michael Sorenson](https://github.com/michael-the-grey)
+ * [Colton Morris](https://github.com/coltonmorris)
 
 
 ## License

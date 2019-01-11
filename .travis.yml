@@ -9,6 +9,7 @@ before_script:
 - mkdir -p $PROTOC_DIR
 - unzip protoc-3.6.1-linux-x86_64.zip -d $PROTOC_DIR
 - chmod +x $PROTOC_DIR/bin/protoc
+- export GO111MODULE=on
 
 before_deploy:
   - rm protoc-gen-persist

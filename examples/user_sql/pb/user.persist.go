@@ -16,6 +16,16 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
+type PersistTx interface {
+	Commit() error
+	Rollback() error
+	Runnable
+}
+
+func NopPersistTx(r Runnable) (PersistTx, error) {
+	return &ignoreTx{r}, nil
+}
+
 type ignoreTx struct {
 	r Runnable
 }
@@ -27,16 +37,6 @@ func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interfac
 }
 func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
 	return this.r.ExecContext(ctx, x, ys...)
-}
-
-type PersistTx interface {
-	Commit() error
-	Rollback() error
-	Runnable
-}
-
-func NopPersistTx(r Runnable) (PersistTx, error) {
-	return &ignoreTx{r}, nil
 }
 
 type Runnable interface {
@@ -456,6 +456,9 @@ func (this *UServ_CreateUsersTableIter) Each(fun func(*UServ_CreateUsersTableRow
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_CreateUsersTableIter) One() *UServ_CreateUsersTableRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_CreateUsersTableRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -469,7 +472,11 @@ func (this *UServ_CreateUsersTableIter) One() *UServ_CreateUsersTableRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_CreateUsersTableIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'CreateUsersTable'")
 	}
 	return nil
@@ -570,6 +577,9 @@ func (this *UServ_InsertUsersIter) Each(fun func(*UServ_InsertUsersRow) error) e
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_InsertUsersRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -583,7 +593,11 @@ func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_InsertUsersIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'InsertUsers'")
 	}
 	return nil
@@ -684,6 +698,9 @@ func (this *UServ_GetAllUsersIter) Each(fun func(*UServ_GetAllUsersRow) error) e
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_GetAllUsersRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -697,7 +714,11 @@ func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_GetAllUsersIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'GetAllUsers'")
 	}
 	return nil
@@ -828,6 +849,9 @@ func (this *UServ_SelectUserByIdIter) Each(fun func(*UServ_SelectUserByIdRow) er
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_SelectUserByIdIter) One() *UServ_SelectUserByIdRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_SelectUserByIdRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -841,7 +865,11 @@ func (this *UServ_SelectUserByIdIter) One() *UServ_SelectUserByIdRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_SelectUserByIdIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'SelectUserById'")
 	}
 	return nil
@@ -972,6 +1000,9 @@ func (this *UServ_UpdateUserNameIter) Each(fun func(*UServ_UpdateUserNameRow) er
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_UpdateUserNameIter) One() *UServ_UpdateUserNameRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_UpdateUserNameRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -985,7 +1016,11 @@ func (this *UServ_UpdateUserNameIter) One() *UServ_UpdateUserNameRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_UpdateUserNameIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'UpdateUserName'")
 	}
 	return nil
@@ -1116,6 +1151,9 @@ func (this *UServ_UpdateNameToFooIter) Each(fun func(*UServ_UpdateNameToFooRow) 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_UpdateNameToFooIter) One() *UServ_UpdateNameToFooRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_UpdateNameToFooRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -1129,7 +1167,11 @@ func (this *UServ_UpdateNameToFooIter) One() *UServ_UpdateNameToFooRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_UpdateNameToFooIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'UpdateNameToFoo'")
 	}
 	return nil
@@ -1230,6 +1272,9 @@ func (this *UServ_GetFriendsIter) Each(fun func(*UServ_GetFriendsRow) error) err
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_GetFriendsIter) One() *UServ_GetFriendsRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_GetFriendsRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -1243,7 +1288,11 @@ func (this *UServ_GetFriendsIter) One() *UServ_GetFriendsRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_GetFriendsIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'GetFriends'")
 	}
 	return nil
@@ -1374,6 +1423,9 @@ func (this *UServ_DropIter) Each(fun func(*UServ_DropRow) error) error {
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *UServ_DropIter) One() *UServ_DropRow {
 	first, hasFirst := this.Next()
+	if first != nil && first.err != nil {
+		return &UServ_DropRow{err: first.err}
+	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
 		amount := "none"
@@ -1387,7 +1439,11 @@ func (this *UServ_DropIter) One() *UServ_DropRow {
 
 // Zero returns an error if there were any rows in the result
 func (this *UServ_DropIter) Zero() error {
-	if _, ok := this.Next(); ok {
+	row, ok := this.Next()
+	if row != nil && row.err != nil {
+		return row.err
+	}
+	if ok {
 		return fmt.Errorf("expected exactly 0 results from query 'Drop'")
 	}
 	return nil
@@ -2089,7 +2145,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer, tx Persist
 
 		result := query.Execute(req)
 		if err := result.Zero(); err != nil {
-			return gstatus.Errorf(codes.InvalidArgument, "client streaming queries must return zero results")
+			return err
 		}
 	}
 	if err := tx.Commit(); err != nil {

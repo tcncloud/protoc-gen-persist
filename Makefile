@@ -84,7 +84,7 @@ test-compile:
 	cd ./tests/spanner/basic && go build
 
 
-deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  $(GOPATH)/bin/dep
+deps: $(GOPATH)/bin/protoc-gen-go $(GOPATH)/bin/ginkgo  
 
 
 $(GOPATH)/bin/protoc-gen-go:
@@ -94,8 +94,6 @@ $(GOPATH)/bin/ginkgo:
 	go get -u github.com/onsi/ginkgo/ginkgo
 	go get -u github.com/onsi/gomega
 
-$(GOPATH)/bin/dep:
-	go get -u github.com/golang/dep/cmd/dep
 
 clean:
 	go clean -modcache
