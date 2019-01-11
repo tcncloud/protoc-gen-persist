@@ -409,6 +409,8 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
 			potentialFieldNames := r.FindAllString(orig, -1)
 			mappedField := make(map[string]string)
 			fieldsMap := make(map[string]desc.FieldDescriptorProto_Type)
+			repeatedMap := make(map[string]desc.FieldDescriptorProto_Label)
+
 			for _, v := range q.inFields {
 				m.EachTM(func(opts *TypeMappingProtoOpts) {
 					if v.GetLabel() != opts.tm.GetProtoLabel() {
@@ -423,6 +425,7 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
 				})
 
 				fieldsMap[v.GetName()] = v.GetType()
+				repeatedMap[v.GetName()] = v.GetLabel()
 			}
 
 			for _, pf := range potentialFieldNames {
@@ -432,6 +435,7 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
 				if ok { // it was a field, mark it
 					key := pf[1:]
 					mappingType, isMapped := mappedField[key]
+					label := repeatedMap[key]
 					if isMapped {
 						result = append(result,
 							key+`, err := this.opts.MAPPINGS.`+mappingType+`().ToSpanner(x.Get`+_gen.CamelCase(key)+`()).SpannerValue()
@@ -441,6 +445,18 @@ func (this *`, sName, `_`, camelQ(q), `Query) Execute(x `, sName, `_`, camelQ(q)
                             result["`+key+`"] = `+key+`
                             `,
 						)
+					} else if label == desc.FieldDescriptorProto_LABEL_REPEATED && fieldType == desc.FieldDescriptorProto_TYPE_MESSAGE {
+						result = append(result, `
+							`+key+` := make([][]byte, 0)
+							for _, tmp := range x.Get`+_gen.CamelCase(key)+`() {
+								bytes, err := proto.Marshal(tmp)
+								if err != nil {
+									return nil, err
+								}
+								`+key+` = append(`+key+`, bytes)
+							}
+							result["`+key+`"] = `+key+`
+						`)
 					} else if fieldType == desc.FieldDescriptorProto_TYPE_MESSAGE {
 						result = append(result, `
                         `+key+`, err := proto.Marshal(x.Get`+_gen.CamelCase(key)+`())
@@ -972,19 +988,19 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 					goType := s.File.GetGoTypeName(field.GetTypeName())
 					msg := mustDefaultMapping(field)
 					acc = append(acc, `
-					`+name+` := make(`+msg+`, 0)
-					`+name+`Bytes := make([][]byte, 0)
-					if err := row.ColumnByName("`+name+`", &`+name+`Bytes); err != nil {
-						return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to convert db column `+name+` to [][]byte")}, true
-					}
-					for _, x := range `+name+`Bytes {
-						tmp := &`+goType+`{}
-						if err := proto.Unmarshal(x, tmp); err != nil {
-							return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
-						}
-						`+name+` = append(`+name+`, tmp)
-					}
-					`)
+                    `+name+` := make(`+msg+`, 0)
+                    `+name+`Bytes := make([][]byte, 0)
+                    if err := row.ColumnByName("`+name+`", &`+name+`Bytes); err != nil {
+                        return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to convert db column `+name+` to [][]byte")}, true
+                    }
+                    for _, x := range `+name+`Bytes {
+                        tmp := &`+goType+`{}
+                        if err := proto.Unmarshal(x, tmp); err != nil {
+                            return &`+sName+`_`+camelQ(q)+`Row{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+                        }
+                        `+name+` = append(`+name+`, tmp)
+                    }
+                    `)
 				} else {
 					acc = append(acc, "var "+name+" "+goType)
 					acc = append(acc, `
@@ -1175,7 +1191,33 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 			})
 		})
 	}
-	unwrapMarshelOut := func(qopt *QueryProtoOpts) string {
+
+	unwrapQueryOut := func(qopt *QueryProtoOpts) string {
+		p := &Printer{}
+
+		setFields := func() string {
+			printer := &Printer{}
+			for _, field := range qopt.outFields {
+				printer.Q(`o.`, camelF(field), ` = res.`, camelF(field), "\n")
+			}
+			return printer.String()
+		}
+
+		p.Q(`if o, ok := (pointerToMsg).(*`, outName(qopt), `); ok {
+            if o == nil {
+                return fmt.Errorf("must initialize *`, outName(qopt), ` before giving to Unwrap()")
+            }
+            res, _ := this.`, outNamePkg(qopt), `()
+            _ = res
+            `, setFields(), `
+            return nil
+        }
+        `)
+
+		return p.String()
+	}
+
+	unwrapMarshalOut := func(qopt *QueryProtoOpts) string {
 		// set the field only if it exists in both the method and the query messages
 		setSharedOnPointer := func(mopt *MethodProtoOpts) string {
 			printer := &Printer{}
@@ -1207,6 +1249,13 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 		return printer.String()
 	}
 	outMethods := func(q *QueryProtoOpts) string {
+		setQueryOutFields := func(q *QueryProtoOpts) string {
+			printer := &Printer{}
+			for _, field := range q.outFields {
+				printer.Q(camelF(field), `: this.item.Get`, camelF(field), "(),\n")
+			}
+			return printer.String()
+		}
 		setSharedFields := func(mopt *MethodProtoOpts) string {
 			printer := &Printer{}
 			eachSharedField(mopt, func(qf *desc.FieldDescriptorProto, q *QueryProtoOpts) {
@@ -1216,6 +1265,18 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 		}
 		printer := &Printer{}
 		did := make(map[string]bool)
+
+		printer.Q(`func (this *`, sName, `_`, camelQ(q), `Row) `, outNamePkg(q), `() (*`, outName(q), `, error) {
+			if this.err != nil {
+				return nil, this.err
+			}
+			return &`, outName(q), `{
+				`, setQueryOutFields(q), `
+			}, nil
+		}
+		`)
+		did[outName(q)] = true
+
 		m.EachMethod(func(mopt *MethodProtoOpts) {
 			printer.Q(`func (this *`, sName, `_`, camelQ(q), `Row) `, methOutNamePkg(mopt), `() (*`, methOutName(mopt), `, error) {
                 if this.err != nil {
@@ -1257,7 +1318,8 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
             if this.err != nil {
                 return this.err
             }
-            `, unwrapMarshelOut(q), `
+            `, unwrapQueryOut(q), `
+            `, unwrapMarshalOut(q), `
             return nil
         }
         `, outMethods(q), `
