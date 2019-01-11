@@ -54,11 +54,11 @@ func (m *MappingImpl) SliceStringParam() pb.UServSliceStringParamMappingImpl {
 
 type HooksImpl struct{}
 
-func (h *HooksImpl) InsertUsersBeforeHook(ctx context.Context, req *pb.User) (*pb.Empty, error) {
+func (h *HooksImpl) InsertUsersBeforeHook(ctx context.Context, req *pb.User) (*pb.Empty2, error) {
 	pb.IncId(req)
 	return nil, nil
 }
-func (h *HooksImpl) InsertUsersAfterHook(context.Context, *pb.User, *pb.Empty) error {
+func (h *HooksImpl) InsertUsersAfterHook(context.Context, *pb.User, *pb.Empty2) error {
 	return nil
 }
 func (h *HooksImpl) GetAllUsersBeforeHook(context.Context, *pb.Empty) (*pb.User, error) {

@@ -1302,6 +1302,16 @@ func (this *UServ_CreateUsersTableRow) Unwrap(pointerToMsg proto.Message) error 
 		return nil
 	}
 
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	return nil
 }
 func (this *UServ_CreateUsersTableRow) Empty() (*Empty, error) {
@@ -1351,6 +1361,16 @@ func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
 		return nil
 	}
 
+	if o, ok := (pointerToMsg).(*Empty2); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty2 before giving to Unwrap()")
+		}
+		res, _ := this.Empty2()
+		_ = res
+
+		return nil
+	}
+
 	return nil
 }
 func (this *UServ_InsertUsersRow) Empty() (*Empty, error) {
@@ -1358,6 +1378,12 @@ func (this *UServ_InsertUsersRow) Empty() (*Empty, error) {
 		return nil, this.err
 	}
 	return &Empty{}, nil
+}
+func (this *UServ_InsertUsersRow) Empty2() (*Empty2, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty2{}, nil
 }
 
 func (this *UServ_InsertUsersRow) Proto() (*Empty, error) {
@@ -1390,6 +1416,19 @@ func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*User); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *User before giving to Unwrap()")
@@ -1469,6 +1508,19 @@ func (this *UServ_SelectUserByIdRow) Unwrap(pointerToMsg proto.Message) error {
 		return nil
 	}
 
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
+
 	return nil
 }
 func (this *UServ_SelectUserByIdRow) User() (*User, error) {
@@ -1522,6 +1574,19 @@ func (this *UServ_UpdateUserNameRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*User); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *User before giving to Unwrap()")
@@ -1594,6 +1659,16 @@ func (this *UServ_UpdateNameToFooRow) Unwrap(pointerToMsg proto.Message) error {
 		return nil
 	}
 
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	return nil
 }
 func (this *UServ_UpdateNameToFooRow) Empty() (*Empty, error) {
@@ -1634,6 +1709,19 @@ func (this *UServ_GetFriendsRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*User); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *User before giving to Unwrap()")
+		}
+		res, _ := this.User()
+		_ = res
+		o.Id = res.Id
+		o.Name = res.Name
+		o.Friends = res.Friends
+		o.CreatedOn = res.CreatedOn
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*User); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *User before giving to Unwrap()")
@@ -1702,6 +1790,16 @@ func (this *UServ_DropRow) Unwrap(pointerToMsg proto.Message) error {
 		return nil
 	}
 
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	return nil
 }
 func (this *UServ_DropRow) Empty() (*Empty, error) {
@@ -1719,20 +1817,20 @@ func (this *UServ_DropRow) Proto() (*Empty, error) {
 }
 
 type UServ_Hooks interface {
-	InsertUsersBeforeHook(context.Context, *User) (*Empty, error)
+	InsertUsersBeforeHook(context.Context, *User) (*Empty2, error)
 	GetAllUsersBeforeHook(context.Context, *Empty) (*User, error)
-	InsertUsersAfterHook(context.Context, *User, *Empty) error
+	InsertUsersAfterHook(context.Context, *User, *Empty2) error
 	GetAllUsersAfterHook(context.Context, *Empty, *User) error
 }
 type UServ_DefaultHooks struct{}
 
-func (*UServ_DefaultHooks) InsertUsersBeforeHook(context.Context, *User) (*Empty, error) {
+func (*UServ_DefaultHooks) InsertUsersBeforeHook(context.Context, *User) (*Empty2, error) {
 	return nil, nil
 }
 func (*UServ_DefaultHooks) GetAllUsersBeforeHook(context.Context, *Empty) (*User, error) {
 	return nil, nil
 }
-func (*UServ_DefaultHooks) InsertUsersAfterHook(context.Context, *User, *Empty) error {
+func (*UServ_DefaultHooks) InsertUsersAfterHook(context.Context, *User, *Empty2) error {
 	return nil
 }
 func (*UServ_DefaultHooks) GetAllUsersAfterHook(context.Context, *Empty, *User) error {
@@ -1915,7 +2013,7 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in read write transaction: %v", err)
 	}
-	res := &Empty{}
+	res := &Empty2{}
 
 	if err := this.opts.HOOKS.InsertUsersAfterHook(stream.Context(), first, res); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)

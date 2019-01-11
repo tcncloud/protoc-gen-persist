@@ -63,7 +63,7 @@ message FriendsReq {
 }
 
 message Empty{}
-
+message Empty2{}
 
 service UServ {
     option (persist.service_type) = SQL;
@@ -132,7 +132,7 @@ service UServ {
             query: "create_users_table",
         };
     };
-    rpc InsertUsers(stream User) returns (Empty) {
+    rpc InsertUsers(stream User) returns (Empty2) {
         option (persist.opts) = {
             query: "insert_users",
             before: true,
