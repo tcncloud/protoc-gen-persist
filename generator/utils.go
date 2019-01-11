@@ -115,16 +115,7 @@ func needsExtraStar(tm *persist.TypeMapping_TypeDescriptor) (bool, string) {
 }
 
 func convertedMsgTypeByProtoName(protoName string, f *FileStruct) string {
-	str := f.AllStructures.GetStructByProtoName(protoName)
-	if str == nil {
-		return ""
-	}
-	if imp := f.ImportList.GetGoNameByStruct(str); imp != nil {
-		if f.NotSameAsMyPackage(imp.GoImportPath) {
-			return imp.GoPackageName + "." + str.GetGoName()
-		}
-	}
-	return str.GetGoName()
+	return f.GetGoTypeName(protoName)
 }
 func defaultMapping(typ *descriptor.FieldDescriptorProto, file *FileStruct) (string, error) {
 	switch typ.GetType() {
