@@ -64,7 +64,22 @@ func (Match) QueryFieldFitsDB(field *desc.FieldDescriptorProto, q *QueryProtoOpt
 		return true
 	case desc.FieldDescriptorProto_TYPE_BYTES:
 		return true
-
+	case desc.FieldDescriptorProto_TYPE_FLOAT:
+		return true
+	case desc.FieldDescriptorProto_TYPE_DOUBLE:
+		return true
+	case desc.FieldDescriptorProto_TYPE_FIXED64:
+		return true
+	case desc.FieldDescriptorProto_TYPE_FIXED32:
+		return true
+	case desc.FieldDescriptorProto_TYPE_SFIXED32:
+		return true
+	case desc.FieldDescriptorProto_TYPE_SFIXED64:
+		return true
+	case desc.FieldDescriptorProto_TYPE_SINT32:
+		return true
+	case desc.FieldDescriptorProto_TYPE_SINT64:
+		return true
 	}
 	return false
 }
