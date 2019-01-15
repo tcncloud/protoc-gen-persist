@@ -665,6 +665,18 @@ func (this *Amazing_SelectByIdRow) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		return nil
 	}
+
+	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
+		}
+		res, _ := this.TestExampleTable()
+		_ = res
+		o.Id = res.Id
+		o.StartTime = res.StartTime
+		o.Name = res.Name
+		return nil
+	}
 	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
@@ -735,6 +747,18 @@ func (this *Amazing_SelectByNameRow) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		return nil
 	}
+
+	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
+		}
+		res, _ := this.TestExampleTable()
+		_ = res
+		o.Id = res.Id
+		o.StartTime = res.StartTime
+		o.Name = res.Name
+		return nil
+	}
 	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
@@ -793,6 +817,16 @@ func (this *Amazing_InsertRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.NumRows); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
@@ -813,6 +847,12 @@ func (this *Amazing_InsertRow) Unwrap(pointerToMsg proto.Message) error {
 	}
 
 	return nil
+}
+func (this *Amazing_InsertRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 func (this *Amazing_InsertRow) TestNumRows() (*test.NumRows, error) {
 	if this.err != nil {

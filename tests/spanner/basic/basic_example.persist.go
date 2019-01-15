@@ -304,6 +304,23 @@ func (this *ExtraSrv_ExtraRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*HasTimestamp); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *HasTimestamp before giving to Unwrap()")
+		}
+		res, _ := this.HasTimestamp()
+		_ = res
+		o.Time = res.Time
+		o.Some = res.Some
+		o.Str = res.Str
+		o.Table = res.Table
+		o.Strs = res.Strs
+		o.Tables = res.Tables
+		o.Somes = res.Somes
+		o.Times = res.Times
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
@@ -315,6 +332,21 @@ func (this *ExtraSrv_ExtraRow) Unwrap(pointerToMsg proto.Message) error {
 	}
 
 	return nil
+}
+func (this *ExtraSrv_ExtraRow) HasTimestamp() (*HasTimestamp, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &HasTimestamp{
+		Time:   this.item.GetTime(),
+		Some:   this.item.GetSome(),
+		Str:    this.item.GetStr(),
+		Table:  this.item.GetTable(),
+		Strs:   this.item.GetStrs(),
+		Tables: this.item.GetTables(),
+		Somes:  this.item.GetSomes(),
+		Times:  this.item.GetTimes(),
+	}, nil
 }
 func (this *ExtraSrv_ExtraRow) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
@@ -1714,6 +1746,16 @@ func (this *MySpanner_InsertRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
@@ -1725,6 +1767,12 @@ func (this *MySpanner_InsertRow) Unwrap(pointerToMsg proto.Message) error {
 	}
 
 	return nil
+}
+func (this *MySpanner_InsertRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 func (this *MySpanner_InsertRow) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
@@ -1765,6 +1813,18 @@ func (this *MySpanner_SelectRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
+		}
+		res, _ := this.TestExampleTable()
+		_ = res
+		o.Id = res.Id
+		o.StartTime = res.StartTime
+		o.Name = res.Name
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
@@ -1837,6 +1897,18 @@ func (this *MySpanner_SelectIndexRow) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		return nil
 	}
+
+	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
+		}
+		res, _ := this.TestExampleTable()
+		_ = res
+		o.Id = res.Id
+		o.StartTime = res.StartTime
+		o.Name = res.Name
+		return nil
+	}
 	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
@@ -1895,6 +1967,16 @@ func (this *MySpanner_UpdateRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.PartialTable); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.PartialTable before giving to Unwrap()")
@@ -1906,6 +1988,12 @@ func (this *MySpanner_UpdateRow) Unwrap(pointerToMsg proto.Message) error {
 	}
 
 	return nil
+}
+func (this *MySpanner_UpdateRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 func (this *MySpanner_UpdateRow) TestPartialTable() (*test.PartialTable, error) {
 	if this.err != nil {
@@ -1942,6 +2030,16 @@ func (this *MySpanner_DeleteRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
@@ -1953,6 +2051,12 @@ func (this *MySpanner_DeleteRow) Unwrap(pointerToMsg proto.Message) error {
 	}
 
 	return nil
+}
+func (this *MySpanner_DeleteRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 func (this *MySpanner_DeleteRow) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
@@ -1990,6 +2094,18 @@ func (this *MySpanner_SelectAllRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
+		}
+		res, _ := this.TestExampleTable()
+		_ = res
+		o.Id = res.Id
+		o.StartTime = res.StartTime
+		o.Name = res.Name
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.ExampleTable); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.ExampleTable before giving to Unwrap()")
@@ -2059,6 +2175,16 @@ func (this *MySpanner_Insert_3Row) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.NumRows); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
@@ -2070,6 +2196,12 @@ func (this *MySpanner_Insert_3Row) Unwrap(pointerToMsg proto.Message) error {
 	}
 
 	return nil
+}
+func (this *MySpanner_Insert_3Row) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 func (this *MySpanner_Insert_3Row) TestNumRows() (*test.NumRows, error) {
 	if this.err != nil {
@@ -2107,6 +2239,16 @@ func (this *MySpanner_DeleteIdRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.NumRows); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
@@ -2118,6 +2260,12 @@ func (this *MySpanner_DeleteIdRow) Unwrap(pointerToMsg proto.Message) error {
 	}
 
 	return nil
+}
+func (this *MySpanner_DeleteIdRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 func (this *MySpanner_DeleteIdRow) TestNumRows() (*test.NumRows, error) {
 	if this.err != nil {
@@ -2155,6 +2303,16 @@ func (this *MySpanner_SetNameAsdfRow) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*test.NumRows); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *test.NumRows before giving to Unwrap()")
@@ -2166,6 +2324,12 @@ func (this *MySpanner_SetNameAsdfRow) Unwrap(pointerToMsg proto.Message) error {
 	}
 
 	return nil
+}
+func (this *MySpanner_SetNameAsdfRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 func (this *MySpanner_SetNameAsdfRow) TestNumRows() (*test.NumRows, error) {
 	if this.err != nil {

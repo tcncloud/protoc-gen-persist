@@ -1066,6 +1066,27 @@ func (this *Testservice1_UnaryExample1Row) Unwrap(pointerToMsg proto.Message) er
 		return nil
 	}
 
+	if o, ok := (pointerToMsg).(*ExampleTable1); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
+		}
+		res, _ := this.ExampleTable1()
+		_ = res
+		o.TableId = res.TableId
+		o.Key = res.Key
+		o.Value = res.Value
+		o.InnerMessage = res.InnerMessage
+		o.InnerEnum = res.InnerEnum
+		o.StringArray = res.StringArray
+		o.BytesField = res.BytesField
+		o.StartTime = res.StartTime
+		o.TestField = res.TestField
+		o.Myyenum = res.Myyenum
+		o.Testsenum = res.Testsenum
+		o.Mappedenum = res.Mappedenum
+		return nil
+	}
+
 	return nil
 }
 func (this *Testservice1_UnaryExample1Row) ExampleTable1() (*ExampleTable1, error) {
@@ -1141,6 +1162,27 @@ func (this *Testservice1_UnaryExample2Row) Unwrap(pointerToMsg proto.Message) er
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*ExampleTable1); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
+		}
+		res, _ := this.ExampleTable1()
+		_ = res
+		o.TableId = res.TableId
+		o.Key = res.Key
+		o.Value = res.Value
+		o.InnerMessage = res.InnerMessage
+		o.InnerEnum = res.InnerEnum
+		o.StringArray = res.StringArray
+		o.BytesField = res.BytesField
+		o.StartTime = res.StartTime
+		o.TestField = res.TestField
+		o.Myyenum = res.Myyenum
+		o.Testsenum = res.Testsenum
+		o.Mappedenum = res.Mappedenum
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*ExampleTable1); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
@@ -1268,6 +1310,27 @@ func (this *Testservice1_ServerStreamSelectRow) Unwrap(pointerToMsg proto.Messag
 		return nil
 	}
 
+	if o, ok := (pointerToMsg).(*ExampleTable1); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *ExampleTable1 before giving to Unwrap()")
+		}
+		res, _ := this.ExampleTable1()
+		_ = res
+		o.TableId = res.TableId
+		o.Key = res.Key
+		o.Value = res.Value
+		o.InnerMessage = res.InnerMessage
+		o.InnerEnum = res.InnerEnum
+		o.StringArray = res.StringArray
+		o.BytesField = res.BytesField
+		o.StartTime = res.StartTime
+		o.TestField = res.TestField
+		o.Myyenum = res.Myyenum
+		o.Testsenum = res.Testsenum
+		o.Mappedenum = res.Mappedenum
+		return nil
+	}
+
 	return nil
 }
 func (this *Testservice1_ServerStreamSelectRow) ExampleTable1() (*ExampleTable1, error) {
@@ -1341,6 +1404,16 @@ func (this *Testservice1_ClientStreamingExampleRow) Unwrap(pointerToMsg proto.Me
 	if this.err != nil {
 		return this.err
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+
 	if o, ok := (pointerToMsg).(*CountRows); ok {
 		if o == nil {
 			return fmt.Errorf("must initialize *CountRows before giving to Unwrap()")
@@ -1352,6 +1425,12 @@ func (this *Testservice1_ClientStreamingExampleRow) Unwrap(pointerToMsg proto.Me
 	}
 
 	return nil
+}
+func (this *Testservice1_ClientStreamingExampleRow) Empty() (*Empty, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+	return &Empty{}, nil
 }
 func (this *Testservice1_ClientStreamingExampleRow) CountRows() (*CountRows, error) {
 	if this.err != nil {
