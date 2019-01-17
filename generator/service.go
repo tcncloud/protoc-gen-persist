@@ -1399,7 +1399,7 @@ func (this *`, serviceName, `_Impl) `, method, `(req *`, inMsg, `, stream `, ser
 		if m.ClientStreaming(mpo) {
 			p.Q(`
 func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, inMsg, `Server) error {
-    return this.HANDLERS.`, inMsg, `(stream)
+    return this.HANDLERS.`, method, `(stream)
 }
         `)
 		}
