@@ -753,11 +753,11 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
 			ename := convertedMsgTypeByProtoName(f.GetTypeName(), s.File)
 			cases[fName(f)] = P(`case "`, fName(f), `":
-                r, ok := (*scanned[i].i).(int32)
+                r, ok := (*scanned[i].i).(int64)
                 if !ok {
                     return &`, sName, `_`, camelQ(q), `Row{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type *`, mustDefaultMappingNoStar(f), `")}, true
                 }
-                var converted = (`, ename, `)(r)
+                var converted = (`, ename, `)(int32(r))
                 res.`, camelF(f), ` = converted
             `)
 		}, m.MatchQuery(opt), func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
@@ -1399,7 +1399,7 @@ func (this *`, serviceName, `_Impl) `, method, `(req *`, inMsg, `, stream `, ser
 		if m.ClientStreaming(mpo) {
 			p.Q(`
 func (this *`, serviceName, `_Impl) `, method, `(stream `, serviceName, `_`, inMsg, `Server) error {
-    return this.HANDLERS.`, inMsg, `(stream)
+    return this.HANDLERS.`, method, `(stream)
 }
         `)
 		}
