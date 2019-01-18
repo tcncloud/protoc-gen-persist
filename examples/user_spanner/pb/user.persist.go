@@ -41,48 +41,51 @@ type Runnable interface {
 	QueryWithStats(context.Context, spanner.Statement) *spanner.RowIterator
 }
 
-// UServ_Queries holds all the queries found the proto service option as methods
-type UServ_Queries struct {
-	opts UServ_Opts
+// Queries_UServ holds all the queries found the proto service option as methods
+type Queries_UServ struct {
+	opts Opts_UServ
 }
 
-// UServPersistQueries returns all the known 'SQL' queires for the 'UServ' service.
-func UServPersistQueries(opts ...UServ_Opts) *UServ_Queries {
-	var myOpts UServ_Opts
+// QueriesUServ returns all the known 'SQL' queires for the 'UServ' service.
+// If no opts are provided default implementations are used.
+func QueriesUServ(opts ...Opts_UServ) *Queries_UServ {
+	var myOpts Opts_UServ
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = UServOpts(nil, nil)
+		myOpts = OptsUServ(&DefaultHooks_UServ{}, &DefaultTypeMappings_UServ{})
 	}
-	return &UServ_Queries{
+	return &Queries_UServ{
 		opts: myOpts,
 	}
 }
 
-// CreateUsersTableQuery returns a new struct wrapping the current UServ_Opts
+// CreateUsersTableQuery returns a new struct wrapping the current Opts_UServ
 // that will perform 'UServ' services 'create_users_table' on the database
 // when executed
-func (this *UServ_Queries) CreateUsersTable(ctx context.Context, db Runnable) *UServ_CreateUsersTableQuery {
-	return &UServ_CreateUsersTableQuery{
+func (this *Queries_UServ) CreateUsersTable(ctx context.Context, db Runnable) *Query_UServ_CreateUsersTable {
+	return &Query_UServ_CreateUsersTable{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type UServ_CreateUsersTableQuery struct {
-	opts UServ_Opts
+// Query_UServ_CreateUsersTable (future doc string needed)
+type Query_UServ_CreateUsersTable struct {
+	opts Opts_UServ
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *UServ_CreateUsersTableQuery) QueryInTypeUser()  {}
-func (this *UServ_CreateUsersTableQuery) QueryOutTypeUser() {}
+func (this *Query_UServ_CreateUsersTable) QueryInType_Empty()  {}
+func (this *Query_UServ_CreateUsersTable) QueryOutType_Empty() {}
 
-// Executes the query with parameters retrieved from x
-func (this *UServ_CreateUsersTableQuery) Execute(x UServ_CreateUsersTableIn) *UServ_CreateUsersTableIter {
+// Executes the query 'create_users_table' with parameters retrieved from x.
+// Fields used: []
+func (this *Query_UServ_CreateUsersTable) Execute(x In_UServ_CreateUsersTable) *Iter_UServ_CreateUsersTable {
 	ctx := this.ctx
-	result := &UServ_CreateUsersTableIter{
+	result := &Iter_UServ_CreateUsersTable{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -105,30 +108,32 @@ func (this *UServ_CreateUsersTableQuery) Execute(x UServ_CreateUsersTableIn) *US
 	return result
 }
 
-// InsertUsersQuery returns a new struct wrapping the current UServ_Opts
+// InsertUsersQuery returns a new struct wrapping the current Opts_UServ
 // that will perform 'UServ' services 'insert_users' on the database
 // when executed
-func (this *UServ_Queries) InsertUsers(ctx context.Context, db Runnable) *UServ_InsertUsersQuery {
-	return &UServ_InsertUsersQuery{
+func (this *Queries_UServ) InsertUsers(ctx context.Context, db Runnable) *Query_UServ_InsertUsers {
+	return &Query_UServ_InsertUsers{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type UServ_InsertUsersQuery struct {
-	opts UServ_Opts
+// Query_UServ_InsertUsers (future doc string needed)
+type Query_UServ_InsertUsers struct {
+	opts Opts_UServ
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *UServ_InsertUsersQuery) QueryInTypeUser()  {}
-func (this *UServ_InsertUsersQuery) QueryOutTypeUser() {}
+func (this *Query_UServ_InsertUsers) QueryInType_User()   {}
+func (this *Query_UServ_InsertUsers) QueryOutType_Empty() {}
 
-// Executes the query with parameters retrieved from x
-func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersIn) *UServ_InsertUsersIter {
+// Executes the query 'insert_users' with parameters retrieved from x.
+// Fields used: [id name friends created_on]
+func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ_InsertUsers {
 	ctx := this.ctx
-	result := &UServ_InsertUsersIter{
+	result := &Iter_UServ_InsertUsers{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -163,30 +168,32 @@ func (this *UServ_InsertUsersQuery) Execute(x UServ_InsertUsersIn) *UServ_Insert
 	return result
 }
 
-// GetAllUsersQuery returns a new struct wrapping the current UServ_Opts
+// GetAllUsersQuery returns a new struct wrapping the current Opts_UServ
 // that will perform 'UServ' services 'get_all_users' on the database
 // when executed
-func (this *UServ_Queries) GetAllUsers(ctx context.Context, db Runnable) *UServ_GetAllUsersQuery {
-	return &UServ_GetAllUsersQuery{
+func (this *Queries_UServ) GetAllUsers(ctx context.Context, db Runnable) *Query_UServ_GetAllUsers {
+	return &Query_UServ_GetAllUsers{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type UServ_GetAllUsersQuery struct {
-	opts UServ_Opts
+// Query_UServ_GetAllUsers (future doc string needed)
+type Query_UServ_GetAllUsers struct {
+	opts Opts_UServ
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *UServ_GetAllUsersQuery) QueryInTypeUser()  {}
-func (this *UServ_GetAllUsersQuery) QueryOutTypeUser() {}
+func (this *Query_UServ_GetAllUsers) QueryInType_Empty() {}
+func (this *Query_UServ_GetAllUsers) QueryOutType_User() {}
 
-// Executes the query with parameters retrieved from x
-func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAllUsersIter {
+// Executes the query 'get_all_users' with parameters retrieved from x.
+// Fields used: []
+func (this *Query_UServ_GetAllUsers) Execute(x In_UServ_GetAllUsers) *Iter_UServ_GetAllUsers {
 	ctx := this.ctx
-	result := &UServ_GetAllUsersIter{
+	result := &Iter_UServ_GetAllUsers{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -209,30 +216,32 @@ func (this *UServ_GetAllUsersQuery) Execute(x UServ_GetAllUsersIn) *UServ_GetAll
 	return result
 }
 
-// SelectUserByIdQuery returns a new struct wrapping the current UServ_Opts
+// SelectUserByIdQuery returns a new struct wrapping the current Opts_UServ
 // that will perform 'UServ' services 'select_user_by_id' on the database
 // when executed
-func (this *UServ_Queries) SelectUserById(ctx context.Context, db Runnable) *UServ_SelectUserByIdQuery {
-	return &UServ_SelectUserByIdQuery{
+func (this *Queries_UServ) SelectUserById(ctx context.Context, db Runnable) *Query_UServ_SelectUserById {
+	return &Query_UServ_SelectUserById{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type UServ_SelectUserByIdQuery struct {
-	opts UServ_Opts
+// Query_UServ_SelectUserById (future doc string needed)
+type Query_UServ_SelectUserById struct {
+	opts Opts_UServ
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *UServ_SelectUserByIdQuery) QueryInTypeUser()  {}
-func (this *UServ_SelectUserByIdQuery) QueryOutTypeUser() {}
+func (this *Query_UServ_SelectUserById) QueryInType_User()  {}
+func (this *Query_UServ_SelectUserById) QueryOutType_User() {}
 
-// Executes the query with parameters retrieved from x
-func (this *UServ_SelectUserByIdQuery) Execute(x UServ_SelectUserByIdIn) *UServ_SelectUserByIdIter {
+// Executes the query 'select_user_by_id' with parameters retrieved from x.
+// Fields used: [id]
+func (this *Query_UServ_SelectUserById) Execute(x In_UServ_SelectUserById) *Iter_UServ_SelectUserById {
 	ctx := this.ctx
-	result := &UServ_SelectUserByIdIter{
+	result := &Iter_UServ_SelectUserById{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -255,30 +264,32 @@ func (this *UServ_SelectUserByIdQuery) Execute(x UServ_SelectUserByIdIn) *UServ_
 	return result
 }
 
-// UpdateUserNameQuery returns a new struct wrapping the current UServ_Opts
+// UpdateUserNameQuery returns a new struct wrapping the current Opts_UServ
 // that will perform 'UServ' services 'update_user_name' on the database
 // when executed
-func (this *UServ_Queries) UpdateUserName(ctx context.Context, db Runnable) *UServ_UpdateUserNameQuery {
-	return &UServ_UpdateUserNameQuery{
+func (this *Queries_UServ) UpdateUserName(ctx context.Context, db Runnable) *Query_UServ_UpdateUserName {
+	return &Query_UServ_UpdateUserName{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type UServ_UpdateUserNameQuery struct {
-	opts UServ_Opts
+// Query_UServ_UpdateUserName (future doc string needed)
+type Query_UServ_UpdateUserName struct {
+	opts Opts_UServ
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *UServ_UpdateUserNameQuery) QueryInTypeUser()  {}
-func (this *UServ_UpdateUserNameQuery) QueryOutTypeUser() {}
+func (this *Query_UServ_UpdateUserName) QueryInType_User()  {}
+func (this *Query_UServ_UpdateUserName) QueryOutType_User() {}
 
-// Executes the query with parameters retrieved from x
-func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameIn) *UServ_UpdateUserNameIter {
+// Executes the query 'update_user_name' with parameters retrieved from x.
+// Fields used: [name id]
+func (this *Query_UServ_UpdateUserName) Execute(x In_UServ_UpdateUserName) *Iter_UServ_UpdateUserName {
 	ctx := this.ctx
-	result := &UServ_UpdateUserNameIter{
+	result := &Iter_UServ_UpdateUserName{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -302,30 +313,32 @@ func (this *UServ_UpdateUserNameQuery) Execute(x UServ_UpdateUserNameIn) *UServ_
 	return result
 }
 
-// UpdateNameToFooQuery returns a new struct wrapping the current UServ_Opts
+// UpdateNameToFooQuery returns a new struct wrapping the current Opts_UServ
 // that will perform 'UServ' services 'update_name_to_foo' on the database
 // when executed
-func (this *UServ_Queries) UpdateNameToFoo(ctx context.Context, db Runnable) *UServ_UpdateNameToFooQuery {
-	return &UServ_UpdateNameToFooQuery{
+func (this *Queries_UServ) UpdateNameToFoo(ctx context.Context, db Runnable) *Query_UServ_UpdateNameToFoo {
+	return &Query_UServ_UpdateNameToFoo{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type UServ_UpdateNameToFooQuery struct {
-	opts UServ_Opts
+// Query_UServ_UpdateNameToFoo (future doc string needed)
+type Query_UServ_UpdateNameToFoo struct {
+	opts Opts_UServ
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *UServ_UpdateNameToFooQuery) QueryInTypeUser()  {}
-func (this *UServ_UpdateNameToFooQuery) QueryOutTypeUser() {}
+func (this *Query_UServ_UpdateNameToFoo) QueryInType_User()   {}
+func (this *Query_UServ_UpdateNameToFoo) QueryOutType_Empty() {}
 
-// Executes the query with parameters retrieved from x
-func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *UServ_UpdateNameToFooIter {
+// Executes the query 'update_name_to_foo' with parameters retrieved from x.
+// Fields used: [id]
+func (this *Query_UServ_UpdateNameToFoo) Execute(x In_UServ_UpdateNameToFoo) *Iter_UServ_UpdateNameToFoo {
 	ctx := this.ctx
-	result := &UServ_UpdateNameToFooIter{
+	result := &Iter_UServ_UpdateNameToFoo{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -348,30 +361,32 @@ func (this *UServ_UpdateNameToFooQuery) Execute(x UServ_UpdateNameToFooIn) *USer
 	return result
 }
 
-// GetFriendsQuery returns a new struct wrapping the current UServ_Opts
+// GetFriendsQuery returns a new struct wrapping the current Opts_UServ
 // that will perform 'UServ' services 'get_friends' on the database
 // when executed
-func (this *UServ_Queries) GetFriends(ctx context.Context, db Runnable) *UServ_GetFriendsQuery {
-	return &UServ_GetFriendsQuery{
+func (this *Queries_UServ) GetFriends(ctx context.Context, db Runnable) *Query_UServ_GetFriends {
+	return &Query_UServ_GetFriends{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type UServ_GetFriendsQuery struct {
-	opts UServ_Opts
+// Query_UServ_GetFriends (future doc string needed)
+type Query_UServ_GetFriends struct {
+	opts Opts_UServ
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *UServ_GetFriendsQuery) QueryInTypeUser()  {}
-func (this *UServ_GetFriendsQuery) QueryOutTypeUser() {}
+func (this *Query_UServ_GetFriends) QueryInType_FriendsReq() {}
+func (this *Query_UServ_GetFriends) QueryOutType_User()      {}
 
-// Executes the query with parameters retrieved from x
-func (this *UServ_GetFriendsQuery) Execute(x UServ_GetFriendsIn) *UServ_GetFriendsIter {
+// Executes the query 'get_friends' with parameters retrieved from x.
+// Fields used: [names]
+func (this *Query_UServ_GetFriends) Execute(x In_UServ_GetFriends) *Iter_UServ_GetFriends {
 	ctx := this.ctx
-	result := &UServ_GetFriendsIter{
+	result := &Iter_UServ_GetFriends{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -399,30 +414,32 @@ func (this *UServ_GetFriendsQuery) Execute(x UServ_GetFriendsIn) *UServ_GetFrien
 	return result
 }
 
-// DropQuery returns a new struct wrapping the current UServ_Opts
+// DropQuery returns a new struct wrapping the current Opts_UServ
 // that will perform 'UServ' services 'drop' on the database
 // when executed
-func (this *UServ_Queries) Drop(ctx context.Context, db Runnable) *UServ_DropQuery {
-	return &UServ_DropQuery{
+func (this *Queries_UServ) Drop(ctx context.Context, db Runnable) *Query_UServ_Drop {
+	return &Query_UServ_Drop{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type UServ_DropQuery struct {
-	opts UServ_Opts
+// Query_UServ_Drop (future doc string needed)
+type Query_UServ_Drop struct {
+	opts Opts_UServ
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *UServ_DropQuery) QueryInTypeUser()  {}
-func (this *UServ_DropQuery) QueryOutTypeUser() {}
+func (this *Query_UServ_Drop) QueryInType_Empty()  {}
+func (this *Query_UServ_Drop) QueryOutType_Empty() {}
 
-// Executes the query with parameters retrieved from x
-func (this *UServ_DropQuery) Execute(x UServ_DropIn) *UServ_DropIter {
+// Executes the query 'drop' with parameters retrieved from x.
+// Fields used: []
+func (this *Query_UServ_Drop) Execute(x In_UServ_Drop) *Iter_UServ_Drop {
 	ctx := this.ctx
-	result := &UServ_DropIter{
+	result := &Iter_UServ_Drop{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -445,21 +462,21 @@ func (this *UServ_DropQuery) Execute(x UServ_DropIn) *UServ_DropIter {
 	return result
 }
 
-type UServ_CreateUsersTableIter struct {
+type Iter_UServ_CreateUsersTable struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     UServ_TypeMappings
+	tm     TypeMappings_UServ
 	ctx    context.Context
 }
 
-func (this *UServ_CreateUsersTableIter) IterOutTypeEmpty() {}
-func (this *UServ_CreateUsersTableIter) IterInTypeEmpty()  {}
+func (this *Iter_UServ_CreateUsersTable) IterOutTypeEmpty() {}
+func (this *Iter_UServ_CreateUsersTable) IterInTypeEmpty()  {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *UServ_CreateUsersTableIter) Each(fun func(*UServ_CreateUsersTableRow) error) error {
+func (this *Iter_UServ_CreateUsersTable) Each(fun func(*Row_UServ_CreateUsersTable) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -475,10 +492,10 @@ func (this *UServ_CreateUsersTableIter) Each(fun func(*UServ_CreateUsersTableRow
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *UServ_CreateUsersTableIter) One() *UServ_CreateUsersTableRow {
+func (this *Iter_UServ_CreateUsersTable) One() *Row_UServ_CreateUsersTable {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &UServ_CreateUsersTableRow{err: first.err}
+		return &Row_UServ_CreateUsersTable{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -486,13 +503,13 @@ func (this *UServ_CreateUsersTableIter) One() *UServ_CreateUsersTableRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &UServ_CreateUsersTableRow{err: fmt.Errorf("expected exactly 1 result from query 'CreateUsersTable' found %s", amount)}
+		return &Row_UServ_CreateUsersTable{err: fmt.Errorf("expected exactly 1 result from query 'CreateUsersTable' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *UServ_CreateUsersTableIter) Zero() error {
+func (this *Iter_UServ_CreateUsersTable) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -504,22 +521,22 @@ func (this *UServ_CreateUsersTableIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *UServ_CreateUsersTableIter) Next() (*UServ_CreateUsersTableRow, bool) {
+func (this *Iter_UServ_CreateUsersTable) Next() (*Row_UServ_CreateUsersTable, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &UServ_CreateUsersTableRow{err: err}, true
+		return &Row_UServ_CreateUsersTable{err: err}, true
 	}
 	res := &Empty{}
-	return &UServ_CreateUsersTableRow{item: res}, true
+	return &Row_UServ_CreateUsersTable{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *UServ_CreateUsersTableIter) Slice() []*UServ_CreateUsersTableRow {
-	var results []*UServ_CreateUsersTableRow
+func (this *Iter_UServ_CreateUsersTable) Slice() []*Row_UServ_CreateUsersTable {
+	var results []*Row_UServ_CreateUsersTable
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -530,21 +547,21 @@ func (this *UServ_CreateUsersTableIter) Slice() []*UServ_CreateUsersTableRow {
 	return results
 }
 
-type UServ_InsertUsersIter struct {
+type Iter_UServ_InsertUsers struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     UServ_TypeMappings
+	tm     TypeMappings_UServ
 	ctx    context.Context
 }
 
-func (this *UServ_InsertUsersIter) IterOutTypeEmpty() {}
-func (this *UServ_InsertUsersIter) IterInTypeUser()   {}
+func (this *Iter_UServ_InsertUsers) IterOutTypeEmpty() {}
+func (this *Iter_UServ_InsertUsers) IterInTypeUser()   {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *UServ_InsertUsersIter) Each(fun func(*UServ_InsertUsersRow) error) error {
+func (this *Iter_UServ_InsertUsers) Each(fun func(*Row_UServ_InsertUsers) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -560,10 +577,10 @@ func (this *UServ_InsertUsersIter) Each(fun func(*UServ_InsertUsersRow) error) e
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
+func (this *Iter_UServ_InsertUsers) One() *Row_UServ_InsertUsers {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &UServ_InsertUsersRow{err: first.err}
+		return &Row_UServ_InsertUsers{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -571,13 +588,13 @@ func (this *UServ_InsertUsersIter) One() *UServ_InsertUsersRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &UServ_InsertUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'InsertUsers' found %s", amount)}
+		return &Row_UServ_InsertUsers{err: fmt.Errorf("expected exactly 1 result from query 'InsertUsers' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *UServ_InsertUsersIter) Zero() error {
+func (this *Iter_UServ_InsertUsers) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -589,22 +606,22 @@ func (this *UServ_InsertUsersIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *UServ_InsertUsersIter) Next() (*UServ_InsertUsersRow, bool) {
+func (this *Iter_UServ_InsertUsers) Next() (*Row_UServ_InsertUsers, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &UServ_InsertUsersRow{err: err}, true
+		return &Row_UServ_InsertUsers{err: err}, true
 	}
 	res := &Empty{}
-	return &UServ_InsertUsersRow{item: res}, true
+	return &Row_UServ_InsertUsers{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *UServ_InsertUsersIter) Slice() []*UServ_InsertUsersRow {
-	var results []*UServ_InsertUsersRow
+func (this *Iter_UServ_InsertUsers) Slice() []*Row_UServ_InsertUsers {
+	var results []*Row_UServ_InsertUsers
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -615,21 +632,21 @@ func (this *UServ_InsertUsersIter) Slice() []*UServ_InsertUsersRow {
 	return results
 }
 
-type UServ_GetAllUsersIter struct {
+type Iter_UServ_GetAllUsers struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     UServ_TypeMappings
+	tm     TypeMappings_UServ
 	ctx    context.Context
 }
 
-func (this *UServ_GetAllUsersIter) IterOutTypeUser() {}
-func (this *UServ_GetAllUsersIter) IterInTypeEmpty() {}
+func (this *Iter_UServ_GetAllUsers) IterOutTypeUser() {}
+func (this *Iter_UServ_GetAllUsers) IterInTypeEmpty() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *UServ_GetAllUsersIter) Each(fun func(*UServ_GetAllUsersRow) error) error {
+func (this *Iter_UServ_GetAllUsers) Each(fun func(*Row_UServ_GetAllUsers) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -645,10 +662,10 @@ func (this *UServ_GetAllUsersIter) Each(fun func(*UServ_GetAllUsersRow) error) e
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
+func (this *Iter_UServ_GetAllUsers) One() *Row_UServ_GetAllUsers {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &UServ_GetAllUsersRow{err: first.err}
+		return &Row_UServ_GetAllUsers{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -656,13 +673,13 @@ func (this *UServ_GetAllUsersIter) One() *UServ_GetAllUsersRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("expected exactly 1 result from query 'GetAllUsers' found %s", amount)}
+		return &Row_UServ_GetAllUsers{err: fmt.Errorf("expected exactly 1 result from query 'GetAllUsers' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *UServ_GetAllUsersIter) Zero() error {
+func (this *Iter_UServ_GetAllUsers) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -674,45 +691,45 @@ func (this *UServ_GetAllUsersIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
+func (this *Iter_UServ_GetAllUsers) Next() (*Row_UServ_GetAllUsers, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &UServ_GetAllUsersRow{err: err}, true
+		return &Row_UServ_GetAllUsers{err: err}, true
 	}
 	var id int64
 	if err := row.ColumnByName("id", &id); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
+		return &Row_UServ_GetAllUsers{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
 
 	var name string
 	if err := row.ColumnByName("name", &name); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+		return &Row_UServ_GetAllUsers{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
 	friends := &Friends{}
 	friendsBytes := make([]byte, 0)
 	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+		return &Row_UServ_GetAllUsers{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
 	}
 	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
+		return &Row_UServ_GetAllUsers{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
 	var created_on_col spanner.GenericColumnValue
 	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+		return &Row_UServ_GetAllUsers{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
 	}
 	convert_created_on := this.tm.TimestampTimestamp().Empty()
 	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+		return &Row_UServ_GetAllUsers{err: fmt.Errorf("SpannerScan failed for created_on")}, true
 	}
 	if err := convert_created_on.ToProto(&created_on); err != nil {
-		return &UServ_GetAllUsersRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
+		return &Row_UServ_GetAllUsers{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
 	res := &User{
@@ -721,12 +738,12 @@ func (this *UServ_GetAllUsersIter) Next() (*UServ_GetAllUsersRow, bool) {
 		Friends:   friends,
 		CreatedOn: created_on,
 	}
-	return &UServ_GetAllUsersRow{item: res}, true
+	return &Row_UServ_GetAllUsers{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *UServ_GetAllUsersIter) Slice() []*UServ_GetAllUsersRow {
-	var results []*UServ_GetAllUsersRow
+func (this *Iter_UServ_GetAllUsers) Slice() []*Row_UServ_GetAllUsers {
+	var results []*Row_UServ_GetAllUsers
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -737,21 +754,21 @@ func (this *UServ_GetAllUsersIter) Slice() []*UServ_GetAllUsersRow {
 	return results
 }
 
-type UServ_SelectUserByIdIter struct {
+type Iter_UServ_SelectUserById struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     UServ_TypeMappings
+	tm     TypeMappings_UServ
 	ctx    context.Context
 }
 
-func (this *UServ_SelectUserByIdIter) IterOutTypeUser() {}
-func (this *UServ_SelectUserByIdIter) IterInTypeUser()  {}
+func (this *Iter_UServ_SelectUserById) IterOutTypeUser() {}
+func (this *Iter_UServ_SelectUserById) IterInTypeUser()  {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *UServ_SelectUserByIdIter) Each(fun func(*UServ_SelectUserByIdRow) error) error {
+func (this *Iter_UServ_SelectUserById) Each(fun func(*Row_UServ_SelectUserById) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -767,10 +784,10 @@ func (this *UServ_SelectUserByIdIter) Each(fun func(*UServ_SelectUserByIdRow) er
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *UServ_SelectUserByIdIter) One() *UServ_SelectUserByIdRow {
+func (this *Iter_UServ_SelectUserById) One() *Row_UServ_SelectUserById {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &UServ_SelectUserByIdRow{err: first.err}
+		return &Row_UServ_SelectUserById{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -778,13 +795,13 @@ func (this *UServ_SelectUserByIdIter) One() *UServ_SelectUserByIdRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("expected exactly 1 result from query 'SelectUserById' found %s", amount)}
+		return &Row_UServ_SelectUserById{err: fmt.Errorf("expected exactly 1 result from query 'SelectUserById' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *UServ_SelectUserByIdIter) Zero() error {
+func (this *Iter_UServ_SelectUserById) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -796,45 +813,45 @@ func (this *UServ_SelectUserByIdIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
+func (this *Iter_UServ_SelectUserById) Next() (*Row_UServ_SelectUserById, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &UServ_SelectUserByIdRow{err: err}, true
+		return &Row_UServ_SelectUserById{err: err}, true
 	}
 	var id int64
 	if err := row.ColumnByName("id", &id); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
+		return &Row_UServ_SelectUserById{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
 
 	var name string
 	if err := row.ColumnByName("name", &name); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+		return &Row_UServ_SelectUserById{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
 	friends := &Friends{}
 	friendsBytes := make([]byte, 0)
 	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+		return &Row_UServ_SelectUserById{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
 	}
 	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
+		return &Row_UServ_SelectUserById{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
 	var created_on_col spanner.GenericColumnValue
 	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+		return &Row_UServ_SelectUserById{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
 	}
 	convert_created_on := this.tm.TimestampTimestamp().Empty()
 	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+		return &Row_UServ_SelectUserById{err: fmt.Errorf("SpannerScan failed for created_on")}, true
 	}
 	if err := convert_created_on.ToProto(&created_on); err != nil {
-		return &UServ_SelectUserByIdRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
+		return &Row_UServ_SelectUserById{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
 	res := &User{
@@ -843,12 +860,12 @@ func (this *UServ_SelectUserByIdIter) Next() (*UServ_SelectUserByIdRow, bool) {
 		Friends:   friends,
 		CreatedOn: created_on,
 	}
-	return &UServ_SelectUserByIdRow{item: res}, true
+	return &Row_UServ_SelectUserById{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *UServ_SelectUserByIdIter) Slice() []*UServ_SelectUserByIdRow {
-	var results []*UServ_SelectUserByIdRow
+func (this *Iter_UServ_SelectUserById) Slice() []*Row_UServ_SelectUserById {
+	var results []*Row_UServ_SelectUserById
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -859,21 +876,21 @@ func (this *UServ_SelectUserByIdIter) Slice() []*UServ_SelectUserByIdRow {
 	return results
 }
 
-type UServ_UpdateUserNameIter struct {
+type Iter_UServ_UpdateUserName struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     UServ_TypeMappings
+	tm     TypeMappings_UServ
 	ctx    context.Context
 }
 
-func (this *UServ_UpdateUserNameIter) IterOutTypeUser() {}
-func (this *UServ_UpdateUserNameIter) IterInTypeUser()  {}
+func (this *Iter_UServ_UpdateUserName) IterOutTypeUser() {}
+func (this *Iter_UServ_UpdateUserName) IterInTypeUser()  {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *UServ_UpdateUserNameIter) Each(fun func(*UServ_UpdateUserNameRow) error) error {
+func (this *Iter_UServ_UpdateUserName) Each(fun func(*Row_UServ_UpdateUserName) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -889,10 +906,10 @@ func (this *UServ_UpdateUserNameIter) Each(fun func(*UServ_UpdateUserNameRow) er
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *UServ_UpdateUserNameIter) One() *UServ_UpdateUserNameRow {
+func (this *Iter_UServ_UpdateUserName) One() *Row_UServ_UpdateUserName {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &UServ_UpdateUserNameRow{err: first.err}
+		return &Row_UServ_UpdateUserName{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -900,13 +917,13 @@ func (this *UServ_UpdateUserNameIter) One() *UServ_UpdateUserNameRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateUserName' found %s", amount)}
+		return &Row_UServ_UpdateUserName{err: fmt.Errorf("expected exactly 1 result from query 'UpdateUserName' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *UServ_UpdateUserNameIter) Zero() error {
+func (this *Iter_UServ_UpdateUserName) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -918,45 +935,45 @@ func (this *UServ_UpdateUserNameIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
+func (this *Iter_UServ_UpdateUserName) Next() (*Row_UServ_UpdateUserName, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &UServ_UpdateUserNameRow{err: err}, true
+		return &Row_UServ_UpdateUserName{err: err}, true
 	}
 	var id int64
 	if err := row.ColumnByName("id", &id); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
+		return &Row_UServ_UpdateUserName{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
 
 	var name string
 	if err := row.ColumnByName("name", &name); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+		return &Row_UServ_UpdateUserName{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
 	friends := &Friends{}
 	friendsBytes := make([]byte, 0)
 	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+		return &Row_UServ_UpdateUserName{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
 	}
 	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
+		return &Row_UServ_UpdateUserName{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
 	var created_on_col spanner.GenericColumnValue
 	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+		return &Row_UServ_UpdateUserName{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
 	}
 	convert_created_on := this.tm.TimestampTimestamp().Empty()
 	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+		return &Row_UServ_UpdateUserName{err: fmt.Errorf("SpannerScan failed for created_on")}, true
 	}
 	if err := convert_created_on.ToProto(&created_on); err != nil {
-		return &UServ_UpdateUserNameRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
+		return &Row_UServ_UpdateUserName{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
 	res := &User{
@@ -965,12 +982,12 @@ func (this *UServ_UpdateUserNameIter) Next() (*UServ_UpdateUserNameRow, bool) {
 		Friends:   friends,
 		CreatedOn: created_on,
 	}
-	return &UServ_UpdateUserNameRow{item: res}, true
+	return &Row_UServ_UpdateUserName{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *UServ_UpdateUserNameIter) Slice() []*UServ_UpdateUserNameRow {
-	var results []*UServ_UpdateUserNameRow
+func (this *Iter_UServ_UpdateUserName) Slice() []*Row_UServ_UpdateUserName {
+	var results []*Row_UServ_UpdateUserName
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -981,21 +998,21 @@ func (this *UServ_UpdateUserNameIter) Slice() []*UServ_UpdateUserNameRow {
 	return results
 }
 
-type UServ_UpdateNameToFooIter struct {
+type Iter_UServ_UpdateNameToFoo struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     UServ_TypeMappings
+	tm     TypeMappings_UServ
 	ctx    context.Context
 }
 
-func (this *UServ_UpdateNameToFooIter) IterOutTypeEmpty() {}
-func (this *UServ_UpdateNameToFooIter) IterInTypeUser()   {}
+func (this *Iter_UServ_UpdateNameToFoo) IterOutTypeEmpty() {}
+func (this *Iter_UServ_UpdateNameToFoo) IterInTypeUser()   {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *UServ_UpdateNameToFooIter) Each(fun func(*UServ_UpdateNameToFooRow) error) error {
+func (this *Iter_UServ_UpdateNameToFoo) Each(fun func(*Row_UServ_UpdateNameToFoo) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1011,10 +1028,10 @@ func (this *UServ_UpdateNameToFooIter) Each(fun func(*UServ_UpdateNameToFooRow) 
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *UServ_UpdateNameToFooIter) One() *UServ_UpdateNameToFooRow {
+func (this *Iter_UServ_UpdateNameToFoo) One() *Row_UServ_UpdateNameToFoo {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &UServ_UpdateNameToFooRow{err: first.err}
+		return &Row_UServ_UpdateNameToFoo{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1022,13 +1039,13 @@ func (this *UServ_UpdateNameToFooIter) One() *UServ_UpdateNameToFooRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &UServ_UpdateNameToFooRow{err: fmt.Errorf("expected exactly 1 result from query 'UpdateNameToFoo' found %s", amount)}
+		return &Row_UServ_UpdateNameToFoo{err: fmt.Errorf("expected exactly 1 result from query 'UpdateNameToFoo' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *UServ_UpdateNameToFooIter) Zero() error {
+func (this *Iter_UServ_UpdateNameToFoo) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1040,22 +1057,22 @@ func (this *UServ_UpdateNameToFooIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *UServ_UpdateNameToFooIter) Next() (*UServ_UpdateNameToFooRow, bool) {
+func (this *Iter_UServ_UpdateNameToFoo) Next() (*Row_UServ_UpdateNameToFoo, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &UServ_UpdateNameToFooRow{err: err}, true
+		return &Row_UServ_UpdateNameToFoo{err: err}, true
 	}
 	res := &Empty{}
-	return &UServ_UpdateNameToFooRow{item: res}, true
+	return &Row_UServ_UpdateNameToFoo{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *UServ_UpdateNameToFooIter) Slice() []*UServ_UpdateNameToFooRow {
-	var results []*UServ_UpdateNameToFooRow
+func (this *Iter_UServ_UpdateNameToFoo) Slice() []*Row_UServ_UpdateNameToFoo {
+	var results []*Row_UServ_UpdateNameToFoo
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1066,21 +1083,21 @@ func (this *UServ_UpdateNameToFooIter) Slice() []*UServ_UpdateNameToFooRow {
 	return results
 }
 
-type UServ_GetFriendsIter struct {
+type Iter_UServ_GetFriends struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     UServ_TypeMappings
+	tm     TypeMappings_UServ
 	ctx    context.Context
 }
 
-func (this *UServ_GetFriendsIter) IterOutTypeUser()      {}
-func (this *UServ_GetFriendsIter) IterInTypeFriendsReq() {}
+func (this *Iter_UServ_GetFriends) IterOutTypeUser()      {}
+func (this *Iter_UServ_GetFriends) IterInTypeFriendsReq() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *UServ_GetFriendsIter) Each(fun func(*UServ_GetFriendsRow) error) error {
+func (this *Iter_UServ_GetFriends) Each(fun func(*Row_UServ_GetFriends) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1096,10 +1113,10 @@ func (this *UServ_GetFriendsIter) Each(fun func(*UServ_GetFriendsRow) error) err
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *UServ_GetFriendsIter) One() *UServ_GetFriendsRow {
+func (this *Iter_UServ_GetFriends) One() *Row_UServ_GetFriends {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &UServ_GetFriendsRow{err: first.err}
+		return &Row_UServ_GetFriends{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1107,13 +1124,13 @@ func (this *UServ_GetFriendsIter) One() *UServ_GetFriendsRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &UServ_GetFriendsRow{err: fmt.Errorf("expected exactly 1 result from query 'GetFriends' found %s", amount)}
+		return &Row_UServ_GetFriends{err: fmt.Errorf("expected exactly 1 result from query 'GetFriends' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *UServ_GetFriendsIter) Zero() error {
+func (this *Iter_UServ_GetFriends) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1125,45 +1142,45 @@ func (this *UServ_GetFriendsIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
+func (this *Iter_UServ_GetFriends) Next() (*Row_UServ_GetFriends, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &UServ_GetFriendsRow{err: err}, true
+		return &Row_UServ_GetFriends{err: err}, true
 	}
 	var id int64
 	if err := row.ColumnByName("id", &id); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
+		return &Row_UServ_GetFriends{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
 
 	var name string
 	if err := row.ColumnByName("name", &name); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+		return &Row_UServ_GetFriends{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
 	friends := &Friends{}
 	friendsBytes := make([]byte, 0)
 	if err := row.ColumnByName("friends", &friendsBytes); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
+		return &Row_UServ_GetFriends{err: fmt.Errorf("failed to convert db column friends to []byte")}, true
 	}
 	if err := proto.Unmarshal(friendsBytes, friends); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
+		return &Row_UServ_GetFriends{err: fmt.Errorf("failed to unmarshal column friends to proto message")}, true
 	}
 
 	var created_on *timestamp.Timestamp
 	var created_on_col spanner.GenericColumnValue
 	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
+		return &Row_UServ_GetFriends{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
 	}
 	convert_created_on := this.tm.TimestampTimestamp().Empty()
 	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("SpannerScan failed for created_on")}, true
+		return &Row_UServ_GetFriends{err: fmt.Errorf("SpannerScan failed for created_on")}, true
 	}
 	if err := convert_created_on.ToProto(&created_on); err != nil {
-		return &UServ_GetFriendsRow{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
+		return &Row_UServ_GetFriends{err: fmt.Errorf("ToProto for created_on when reading from spanner")}, true
 	}
 
 	res := &User{
@@ -1172,12 +1189,12 @@ func (this *UServ_GetFriendsIter) Next() (*UServ_GetFriendsRow, bool) {
 		Friends:   friends,
 		CreatedOn: created_on,
 	}
-	return &UServ_GetFriendsRow{item: res}, true
+	return &Row_UServ_GetFriends{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *UServ_GetFriendsIter) Slice() []*UServ_GetFriendsRow {
-	var results []*UServ_GetFriendsRow
+func (this *Iter_UServ_GetFriends) Slice() []*Row_UServ_GetFriends {
+	var results []*Row_UServ_GetFriends
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1188,21 +1205,21 @@ func (this *UServ_GetFriendsIter) Slice() []*UServ_GetFriendsRow {
 	return results
 }
 
-type UServ_DropIter struct {
+type Iter_UServ_Drop struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     UServ_TypeMappings
+	tm     TypeMappings_UServ
 	ctx    context.Context
 }
 
-func (this *UServ_DropIter) IterOutTypeEmpty() {}
-func (this *UServ_DropIter) IterInTypeEmpty()  {}
+func (this *Iter_UServ_Drop) IterOutTypeEmpty() {}
+func (this *Iter_UServ_Drop) IterInTypeEmpty()  {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *UServ_DropIter) Each(fun func(*UServ_DropRow) error) error {
+func (this *Iter_UServ_Drop) Each(fun func(*Row_UServ_Drop) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1218,10 +1235,10 @@ func (this *UServ_DropIter) Each(fun func(*UServ_DropRow) error) error {
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *UServ_DropIter) One() *UServ_DropRow {
+func (this *Iter_UServ_Drop) One() *Row_UServ_Drop {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &UServ_DropRow{err: first.err}
+		return &Row_UServ_Drop{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1229,13 +1246,13 @@ func (this *UServ_DropIter) One() *UServ_DropRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &UServ_DropRow{err: fmt.Errorf("expected exactly 1 result from query 'Drop' found %s", amount)}
+		return &Row_UServ_Drop{err: fmt.Errorf("expected exactly 1 result from query 'Drop' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *UServ_DropIter) Zero() error {
+func (this *Iter_UServ_Drop) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1247,22 +1264,22 @@ func (this *UServ_DropIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *UServ_DropIter) Next() (*UServ_DropRow, bool) {
+func (this *Iter_UServ_Drop) Next() (*Row_UServ_Drop, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &UServ_DropRow{err: err}, true
+		return &Row_UServ_Drop{err: err}, true
 	}
 	res := &Empty{}
-	return &UServ_DropRow{item: res}, true
+	return &Row_UServ_Drop{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *UServ_DropIter) Slice() []*UServ_DropRow {
-	var results []*UServ_DropRow
+func (this *Iter_UServ_Drop) Slice() []*Row_UServ_Drop {
+	var results []*Row_UServ_Drop
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1273,22 +1290,22 @@ func (this *UServ_DropIter) Slice() []*UServ_DropRow {
 	return results
 }
 
-type UServ_CreateUsersTableIn interface {
+type In_UServ_CreateUsersTable interface {
 }
-type UServ_CreateUsersTableOut interface {
+type Out_UServ_CreateUsersTable interface {
 }
-type UServ_CreateUsersTableRow struct {
-	item UServ_CreateUsersTableOut
+type Row_UServ_CreateUsersTable struct {
+	item Out_UServ_CreateUsersTable
 	err  error
 }
 
-func newUServ_CreateUsersTableRow(item UServ_CreateUsersTableOut, err error) *UServ_CreateUsersTableRow {
-	return &UServ_CreateUsersTableRow{item, err}
+func newRowUServCreateUsersTable(item Out_UServ_CreateUsersTable, err error) *Row_UServ_CreateUsersTable {
+	return &Row_UServ_CreateUsersTable{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *UServ_CreateUsersTableRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_UServ_CreateUsersTable) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1314,40 +1331,40 @@ func (this *UServ_CreateUsersTableRow) Unwrap(pointerToMsg proto.Message) error 
 
 	return nil
 }
-func (this *UServ_CreateUsersTableRow) Empty() (*Empty, error) {
+func (this *Row_UServ_CreateUsersTable) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-func (this *UServ_CreateUsersTableRow) Proto() (*Empty, error) {
+func (this *Row_UServ_CreateUsersTable) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type UServ_InsertUsersIn interface {
+type In_UServ_InsertUsers interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-type UServ_InsertUsersOut interface {
+type Out_UServ_InsertUsers interface {
 }
-type UServ_InsertUsersRow struct {
-	item UServ_InsertUsersOut
+type Row_UServ_InsertUsers struct {
+	item Out_UServ_InsertUsers
 	err  error
 }
 
-func newUServ_InsertUsersRow(item UServ_InsertUsersOut, err error) *UServ_InsertUsersRow {
-	return &UServ_InsertUsersRow{item, err}
+func newRowUServInsertUsers(item Out_UServ_InsertUsers, err error) *Row_UServ_InsertUsers {
+	return &Row_UServ_InsertUsers{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_UServ_InsertUsers) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1373,46 +1390,46 @@ func (this *UServ_InsertUsersRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *UServ_InsertUsersRow) Empty() (*Empty, error) {
+func (this *Row_UServ_InsertUsers) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
-func (this *UServ_InsertUsersRow) Empty2() (*Empty2, error) {
+func (this *Row_UServ_InsertUsers) Empty2() (*Empty2, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty2{}, nil
 }
 
-func (this *UServ_InsertUsersRow) Proto() (*Empty, error) {
+func (this *Row_UServ_InsertUsers) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type UServ_GetAllUsersIn interface {
+type In_UServ_GetAllUsers interface {
 }
-type UServ_GetAllUsersOut interface {
+type Out_UServ_GetAllUsers interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-type UServ_GetAllUsersRow struct {
-	item UServ_GetAllUsersOut
+type Row_UServ_GetAllUsers struct {
+	item Out_UServ_GetAllUsers
 	err  error
 }
 
-func newUServ_GetAllUsersRow(item UServ_GetAllUsersOut, err error) *UServ_GetAllUsersRow {
-	return &UServ_GetAllUsersRow{item, err}
+func newRowUServGetAllUsers(item Out_UServ_GetAllUsers, err error) *Row_UServ_GetAllUsers {
+	return &Row_UServ_GetAllUsers{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_UServ_GetAllUsers) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1444,7 +1461,7 @@ func (this *UServ_GetAllUsersRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *UServ_GetAllUsersRow) User() (*User, error) {
+func (this *Row_UServ_GetAllUsers) User() (*User, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1456,7 +1473,7 @@ func (this *UServ_GetAllUsersRow) User() (*User, error) {
 	}, nil
 }
 
-func (this *UServ_GetAllUsersRow) Proto() (*User, error) {
+func (this *Row_UServ_GetAllUsers) Proto() (*User, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1468,30 +1485,30 @@ func (this *UServ_GetAllUsersRow) Proto() (*User, error) {
 	}, nil
 }
 
-type UServ_SelectUserByIdIn interface {
+type In_UServ_SelectUserById interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-type UServ_SelectUserByIdOut interface {
+type Out_UServ_SelectUserById interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-type UServ_SelectUserByIdRow struct {
-	item UServ_SelectUserByIdOut
+type Row_UServ_SelectUserById struct {
+	item Out_UServ_SelectUserById
 	err  error
 }
 
-func newUServ_SelectUserByIdRow(item UServ_SelectUserByIdOut, err error) *UServ_SelectUserByIdRow {
-	return &UServ_SelectUserByIdRow{item, err}
+func newRowUServSelectUserById(item Out_UServ_SelectUserById, err error) *Row_UServ_SelectUserById {
+	return &Row_UServ_SelectUserById{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *UServ_SelectUserByIdRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_UServ_SelectUserById) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1523,7 +1540,7 @@ func (this *UServ_SelectUserByIdRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *UServ_SelectUserByIdRow) User() (*User, error) {
+func (this *Row_UServ_SelectUserById) User() (*User, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1535,7 +1552,7 @@ func (this *UServ_SelectUserByIdRow) User() (*User, error) {
 	}, nil
 }
 
-func (this *UServ_SelectUserByIdRow) Proto() (*User, error) {
+func (this *Row_UServ_SelectUserById) Proto() (*User, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1547,30 +1564,30 @@ func (this *UServ_SelectUserByIdRow) Proto() (*User, error) {
 	}, nil
 }
 
-type UServ_UpdateUserNameIn interface {
+type In_UServ_UpdateUserName interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-type UServ_UpdateUserNameOut interface {
+type Out_UServ_UpdateUserName interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-type UServ_UpdateUserNameRow struct {
-	item UServ_UpdateUserNameOut
+type Row_UServ_UpdateUserName struct {
+	item Out_UServ_UpdateUserName
 	err  error
 }
 
-func newUServ_UpdateUserNameRow(item UServ_UpdateUserNameOut, err error) *UServ_UpdateUserNameRow {
-	return &UServ_UpdateUserNameRow{item, err}
+func newRowUServUpdateUserName(item Out_UServ_UpdateUserName, err error) *Row_UServ_UpdateUserName {
+	return &Row_UServ_UpdateUserName{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *UServ_UpdateUserNameRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_UServ_UpdateUserName) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1602,7 +1619,7 @@ func (this *UServ_UpdateUserNameRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *UServ_UpdateUserNameRow) User() (*User, error) {
+func (this *Row_UServ_UpdateUserName) User() (*User, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1614,7 +1631,7 @@ func (this *UServ_UpdateUserNameRow) User() (*User, error) {
 	}, nil
 }
 
-func (this *UServ_UpdateUserNameRow) Proto() (*User, error) {
+func (this *Row_UServ_UpdateUserName) Proto() (*User, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1626,26 +1643,26 @@ func (this *UServ_UpdateUserNameRow) Proto() (*User, error) {
 	}, nil
 }
 
-type UServ_UpdateNameToFooIn interface {
+type In_UServ_UpdateNameToFoo interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-type UServ_UpdateNameToFooOut interface {
+type Out_UServ_UpdateNameToFoo interface {
 }
-type UServ_UpdateNameToFooRow struct {
-	item UServ_UpdateNameToFooOut
+type Row_UServ_UpdateNameToFoo struct {
+	item Out_UServ_UpdateNameToFoo
 	err  error
 }
 
-func newUServ_UpdateNameToFooRow(item UServ_UpdateNameToFooOut, err error) *UServ_UpdateNameToFooRow {
-	return &UServ_UpdateNameToFooRow{item, err}
+func newRowUServUpdateNameToFoo(item Out_UServ_UpdateNameToFoo, err error) *Row_UServ_UpdateNameToFoo {
+	return &Row_UServ_UpdateNameToFoo{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *UServ_UpdateNameToFooRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_UServ_UpdateNameToFoo) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1671,41 +1688,41 @@ func (this *UServ_UpdateNameToFooRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *UServ_UpdateNameToFooRow) Empty() (*Empty, error) {
+func (this *Row_UServ_UpdateNameToFoo) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-func (this *UServ_UpdateNameToFooRow) Proto() (*Empty, error) {
+func (this *Row_UServ_UpdateNameToFoo) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type UServ_GetFriendsIn interface {
+type In_UServ_GetFriends interface {
 	GetNames() *SliceStringParam
 }
-type UServ_GetFriendsOut interface {
+type Out_UServ_GetFriends interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 }
-type UServ_GetFriendsRow struct {
-	item UServ_GetFriendsOut
+type Row_UServ_GetFriends struct {
+	item Out_UServ_GetFriends
 	err  error
 }
 
-func newUServ_GetFriendsRow(item UServ_GetFriendsOut, err error) *UServ_GetFriendsRow {
-	return &UServ_GetFriendsRow{item, err}
+func newRowUServGetFriends(item Out_UServ_GetFriends, err error) *Row_UServ_GetFriends {
+	return &Row_UServ_GetFriends{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *UServ_GetFriendsRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_UServ_GetFriends) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1737,7 +1754,7 @@ func (this *UServ_GetFriendsRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *UServ_GetFriendsRow) User() (*User, error) {
+func (this *Row_UServ_GetFriends) User() (*User, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1749,7 +1766,7 @@ func (this *UServ_GetFriendsRow) User() (*User, error) {
 	}, nil
 }
 
-func (this *UServ_GetFriendsRow) Proto() (*User, error) {
+func (this *Row_UServ_GetFriends) Proto() (*User, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1761,22 +1778,22 @@ func (this *UServ_GetFriendsRow) Proto() (*User, error) {
 	}, nil
 }
 
-type UServ_DropIn interface {
+type In_UServ_Drop interface {
 }
-type UServ_DropOut interface {
+type Out_UServ_Drop interface {
 }
-type UServ_DropRow struct {
-	item UServ_DropOut
+type Row_UServ_Drop struct {
+	item Out_UServ_Drop
 	err  error
 }
 
-func newUServ_DropRow(item UServ_DropOut, err error) *UServ_DropRow {
-	return &UServ_DropRow{item, err}
+func newRowUServDrop(item Out_UServ_Drop, err error) *Row_UServ_Drop {
+	return &Row_UServ_Drop{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *UServ_DropRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_UServ_Drop) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1802,115 +1819,116 @@ func (this *UServ_DropRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *UServ_DropRow) Empty() (*Empty, error) {
+func (this *Row_UServ_Drop) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-func (this *UServ_DropRow) Proto() (*Empty, error) {
+func (this *Row_UServ_Drop) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type UServ_Hooks interface {
+type Hooks_UServ interface {
 	InsertUsersBeforeHook(context.Context, *User) (*Empty2, error)
 	GetAllUsersBeforeHook(context.Context, *Empty) (*User, error)
 	InsertUsersAfterHook(context.Context, *User, *Empty2) error
 	GetAllUsersAfterHook(context.Context, *Empty, *User) error
 }
-type UServ_DefaultHooks struct{}
+type DefaultHooks_UServ struct{}
 
-func (*UServ_DefaultHooks) InsertUsersBeforeHook(context.Context, *User) (*Empty2, error) {
+func (*DefaultHooks_UServ) InsertUsersBeforeHook(context.Context, *User) (*Empty2, error) {
 	return nil, nil
 }
-func (*UServ_DefaultHooks) GetAllUsersBeforeHook(context.Context, *Empty) (*User, error) {
+func (*DefaultHooks_UServ) GetAllUsersBeforeHook(context.Context, *Empty) (*User, error) {
 	return nil, nil
 }
-func (*UServ_DefaultHooks) InsertUsersAfterHook(context.Context, *User, *Empty2) error {
+func (*DefaultHooks_UServ) InsertUsersAfterHook(context.Context, *User, *Empty2) error {
 	return nil
 }
-func (*UServ_DefaultHooks) GetAllUsersAfterHook(context.Context, *Empty, *User) error {
+func (*DefaultHooks_UServ) GetAllUsersAfterHook(context.Context, *Empty, *User) error {
 	return nil
 }
 
-type UServ_TypeMappings interface {
-	TimestampTimestamp() UServTimestampTimestampMappingImpl
-	SliceStringParam() UServSliceStringParamMappingImpl
+type TypeMappings_UServ interface {
+	TimestampTimestamp() MappingImpl_UServ_TimestampTimestamp
+	SliceStringParam() MappingImpl_UServ_SliceStringParam
 }
-type UServ_DefaultTypeMappings struct{}
+type DefaultTypeMappings_UServ struct{}
 
-func (this *UServ_DefaultTypeMappings) TimestampTimestamp() UServTimestampTimestampMappingImpl {
-	return &UServ_DefaultTimestampTimestampMappingImpl{}
+func (this *DefaultTypeMappings_UServ) TimestampTimestamp() MappingImpl_UServ_TimestampTimestamp {
+	return &DefaultMappingImpl_UServ_TimestampTimestamp{}
 }
 
-type UServ_DefaultTimestampTimestampMappingImpl struct{}
+type DefaultMappingImpl_UServ_TimestampTimestamp struct{}
 
-func (this *UServ_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
+func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToProto(**timestamp.Timestamp) error {
 	return nil
 }
-func (this *UServ_DefaultTimestampTimestampMappingImpl) Empty() UServTimestampTimestampMappingImpl {
+func (this *DefaultMappingImpl_UServ_TimestampTimestamp) Empty() MappingImpl_UServ_TimestampTimestamp {
 	return this
 }
-func (this *UServ_DefaultTimestampTimestampMappingImpl) ToSpanner(*timestamp.Timestamp) UServTimestampTimestampMappingImpl {
+func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToSpanner(*timestamp.Timestamp) MappingImpl_UServ_TimestampTimestamp {
 	return this
 }
-func (this *UServ_DefaultTimestampTimestampMappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
+func (this *DefaultMappingImpl_UServ_TimestampTimestamp) SpannerScan(*spanner.GenericColumnValue) error {
 	return nil
 }
-func (this *UServ_DefaultTimestampTimestampMappingImpl) SpannerValue() (interface{}, error) {
+func (this *DefaultMappingImpl_UServ_TimestampTimestamp) SpannerValue() (interface{}, error) {
 	return "DEFAULT_TYPE_MAPPING_VALUE", nil
 }
 
-type UServTimestampTimestampMappingImpl interface {
+type MappingImpl_UServ_TimestampTimestamp interface {
 	ToProto(**timestamp.Timestamp) error
-	Empty() UServTimestampTimestampMappingImpl
-	ToSpanner(*timestamp.Timestamp) UServTimestampTimestampMappingImpl
+	Empty() MappingImpl_UServ_TimestampTimestamp
+	ToSpanner(*timestamp.Timestamp) MappingImpl_UServ_TimestampTimestamp
 	SpannerScan(*spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }
 
-func (this *UServ_DefaultTypeMappings) SliceStringParam() UServSliceStringParamMappingImpl {
-	return &UServ_DefaultSliceStringParamMappingImpl{}
+func (this *DefaultTypeMappings_UServ) SliceStringParam() MappingImpl_UServ_SliceStringParam {
+	return &DefaultMappingImpl_UServ_SliceStringParam{}
 }
 
-type UServ_DefaultSliceStringParamMappingImpl struct{}
+type DefaultMappingImpl_UServ_SliceStringParam struct{}
 
-func (this *UServ_DefaultSliceStringParamMappingImpl) ToProto(**SliceStringParam) error {
+func (this *DefaultMappingImpl_UServ_SliceStringParam) ToProto(**SliceStringParam) error {
 	return nil
 }
-func (this *UServ_DefaultSliceStringParamMappingImpl) Empty() UServSliceStringParamMappingImpl {
+func (this *DefaultMappingImpl_UServ_SliceStringParam) Empty() MappingImpl_UServ_SliceStringParam {
 	return this
 }
-func (this *UServ_DefaultSliceStringParamMappingImpl) ToSpanner(*SliceStringParam) UServSliceStringParamMappingImpl {
+func (this *DefaultMappingImpl_UServ_SliceStringParam) ToSpanner(*SliceStringParam) MappingImpl_UServ_SliceStringParam {
 	return this
 }
-func (this *UServ_DefaultSliceStringParamMappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
+func (this *DefaultMappingImpl_UServ_SliceStringParam) SpannerScan(*spanner.GenericColumnValue) error {
 	return nil
 }
-func (this *UServ_DefaultSliceStringParamMappingImpl) SpannerValue() (interface{}, error) {
+func (this *DefaultMappingImpl_UServ_SliceStringParam) SpannerValue() (interface{}, error) {
 	return "DEFAULT_TYPE_MAPPING_VALUE", nil
 }
 
-type UServSliceStringParamMappingImpl interface {
+type MappingImpl_UServ_SliceStringParam interface {
 	ToProto(**SliceStringParam) error
-	Empty() UServSliceStringParamMappingImpl
-	ToSpanner(*SliceStringParam) UServSliceStringParamMappingImpl
+	Empty() MappingImpl_UServ_SliceStringParam
+	ToSpanner(*SliceStringParam) MappingImpl_UServ_SliceStringParam
 	SpannerScan(*spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }
-type UServ_Opts struct {
-	MAPPINGS UServ_TypeMappings
-	HOOKS    UServ_Hooks
+
+type Opts_UServ struct {
+	MAPPINGS TypeMappings_UServ
+	HOOKS    Hooks_UServ
 }
 
-func UServOpts(hooks UServ_Hooks, mappings UServ_TypeMappings) UServ_Opts {
-	opts := UServ_Opts{
-		HOOKS:    &UServ_DefaultHooks{},
-		MAPPINGS: &UServ_DefaultTypeMappings{},
+func OptsUServ(hooks Hooks_UServ, mappings TypeMappings_UServ) Opts_UServ {
+	opts := Opts_UServ{
+		HOOKS:    &DefaultHooks_UServ{},
+		MAPPINGS: &DefaultTypeMappings_UServ{},
 	}
 	if hooks != nil {
 		opts.HOOKS = hooks
@@ -1921,42 +1939,42 @@ func UServOpts(hooks UServ_Hooks, mappings UServ_TypeMappings) UServ_Opts {
 	return opts
 }
 
-type UServ_Impl struct {
-	opts     *UServ_Opts
-	QUERIES  *UServ_Queries
-	HANDLERS RestOfUServHandlers
+type Impl_UServ struct {
+	opts     *Opts_UServ
+	QUERIES  *Queries_UServ
+	HANDLERS RestOfHandlers_UServ
 	DB       *spanner.Client
 }
 
-func UServPersistImpl(db *spanner.Client, handlers RestOfUServHandlers, opts ...UServ_Opts) *UServ_Impl {
-	var myOpts UServ_Opts
+func ImplUServ(db *spanner.Client, handlers RestOfHandlers_UServ, opts ...Opts_UServ) *Impl_UServ {
+	var myOpts Opts_UServ
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = UServOpts(nil, nil)
+		myOpts = OptsUServ(&DefaultHooks_UServ{}, &DefaultTypeMappings_UServ{})
 	}
-	return &UServ_Impl{
+	return &Impl_UServ{
 		opts:     &myOpts,
-		QUERIES:  UServPersistQueries(myOpts),
+		QUERIES:  QueriesUServ(myOpts),
 		DB:       db,
 		HANDLERS: handlers,
 	}
 }
 
-type RestOfUServHandlers interface {
+type RestOfHandlers_UServ interface {
 	UpdateUserNames(UServ_UpdateUserNamesServer) error
 	UpdateAllNames(*Empty, UServ_UpdateAllNamesServer) error
 }
 
-func (this *UServ_Impl) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
+func (this *Impl_UServ) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
 	return this.HANDLERS.UpdateUserNames(stream)
 }
 
-func (this *UServ_Impl) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
+func (this *Impl_UServ) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesServer) error {
 	return this.HANDLERS.UpdateAllNames(req, stream)
 }
 
-func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
+func (this *Impl_UServ) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
 	query := this.QUERIES.CreateUsersTable(ctx, this.DB.Single())
 
 	result := query.Execute(req)
@@ -1971,13 +1989,13 @@ func (this *UServ_Impl) CreateTable(ctx context.Context, req *Empty) (*Empty, er
 	return res, nil
 }
 
-func (this *UServ_Impl) InsertUsers(stream UServ_InsertUsersServer) error {
+func (this *Impl_UServ) InsertUsers(stream UServ_InsertUsersServer) error {
 	if err := this.InsertUsersTx(stream); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'insert_users' query: %v", err)
 	}
 	return nil
 }
-func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
+func (this *Impl_UServ) InsertUsersTx(stream UServ_InsertUsersServer) error {
 	items := make([]*User, 0)
 	var first *User
 	for {
@@ -2025,17 +2043,17 @@ func (this *UServ_Impl) InsertUsersTx(stream UServ_InsertUsersServer) error {
 	return nil
 }
 
-func (this *UServ_Impl) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
+func (this *Impl_UServ) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) error {
 	if err := this.GetAllUsersTx(req, stream, this.DB.Single()); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'get_all_users' query: %v", err)
 	}
 	return nil
 }
-func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer, tx PersistTx) error {
+func (this *Impl_UServ) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer, tx PersistTx) error {
 	ctx := stream.Context()
 	query := this.QUERIES.GetAllUsers(ctx, tx)
 	iter := query.Execute(req)
-	return iter.Each(func(row *UServ_GetAllUsersRow) error {
+	return iter.Each(func(row *Row_UServ_GetAllUsers) error {
 		res, err := row.User()
 		if err != nil {
 			return err
@@ -2044,7 +2062,7 @@ func (this *UServ_Impl) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer
 	})
 }
 
-func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, error) {
+func (this *Impl_UServ) SelectUserById(ctx context.Context, req *User) (*User, error) {
 	query := this.QUERIES.SelectUserById(ctx, this.DB.Single())
 
 	result := query.Execute(req)
@@ -2056,7 +2074,7 @@ func (this *UServ_Impl) SelectUserById(ctx context.Context, req *User) (*User, e
 	return res, nil
 }
 
-func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
+func (this *Impl_UServ) UpdateNameToFoo(ctx context.Context, req *User) (*Empty, error) {
 	query := this.QUERIES.UpdateNameToFoo(ctx, this.DB.Single())
 
 	result := query.Execute(req)
@@ -2071,17 +2089,17 @@ func (this *UServ_Impl) UpdateNameToFoo(ctx context.Context, req *User) (*Empty,
 	return res, nil
 }
 
-func (this *UServ_Impl) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
+func (this *Impl_UServ) GetFriends(req *FriendsReq, stream UServ_GetFriendsServer) error {
 	if err := this.GetFriendsTx(req, stream, this.DB.Single()); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'get_friends' query: %v", err)
 	}
 	return nil
 }
-func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsServer, tx PersistTx) error {
+func (this *Impl_UServ) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsServer, tx PersistTx) error {
 	ctx := stream.Context()
 	query := this.QUERIES.GetFriends(ctx, tx)
 	iter := query.Execute(req)
-	return iter.Each(func(row *UServ_GetFriendsRow) error {
+	return iter.Each(func(row *Row_UServ_GetFriends) error {
 		res, err := row.User()
 		if err != nil {
 			return err
@@ -2090,7 +2108,7 @@ func (this *UServ_Impl) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsSer
 	})
 }
 
-func (this *UServ_Impl) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
+func (this *Impl_UServ) DropTable(ctx context.Context, req *Empty) (*Empty, error) {
 	query := this.QUERIES.Drop(ctx, this.DB.Single())
 
 	result := query.Execute(req)

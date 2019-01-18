@@ -40,7 +40,7 @@ type TimeString struct {
 	t *timestamp.Timestamp
 }
 
-func (ts TimeString) ToSpanner(t *timestamp.Timestamp) UServTimestampTimestampMappingImpl {
+func (ts TimeString) ToSpanner(t *timestamp.Timestamp) MappingImpl_UServ_TimestampTimestamp {
 	ts.t = t
 	return &ts
 }
@@ -69,7 +69,7 @@ func (t *TimeString) SpannerScan(src *spanner.GenericColumnValue) error {
 func (t *TimeString) SpannerValue() (interface{}, error) {
 	return ptypes.TimestampString(t.t), nil
 }
-func (t TimeString) Empty() UServTimestampTimestampMappingImpl {
+func (t TimeString) Empty() MappingImpl_UServ_TimestampTimestamp {
 	return new(TimeString)
 }
 
@@ -77,7 +77,7 @@ type SliceStringConverter struct {
 	v *SliceStringParam
 }
 
-func (s *SliceStringConverter) ToSpanner(v *SliceStringParam) UServSliceStringParamMappingImpl {
+func (s *SliceStringConverter) ToSpanner(v *SliceStringParam) MappingImpl_UServ_SliceStringParam {
 	s.v = v
 	return s
 }
@@ -101,7 +101,7 @@ func (s *SliceStringConverter) SpannerValue() (interface{}, error) {
 	return s.v.GetSlice(), nil
 }
 
-func (s *SliceStringConverter) Empty() UServSliceStringParamMappingImpl {
+func (s *SliceStringConverter) Empty() MappingImpl_UServ_SliceStringParam {
 	return new(SliceStringConverter)
 }
 

@@ -219,7 +219,7 @@ func Serve(servFunc func(s *grpc.Server)) {
 	}
 	// defer conn.Close()
 
-	service := pb.UServPersistImpl(conn, &main.RestOfImpl{DB: conn}, pb.UServ_Opts{
+	service := pb.ImplUServ(conn, &main.RestOfImpl{DB: conn}, pb.Opts_UServ{
 		HOOKS:    &main.HooksImpl{},
 		MAPPINGS: &main.MappingImpl{},
 	})

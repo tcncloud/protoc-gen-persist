@@ -73,7 +73,7 @@ func (t *TimeString) Scan(src interface{}) error {
 func (t *TimeString) Value() (driver.Value, error) {
 	return ptypes.TimestampString(t.t), nil
 }
-func (t *TimeString) Empty() UServTimestampTimestampMappingImpl {
+func (t *TimeString) Empty() MappingImpl_UServ_TimestampTimestamp {
 	return new(TimeString)
 }
 
@@ -102,7 +102,7 @@ func (s *SliceStringConverter) Scan(src interface{}) error {
 func (s *SliceStringConverter) Value() (driver.Value, error) {
 	return pq.StringArray(s.v.Slice).Value()
 }
-func (s *SliceStringConverter) Empty() UServSliceStringParamMappingImpl {
+func (s *SliceStringConverter) Empty() MappingImpl_UServ_SliceStringParam {
 	return new(SliceStringConverter)
 }
 

@@ -286,6 +286,10 @@ func WriteQueries(p *Printer, s *Service) error {
 		res, _ := queryAndFields(q)
 		return res
 	}
+	qFieldDoc := func(q *QueryProtoOpts) string {
+		_, res := queryAndFields(q)
+		return P(res)
+	}
 
 	p.Q("// Queries_", sName, " holds all the queries found the proto service option as methods\n")
 	p.Q("type Queries_", sName, " struct {\n")
@@ -387,7 +391,8 @@ type Query_`, sName, `_`, camelQ(q), ` struct {
 func (this *Query_`, sName, `_`, camelQ(q), `) QueryInType_`, qin(q), `()  {}
 func (this *Query_`, sName, `_`, camelQ(q), `) QueryOutType_`, qout(q), `() {}
 
-// Executes the query with parameters retrieved from x
+// Executes the query '`, qname(q), `' with parameters retrieved from x.
+// Fields used: `, qFieldDoc(q), `
 func (this *Query_`, sName, `_`, camelQ(q), `) Execute(x In_`, sName, `_`, camelQ(q), `) *Iter_`, sName, `_`, camelQ(q), ` {
     var setupErr error
     params := []interface{}{
@@ -507,7 +512,8 @@ type Query_`, sName, `_`, camelQ(q), ` struct {
 func (this *Query_`, sName, `_`, camelQ(q), `) QueryInType_`, qin(q), `()  {}
 func (this *Query_`, sName, `_`, camelQ(q), `) QueryOutType_`, qout(q), `() {}
 
-// Executes the query with parameters retrieved from x
+// Executes the query '`, qname(q), `' with parameters retrieved from x.
+// Fields used: `, qFieldDoc(q), `
 func (this *Query_`, sName, `_`, camelQ(q), `) Execute(x In_`, sName, `_`, camelQ(q), `) *Iter_`, sName, `_`, camelQ(q), ` {
     ctx := this.ctx
     result := &Iter_`, sName, `_`, camelQ(q), `{

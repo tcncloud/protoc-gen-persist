@@ -20,12 +20,12 @@ func main() {
 
 	hooks := &HooksImpl{}
 	mapping := &MappingImpl{}
-	opts := pb.UServOpts(hooks, mapping)
+	opts := pb.OptsUServ(hooks, mapping)
 	handlers := &RestOfImpl{
 		DB:      conn,
-		QUERIES: pb.UServPersistQueries(opts),
+		QUERIES: pb.QueriesUServ(opts),
 	}
-	service := pb.UServPersistImpl(conn, handlers, opts)
+	service := pb.ImplUServ(conn, handlers, opts)
 	server := grpc.NewServer()
 
 	pb.RegisterUServServer(server, service)
@@ -59,15 +59,15 @@ type MyTimestampImpl struct{}
 
 type MappingImpl struct{}
 
-func (m *MappingImpl) TimestampTimestamp() pb.UServTimestampTimestampMappingImpl {
+func (m *MappingImpl) TimestampTimestamp() pb.MappingImpl_UServ_TimestampTimestamp {
 	return &pb.TimeString{}
 }
-func (m *MappingImpl) SliceStringParam() pb.UServSliceStringParamMappingImpl {
+func (m *MappingImpl) SliceStringParam() pb.MappingImpl_UServ_SliceStringParam {
 	return &pb.SliceStringConverter{}
 }
 
 // Type Aliasing to remove redundency
-type Queries = pb.UServ_Queries
+type Queries = pb.Queries_UServ
 type RestOfImpl struct {
 	DB      *sql.DB
 	QUERIES *Queries
@@ -97,12 +97,12 @@ func (d *RestOfImpl) UpdateUserNames(stream pb.UServ_UpdateUserNamesServer) erro
 func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {
 	ctx := stream.Context()
 	// tests that we can use both queries made from two different calls
-	testOpts := pb.UServ_Opts{MAPPINGS: &MappingImpl{}}
-	renameToFoo := pb.UServPersistQueries(testOpts).UpdateNameToFoo(ctx, d.DB)
+	testOpts := pb.OptsUServ(nil, &MappingImpl{})
+	renameToFoo := pb.QueriesUServ(testOpts).UpdateNameToFoo(ctx, d.DB)
 	allUsers := d.QUERIES.GetAllUsers(ctx, d.DB).Execute(req)
 	selectUser := d.QUERIES.SelectUserById(ctx, d.DB)
 
-	return allUsers.Each(func(row *pb.UServ_GetAllUsersRow) error {
+	return allUsers.Each(func(row *pb.Row_UServ_GetAllUsers) error {
 		user, err := row.User()
 		if err != nil {
 			return err

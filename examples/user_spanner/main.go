@@ -21,7 +21,7 @@ func main() {
 	}
 	// defer conn.Close()
 
-	service := pb.UServPersistImpl(conn, &RestOfImpl{DB: conn}, pb.UServ_Opts{
+	service := pb.ImplUServ(conn, &RestOfImpl{DB: conn}, pb.Opts_UServ{
 		HOOKS:    &HooksImpl{},
 		MAPPINGS: &MappingImpl{},
 	})
@@ -45,10 +45,10 @@ type RestOfImpl struct {
 }
 type MappingImpl struct{}
 
-func (m *MappingImpl) TimestampTimestamp() pb.UServTimestampTimestampMappingImpl {
+func (m *MappingImpl) TimestampTimestamp() pb.MappingImpl_UServ_TimestampTimestamp {
 	return &pb.TimeString{}
 }
-func (m *MappingImpl) SliceStringParam() pb.UServSliceStringParamMappingImpl {
+func (m *MappingImpl) SliceStringParam() pb.MappingImpl_UServ_SliceStringParam {
 	return &pb.SliceStringConverter{}
 }
 
@@ -82,9 +82,7 @@ func (d *RestOfImpl) CreateTable(req *pb.Empty) (*pb.Empty, error) {
 // using the persist lib queries to implement your own handlers.
 func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllNamesServer) error {
 	ctx := stream.Context()
-	queries := pb.UServPersistQueries(pb.UServ_Opts{
-		MAPPINGS: &MappingImpl{},
-	})
+	queries := pb.QueriesUServ(pb.Opts_UServ{MAPPINGS: &MappingImpl{}})
 
 	var users []*pb.User
 
@@ -94,7 +92,7 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 		selectUser := queries.SelectUserById(ctx, tx)
 		allUsers := queries.GetAllUsers(ctx, tx).Execute(req)
 
-		return allUsers.Each(func(row *pb.UServ_GetAllUsersRow) error {
+		return allUsers.Each(func(row *pb.Row_UServ_GetAllUsers) error {
 			user, err := row.User()
 			if err != nil {
 				return err
@@ -131,7 +129,7 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 
 func (d *RestOfImpl) UpdateUserNames(stream pb.UServ_UpdateUserNamesServer) error {
 	ctx := stream.Context()
-	queries := pb.UServPersistQueries(pb.UServ_Opts{
+	queries := pb.QueriesUServ(pb.Opts_UServ{
 		MAPPINGS: &MappingImpl{},
 	})
 
