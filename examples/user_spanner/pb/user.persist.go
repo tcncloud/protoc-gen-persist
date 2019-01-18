@@ -60,9 +60,9 @@ func QueriesUServ(opts ...Opts_UServ) *Queries_UServ {
 	}
 }
 
-// CreateUsersTableQuery returns a new struct wrapping the current Opts_UServ
-// that will perform 'UServ' services 'create_users_table' on the database
-// when executed
+// CreateUsersTable returns a struct that will perform the 'create_users_table' query.
+// When Execute is called, it will use the following fields:
+// []
 func (this *Queries_UServ) CreateUsersTable(ctx context.Context, db Runnable) *Query_UServ_CreateUsersTable {
 	return &Query_UServ_CreateUsersTable{
 		opts: this.opts,
@@ -108,9 +108,9 @@ func (this *Query_UServ_CreateUsersTable) Execute(x In_UServ_CreateUsersTable) *
 	return result
 }
 
-// InsertUsersQuery returns a new struct wrapping the current Opts_UServ
-// that will perform 'UServ' services 'insert_users' on the database
-// when executed
+// InsertUsers returns a struct that will perform the 'insert_users' query.
+// When Execute is called, it will use the following fields:
+// [id name friends created_on]
 func (this *Queries_UServ) InsertUsers(ctx context.Context, db Runnable) *Query_UServ_InsertUsers {
 	return &Query_UServ_InsertUsers{
 		opts: this.opts,
@@ -168,9 +168,9 @@ func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ
 	return result
 }
 
-// GetAllUsersQuery returns a new struct wrapping the current Opts_UServ
-// that will perform 'UServ' services 'get_all_users' on the database
-// when executed
+// GetAllUsers returns a struct that will perform the 'get_all_users' query.
+// When Execute is called, it will use the following fields:
+// []
 func (this *Queries_UServ) GetAllUsers(ctx context.Context, db Runnable) *Query_UServ_GetAllUsers {
 	return &Query_UServ_GetAllUsers{
 		opts: this.opts,
@@ -216,9 +216,9 @@ func (this *Query_UServ_GetAllUsers) Execute(x In_UServ_GetAllUsers) *Iter_UServ
 	return result
 }
 
-// SelectUserByIdQuery returns a new struct wrapping the current Opts_UServ
-// that will perform 'UServ' services 'select_user_by_id' on the database
-// when executed
+// SelectUserById returns a struct that will perform the 'select_user_by_id' query.
+// When Execute is called, it will use the following fields:
+// [id]
 func (this *Queries_UServ) SelectUserById(ctx context.Context, db Runnable) *Query_UServ_SelectUserById {
 	return &Query_UServ_SelectUserById{
 		opts: this.opts,
@@ -264,9 +264,9 @@ func (this *Query_UServ_SelectUserById) Execute(x In_UServ_SelectUserById) *Iter
 	return result
 }
 
-// UpdateUserNameQuery returns a new struct wrapping the current Opts_UServ
-// that will perform 'UServ' services 'update_user_name' on the database
-// when executed
+// UpdateUserName returns a struct that will perform the 'update_user_name' query.
+// When Execute is called, it will use the following fields:
+// [name id]
 func (this *Queries_UServ) UpdateUserName(ctx context.Context, db Runnable) *Query_UServ_UpdateUserName {
 	return &Query_UServ_UpdateUserName{
 		opts: this.opts,
@@ -313,9 +313,9 @@ func (this *Query_UServ_UpdateUserName) Execute(x In_UServ_UpdateUserName) *Iter
 	return result
 }
 
-// UpdateNameToFooQuery returns a new struct wrapping the current Opts_UServ
-// that will perform 'UServ' services 'update_name_to_foo' on the database
-// when executed
+// UpdateNameToFoo returns a struct that will perform the 'update_name_to_foo' query.
+// When Execute is called, it will use the following fields:
+// [id]
 func (this *Queries_UServ) UpdateNameToFoo(ctx context.Context, db Runnable) *Query_UServ_UpdateNameToFoo {
 	return &Query_UServ_UpdateNameToFoo{
 		opts: this.opts,
@@ -361,9 +361,9 @@ func (this *Query_UServ_UpdateNameToFoo) Execute(x In_UServ_UpdateNameToFoo) *It
 	return result
 }
 
-// GetFriendsQuery returns a new struct wrapping the current Opts_UServ
-// that will perform 'UServ' services 'get_friends' on the database
-// when executed
+// GetFriends returns a struct that will perform the 'get_friends' query.
+// When Execute is called, it will use the following fields:
+// [names]
 func (this *Queries_UServ) GetFriends(ctx context.Context, db Runnable) *Query_UServ_GetFriends {
 	return &Query_UServ_GetFriends{
 		opts: this.opts,
@@ -414,9 +414,9 @@ func (this *Query_UServ_GetFriends) Execute(x In_UServ_GetFriends) *Iter_UServ_G
 	return result
 }
 
-// DropQuery returns a new struct wrapping the current Opts_UServ
-// that will perform 'UServ' services 'drop' on the database
-// when executed
+// Drop returns a struct that will perform the 'drop' query.
+// When Execute is called, it will use the following fields:
+// []
 func (this *Queries_UServ) Drop(ctx context.Context, db Runnable) *Query_UServ_Drop {
 	return &Query_UServ_Drop{
 		opts: this.opts,

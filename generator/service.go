@@ -368,11 +368,13 @@ func Queries`, sName, `(opts ... Opts_`, sName, `) * Queries_`, sName, ` {
 			return printer.String()
 		}
 
+		// GetFriendsQuery returns a struct that will perform the 'get_friends' query.
+		// When Execute is called, it will expect the following fields:
 		m.EachQuery(func(q *QueryProtoOpts) {
 			p.Q(`
-// `, camelQ(q), ` returns a new struct wrapping the current Opts_`, sName, `
-// that will perform '`, sName, `' services '`, qname(q), `' on the database
-// when executed
+// `, camelQ(q), ` returns a struct that will perform the '`, qname(q), `' query.
+// When Execute is called, it will use the following fields:
+// `, qFieldDoc(q), `
 func (this *Queries_`, sName, `) `, camelQ(q), `(ctx context.Context, db Runnable) *Query_`, sName, `_`, camelQ(q), ` {
     return &Query_`, sName, `_`, camelQ(q), `{
         opts: this.opts,
@@ -491,9 +493,9 @@ func (this *Query_`, sName, `_`, camelQ(q), `) Execute(x In_`, sName, `_`, camel
 
 		m.EachQuery(func(q *QueryProtoOpts) {
 			p.Q(`
-// `, camelQ(q), `Query returns a new struct wrapping the current Opts_`, sName, `
-// that will perform '`, sName, `' services '`, qname(q), `' on the database
-// when executed
+// `, camelQ(q), ` returns a struct that will perform the '`, qname(q), `' query.
+// When Execute is called, it will use the following fields:
+// `, qFieldDoc(q), `
 func (this *Queries_`, sName, `) `, camelQ(q), `(ctx context.Context, db Runnable) *Query_`, sName, `_`, camelQ(q), ` {
     return &Query_`, sName, `_`, camelQ(q), `{
         opts: this.opts,
@@ -633,7 +635,7 @@ func WriteTypeMappings(p *Printer, s *Service) error {
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) Value() (driver.Value, error) {
             return "DEFAULT_TYPE_MAPPING_VALUE", nil
 		}
-		type MappingImpl_`, sName, `_`, titled, ` interface{
+		type MappingImpl_`, sName, `_`, titled, ` interface {
 			ToProto(**`, name, `) error
 			Empty() MappingImpl_`, sName, `_`, titled, `
 			ToSql(*`, name, `) sql.Scanner
