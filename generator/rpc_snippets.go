@@ -47,15 +47,15 @@ func NewPrinterProxy(printer *Printer) *printerProxy {
 func WritePersistServerStruct(printer *Printer, service, db string) error {
 	printerProxy := NewPrinterProxy(printer)
 	structFormat := `
-type {{.Service}}_Opts struct {
-    MAPPINGS {{.Service}}_TypeMappings
-    HOOKS    {{.Service}}_Hooks
+type Opts_{{.Service}} struct {
+    MAPPINGS TypeMappings_{{.Service}}
+    HOOKS    Hooks_{{.Service}}
 }
 
-func {{.Service}}Opts(hooks {{.Service}}_Hooks, mappings {{.Service}}_TypeMappings) {{.Service}}_Opts {
-    opts := {{.Service}}_Opts{
-        HOOKS: &{{.Service}}_DefaultHooks{},
-        MAPPINGS: &{{.Service}}_DefaultTypeMappings{},
+func Opts{{.Service}}(hooks Hooks_{{.Service}}, mappings TypeMappings_{{.Service}}) Opts_{{.Service}} {
+    opts := Opts_{{.Service}}{
+        HOOKS: &DefaultHooks_{{.Service}}{},
+        MAPPINGS: &DefaultTypeMappings_{{.Service}}{},
     }
     if hooks != nil {
         opts.HOOKS = hooks
@@ -67,23 +67,23 @@ func {{.Service}}Opts(hooks {{.Service}}_Hooks, mappings {{.Service}}_TypeMappin
 }
 
 
-type {{.Service}}_Impl struct {
-    opts    *{{.Service}}_Opts
-    QUERIES *{{.Service}}_Queries
-    HANDLERS RestOf{{.Service}}Handlers
+type Impl_{{.Service}} struct {
+    opts    *Opts_{{.Service}}
+    QUERIES *Queries_{{.Service}}
+    HANDLERS RestOfHandlers_{{.Service}}
     DB      *{{.DB}}
 }
 
-func {{.Service}}PersistImpl(db *{{.DB}}, handlers RestOf{{.Service}}Handlers, opts ...{{.Service}}_Opts) *{{.Service}}_Impl {
-    var myOpts {{.Service}}_Opts
+func Impl{{.Service}}(db *{{.DB}}, handlers RestOfHandlers_{{.Service}}, opts ...Opts_{{.Service}}) *Impl_{{.Service}} {
+    var myOpts Opts_{{.Service}}
     if len(opts) > 0 {
         myOpts = opts[0]
     } else {
-        myOpts = {{.Service}}Opts(nil, nil)
+        myOpts = Opts{{.Service}}(&DefaultHooks_{{.Service}}{}, &DefaultTypeMappings_{{.Service}}{})
     }
-    return &{{.Service}}_Impl{
+    return &Impl_{{.Service}}{
         opts:    &myOpts,
-        QUERIES: {{.Service}}PersistQueries(myOpts),
+        QUERIES: Queries{{.Service}}(myOpts),
         DB:      db,
         HANDLERS: handlers,
     }
@@ -99,7 +99,7 @@ func {{.Service}}PersistImpl(db *{{.DB}}, handlers RestOf{{.Service}}Handlers, o
 func WriteClientStreaming(printer *Printer, params *handlerParams, isSql bool) error {
 	printerProxy := NewPrinterProxy(printer)
 	sqlClientStreamingFormat := `
-func (this *{{.Service}}_Impl) {{.Method}}(stream {{.Service}}_{{.Method}}Server) error {
+func (this *Impl_{{.Service}}) {{.Method}}(stream {{.Service}}_{{.Method}}Server) error {
     tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
     if err != nil {
         return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -110,7 +110,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(stream {{.Service}}_{{.Method}}Server
     return nil
 }
 
-func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
+func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
     query := this.QUERIES.{{camelCase .Query}}(stream.Context(), tx)
     var first *{{.Request}}
     for {
@@ -157,14 +157,14 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
         `
 
 	spannerClientStreamingFormat := `
-func (this *{{.Service}}_Impl) {{.Method}}(stream {{.Service}}_{{.Method}}Server) error {
+func (this *Impl_{{.Service}}) {{.Method}}(stream {{.Service}}_{{.Method}}Server) error {
     if err := this.{{.Method}}Tx(stream); err != nil {
         return gstatus.Errorf(codes.Unknown, "error executing '{{.Query}}' query: %v", err)
     }
     return nil
 }
 
-func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server) error {
+func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server) error {
     items := make([]*{{.Request}}, 0)
     var first *{{.Request}}
     for {
@@ -235,7 +235,7 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
 func WriteUnary(printer *Printer, params *handlerParams, isSql bool) error {
 	printerProxy := NewPrinterProxy(printer)
 	sqlUnaryFormat := `
-func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
+func (this *Impl_{{.Service}}) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
     query := this.QUERIES.{{camelCase .Query}}(ctx, this.DB)
     {{if .Before}}
     beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(ctx, req)
@@ -262,7 +262,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
 }
   `
 	spannerUnaryFormat := `
-func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
+func (this *Impl_{{.Service}}) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
     query := this.QUERIES.{{camelCase .Query}}(ctx, this.DB.Single())
     {{if .Before}}
     beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(ctx, req)
@@ -307,7 +307,7 @@ func (this *{{.Service}}_Impl) {{.Method}}(ctx context.Context, req *{{.Request}
 func WriteServerStream(printer *Printer, params *handlerParams, isSql bool) error {
 	printerProxy := NewPrinterProxy(printer)
 	sqlServerFormat := `
-func (this *{{.Service}}_Impl) {{.Method}}(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server) error {
+func (this *Impl_{{.Service}}) {{.Method}}(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server) error {
     tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
     if err != nil {
         return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -318,12 +318,12 @@ func (this *{{.Service}}_Impl) {{.Method}}(req *{{.Request}}, stream {{.Service}
     return nil
 }
 
-func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
+func (this *Impl_{{.Service}}) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
     ctx := stream.Context()
     query := this.QUERIES.{{camelCase .Query}}(ctx, tx)
 
     iter := query.Execute(req)
-    return iter.Each(func(row *{{.Service}}_{{camelCase .Query}}Row) error {
+    return iter.Each(func(row *Row_{{.Service}}_{{camelCase .Query}}) error {
         res, err := row.{{.RespMethodCall}}()
         if err != nil {
             return err
@@ -334,19 +334,19 @@ func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Servic
   `
 
 	spannerServerFormat := `
-func (this *{{.Service}}_Impl) {{.Method}}(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server) error {
+func (this *Impl_{{.Service}}) {{.Method}}(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server) error {
     if err := this.{{.Method}}Tx(req, stream, this.DB.Single()); err != nil {
         return gstatus.Errorf(codes.Unknown, "error executing '{{.Query}}' query: %v", err)
     }
     return nil
 }
 
-func (this *{{.Service}}_Impl) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
+func (this *Impl_{{.Service}}) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
     ctx := stream.Context()
     query := this.QUERIES.{{camelCase .Query}}(ctx, tx)
 
     iter := query.Execute(req)
-    return iter.Each(func(row *{{.Service}}_{{camelCase .Query}}Row) error {
+    return iter.Each(func(row *Row_{{.Service}}_{{camelCase .Query}}) error {
         res, err := row.{{.RespMethodCall}}()
         if err != nil {
             return err

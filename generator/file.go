@@ -31,7 +31,6 @@ package generator
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -292,6 +291,10 @@ func (f *FileStruct) ProcessImports() {
 				importsForStructName(q.GetOut())
 			}
 		}
+		tops := srv.GetTypeMapping()
+		for _, t := range tops.GetTypes() {
+			importsForStructName(t.GetProtoTypeName())
+		}
 
 	}
 }
@@ -302,26 +305,6 @@ type persistFile struct {
 	importStr string
 }
 
-func (f *FileStruct) GetPersistLibFullFilepath() persistFile {
-	// the full path that generated me
-	origFile := path.Base(f.GetOrigName())
-	// sloppily grab the first part of the filename
-	beforeDot := strings.Split(origFile, ".")[0]
-	if beforeDot == "" {
-		beforeDot = "_"
-	}
-	imp := func() string {
-		if f.Opts.PersistLibRoot == "" {
-			return f.GetImplDir()
-		}
-		return f.Opts.PersistLibRoot
-	}()
-	return persistFile{
-		filename:  beforeDot,
-		path:      path.Join(f.GetImplDir(), "/persist_lib"),
-		importStr: path.Join(imp, "/persist_lib"),
-	}
-}
 func (f *FileStruct) Process() error {
 	logrus.WithFields(logrus.Fields{
 		"GetFileName()": f.GetFileName(),
