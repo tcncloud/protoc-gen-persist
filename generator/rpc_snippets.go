@@ -124,11 +124,13 @@ func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
             first = req
         }
         {{if .Before}}
-        beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(stream.Context(), req)
-        if err != nil {
-            return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
-        } else if beforeRes != nil {
-            continue
+        {
+            beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(stream.Context(), req)
+            if err != nil {
+                return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+            } else if beforeRes != nil {
+                continue
+            }
         }
         {{end}}
         result := query.Execute(req)
@@ -144,8 +146,10 @@ func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
     res := &{{.Response}}{}
 
     {{if .After}}
-    if err := this.opts.HOOKS.{{.Method}}AfterHook(stream.Context(), first, res); err != nil {
-        return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+    {
+        if err := this.opts.HOOKS.{{.Method}}AfterHook(stream.Context(), first, res); err != nil {
+            return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+        }
     }
     {{end}}
     if err := stream.SendAndClose(res); err != nil {
@@ -178,11 +182,13 @@ func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
             first = req
         }
         {{if .Before}}
-        beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(stream.Context(), req)
-        if err != nil {
-            return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
-        } else if beforeRes != nil {
-            continue
+        {
+            beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(stream.Context(), req)
+            if err != nil {
+                return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+            } else if beforeRes != nil {
+                continue
+            }
         }
         {{end}}
 
@@ -206,8 +212,10 @@ func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
     res := &{{.Response}}{}
 
     {{if .After}}
-    if err := this.opts.HOOKS.{{.Method}}AfterHook(stream.Context(), first, res); err != nil {
-        return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+    {
+        if err := this.opts.HOOKS.{{.Method}}AfterHook(stream.Context(), first, res); err != nil {
+            return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+        }
     }
     {{end}}
     if err := stream.SendAndClose(res); err != nil {
@@ -238,11 +246,13 @@ func WriteUnary(printer *Printer, params *handlerParams, isSql bool) error {
 func (this *Impl_{{.Service}}) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
     query := this.QUERIES.{{camelCase .Query}}(ctx, this.DB)
     {{if .Before}}
-    beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(ctx, req)
-    if err != nil {
-        return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
-    } else if beforeRes != nil {
-        return beforeRes, nil
+    {
+        beforeRes, err := this.opts.HOOKS.{{.Method}}BeforeHook(ctx, req)
+        if err != nil {
+            return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+        } else if beforeRes != nil {
+            return beforeRes, nil
+        }
     }
     {{end}}
 
@@ -253,8 +263,10 @@ func (this *Impl_{{.Service}}) {{.Method}}(ctx context.Context, req *{{.Request}
     }
 
     {{if .After}}
-    if err := this.opts.HOOKS.{{.Method}}AfterHook(ctx, req, res); err != nil {
-        return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+    {
+        if err := this.opts.HOOKS.{{.Method}}AfterHook(ctx, req, res); err != nil {
+            return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+        }
     }
     {{end}}
 
@@ -280,8 +292,10 @@ func (this *Impl_{{.Service}}) {{.Method}}(ctx context.Context, req *{{.Request}
     }
 
     {{if .After}}
-    if err := this.opts.HOOKS.{{.Method}}AfterHook(ctx, req, res); err != nil {
-        return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+    {
+        if err := this.opts.HOOKS.{{.Method}}AfterHook(ctx, req, res); err != nil {
+            return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+        }
     }
     {{end}}
 
