@@ -72,13 +72,13 @@ test-compile:
 	go build
 	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--plugin=./protoc-gen-persist \
-	 	--persist_out=$$GOPATH/src  tests/sql/little_of_everything/*.proto
+	 	--persist_out=persist_root=tests/sql/little_of_everything:.  tests/sql/little_of_everything/*.proto
 	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 	 	--plugin=./protoc-gen-persist \
-	 	--persist_out=$$GOPATH/src  tests/sql/basic/*.proto
+	 	--persist_out=persist_root=tests/sql/basic:.  tests/sql/basic/*.proto
 	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
 		--plugin=./protoc-gen-persist \
-		--persist_out=$$GOPATH/src  tests/spanner/basic/*.proto
+		--persist_out=persist_root=tests/spanner/basic:.  tests/spanner/basic/*.proto
 	cd ./tests/sql/little_of_everything && go build
 	cd ./tests/sql/basic && go build
 	cd ./tests/spanner/basic && go build

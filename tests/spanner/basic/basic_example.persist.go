@@ -20,6 +20,16 @@ import (
 type PersistTx interface {
 	Runnable
 }
+type SpannerScanner interface {
+	SpannerScan(*spanner.GenericColumnValue) error
+}
+type SpannerValuer interface {
+	SpannerValue() (interface{}, error)
+}
+type SpannerScanValuer interface {
+	SpannerScanner
+	SpannerValuer
+}
 type Result interface {
 	LastInsertId() (int64, error)
 	RowsAffected() (int64, error)
@@ -42,48 +52,51 @@ type Runnable interface {
 	QueryWithStats(context.Context, spanner.Statement) *spanner.RowIterator
 }
 
-// ExtraSrv_Queries holds all the queries found the proto service option as methods
-type ExtraSrv_Queries struct {
-	opts ExtraSrv_Opts
+// Queries_ExtraSrv holds all the queries found the proto service option as methods
+type Queries_ExtraSrv struct {
+	opts Opts_ExtraSrv
 }
 
-// ExtraSrvPersistQueries returns all the known 'SQL' queires for the 'ExtraSrv' service.
-func ExtraSrvPersistQueries(opts ...ExtraSrv_Opts) *ExtraSrv_Queries {
-	var myOpts ExtraSrv_Opts
+// QueriesExtraSrv returns all the known 'SQL' queires for the 'ExtraSrv' service.
+// If no opts are provided default implementations are used.
+func QueriesExtraSrv(opts ...Opts_ExtraSrv) *Queries_ExtraSrv {
+	var myOpts Opts_ExtraSrv
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = ExtraSrvOpts(nil, nil)
+		myOpts = OptsExtraSrv(&DefaultHooks_ExtraSrv{}, &DefaultTypeMappings_ExtraSrv{})
 	}
-	return &ExtraSrv_Queries{
+	return &Queries_ExtraSrv{
 		opts: myOpts,
 	}
 }
 
-// ExtraQuery returns a new struct wrapping the current ExtraSrv_Opts
-// that will perform 'ExtraSrv' services 'extra' on the database
-// when executed
-func (this *ExtraSrv_Queries) Extra(ctx context.Context, db Runnable) *ExtraSrv_ExtraQuery {
-	return &ExtraSrv_ExtraQuery{
+// Extra returns a struct that will perform the 'extra' query.
+// When Execute is called, it will use the following fields:
+// []
+func (this *Queries_ExtraSrv) Extra(ctx context.Context, db Runnable) *Query_ExtraSrv_Extra {
+	return &Query_ExtraSrv_Extra{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type ExtraSrv_ExtraQuery struct {
-	opts ExtraSrv_Opts
+// Query_ExtraSrv_Extra (future doc string needed)
+type Query_ExtraSrv_Extra struct {
+	opts Opts_ExtraSrv
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *ExtraSrv_ExtraQuery) QueryInTypeUser()  {}
-func (this *ExtraSrv_ExtraQuery) QueryOutTypeUser() {}
+func (this *Query_ExtraSrv_Extra) QueryInType_Empty()         {}
+func (this *Query_ExtraSrv_Extra) QueryOutType_HasTimestamp() {}
 
-// Executes the query with parameters retrieved from x
-func (this *ExtraSrv_ExtraQuery) Execute(x ExtraSrv_ExtraIn) *ExtraSrv_ExtraIter {
+// Executes the query 'extra' with parameters retrieved from x.
+// Fields used: []
+func (this *Query_ExtraSrv_Extra) Execute(x In_ExtraSrv_Extra) *Iter_ExtraSrv_Extra {
 	ctx := this.ctx
-	result := &ExtraSrv_ExtraIter{
+	result := &Iter_ExtraSrv_Extra{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -106,21 +119,21 @@ func (this *ExtraSrv_ExtraQuery) Execute(x ExtraSrv_ExtraIn) *ExtraSrv_ExtraIter
 	return result
 }
 
-type ExtraSrv_ExtraIter struct {
+type Iter_ExtraSrv_Extra struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     ExtraSrv_TypeMappings
+	tm     TypeMappings_ExtraSrv
 	ctx    context.Context
 }
 
-func (this *ExtraSrv_ExtraIter) IterOutTypeHasTimestamp() {}
-func (this *ExtraSrv_ExtraIter) IterInTypeEmpty()         {}
+func (this *Iter_ExtraSrv_Extra) IterOutTypeHasTimestamp() {}
+func (this *Iter_ExtraSrv_Extra) IterInTypeEmpty()         {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *ExtraSrv_ExtraIter) Each(fun func(*ExtraSrv_ExtraRow) error) error {
+func (this *Iter_ExtraSrv_Extra) Each(fun func(*Row_ExtraSrv_Extra) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -136,10 +149,10 @@ func (this *ExtraSrv_ExtraIter) Each(fun func(*ExtraSrv_ExtraRow) error) error {
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *ExtraSrv_ExtraIter) One() *ExtraSrv_ExtraRow {
+func (this *Iter_ExtraSrv_Extra) One() *Row_ExtraSrv_Extra {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &ExtraSrv_ExtraRow{err: first.err}
+		return &Row_ExtraSrv_Extra{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -147,13 +160,13 @@ func (this *ExtraSrv_ExtraIter) One() *ExtraSrv_ExtraRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("expected exactly 1 result from query 'Extra' found %s", amount)}
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("expected exactly 1 result from query 'Extra' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *ExtraSrv_ExtraIter) Zero() error {
+func (this *Iter_ExtraSrv_Extra) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -165,62 +178,62 @@ func (this *ExtraSrv_ExtraIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *ExtraSrv_ExtraIter) Next() (*ExtraSrv_ExtraRow, bool) {
+func (this *Iter_ExtraSrv_Extra) Next() (*Row_ExtraSrv_Extra, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &ExtraSrv_ExtraRow{err: err}, true
+		return &Row_ExtraSrv_Extra{err: err}, true
 	}
 
 	time := &timestamp.Timestamp{}
 	timeBytes := make([]byte, 0)
 	if err := row.ColumnByName("time", &timeBytes); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column time to []byte")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to convert db column time to []byte")}, true
 	}
 	if err := proto.Unmarshal(timeBytes, time); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column time to proto message")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to unmarshal column time to proto message")}, true
 	}
 
 	some := &Something{}
 	someBytes := make([]byte, 0)
 	if err := row.ColumnByName("some", &someBytes); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column some to []byte")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to convert db column some to []byte")}, true
 	}
 	if err := proto.Unmarshal(someBytes, some); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column some to proto message")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to unmarshal column some to proto message")}, true
 	}
 
 	var str string
 	if err := row.ColumnByName("str", &str); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("cant convert db column str to protobuf go type string")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("cant convert db column str to protobuf go type string")}, true
 	}
 
 	table := &test.ExampleTable{}
 	tableBytes := make([]byte, 0)
 	if err := row.ColumnByName("table", &tableBytes); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column table to []byte")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to convert db column table to []byte")}, true
 	}
 	if err := proto.Unmarshal(tableBytes, table); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
 	}
 
 	var strs []string
 	if err := row.ColumnByName("strs", &strs); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("cant convert db column strs to protobuf go type []string")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("cant convert db column strs to protobuf go type []string")}, true
 	}
 
 	tables := make([]*test.ExampleTable, 0)
 	tablesBytes := make([][]byte, 0)
 	if err := row.ColumnByName("tables", &tablesBytes); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column tables to [][]byte")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to convert db column tables to [][]byte")}, true
 	}
 	for _, x := range tablesBytes {
 		tmp := &test.ExampleTable{}
 		if err := proto.Unmarshal(x, tmp); err != nil {
-			return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+			return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
 		}
 		tables = append(tables, tmp)
 	}
@@ -228,12 +241,12 @@ func (this *ExtraSrv_ExtraIter) Next() (*ExtraSrv_ExtraRow, bool) {
 	somes := make([]*Something, 0)
 	somesBytes := make([][]byte, 0)
 	if err := row.ColumnByName("somes", &somesBytes); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column somes to [][]byte")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to convert db column somes to [][]byte")}, true
 	}
 	for _, x := range somesBytes {
 		tmp := &Something{}
 		if err := proto.Unmarshal(x, tmp); err != nil {
-			return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+			return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
 		}
 		somes = append(somes, tmp)
 	}
@@ -241,12 +254,12 @@ func (this *ExtraSrv_ExtraIter) Next() (*ExtraSrv_ExtraRow, bool) {
 	times := make([]*timestamp.Timestamp, 0)
 	timesBytes := make([][]byte, 0)
 	if err := row.ColumnByName("times", &timesBytes); err != nil {
-		return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to convert db column times to [][]byte")}, true
+		return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to convert db column times to [][]byte")}, true
 	}
 	for _, x := range timesBytes {
 		tmp := &timestamp.Timestamp{}
 		if err := proto.Unmarshal(x, tmp); err != nil {
-			return &ExtraSrv_ExtraRow{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
+			return &Row_ExtraSrv_Extra{err: fmt.Errorf("failed to unmarshal column table to proto message")}, true
 		}
 		times = append(times, tmp)
 	}
@@ -261,12 +274,12 @@ func (this *ExtraSrv_ExtraIter) Next() (*ExtraSrv_ExtraRow, bool) {
 		Somes:  somes,
 		Times:  times,
 	}
-	return &ExtraSrv_ExtraRow{item: res}, true
+	return &Row_ExtraSrv_Extra{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *ExtraSrv_ExtraIter) Slice() []*ExtraSrv_ExtraRow {
-	var results []*ExtraSrv_ExtraRow
+func (this *Iter_ExtraSrv_Extra) Slice() []*Row_ExtraSrv_Extra {
+	var results []*Row_ExtraSrv_Extra
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -277,9 +290,9 @@ func (this *ExtraSrv_ExtraIter) Slice() []*ExtraSrv_ExtraRow {
 	return results
 }
 
-type ExtraSrv_ExtraIn interface {
+type In_ExtraSrv_Extra interface {
 }
-type ExtraSrv_ExtraOut interface {
+type Out_ExtraSrv_Extra interface {
 	GetTime() *timestamp.Timestamp
 	GetSome() *Something
 	GetStr() string
@@ -289,18 +302,18 @@ type ExtraSrv_ExtraOut interface {
 	GetSomes() []*Something
 	GetTimes() []*timestamp.Timestamp
 }
-type ExtraSrv_ExtraRow struct {
-	item ExtraSrv_ExtraOut
+type Row_ExtraSrv_Extra struct {
+	item Out_ExtraSrv_Extra
 	err  error
 }
 
-func newExtraSrv_ExtraRow(item ExtraSrv_ExtraOut, err error) *ExtraSrv_ExtraRow {
-	return &ExtraSrv_ExtraRow{item, err}
+func newRowExtraSrvExtra(item Out_ExtraSrv_Extra, err error) *Row_ExtraSrv_Extra {
+	return &Row_ExtraSrv_Extra{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *ExtraSrv_ExtraRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_ExtraSrv_Extra) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -333,7 +346,7 @@ func (this *ExtraSrv_ExtraRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *ExtraSrv_ExtraRow) HasTimestamp() (*HasTimestamp, error) {
+func (this *Row_ExtraSrv_Extra) HasTimestamp() (*HasTimestamp, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -348,14 +361,14 @@ func (this *ExtraSrv_ExtraRow) HasTimestamp() (*HasTimestamp, error) {
 		Times:  this.item.GetTimes(),
 	}, nil
 }
-func (this *ExtraSrv_ExtraRow) TestExampleTable() (*test.ExampleTable, error) {
+func (this *Row_ExtraSrv_Extra) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &test.ExampleTable{}, nil
 }
 
-func (this *ExtraSrv_ExtraRow) Proto() (*HasTimestamp, error) {
+func (this *Row_ExtraSrv_Extra) Proto() (*HasTimestamp, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -371,22 +384,22 @@ func (this *ExtraSrv_ExtraRow) Proto() (*HasTimestamp, error) {
 	}, nil
 }
 
-type ExtraSrv_Hooks interface {
+type Hooks_ExtraSrv interface {
 }
-type ExtraSrv_DefaultHooks struct{}
-type ExtraSrv_TypeMappings interface {
+type DefaultHooks_ExtraSrv struct{}
+type TypeMappings_ExtraSrv interface {
 }
-type ExtraSrv_DefaultTypeMappings struct{}
+type DefaultTypeMappings_ExtraSrv struct{}
 
-type ExtraSrv_Opts struct {
-	MAPPINGS ExtraSrv_TypeMappings
-	HOOKS    ExtraSrv_Hooks
+type Opts_ExtraSrv struct {
+	MAPPINGS TypeMappings_ExtraSrv
+	HOOKS    Hooks_ExtraSrv
 }
 
-func ExtraSrvOpts(hooks ExtraSrv_Hooks, mappings ExtraSrv_TypeMappings) ExtraSrv_Opts {
-	opts := ExtraSrv_Opts{
-		HOOKS:    &ExtraSrv_DefaultHooks{},
-		MAPPINGS: &ExtraSrv_DefaultTypeMappings{},
+func OptsExtraSrv(hooks Hooks_ExtraSrv, mappings TypeMappings_ExtraSrv) Opts_ExtraSrv {
+	opts := Opts_ExtraSrv{
+		HOOKS:    &DefaultHooks_ExtraSrv{},
+		MAPPINGS: &DefaultTypeMappings_ExtraSrv{},
 	}
 	if hooks != nil {
 		opts.HOOKS = hooks
@@ -397,37 +410,37 @@ func ExtraSrvOpts(hooks ExtraSrv_Hooks, mappings ExtraSrv_TypeMappings) ExtraSrv
 	return opts
 }
 
-type ExtraSrv_Impl struct {
-	opts     *ExtraSrv_Opts
-	QUERIES  *ExtraSrv_Queries
-	HANDLERS RestOfExtraSrvHandlers
+type Impl_ExtraSrv struct {
+	opts     *Opts_ExtraSrv
+	QUERIES  *Queries_ExtraSrv
+	HANDLERS RestOfHandlers_ExtraSrv
 	DB       *spanner.Client
 }
 
-func ExtraSrvPersistImpl(db *spanner.Client, handlers RestOfExtraSrvHandlers, opts ...ExtraSrv_Opts) *ExtraSrv_Impl {
-	var myOpts ExtraSrv_Opts
+func ImplExtraSrv(db *spanner.Client, handlers RestOfHandlers_ExtraSrv, opts ...Opts_ExtraSrv) *Impl_ExtraSrv {
+	var myOpts Opts_ExtraSrv
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = ExtraSrvOpts(nil, nil)
+		myOpts = OptsExtraSrv(&DefaultHooks_ExtraSrv{}, &DefaultTypeMappings_ExtraSrv{})
 	}
-	return &ExtraSrv_Impl{
+	return &Impl_ExtraSrv{
 		opts:     &myOpts,
-		QUERIES:  ExtraSrvPersistQueries(myOpts),
+		QUERIES:  QueriesExtraSrv(myOpts),
 		DB:       db,
 		HANDLERS: handlers,
 	}
 }
 
-type RestOfExtraSrvHandlers interface {
+type RestOfHandlers_ExtraSrv interface {
 	ExtraMethod(context.Context, *test.ExampleTable) (*test.ExampleTable, error)
 }
 
-func (this *ExtraSrv_Impl) ExtraMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (this *Impl_ExtraSrv) ExtraMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	return this.HANDLERS.ExtraMethod(ctx, req)
 }
 
-func (this *ExtraSrv_Impl) ExtraUnary(ctx context.Context, req *test.NumRows) (*test.ExampleTable, error) {
+func (this *Impl_ExtraSrv) ExtraUnary(ctx context.Context, req *test.NumRows) (*test.ExampleTable, error) {
 	query := this.QUERIES.Extra(ctx, this.DB.Single())
 
 	result := query.Execute(req)
@@ -439,48 +452,51 @@ func (this *ExtraSrv_Impl) ExtraUnary(ctx context.Context, req *test.NumRows) (*
 	return res, nil
 }
 
-// MySpanner_Queries holds all the queries found the proto service option as methods
-type MySpanner_Queries struct {
-	opts MySpanner_Opts
+// Queries_MySpanner holds all the queries found the proto service option as methods
+type Queries_MySpanner struct {
+	opts Opts_MySpanner
 }
 
-// MySpannerPersistQueries returns all the known 'SQL' queires for the 'MySpanner' service.
-func MySpannerPersistQueries(opts ...MySpanner_Opts) *MySpanner_Queries {
-	var myOpts MySpanner_Opts
+// QueriesMySpanner returns all the known 'SQL' queires for the 'MySpanner' service.
+// If no opts are provided default implementations are used.
+func QueriesMySpanner(opts ...Opts_MySpanner) *Queries_MySpanner {
+	var myOpts Opts_MySpanner
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = MySpannerOpts(nil, nil)
+		myOpts = OptsMySpanner(&DefaultHooks_MySpanner{}, &DefaultTypeMappings_MySpanner{})
 	}
-	return &MySpanner_Queries{
+	return &Queries_MySpanner{
 		opts: myOpts,
 	}
 }
 
-// InsertQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'insert' on the database
-// when executed
-func (this *MySpanner_Queries) Insert(ctx context.Context, db Runnable) *MySpanner_InsertQuery {
-	return &MySpanner_InsertQuery{
+// Insert returns a struct that will perform the 'insert' query.
+// When Execute is called, it will use the following fields:
+// [id start_time]
+func (this *Queries_MySpanner) Insert(ctx context.Context, db Runnable) *Query_MySpanner_Insert {
+	return &Query_MySpanner_Insert{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type MySpanner_InsertQuery struct {
-	opts MySpanner_Opts
+// Query_MySpanner_Insert (future doc string needed)
+type Query_MySpanner_Insert struct {
+	opts Opts_MySpanner
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *MySpanner_InsertQuery) QueryInTypeUser()  {}
-func (this *MySpanner_InsertQuery) QueryOutTypeUser() {}
+func (this *Query_MySpanner_Insert) QueryInType_ExampleTable() {}
+func (this *Query_MySpanner_Insert) QueryOutType_Empty()       {}
 
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_InsertQuery) Execute(x MySpanner_InsertIn) *MySpanner_InsertIter {
+// Executes the query 'insert' with parameters retrieved from x.
+// Fields used: [id start_time]
+func (this *Query_MySpanner_Insert) Execute(x In_MySpanner_Insert) *Iter_MySpanner_Insert {
 	ctx := this.ctx
-	result := &MySpanner_InsertIter{
+	result := &Iter_MySpanner_Insert{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -508,30 +524,32 @@ func (this *MySpanner_InsertQuery) Execute(x MySpanner_InsertIn) *MySpanner_Inse
 	return result
 }
 
-// SelectQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'select' on the database
-// when executed
-func (this *MySpanner_Queries) Select(ctx context.Context, db Runnable) *MySpanner_SelectQuery {
-	return &MySpanner_SelectQuery{
+// Select returns a struct that will perform the 'select' query.
+// When Execute is called, it will use the following fields:
+// [id name]
+func (this *Queries_MySpanner) Select(ctx context.Context, db Runnable) *Query_MySpanner_Select {
+	return &Query_MySpanner_Select{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type MySpanner_SelectQuery struct {
-	opts MySpanner_Opts
+// Query_MySpanner_Select (future doc string needed)
+type Query_MySpanner_Select struct {
+	opts Opts_MySpanner
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *MySpanner_SelectQuery) QueryInTypeUser()  {}
-func (this *MySpanner_SelectQuery) QueryOutTypeUser() {}
+func (this *Query_MySpanner_Select) QueryInType_ExampleTable()  {}
+func (this *Query_MySpanner_Select) QueryOutType_ExampleTable() {}
 
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_SelectQuery) Execute(x MySpanner_SelectIn) *MySpanner_SelectIter {
+// Executes the query 'select' with parameters retrieved from x.
+// Fields used: [id name]
+func (this *Query_MySpanner_Select) Execute(x In_MySpanner_Select) *Iter_MySpanner_Select {
 	ctx := this.ctx
-	result := &MySpanner_SelectIter{
+	result := &Iter_MySpanner_Select{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -555,30 +573,32 @@ func (this *MySpanner_SelectQuery) Execute(x MySpanner_SelectIn) *MySpanner_Sele
 	return result
 }
 
-// SelectIndexQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'select_index' on the database
-// when executed
-func (this *MySpanner_Queries) SelectIndex(ctx context.Context, db Runnable) *MySpanner_SelectIndexQuery {
-	return &MySpanner_SelectIndexQuery{
+// SelectIndex returns a struct that will perform the 'select_index' query.
+// When Execute is called, it will use the following fields:
+// [id name]
+func (this *Queries_MySpanner) SelectIndex(ctx context.Context, db Runnable) *Query_MySpanner_SelectIndex {
+	return &Query_MySpanner_SelectIndex{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type MySpanner_SelectIndexQuery struct {
-	opts MySpanner_Opts
+// Query_MySpanner_SelectIndex (future doc string needed)
+type Query_MySpanner_SelectIndex struct {
+	opts Opts_MySpanner
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *MySpanner_SelectIndexQuery) QueryInTypeUser()  {}
-func (this *MySpanner_SelectIndexQuery) QueryOutTypeUser() {}
+func (this *Query_MySpanner_SelectIndex) QueryInType_ExampleTable()  {}
+func (this *Query_MySpanner_SelectIndex) QueryOutType_ExampleTable() {}
 
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_SelectIndexQuery) Execute(x MySpanner_SelectIndexIn) *MySpanner_SelectIndexIter {
+// Executes the query 'select_index' with parameters retrieved from x.
+// Fields used: [id name]
+func (this *Query_MySpanner_SelectIndex) Execute(x In_MySpanner_SelectIndex) *Iter_MySpanner_SelectIndex {
 	ctx := this.ctx
-	result := &MySpanner_SelectIndexIter{
+	result := &Iter_MySpanner_SelectIndex{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -602,30 +622,32 @@ func (this *MySpanner_SelectIndexQuery) Execute(x MySpanner_SelectIndexIn) *MySp
 	return result
 }
 
-// UpdateQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'update' on the database
-// when executed
-func (this *MySpanner_Queries) Update(ctx context.Context, db Runnable) *MySpanner_UpdateQuery {
-	return &MySpanner_UpdateQuery{
+// Update returns a struct that will perform the 'update' query.
+// When Execute is called, it will use the following fields:
+// [start_time id]
+func (this *Queries_MySpanner) Update(ctx context.Context, db Runnable) *Query_MySpanner_Update {
+	return &Query_MySpanner_Update{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type MySpanner_UpdateQuery struct {
-	opts MySpanner_Opts
+// Query_MySpanner_Update (future doc string needed)
+type Query_MySpanner_Update struct {
+	opts Opts_MySpanner
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *MySpanner_UpdateQuery) QueryInTypeUser()  {}
-func (this *MySpanner_UpdateQuery) QueryOutTypeUser() {}
+func (this *Query_MySpanner_Update) QueryInType_ExampleTable() {}
+func (this *Query_MySpanner_Update) QueryOutType_Empty()       {}
 
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_UpdateQuery) Execute(x MySpanner_UpdateIn) *MySpanner_UpdateIter {
+// Executes the query 'update' with parameters retrieved from x.
+// Fields used: [start_time id]
+func (this *Query_MySpanner_Update) Execute(x In_MySpanner_Update) *Iter_MySpanner_Update {
 	ctx := this.ctx
-	result := &MySpanner_UpdateIter{
+	result := &Iter_MySpanner_Update{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -654,30 +676,32 @@ func (this *MySpanner_UpdateQuery) Execute(x MySpanner_UpdateIn) *MySpanner_Upda
 	return result
 }
 
-// DeleteQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'delete' on the database
-// when executed
-func (this *MySpanner_Queries) Delete(ctx context.Context, db Runnable) *MySpanner_DeleteQuery {
-	return &MySpanner_DeleteQuery{
+// Delete returns a struct that will perform the 'delete' query.
+// When Execute is called, it will use the following fields:
+// [start_id end_id]
+func (this *Queries_MySpanner) Delete(ctx context.Context, db Runnable) *Query_MySpanner_Delete {
+	return &Query_MySpanner_Delete{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type MySpanner_DeleteQuery struct {
-	opts MySpanner_Opts
+// Query_MySpanner_Delete (future doc string needed)
+type Query_MySpanner_Delete struct {
+	opts Opts_MySpanner
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *MySpanner_DeleteQuery) QueryInTypeUser()  {}
-func (this *MySpanner_DeleteQuery) QueryOutTypeUser() {}
+func (this *Query_MySpanner_Delete) QueryInType_ExampleTableRange() {}
+func (this *Query_MySpanner_Delete) QueryOutType_Empty()            {}
 
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_DeleteQuery) Execute(x MySpanner_DeleteIn) *MySpanner_DeleteIter {
+// Executes the query 'delete' with parameters retrieved from x.
+// Fields used: [start_id end_id]
+func (this *Query_MySpanner_Delete) Execute(x In_MySpanner_Delete) *Iter_MySpanner_Delete {
 	ctx := this.ctx
-	result := &MySpanner_DeleteIter{
+	result := &Iter_MySpanner_Delete{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -701,30 +725,32 @@ func (this *MySpanner_DeleteQuery) Execute(x MySpanner_DeleteIn) *MySpanner_Dele
 	return result
 }
 
-// SelectAllQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'select_all' on the database
-// when executed
-func (this *MySpanner_Queries) SelectAll(ctx context.Context, db Runnable) *MySpanner_SelectAllQuery {
-	return &MySpanner_SelectAllQuery{
+// SelectAll returns a struct that will perform the 'select_all' query.
+// When Execute is called, it will use the following fields:
+// []
+func (this *Queries_MySpanner) SelectAll(ctx context.Context, db Runnable) *Query_MySpanner_SelectAll {
+	return &Query_MySpanner_SelectAll{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type MySpanner_SelectAllQuery struct {
-	opts MySpanner_Opts
+// Query_MySpanner_SelectAll (future doc string needed)
+type Query_MySpanner_SelectAll struct {
+	opts Opts_MySpanner
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *MySpanner_SelectAllQuery) QueryInTypeUser()  {}
-func (this *MySpanner_SelectAllQuery) QueryOutTypeUser() {}
+func (this *Query_MySpanner_SelectAll) QueryInType_Empty()         {}
+func (this *Query_MySpanner_SelectAll) QueryOutType_ExampleTable() {}
 
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_SelectAllQuery) Execute(x MySpanner_SelectAllIn) *MySpanner_SelectAllIter {
+// Executes the query 'select_all' with parameters retrieved from x.
+// Fields used: []
+func (this *Query_MySpanner_SelectAll) Execute(x In_MySpanner_SelectAll) *Iter_MySpanner_SelectAll {
 	ctx := this.ctx
-	result := &MySpanner_SelectAllIter{
+	result := &Iter_MySpanner_SelectAll{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -747,30 +773,32 @@ func (this *MySpanner_SelectAllQuery) Execute(x MySpanner_SelectAllIn) *MySpanne
 	return result
 }
 
-// Insert_3Query returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'insert_3' on the database
-// when executed
-func (this *MySpanner_Queries) Insert_3(ctx context.Context, db Runnable) *MySpanner_Insert_3Query {
-	return &MySpanner_Insert_3Query{
+// Insert_3 returns a struct that will perform the 'insert_3' query.
+// When Execute is called, it will use the following fields:
+// [id start_time]
+func (this *Queries_MySpanner) Insert_3(ctx context.Context, db Runnable) *Query_MySpanner_Insert_3 {
+	return &Query_MySpanner_Insert_3{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type MySpanner_Insert_3Query struct {
-	opts MySpanner_Opts
+// Query_MySpanner_Insert_3 (future doc string needed)
+type Query_MySpanner_Insert_3 struct {
+	opts Opts_MySpanner
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *MySpanner_Insert_3Query) QueryInTypeUser()  {}
-func (this *MySpanner_Insert_3Query) QueryOutTypeUser() {}
+func (this *Query_MySpanner_Insert_3) QueryInType_ExampleTable() {}
+func (this *Query_MySpanner_Insert_3) QueryOutType_Empty()       {}
 
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_Insert_3Query) Execute(x MySpanner_Insert_3In) *MySpanner_Insert_3Iter {
+// Executes the query 'insert_3' with parameters retrieved from x.
+// Fields used: [id start_time]
+func (this *Query_MySpanner_Insert_3) Execute(x In_MySpanner_Insert_3) *Iter_MySpanner_Insert_3 {
 	ctx := this.ctx
-	result := &MySpanner_Insert_3Iter{
+	result := &Iter_MySpanner_Insert_3{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -798,30 +826,32 @@ func (this *MySpanner_Insert_3Query) Execute(x MySpanner_Insert_3In) *MySpanner_
 	return result
 }
 
-// DeleteIdQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'delete_id' on the database
-// when executed
-func (this *MySpanner_Queries) DeleteId(ctx context.Context, db Runnable) *MySpanner_DeleteIdQuery {
-	return &MySpanner_DeleteIdQuery{
+// DeleteId returns a struct that will perform the 'delete_id' query.
+// When Execute is called, it will use the following fields:
+// [id]
+func (this *Queries_MySpanner) DeleteId(ctx context.Context, db Runnable) *Query_MySpanner_DeleteId {
+	return &Query_MySpanner_DeleteId{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type MySpanner_DeleteIdQuery struct {
-	opts MySpanner_Opts
+// Query_MySpanner_DeleteId (future doc string needed)
+type Query_MySpanner_DeleteId struct {
+	opts Opts_MySpanner
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *MySpanner_DeleteIdQuery) QueryInTypeUser()  {}
-func (this *MySpanner_DeleteIdQuery) QueryOutTypeUser() {}
+func (this *Query_MySpanner_DeleteId) QueryInType_ExampleTable() {}
+func (this *Query_MySpanner_DeleteId) QueryOutType_Empty()       {}
 
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_DeleteIdQuery) Execute(x MySpanner_DeleteIdIn) *MySpanner_DeleteIdIter {
+// Executes the query 'delete_id' with parameters retrieved from x.
+// Fields used: [id]
+func (this *Query_MySpanner_DeleteId) Execute(x In_MySpanner_DeleteId) *Iter_MySpanner_DeleteId {
 	ctx := this.ctx
-	result := &MySpanner_DeleteIdIter{
+	result := &Iter_MySpanner_DeleteId{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -844,30 +874,32 @@ func (this *MySpanner_DeleteIdQuery) Execute(x MySpanner_DeleteIdIn) *MySpanner_
 	return result
 }
 
-// SetNameAsdfQuery returns a new struct wrapping the current MySpanner_Opts
-// that will perform 'MySpanner' services 'set_name_asdf' on the database
-// when executed
-func (this *MySpanner_Queries) SetNameAsdf(ctx context.Context, db Runnable) *MySpanner_SetNameAsdfQuery {
-	return &MySpanner_SetNameAsdfQuery{
+// SetNameAsdf returns a struct that will perform the 'set_name_asdf' query.
+// When Execute is called, it will use the following fields:
+// [id]
+func (this *Queries_MySpanner) SetNameAsdf(ctx context.Context, db Runnable) *Query_MySpanner_SetNameAsdf {
+	return &Query_MySpanner_SetNameAsdf{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type MySpanner_SetNameAsdfQuery struct {
-	opts MySpanner_Opts
+// Query_MySpanner_SetNameAsdf (future doc string needed)
+type Query_MySpanner_SetNameAsdf struct {
+	opts Opts_MySpanner
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *MySpanner_SetNameAsdfQuery) QueryInTypeUser()  {}
-func (this *MySpanner_SetNameAsdfQuery) QueryOutTypeUser() {}
+func (this *Query_MySpanner_SetNameAsdf) QueryInType_ExampleTable() {}
+func (this *Query_MySpanner_SetNameAsdf) QueryOutType_Empty()       {}
 
-// Executes the query with parameters retrieved from x
-func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySpanner_SetNameAsdfIter {
+// Executes the query 'set_name_asdf' with parameters retrieved from x.
+// Fields used: [id]
+func (this *Query_MySpanner_SetNameAsdf) Execute(x In_MySpanner_SetNameAsdf) *Iter_MySpanner_SetNameAsdf {
 	ctx := this.ctx
-	result := &MySpanner_SetNameAsdfIter{
+	result := &Iter_MySpanner_SetNameAsdf{
 		result: &SpannerResult{},
 		tm:     this.opts.MAPPINGS,
 		ctx:    ctx,
@@ -890,21 +922,21 @@ func (this *MySpanner_SetNameAsdfQuery) Execute(x MySpanner_SetNameAsdfIn) *MySp
 	return result
 }
 
-type MySpanner_InsertIter struct {
+type Iter_MySpanner_Insert struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     MySpanner_TypeMappings
+	tm     TypeMappings_MySpanner
 	ctx    context.Context
 }
 
-func (this *MySpanner_InsertIter) IterOutTypeEmpty()           {}
-func (this *MySpanner_InsertIter) IterInTypeTestExampleTable() {}
+func (this *Iter_MySpanner_Insert) IterOutTypeEmpty()           {}
+func (this *Iter_MySpanner_Insert) IterInTypeTestExampleTable() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *MySpanner_InsertIter) Each(fun func(*MySpanner_InsertRow) error) error {
+func (this *Iter_MySpanner_Insert) Each(fun func(*Row_MySpanner_Insert) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -920,10 +952,10 @@ func (this *MySpanner_InsertIter) Each(fun func(*MySpanner_InsertRow) error) err
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *MySpanner_InsertIter) One() *MySpanner_InsertRow {
+func (this *Iter_MySpanner_Insert) One() *Row_MySpanner_Insert {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &MySpanner_InsertRow{err: first.err}
+		return &Row_MySpanner_Insert{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -931,13 +963,13 @@ func (this *MySpanner_InsertIter) One() *MySpanner_InsertRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &MySpanner_InsertRow{err: fmt.Errorf("expected exactly 1 result from query 'Insert' found %s", amount)}
+		return &Row_MySpanner_Insert{err: fmt.Errorf("expected exactly 1 result from query 'Insert' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *MySpanner_InsertIter) Zero() error {
+func (this *Iter_MySpanner_Insert) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -949,22 +981,22 @@ func (this *MySpanner_InsertIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *MySpanner_InsertIter) Next() (*MySpanner_InsertRow, bool) {
+func (this *Iter_MySpanner_Insert) Next() (*Row_MySpanner_Insert, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &MySpanner_InsertRow{err: err}, true
+		return &Row_MySpanner_Insert{err: err}, true
 	}
 	res := &Empty{}
-	return &MySpanner_InsertRow{item: res}, true
+	return &Row_MySpanner_Insert{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *MySpanner_InsertIter) Slice() []*MySpanner_InsertRow {
-	var results []*MySpanner_InsertRow
+func (this *Iter_MySpanner_Insert) Slice() []*Row_MySpanner_Insert {
+	var results []*Row_MySpanner_Insert
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -975,21 +1007,21 @@ func (this *MySpanner_InsertIter) Slice() []*MySpanner_InsertRow {
 	return results
 }
 
-type MySpanner_SelectIter struct {
+type Iter_MySpanner_Select struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     MySpanner_TypeMappings
+	tm     TypeMappings_MySpanner
 	ctx    context.Context
 }
 
-func (this *MySpanner_SelectIter) IterOutTypeTestExampleTable() {}
-func (this *MySpanner_SelectIter) IterInTypeTestExampleTable()  {}
+func (this *Iter_MySpanner_Select) IterOutTypeTestExampleTable() {}
+func (this *Iter_MySpanner_Select) IterInTypeTestExampleTable()  {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *MySpanner_SelectIter) Each(fun func(*MySpanner_SelectRow) error) error {
+func (this *Iter_MySpanner_Select) Each(fun func(*Row_MySpanner_Select) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1005,10 +1037,10 @@ func (this *MySpanner_SelectIter) Each(fun func(*MySpanner_SelectRow) error) err
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *MySpanner_SelectIter) One() *MySpanner_SelectRow {
+func (this *Iter_MySpanner_Select) One() *Row_MySpanner_Select {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &MySpanner_SelectRow{err: first.err}
+		return &Row_MySpanner_Select{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1016,13 +1048,13 @@ func (this *MySpanner_SelectIter) One() *MySpanner_SelectRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &MySpanner_SelectRow{err: fmt.Errorf("expected exactly 1 result from query 'Select' found %s", amount)}
+		return &Row_MySpanner_Select{err: fmt.Errorf("expected exactly 1 result from query 'Select' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *MySpanner_SelectIter) Zero() error {
+func (this *Iter_MySpanner_Select) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1034,32 +1066,32 @@ func (this *MySpanner_SelectIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *MySpanner_SelectIter) Next() (*MySpanner_SelectRow, bool) {
+func (this *Iter_MySpanner_Select) Next() (*Row_MySpanner_Select, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &MySpanner_SelectRow{err: err}, true
+		return &Row_MySpanner_Select{err: err}, true
 	}
 	var id int64
 	if err := row.ColumnByName("id", &id); err != nil {
-		return &MySpanner_SelectRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
+		return &Row_MySpanner_Select{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
 
 	start_time := &timestamp.Timestamp{}
 	start_timeBytes := make([]byte, 0)
 	if err := row.ColumnByName("start_time", &start_timeBytes); err != nil {
-		return &MySpanner_SelectRow{err: fmt.Errorf("failed to convert db column start_time to []byte")}, true
+		return &Row_MySpanner_Select{err: fmt.Errorf("failed to convert db column start_time to []byte")}, true
 	}
 	if err := proto.Unmarshal(start_timeBytes, start_time); err != nil {
-		return &MySpanner_SelectRow{err: fmt.Errorf("failed to unmarshal column start_time to proto message")}, true
+		return &Row_MySpanner_Select{err: fmt.Errorf("failed to unmarshal column start_time to proto message")}, true
 	}
 
 	var name string
 	if err := row.ColumnByName("name", &name); err != nil {
-		return &MySpanner_SelectRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+		return &Row_MySpanner_Select{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
 	res := &test.ExampleTable{
@@ -1067,12 +1099,12 @@ func (this *MySpanner_SelectIter) Next() (*MySpanner_SelectRow, bool) {
 		StartTime: start_time,
 		Name:      name,
 	}
-	return &MySpanner_SelectRow{item: res}, true
+	return &Row_MySpanner_Select{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *MySpanner_SelectIter) Slice() []*MySpanner_SelectRow {
-	var results []*MySpanner_SelectRow
+func (this *Iter_MySpanner_Select) Slice() []*Row_MySpanner_Select {
+	var results []*Row_MySpanner_Select
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1083,21 +1115,21 @@ func (this *MySpanner_SelectIter) Slice() []*MySpanner_SelectRow {
 	return results
 }
 
-type MySpanner_SelectIndexIter struct {
+type Iter_MySpanner_SelectIndex struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     MySpanner_TypeMappings
+	tm     TypeMappings_MySpanner
 	ctx    context.Context
 }
 
-func (this *MySpanner_SelectIndexIter) IterOutTypeTestExampleTable() {}
-func (this *MySpanner_SelectIndexIter) IterInTypeTestExampleTable()  {}
+func (this *Iter_MySpanner_SelectIndex) IterOutTypeTestExampleTable() {}
+func (this *Iter_MySpanner_SelectIndex) IterInTypeTestExampleTable()  {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *MySpanner_SelectIndexIter) Each(fun func(*MySpanner_SelectIndexRow) error) error {
+func (this *Iter_MySpanner_SelectIndex) Each(fun func(*Row_MySpanner_SelectIndex) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1113,10 +1145,10 @@ func (this *MySpanner_SelectIndexIter) Each(fun func(*MySpanner_SelectIndexRow) 
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *MySpanner_SelectIndexIter) One() *MySpanner_SelectIndexRow {
+func (this *Iter_MySpanner_SelectIndex) One() *Row_MySpanner_SelectIndex {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &MySpanner_SelectIndexRow{err: first.err}
+		return &Row_MySpanner_SelectIndex{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1124,13 +1156,13 @@ func (this *MySpanner_SelectIndexIter) One() *MySpanner_SelectIndexRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &MySpanner_SelectIndexRow{err: fmt.Errorf("expected exactly 1 result from query 'SelectIndex' found %s", amount)}
+		return &Row_MySpanner_SelectIndex{err: fmt.Errorf("expected exactly 1 result from query 'SelectIndex' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *MySpanner_SelectIndexIter) Zero() error {
+func (this *Iter_MySpanner_SelectIndex) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1142,32 +1174,32 @@ func (this *MySpanner_SelectIndexIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *MySpanner_SelectIndexIter) Next() (*MySpanner_SelectIndexRow, bool) {
+func (this *Iter_MySpanner_SelectIndex) Next() (*Row_MySpanner_SelectIndex, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &MySpanner_SelectIndexRow{err: err}, true
+		return &Row_MySpanner_SelectIndex{err: err}, true
 	}
 	var id int64
 	if err := row.ColumnByName("id", &id); err != nil {
-		return &MySpanner_SelectIndexRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
+		return &Row_MySpanner_SelectIndex{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
 
 	start_time := &timestamp.Timestamp{}
 	start_timeBytes := make([]byte, 0)
 	if err := row.ColumnByName("start_time", &start_timeBytes); err != nil {
-		return &MySpanner_SelectIndexRow{err: fmt.Errorf("failed to convert db column start_time to []byte")}, true
+		return &Row_MySpanner_SelectIndex{err: fmt.Errorf("failed to convert db column start_time to []byte")}, true
 	}
 	if err := proto.Unmarshal(start_timeBytes, start_time); err != nil {
-		return &MySpanner_SelectIndexRow{err: fmt.Errorf("failed to unmarshal column start_time to proto message")}, true
+		return &Row_MySpanner_SelectIndex{err: fmt.Errorf("failed to unmarshal column start_time to proto message")}, true
 	}
 
 	var name string
 	if err := row.ColumnByName("name", &name); err != nil {
-		return &MySpanner_SelectIndexRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+		return &Row_MySpanner_SelectIndex{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
 	res := &test.ExampleTable{
@@ -1175,12 +1207,12 @@ func (this *MySpanner_SelectIndexIter) Next() (*MySpanner_SelectIndexRow, bool) 
 		StartTime: start_time,
 		Name:      name,
 	}
-	return &MySpanner_SelectIndexRow{item: res}, true
+	return &Row_MySpanner_SelectIndex{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *MySpanner_SelectIndexIter) Slice() []*MySpanner_SelectIndexRow {
-	var results []*MySpanner_SelectIndexRow
+func (this *Iter_MySpanner_SelectIndex) Slice() []*Row_MySpanner_SelectIndex {
+	var results []*Row_MySpanner_SelectIndex
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1191,21 +1223,21 @@ func (this *MySpanner_SelectIndexIter) Slice() []*MySpanner_SelectIndexRow {
 	return results
 }
 
-type MySpanner_UpdateIter struct {
+type Iter_MySpanner_Update struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     MySpanner_TypeMappings
+	tm     TypeMappings_MySpanner
 	ctx    context.Context
 }
 
-func (this *MySpanner_UpdateIter) IterOutTypeEmpty()           {}
-func (this *MySpanner_UpdateIter) IterInTypeTestExampleTable() {}
+func (this *Iter_MySpanner_Update) IterOutTypeEmpty()           {}
+func (this *Iter_MySpanner_Update) IterInTypeTestExampleTable() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *MySpanner_UpdateIter) Each(fun func(*MySpanner_UpdateRow) error) error {
+func (this *Iter_MySpanner_Update) Each(fun func(*Row_MySpanner_Update) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1221,10 +1253,10 @@ func (this *MySpanner_UpdateIter) Each(fun func(*MySpanner_UpdateRow) error) err
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *MySpanner_UpdateIter) One() *MySpanner_UpdateRow {
+func (this *Iter_MySpanner_Update) One() *Row_MySpanner_Update {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &MySpanner_UpdateRow{err: first.err}
+		return &Row_MySpanner_Update{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1232,13 +1264,13 @@ func (this *MySpanner_UpdateIter) One() *MySpanner_UpdateRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &MySpanner_UpdateRow{err: fmt.Errorf("expected exactly 1 result from query 'Update' found %s", amount)}
+		return &Row_MySpanner_Update{err: fmt.Errorf("expected exactly 1 result from query 'Update' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *MySpanner_UpdateIter) Zero() error {
+func (this *Iter_MySpanner_Update) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1250,22 +1282,22 @@ func (this *MySpanner_UpdateIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *MySpanner_UpdateIter) Next() (*MySpanner_UpdateRow, bool) {
+func (this *Iter_MySpanner_Update) Next() (*Row_MySpanner_Update, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &MySpanner_UpdateRow{err: err}, true
+		return &Row_MySpanner_Update{err: err}, true
 	}
 	res := &Empty{}
-	return &MySpanner_UpdateRow{item: res}, true
+	return &Row_MySpanner_Update{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *MySpanner_UpdateIter) Slice() []*MySpanner_UpdateRow {
-	var results []*MySpanner_UpdateRow
+func (this *Iter_MySpanner_Update) Slice() []*Row_MySpanner_Update {
+	var results []*Row_MySpanner_Update
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1276,21 +1308,21 @@ func (this *MySpanner_UpdateIter) Slice() []*MySpanner_UpdateRow {
 	return results
 }
 
-type MySpanner_DeleteIter struct {
+type Iter_MySpanner_Delete struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     MySpanner_TypeMappings
+	tm     TypeMappings_MySpanner
 	ctx    context.Context
 }
 
-func (this *MySpanner_DeleteIter) IterOutTypeEmpty()                {}
-func (this *MySpanner_DeleteIter) IterInTypeTestExampleTableRange() {}
+func (this *Iter_MySpanner_Delete) IterOutTypeEmpty()                {}
+func (this *Iter_MySpanner_Delete) IterInTypeTestExampleTableRange() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *MySpanner_DeleteIter) Each(fun func(*MySpanner_DeleteRow) error) error {
+func (this *Iter_MySpanner_Delete) Each(fun func(*Row_MySpanner_Delete) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1306,10 +1338,10 @@ func (this *MySpanner_DeleteIter) Each(fun func(*MySpanner_DeleteRow) error) err
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *MySpanner_DeleteIter) One() *MySpanner_DeleteRow {
+func (this *Iter_MySpanner_Delete) One() *Row_MySpanner_Delete {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &MySpanner_DeleteRow{err: first.err}
+		return &Row_MySpanner_Delete{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1317,13 +1349,13 @@ func (this *MySpanner_DeleteIter) One() *MySpanner_DeleteRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &MySpanner_DeleteRow{err: fmt.Errorf("expected exactly 1 result from query 'Delete' found %s", amount)}
+		return &Row_MySpanner_Delete{err: fmt.Errorf("expected exactly 1 result from query 'Delete' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *MySpanner_DeleteIter) Zero() error {
+func (this *Iter_MySpanner_Delete) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1335,22 +1367,22 @@ func (this *MySpanner_DeleteIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *MySpanner_DeleteIter) Next() (*MySpanner_DeleteRow, bool) {
+func (this *Iter_MySpanner_Delete) Next() (*Row_MySpanner_Delete, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &MySpanner_DeleteRow{err: err}, true
+		return &Row_MySpanner_Delete{err: err}, true
 	}
 	res := &Empty{}
-	return &MySpanner_DeleteRow{item: res}, true
+	return &Row_MySpanner_Delete{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *MySpanner_DeleteIter) Slice() []*MySpanner_DeleteRow {
-	var results []*MySpanner_DeleteRow
+func (this *Iter_MySpanner_Delete) Slice() []*Row_MySpanner_Delete {
+	var results []*Row_MySpanner_Delete
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1361,21 +1393,21 @@ func (this *MySpanner_DeleteIter) Slice() []*MySpanner_DeleteRow {
 	return results
 }
 
-type MySpanner_SelectAllIter struct {
+type Iter_MySpanner_SelectAll struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     MySpanner_TypeMappings
+	tm     TypeMappings_MySpanner
 	ctx    context.Context
 }
 
-func (this *MySpanner_SelectAllIter) IterOutTypeTestExampleTable() {}
-func (this *MySpanner_SelectAllIter) IterInTypeEmpty()             {}
+func (this *Iter_MySpanner_SelectAll) IterOutTypeTestExampleTable() {}
+func (this *Iter_MySpanner_SelectAll) IterInTypeEmpty()             {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *MySpanner_SelectAllIter) Each(fun func(*MySpanner_SelectAllRow) error) error {
+func (this *Iter_MySpanner_SelectAll) Each(fun func(*Row_MySpanner_SelectAll) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1391,10 +1423,10 @@ func (this *MySpanner_SelectAllIter) Each(fun func(*MySpanner_SelectAllRow) erro
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *MySpanner_SelectAllIter) One() *MySpanner_SelectAllRow {
+func (this *Iter_MySpanner_SelectAll) One() *Row_MySpanner_SelectAll {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &MySpanner_SelectAllRow{err: first.err}
+		return &Row_MySpanner_SelectAll{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1402,13 +1434,13 @@ func (this *MySpanner_SelectAllIter) One() *MySpanner_SelectAllRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &MySpanner_SelectAllRow{err: fmt.Errorf("expected exactly 1 result from query 'SelectAll' found %s", amount)}
+		return &Row_MySpanner_SelectAll{err: fmt.Errorf("expected exactly 1 result from query 'SelectAll' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *MySpanner_SelectAllIter) Zero() error {
+func (this *Iter_MySpanner_SelectAll) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1420,32 +1452,32 @@ func (this *MySpanner_SelectAllIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *MySpanner_SelectAllIter) Next() (*MySpanner_SelectAllRow, bool) {
+func (this *Iter_MySpanner_SelectAll) Next() (*Row_MySpanner_SelectAll, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &MySpanner_SelectAllRow{err: err}, true
+		return &Row_MySpanner_SelectAll{err: err}, true
 	}
 	var id int64
 	if err := row.ColumnByName("id", &id); err != nil {
-		return &MySpanner_SelectAllRow{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
+		return &Row_MySpanner_SelectAll{err: fmt.Errorf("cant convert db column id to protobuf go type int64")}, true
 	}
 
 	start_time := &timestamp.Timestamp{}
 	start_timeBytes := make([]byte, 0)
 	if err := row.ColumnByName("start_time", &start_timeBytes); err != nil {
-		return &MySpanner_SelectAllRow{err: fmt.Errorf("failed to convert db column start_time to []byte")}, true
+		return &Row_MySpanner_SelectAll{err: fmt.Errorf("failed to convert db column start_time to []byte")}, true
 	}
 	if err := proto.Unmarshal(start_timeBytes, start_time); err != nil {
-		return &MySpanner_SelectAllRow{err: fmt.Errorf("failed to unmarshal column start_time to proto message")}, true
+		return &Row_MySpanner_SelectAll{err: fmt.Errorf("failed to unmarshal column start_time to proto message")}, true
 	}
 
 	var name string
 	if err := row.ColumnByName("name", &name); err != nil {
-		return &MySpanner_SelectAllRow{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
+		return &Row_MySpanner_SelectAll{err: fmt.Errorf("cant convert db column name to protobuf go type string")}, true
 	}
 
 	res := &test.ExampleTable{
@@ -1453,12 +1485,12 @@ func (this *MySpanner_SelectAllIter) Next() (*MySpanner_SelectAllRow, bool) {
 		StartTime: start_time,
 		Name:      name,
 	}
-	return &MySpanner_SelectAllRow{item: res}, true
+	return &Row_MySpanner_SelectAll{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *MySpanner_SelectAllIter) Slice() []*MySpanner_SelectAllRow {
-	var results []*MySpanner_SelectAllRow
+func (this *Iter_MySpanner_SelectAll) Slice() []*Row_MySpanner_SelectAll {
+	var results []*Row_MySpanner_SelectAll
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1469,21 +1501,21 @@ func (this *MySpanner_SelectAllIter) Slice() []*MySpanner_SelectAllRow {
 	return results
 }
 
-type MySpanner_Insert_3Iter struct {
+type Iter_MySpanner_Insert_3 struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     MySpanner_TypeMappings
+	tm     TypeMappings_MySpanner
 	ctx    context.Context
 }
 
-func (this *MySpanner_Insert_3Iter) IterOutTypeEmpty()           {}
-func (this *MySpanner_Insert_3Iter) IterInTypeTestExampleTable() {}
+func (this *Iter_MySpanner_Insert_3) IterOutTypeEmpty()           {}
+func (this *Iter_MySpanner_Insert_3) IterInTypeTestExampleTable() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *MySpanner_Insert_3Iter) Each(fun func(*MySpanner_Insert_3Row) error) error {
+func (this *Iter_MySpanner_Insert_3) Each(fun func(*Row_MySpanner_Insert_3) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1499,10 +1531,10 @@ func (this *MySpanner_Insert_3Iter) Each(fun func(*MySpanner_Insert_3Row) error)
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *MySpanner_Insert_3Iter) One() *MySpanner_Insert_3Row {
+func (this *Iter_MySpanner_Insert_3) One() *Row_MySpanner_Insert_3 {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &MySpanner_Insert_3Row{err: first.err}
+		return &Row_MySpanner_Insert_3{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1510,13 +1542,13 @@ func (this *MySpanner_Insert_3Iter) One() *MySpanner_Insert_3Row {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &MySpanner_Insert_3Row{err: fmt.Errorf("expected exactly 1 result from query 'Insert_3' found %s", amount)}
+		return &Row_MySpanner_Insert_3{err: fmt.Errorf("expected exactly 1 result from query 'Insert_3' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *MySpanner_Insert_3Iter) Zero() error {
+func (this *Iter_MySpanner_Insert_3) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1528,22 +1560,22 @@ func (this *MySpanner_Insert_3Iter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *MySpanner_Insert_3Iter) Next() (*MySpanner_Insert_3Row, bool) {
+func (this *Iter_MySpanner_Insert_3) Next() (*Row_MySpanner_Insert_3, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &MySpanner_Insert_3Row{err: err}, true
+		return &Row_MySpanner_Insert_3{err: err}, true
 	}
 	res := &Empty{}
-	return &MySpanner_Insert_3Row{item: res}, true
+	return &Row_MySpanner_Insert_3{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *MySpanner_Insert_3Iter) Slice() []*MySpanner_Insert_3Row {
-	var results []*MySpanner_Insert_3Row
+func (this *Iter_MySpanner_Insert_3) Slice() []*Row_MySpanner_Insert_3 {
+	var results []*Row_MySpanner_Insert_3
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1554,21 +1586,21 @@ func (this *MySpanner_Insert_3Iter) Slice() []*MySpanner_Insert_3Row {
 	return results
 }
 
-type MySpanner_DeleteIdIter struct {
+type Iter_MySpanner_DeleteId struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     MySpanner_TypeMappings
+	tm     TypeMappings_MySpanner
 	ctx    context.Context
 }
 
-func (this *MySpanner_DeleteIdIter) IterOutTypeEmpty()           {}
-func (this *MySpanner_DeleteIdIter) IterInTypeTestExampleTable() {}
+func (this *Iter_MySpanner_DeleteId) IterOutTypeEmpty()           {}
+func (this *Iter_MySpanner_DeleteId) IterInTypeTestExampleTable() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *MySpanner_DeleteIdIter) Each(fun func(*MySpanner_DeleteIdRow) error) error {
+func (this *Iter_MySpanner_DeleteId) Each(fun func(*Row_MySpanner_DeleteId) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1584,10 +1616,10 @@ func (this *MySpanner_DeleteIdIter) Each(fun func(*MySpanner_DeleteIdRow) error)
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *MySpanner_DeleteIdIter) One() *MySpanner_DeleteIdRow {
+func (this *Iter_MySpanner_DeleteId) One() *Row_MySpanner_DeleteId {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &MySpanner_DeleteIdRow{err: first.err}
+		return &Row_MySpanner_DeleteId{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1595,13 +1627,13 @@ func (this *MySpanner_DeleteIdIter) One() *MySpanner_DeleteIdRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &MySpanner_DeleteIdRow{err: fmt.Errorf("expected exactly 1 result from query 'DeleteId' found %s", amount)}
+		return &Row_MySpanner_DeleteId{err: fmt.Errorf("expected exactly 1 result from query 'DeleteId' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *MySpanner_DeleteIdIter) Zero() error {
+func (this *Iter_MySpanner_DeleteId) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1613,22 +1645,22 @@ func (this *MySpanner_DeleteIdIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *MySpanner_DeleteIdIter) Next() (*MySpanner_DeleteIdRow, bool) {
+func (this *Iter_MySpanner_DeleteId) Next() (*Row_MySpanner_DeleteId, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &MySpanner_DeleteIdRow{err: err}, true
+		return &Row_MySpanner_DeleteId{err: err}, true
 	}
 	res := &Empty{}
-	return &MySpanner_DeleteIdRow{item: res}, true
+	return &Row_MySpanner_DeleteId{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *MySpanner_DeleteIdIter) Slice() []*MySpanner_DeleteIdRow {
-	var results []*MySpanner_DeleteIdRow
+func (this *Iter_MySpanner_DeleteId) Slice() []*Row_MySpanner_DeleteId {
+	var results []*Row_MySpanner_DeleteId
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1639,21 +1671,21 @@ func (this *MySpanner_DeleteIdIter) Slice() []*MySpanner_DeleteIdRow {
 	return results
 }
 
-type MySpanner_SetNameAsdfIter struct {
+type Iter_MySpanner_SetNameAsdf struct {
 	result *SpannerResult
 	rows   *spanner.RowIterator
 	err    error
-	tm     MySpanner_TypeMappings
+	tm     TypeMappings_MySpanner
 	ctx    context.Context
 }
 
-func (this *MySpanner_SetNameAsdfIter) IterOutTypeEmpty()           {}
-func (this *MySpanner_SetNameAsdfIter) IterInTypeTestExampleTable() {}
+func (this *Iter_MySpanner_SetNameAsdf) IterOutTypeEmpty()           {}
+func (this *Iter_MySpanner_SetNameAsdf) IterInTypeTestExampleTable() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *MySpanner_SetNameAsdfIter) Each(fun func(*MySpanner_SetNameAsdfRow) error) error {
+func (this *Iter_MySpanner_SetNameAsdf) Each(fun func(*Row_MySpanner_SetNameAsdf) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1669,10 +1701,10 @@ func (this *MySpanner_SetNameAsdfIter) Each(fun func(*MySpanner_SetNameAsdfRow) 
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *MySpanner_SetNameAsdfIter) One() *MySpanner_SetNameAsdfRow {
+func (this *Iter_MySpanner_SetNameAsdf) One() *Row_MySpanner_SetNameAsdf {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &MySpanner_SetNameAsdfRow{err: first.err}
+		return &Row_MySpanner_SetNameAsdf{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -1680,13 +1712,13 @@ func (this *MySpanner_SetNameAsdfIter) One() *MySpanner_SetNameAsdfRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &MySpanner_SetNameAsdfRow{err: fmt.Errorf("expected exactly 1 result from query 'SetNameAsdf' found %s", amount)}
+		return &Row_MySpanner_SetNameAsdf{err: fmt.Errorf("expected exactly 1 result from query 'SetNameAsdf' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *MySpanner_SetNameAsdfIter) Zero() error {
+func (this *Iter_MySpanner_SetNameAsdf) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -1698,22 +1730,22 @@ func (this *MySpanner_SetNameAsdfIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *MySpanner_SetNameAsdfIter) Next() (*MySpanner_SetNameAsdfRow, bool) {
+func (this *Iter_MySpanner_SetNameAsdf) Next() (*Row_MySpanner_SetNameAsdf, bool) {
 	row, err := this.rows.Next()
 	_ = row
 	if err == iterator.Done {
 		return nil, false
 	}
 	if err != nil {
-		return &MySpanner_SetNameAsdfRow{err: err}, true
+		return &Row_MySpanner_SetNameAsdf{err: err}, true
 	}
 	res := &Empty{}
-	return &MySpanner_SetNameAsdfRow{item: res}, true
+	return &Row_MySpanner_SetNameAsdf{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *MySpanner_SetNameAsdfIter) Slice() []*MySpanner_SetNameAsdfRow {
-	var results []*MySpanner_SetNameAsdfRow
+func (this *Iter_MySpanner_SetNameAsdf) Slice() []*Row_MySpanner_SetNameAsdf {
+	var results []*Row_MySpanner_SetNameAsdf
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -1724,25 +1756,25 @@ func (this *MySpanner_SetNameAsdfIter) Slice() []*MySpanner_SetNameAsdfRow {
 	return results
 }
 
-type MySpanner_InsertIn interface {
+type In_MySpanner_Insert interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_InsertOut interface {
+type Out_MySpanner_Insert interface {
 }
-type MySpanner_InsertRow struct {
-	item MySpanner_InsertOut
+type Row_MySpanner_Insert struct {
+	item Out_MySpanner_Insert
 	err  error
 }
 
-func newMySpanner_InsertRow(item MySpanner_InsertOut, err error) *MySpanner_InsertRow {
-	return &MySpanner_InsertRow{item, err}
+func newRowMySpannerInsert(item Out_MySpanner_Insert, err error) *Row_MySpanner_Insert {
+	return &Row_MySpanner_Insert{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *MySpanner_InsertRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_MySpanner_Insert) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1768,48 +1800,48 @@ func (this *MySpanner_InsertRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *MySpanner_InsertRow) Empty() (*Empty, error) {
+func (this *Row_MySpanner_Insert) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
-func (this *MySpanner_InsertRow) TestExampleTable() (*test.ExampleTable, error) {
+func (this *Row_MySpanner_Insert) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &test.ExampleTable{}, nil
 }
 
-func (this *MySpanner_InsertRow) Proto() (*Empty, error) {
+func (this *Row_MySpanner_Insert) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type MySpanner_SelectIn interface {
+type In_MySpanner_Select interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_SelectOut interface {
+type Out_MySpanner_Select interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_SelectRow struct {
-	item MySpanner_SelectOut
+type Row_MySpanner_Select struct {
+	item Out_MySpanner_Select
 	err  error
 }
 
-func newMySpanner_SelectRow(item MySpanner_SelectOut, err error) *MySpanner_SelectRow {
-	return &MySpanner_SelectRow{item, err}
+func newRowMySpannerSelect(item Out_MySpanner_Select, err error) *Row_MySpanner_Select {
+	return &Row_MySpanner_Select{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *MySpanner_SelectRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_MySpanner_Select) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1839,7 +1871,7 @@ func (this *MySpanner_SelectRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *MySpanner_SelectRow) TestExampleTable() (*test.ExampleTable, error) {
+func (this *Row_MySpanner_Select) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1850,7 +1882,7 @@ func (this *MySpanner_SelectRow) TestExampleTable() (*test.ExampleTable, error) 
 	}, nil
 }
 
-func (this *MySpanner_SelectRow) Proto() (*test.ExampleTable, error) {
+func (this *Row_MySpanner_Select) Proto() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1861,28 +1893,28 @@ func (this *MySpanner_SelectRow) Proto() (*test.ExampleTable, error) {
 	}, nil
 }
 
-type MySpanner_SelectIndexIn interface {
+type In_MySpanner_SelectIndex interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_SelectIndexOut interface {
+type Out_MySpanner_SelectIndex interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_SelectIndexRow struct {
-	item MySpanner_SelectIndexOut
+type Row_MySpanner_SelectIndex struct {
+	item Out_MySpanner_SelectIndex
 	err  error
 }
 
-func newMySpanner_SelectIndexRow(item MySpanner_SelectIndexOut, err error) *MySpanner_SelectIndexRow {
-	return &MySpanner_SelectIndexRow{item, err}
+func newRowMySpannerSelectIndex(item Out_MySpanner_SelectIndex, err error) *Row_MySpanner_SelectIndex {
+	return &Row_MySpanner_SelectIndex{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *MySpanner_SelectIndexRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_MySpanner_SelectIndex) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1923,7 +1955,7 @@ func (this *MySpanner_SelectIndexRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *MySpanner_SelectIndexRow) TestExampleTable() (*test.ExampleTable, error) {
+func (this *Row_MySpanner_SelectIndex) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1934,7 +1966,7 @@ func (this *MySpanner_SelectIndexRow) TestExampleTable() (*test.ExampleTable, er
 	}, nil
 }
 
-func (this *MySpanner_SelectIndexRow) Proto() (*test.ExampleTable, error) {
+func (this *Row_MySpanner_SelectIndex) Proto() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -1945,25 +1977,25 @@ func (this *MySpanner_SelectIndexRow) Proto() (*test.ExampleTable, error) {
 	}, nil
 }
 
-type MySpanner_UpdateIn interface {
+type In_MySpanner_Update interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_UpdateOut interface {
+type Out_MySpanner_Update interface {
 }
-type MySpanner_UpdateRow struct {
-	item MySpanner_UpdateOut
+type Row_MySpanner_Update struct {
+	item Out_MySpanner_Update
 	err  error
 }
 
-func newMySpanner_UpdateRow(item MySpanner_UpdateOut, err error) *MySpanner_UpdateRow {
-	return &MySpanner_UpdateRow{item, err}
+func newRowMySpannerUpdate(item Out_MySpanner_Update, err error) *Row_MySpanner_Update {
+	return &Row_MySpanner_Update{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *MySpanner_UpdateRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_MySpanner_Update) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -1989,44 +2021,44 @@ func (this *MySpanner_UpdateRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *MySpanner_UpdateRow) Empty() (*Empty, error) {
+func (this *Row_MySpanner_Update) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
-func (this *MySpanner_UpdateRow) TestPartialTable() (*test.PartialTable, error) {
+func (this *Row_MySpanner_Update) TestPartialTable() (*test.PartialTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &test.PartialTable{}, nil
 }
 
-func (this *MySpanner_UpdateRow) Proto() (*Empty, error) {
+func (this *Row_MySpanner_Update) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type MySpanner_DeleteIn interface {
+type In_MySpanner_Delete interface {
 	GetStartId() int64
 	GetEndId() int64
 }
-type MySpanner_DeleteOut interface {
+type Out_MySpanner_Delete interface {
 }
-type MySpanner_DeleteRow struct {
-	item MySpanner_DeleteOut
+type Row_MySpanner_Delete struct {
+	item Out_MySpanner_Delete
 	err  error
 }
 
-func newMySpanner_DeleteRow(item MySpanner_DeleteOut, err error) *MySpanner_DeleteRow {
-	return &MySpanner_DeleteRow{item, err}
+func newRowMySpannerDelete(item Out_MySpanner_Delete, err error) *Row_MySpanner_Delete {
+	return &Row_MySpanner_Delete{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *MySpanner_DeleteRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_MySpanner_Delete) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -2052,45 +2084,45 @@ func (this *MySpanner_DeleteRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *MySpanner_DeleteRow) Empty() (*Empty, error) {
+func (this *Row_MySpanner_Delete) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
-func (this *MySpanner_DeleteRow) TestExampleTable() (*test.ExampleTable, error) {
+func (this *Row_MySpanner_Delete) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &test.ExampleTable{}, nil
 }
 
-func (this *MySpanner_DeleteRow) Proto() (*Empty, error) {
+func (this *Row_MySpanner_Delete) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type MySpanner_SelectAllIn interface {
+type In_MySpanner_SelectAll interface {
 }
-type MySpanner_SelectAllOut interface {
+type Out_MySpanner_SelectAll interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_SelectAllRow struct {
-	item MySpanner_SelectAllOut
+type Row_MySpanner_SelectAll struct {
+	item Out_MySpanner_SelectAll
 	err  error
 }
 
-func newMySpanner_SelectAllRow(item MySpanner_SelectAllOut, err error) *MySpanner_SelectAllRow {
-	return &MySpanner_SelectAllRow{item, err}
+func newRowMySpannerSelectAll(item Out_MySpanner_SelectAll, err error) *Row_MySpanner_SelectAll {
+	return &Row_MySpanner_SelectAll{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *MySpanner_SelectAllRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_MySpanner_SelectAll) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -2131,7 +2163,7 @@ func (this *MySpanner_SelectAllRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *MySpanner_SelectAllRow) TestExampleTable() (*test.ExampleTable, error) {
+func (this *Row_MySpanner_SelectAll) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -2142,7 +2174,7 @@ func (this *MySpanner_SelectAllRow) TestExampleTable() (*test.ExampleTable, erro
 	}, nil
 }
 
-func (this *MySpanner_SelectAllRow) Proto() (*test.ExampleTable, error) {
+func (this *Row_MySpanner_SelectAll) Proto() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -2153,25 +2185,25 @@ func (this *MySpanner_SelectAllRow) Proto() (*test.ExampleTable, error) {
 	}, nil
 }
 
-type MySpanner_Insert_3In interface {
+type In_MySpanner_Insert_3 interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_Insert_3Out interface {
+type Out_MySpanner_Insert_3 interface {
 }
-type MySpanner_Insert_3Row struct {
-	item MySpanner_Insert_3Out
+type Row_MySpanner_Insert_3 struct {
+	item Out_MySpanner_Insert_3
 	err  error
 }
 
-func newMySpanner_Insert_3Row(item MySpanner_Insert_3Out, err error) *MySpanner_Insert_3Row {
-	return &MySpanner_Insert_3Row{item, err}
+func newRowMySpannerInsert_3(item Out_MySpanner_Insert_3, err error) *Row_MySpanner_Insert_3 {
+	return &Row_MySpanner_Insert_3{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *MySpanner_Insert_3Row) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_MySpanner_Insert_3) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -2197,45 +2229,45 @@ func (this *MySpanner_Insert_3Row) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *MySpanner_Insert_3Row) Empty() (*Empty, error) {
+func (this *Row_MySpanner_Insert_3) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
-func (this *MySpanner_Insert_3Row) TestNumRows() (*test.NumRows, error) {
+func (this *Row_MySpanner_Insert_3) TestNumRows() (*test.NumRows, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &test.NumRows{}, nil
 }
 
-func (this *MySpanner_Insert_3Row) Proto() (*Empty, error) {
+func (this *Row_MySpanner_Insert_3) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type MySpanner_DeleteIdIn interface {
+type In_MySpanner_DeleteId interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_DeleteIdOut interface {
+type Out_MySpanner_DeleteId interface {
 }
-type MySpanner_DeleteIdRow struct {
-	item MySpanner_DeleteIdOut
+type Row_MySpanner_DeleteId struct {
+	item Out_MySpanner_DeleteId
 	err  error
 }
 
-func newMySpanner_DeleteIdRow(item MySpanner_DeleteIdOut, err error) *MySpanner_DeleteIdRow {
-	return &MySpanner_DeleteIdRow{item, err}
+func newRowMySpannerDeleteId(item Out_MySpanner_DeleteId, err error) *Row_MySpanner_DeleteId {
+	return &Row_MySpanner_DeleteId{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *MySpanner_DeleteIdRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_MySpanner_DeleteId) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -2261,45 +2293,45 @@ func (this *MySpanner_DeleteIdRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *MySpanner_DeleteIdRow) Empty() (*Empty, error) {
+func (this *Row_MySpanner_DeleteId) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
-func (this *MySpanner_DeleteIdRow) TestNumRows() (*test.NumRows, error) {
+func (this *Row_MySpanner_DeleteId) TestNumRows() (*test.NumRows, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &test.NumRows{}, nil
 }
 
-func (this *MySpanner_DeleteIdRow) Proto() (*Empty, error) {
+func (this *Row_MySpanner_DeleteId) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type MySpanner_SetNameAsdfIn interface {
+type In_MySpanner_SetNameAsdf interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type MySpanner_SetNameAsdfOut interface {
+type Out_MySpanner_SetNameAsdf interface {
 }
-type MySpanner_SetNameAsdfRow struct {
-	item MySpanner_SetNameAsdfOut
+type Row_MySpanner_SetNameAsdf struct {
+	item Out_MySpanner_SetNameAsdf
 	err  error
 }
 
-func newMySpanner_SetNameAsdfRow(item MySpanner_SetNameAsdfOut, err error) *MySpanner_SetNameAsdfRow {
-	return &MySpanner_SetNameAsdfRow{item, err}
+func newRowMySpannerSetNameAsdf(item Out_MySpanner_SetNameAsdf, err error) *Row_MySpanner_SetNameAsdf {
+	return &Row_MySpanner_SetNameAsdf{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *MySpanner_SetNameAsdfRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_MySpanner_SetNameAsdf) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -2325,27 +2357,27 @@ func (this *MySpanner_SetNameAsdfRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *MySpanner_SetNameAsdfRow) Empty() (*Empty, error) {
+func (this *Row_MySpanner_SetNameAsdf) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
-func (this *MySpanner_SetNameAsdfRow) TestNumRows() (*test.NumRows, error) {
+func (this *Row_MySpanner_SetNameAsdf) TestNumRows() (*test.NumRows, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &test.NumRows{}, nil
 }
 
-func (this *MySpanner_SetNameAsdfRow) Proto() (*Empty, error) {
+func (this *Row_MySpanner_SetNameAsdf) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type MySpanner_Hooks interface {
+type Hooks_MySpanner interface {
 	UniarySelectWithHooksBeforeHook(context.Context, *test.ExampleTable) (*test.ExampleTable, error)
 	ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error)
 	ClientStreamUpdateWithHooksBeforeHook(context.Context, *test.ExampleTable) (*test.NumRows, error)
@@ -2353,70 +2385,67 @@ type MySpanner_Hooks interface {
 	ServerStreamWithHooksAfterHook(context.Context, *test.Name, *test.ExampleTable) error
 	ClientStreamUpdateWithHooksAfterHook(context.Context, *test.ExampleTable, *test.NumRows) error
 }
-type MySpanner_DefaultHooks struct{}
+type DefaultHooks_MySpanner struct{}
 
-func (*MySpanner_DefaultHooks) UniarySelectWithHooksBeforeHook(context.Context, *test.ExampleTable) (*test.ExampleTable, error) {
+func (*DefaultHooks_MySpanner) UniarySelectWithHooksBeforeHook(context.Context, *test.ExampleTable) (*test.ExampleTable, error) {
 	return nil, nil
 }
-func (*MySpanner_DefaultHooks) ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error) {
+func (*DefaultHooks_MySpanner) ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error) {
 	return nil, nil
 }
-func (*MySpanner_DefaultHooks) ClientStreamUpdateWithHooksBeforeHook(context.Context, *test.ExampleTable) (*test.NumRows, error) {
+func (*DefaultHooks_MySpanner) ClientStreamUpdateWithHooksBeforeHook(context.Context, *test.ExampleTable) (*test.NumRows, error) {
 	return nil, nil
 }
-func (*MySpanner_DefaultHooks) UniarySelectWithHooksAfterHook(context.Context, *test.ExampleTable, *test.ExampleTable) error {
+func (*DefaultHooks_MySpanner) UniarySelectWithHooksAfterHook(context.Context, *test.ExampleTable, *test.ExampleTable) error {
 	return nil
 }
-func (*MySpanner_DefaultHooks) ServerStreamWithHooksAfterHook(context.Context, *test.Name, *test.ExampleTable) error {
+func (*DefaultHooks_MySpanner) ServerStreamWithHooksAfterHook(context.Context, *test.Name, *test.ExampleTable) error {
 	return nil
 }
-func (*MySpanner_DefaultHooks) ClientStreamUpdateWithHooksAfterHook(context.Context, *test.ExampleTable, *test.NumRows) error {
+func (*DefaultHooks_MySpanner) ClientStreamUpdateWithHooksAfterHook(context.Context, *test.ExampleTable, *test.NumRows) error {
 	return nil
 }
 
-type MySpanner_TypeMappings interface {
-	TimestampTimestamp() MySpannerTimestampTimestampMappingImpl
+type TypeMappings_MySpanner interface {
+	TimestampTimestamp() MappingImpl_MySpanner_TimestampTimestamp
 }
-type MySpanner_DefaultTypeMappings struct{}
+type DefaultTypeMappings_MySpanner struct{}
 
-func (this *MySpanner_DefaultTypeMappings) TimestampTimestamp() MySpannerTimestampTimestampMappingImpl {
-	return &MySpanner_DefaultTimestampTimestampMappingImpl{}
+func (this *DefaultTypeMappings_MySpanner) TimestampTimestamp() MappingImpl_MySpanner_TimestampTimestamp {
+	return &DefaultMappingImpl_MySpanner_TimestampTimestamp{}
 }
 
-type MySpanner_DefaultTimestampTimestampMappingImpl struct{}
+type DefaultMappingImpl_MySpanner_TimestampTimestamp struct{}
 
-func (this *MySpanner_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
+func (this *DefaultMappingImpl_MySpanner_TimestampTimestamp) ToProto(**timestamp.Timestamp) error {
 	return nil
 }
-func (this *MySpanner_DefaultTimestampTimestampMappingImpl) Empty() MySpannerTimestampTimestampMappingImpl {
+func (this *DefaultMappingImpl_MySpanner_TimestampTimestamp) ToSpanner(*timestamp.Timestamp) SpannerScanValuer {
 	return this
 }
-func (this *MySpanner_DefaultTimestampTimestampMappingImpl) ToSpanner(*timestamp.Timestamp) MySpannerTimestampTimestampMappingImpl {
-	return this
-}
-func (this *MySpanner_DefaultTimestampTimestampMappingImpl) SpannerScan(*spanner.GenericColumnValue) error {
+func (this *DefaultMappingImpl_MySpanner_TimestampTimestamp) SpannerScan(*spanner.GenericColumnValue) error {
 	return nil
 }
-func (this *MySpanner_DefaultTimestampTimestampMappingImpl) SpannerValue() (interface{}, error) {
+func (this *DefaultMappingImpl_MySpanner_TimestampTimestamp) SpannerValue() (interface{}, error) {
 	return "DEFAULT_TYPE_MAPPING_VALUE", nil
 }
 
-type MySpannerTimestampTimestampMappingImpl interface {
+type MappingImpl_MySpanner_TimestampTimestamp interface {
 	ToProto(**timestamp.Timestamp) error
-	Empty() MySpannerTimestampTimestampMappingImpl
-	ToSpanner(*timestamp.Timestamp) MySpannerTimestampTimestampMappingImpl
+	ToSpanner(*timestamp.Timestamp) SpannerScanValuer
 	SpannerScan(*spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }
-type MySpanner_Opts struct {
-	MAPPINGS MySpanner_TypeMappings
-	HOOKS    MySpanner_Hooks
+
+type Opts_MySpanner struct {
+	MAPPINGS TypeMappings_MySpanner
+	HOOKS    Hooks_MySpanner
 }
 
-func MySpannerOpts(hooks MySpanner_Hooks, mappings MySpanner_TypeMappings) MySpanner_Opts {
-	opts := MySpanner_Opts{
-		HOOKS:    &MySpanner_DefaultHooks{},
-		MAPPINGS: &MySpanner_DefaultTypeMappings{},
+func OptsMySpanner(hooks Hooks_MySpanner, mappings TypeMappings_MySpanner) Opts_MySpanner {
+	opts := Opts_MySpanner{
+		HOOKS:    &DefaultHooks_MySpanner{},
+		MAPPINGS: &DefaultTypeMappings_MySpanner{},
 	}
 	if hooks != nil {
 		opts.HOOKS = hooks
@@ -2427,32 +2456,32 @@ func MySpannerOpts(hooks MySpanner_Hooks, mappings MySpanner_TypeMappings) MySpa
 	return opts
 }
 
-type MySpanner_Impl struct {
-	opts     *MySpanner_Opts
-	QUERIES  *MySpanner_Queries
-	HANDLERS RestOfMySpannerHandlers
+type Impl_MySpanner struct {
+	opts     *Opts_MySpanner
+	QUERIES  *Queries_MySpanner
+	HANDLERS RestOfHandlers_MySpanner
 	DB       *spanner.Client
 }
 
-func MySpannerPersistImpl(db *spanner.Client, handlers RestOfMySpannerHandlers, opts ...MySpanner_Opts) *MySpanner_Impl {
-	var myOpts MySpanner_Opts
+func ImplMySpanner(db *spanner.Client, handlers RestOfHandlers_MySpanner, opts ...Opts_MySpanner) *Impl_MySpanner {
+	var myOpts Opts_MySpanner
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = MySpannerOpts(nil, nil)
+		myOpts = OptsMySpanner(&DefaultHooks_MySpanner{}, &DefaultTypeMappings_MySpanner{})
 	}
-	return &MySpanner_Impl{
+	return &Impl_MySpanner{
 		opts:     &myOpts,
-		QUERIES:  MySpannerPersistQueries(myOpts),
+		QUERIES:  QueriesMySpanner(myOpts),
 		DB:       db,
 		HANDLERS: handlers,
 	}
 }
 
-type RestOfMySpannerHandlers interface {
+type RestOfHandlers_MySpanner interface {
 }
 
-func (this *MySpanner_Impl) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (this *Impl_MySpanner) UniaryInsert(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	query := this.QUERIES.Insert(ctx, this.DB.Single())
 
 	result := query.Execute(req)
@@ -2467,7 +2496,7 @@ func (this *MySpanner_Impl) UniaryInsert(ctx context.Context, req *test.ExampleT
 	return res, nil
 }
 
-func (this *MySpanner_Impl) UniarySelect(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (this *Impl_MySpanner) UniarySelect(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	query := this.QUERIES.Select(ctx, this.DB.Single())
 
 	result := query.Execute(req)
@@ -2479,7 +2508,7 @@ func (this *MySpanner_Impl) UniarySelect(ctx context.Context, req *test.ExampleT
 	return res, nil
 }
 
-func (this *MySpanner_Impl) UniarySelectWithDirectives(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (this *Impl_MySpanner) UniarySelectWithDirectives(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	query := this.QUERIES.SelectIndex(ctx, this.DB.Single())
 
 	result := query.Execute(req)
@@ -2491,7 +2520,7 @@ func (this *MySpanner_Impl) UniarySelectWithDirectives(ctx context.Context, req 
 	return res, nil
 }
 
-func (this *MySpanner_Impl) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
+func (this *Impl_MySpanner) UniaryUpdate(ctx context.Context, req *test.ExampleTable) (*test.PartialTable, error) {
 	query := this.QUERIES.Update(ctx, this.DB.Single())
 
 	result := query.Execute(req)
@@ -2506,7 +2535,7 @@ func (this *MySpanner_Impl) UniaryUpdate(ctx context.Context, req *test.ExampleT
 	return res, nil
 }
 
-func (this *MySpanner_Impl) UniaryDeleteRange(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
+func (this *Impl_MySpanner) UniaryDeleteRange(ctx context.Context, req *test.ExampleTableRange) (*test.ExampleTable, error) {
 	query := this.QUERIES.Delete(ctx, this.DB.Single())
 
 	result := query.Execute(req)
@@ -2521,17 +2550,17 @@ func (this *MySpanner_Impl) UniaryDeleteRange(ctx context.Context, req *test.Exa
 	return res, nil
 }
 
-func (this *MySpanner_Impl) ServerStream(req *test.Name, stream MySpanner_ServerStreamServer) error {
+func (this *Impl_MySpanner) ServerStream(req *test.Name, stream MySpanner_ServerStreamServer) error {
 	if err := this.ServerStreamTx(req, stream, this.DB.Single()); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'select_all' query: %v", err)
 	}
 	return nil
 }
-func (this *MySpanner_Impl) ServerStreamTx(req *test.Name, stream MySpanner_ServerStreamServer, tx PersistTx) error {
+func (this *Impl_MySpanner) ServerStreamTx(req *test.Name, stream MySpanner_ServerStreamServer, tx PersistTx) error {
 	ctx := stream.Context()
 	query := this.QUERIES.SelectAll(ctx, tx)
 	iter := query.Execute(req)
-	return iter.Each(func(row *MySpanner_SelectAllRow) error {
+	return iter.Each(func(row *Row_MySpanner_SelectAll) error {
 		res, err := row.TestExampleTable()
 		if err != nil {
 			return err
@@ -2540,13 +2569,13 @@ func (this *MySpanner_Impl) ServerStreamTx(req *test.Name, stream MySpanner_Serv
 	})
 }
 
-func (this *MySpanner_Impl) ClientStreamInsert(stream MySpanner_ClientStreamInsertServer) error {
+func (this *Impl_MySpanner) ClientStreamInsert(stream MySpanner_ClientStreamInsertServer) error {
 	if err := this.ClientStreamInsertTx(stream); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'insert_3' query: %v", err)
 	}
 	return nil
 }
-func (this *MySpanner_Impl) ClientStreamInsertTx(stream MySpanner_ClientStreamInsertServer) error {
+func (this *Impl_MySpanner) ClientStreamInsertTx(stream MySpanner_ClientStreamInsertServer) error {
 	items := make([]*test.ExampleTable, 0)
 	var first *test.ExampleTable
 	for {
@@ -2583,13 +2612,13 @@ func (this *MySpanner_Impl) ClientStreamInsertTx(stream MySpanner_ClientStreamIn
 	return nil
 }
 
-func (this *MySpanner_Impl) ClientStreamDelete(stream MySpanner_ClientStreamDeleteServer) error {
+func (this *Impl_MySpanner) ClientStreamDelete(stream MySpanner_ClientStreamDeleteServer) error {
 	if err := this.ClientStreamDeleteTx(stream); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'delete_id' query: %v", err)
 	}
 	return nil
 }
-func (this *MySpanner_Impl) ClientStreamDeleteTx(stream MySpanner_ClientStreamDeleteServer) error {
+func (this *Impl_MySpanner) ClientStreamDeleteTx(stream MySpanner_ClientStreamDeleteServer) error {
 	items := make([]*test.ExampleTable, 0)
 	var first *test.ExampleTable
 	for {
@@ -2626,7 +2655,7 @@ func (this *MySpanner_Impl) ClientStreamDeleteTx(stream MySpanner_ClientStreamDe
 	return nil
 }
 
-func (this *MySpanner_Impl) UniarySelectWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (this *Impl_MySpanner) UniarySelectWithHooks(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	query := this.QUERIES.SelectIndex(ctx, this.DB.Single())
 
 	beforeRes, err := this.opts.HOOKS.UniarySelectWithHooksBeforeHook(ctx, req)
@@ -2642,24 +2671,26 @@ func (this *MySpanner_Impl) UniarySelectWithHooks(ctx context.Context, req *test
 		return nil, err
 	}
 
-	if err := this.opts.HOOKS.UniarySelectWithHooksAfterHook(ctx, req, res); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+	{
+		if err := this.opts.HOOKS.UniarySelectWithHooksAfterHook(ctx, req, res); err != nil {
+			return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+		}
 	}
 
 	return res, nil
 }
 
-func (this *MySpanner_Impl) ServerStreamWithHooks(req *test.Name, stream MySpanner_ServerStreamWithHooksServer) error {
+func (this *Impl_MySpanner) ServerStreamWithHooks(req *test.Name, stream MySpanner_ServerStreamWithHooksServer) error {
 	if err := this.ServerStreamWithHooksTx(req, stream, this.DB.Single()); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'select_all' query: %v", err)
 	}
 	return nil
 }
-func (this *MySpanner_Impl) ServerStreamWithHooksTx(req *test.Name, stream MySpanner_ServerStreamWithHooksServer, tx PersistTx) error {
+func (this *Impl_MySpanner) ServerStreamWithHooksTx(req *test.Name, stream MySpanner_ServerStreamWithHooksServer, tx PersistTx) error {
 	ctx := stream.Context()
 	query := this.QUERIES.SelectAll(ctx, tx)
 	iter := query.Execute(req)
-	return iter.Each(func(row *MySpanner_SelectAllRow) error {
+	return iter.Each(func(row *Row_MySpanner_SelectAll) error {
 		res, err := row.TestExampleTable()
 		if err != nil {
 			return err
@@ -2668,13 +2699,13 @@ func (this *MySpanner_Impl) ServerStreamWithHooksTx(req *test.Name, stream MySpa
 	})
 }
 
-func (this *MySpanner_Impl) ClientStreamUpdateWithHooks(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
+func (this *Impl_MySpanner) ClientStreamUpdateWithHooks(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
 	if err := this.ClientStreamUpdateWithHooksTx(stream); err != nil {
 		return gstatus.Errorf(codes.Unknown, "error executing 'set_name_asdf' query: %v", err)
 	}
 	return nil
 }
-func (this *MySpanner_Impl) ClientStreamUpdateWithHooksTx(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
+func (this *Impl_MySpanner) ClientStreamUpdateWithHooksTx(stream MySpanner_ClientStreamUpdateWithHooksServer) error {
 	items := make([]*test.ExampleTable, 0)
 	var first *test.ExampleTable
 	for {
@@ -2688,11 +2719,13 @@ func (this *MySpanner_Impl) ClientStreamUpdateWithHooksTx(stream MySpanner_Clien
 			first = req
 		}
 
-		beforeRes, err := this.opts.HOOKS.ClientStreamUpdateWithHooksBeforeHook(stream.Context(), req)
-		if err != nil {
-			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
-		} else if beforeRes != nil {
-			continue
+		{
+			beforeRes, err := this.opts.HOOKS.ClientStreamUpdateWithHooksBeforeHook(stream.Context(), req)
+			if err != nil {
+				return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+			} else if beforeRes != nil {
+				continue
+			}
 		}
 
 		items = append(items, req)
@@ -2712,8 +2745,10 @@ func (this *MySpanner_Impl) ClientStreamUpdateWithHooksTx(stream MySpanner_Clien
 	}
 	res := &test.NumRows{}
 
-	if err := this.opts.HOOKS.ClientStreamUpdateWithHooksAfterHook(stream.Context(), first, res); err != nil {
-		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+	{
+		if err := this.opts.HOOKS.ClientStreamUpdateWithHooksAfterHook(stream.Context(), first, res); err != nil {
+			return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+		}
 	}
 
 	if err := stream.SendAndClose(res); err != nil {

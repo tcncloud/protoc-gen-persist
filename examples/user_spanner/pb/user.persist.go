@@ -19,6 +19,16 @@ import (
 type PersistTx interface {
 	Runnable
 }
+type SpannerScanner interface {
+	SpannerScan(*spanner.GenericColumnValue) error
+}
+type SpannerValuer interface {
+	SpannerValue() (interface{}, error)
+}
+type SpannerScanValuer interface {
+	SpannerScanner
+	SpannerValuer
+}
 type Result interface {
 	LastInsertId() (int64, error)
 	RowsAffected() (int64, error)
@@ -1870,10 +1880,7 @@ type DefaultMappingImpl_UServ_TimestampTimestamp struct{}
 func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToProto(**timestamp.Timestamp) error {
 	return nil
 }
-func (this *DefaultMappingImpl_UServ_TimestampTimestamp) Empty() MappingImpl_UServ_TimestampTimestamp {
-	return this
-}
-func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToSpanner(*timestamp.Timestamp) MappingImpl_UServ_TimestampTimestamp {
+func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToSpanner(*timestamp.Timestamp) SpannerScanValuer {
 	return this
 }
 func (this *DefaultMappingImpl_UServ_TimestampTimestamp) SpannerScan(*spanner.GenericColumnValue) error {
@@ -1885,8 +1892,7 @@ func (this *DefaultMappingImpl_UServ_TimestampTimestamp) SpannerValue() (interfa
 
 type MappingImpl_UServ_TimestampTimestamp interface {
 	ToProto(**timestamp.Timestamp) error
-	Empty() MappingImpl_UServ_TimestampTimestamp
-	ToSpanner(*timestamp.Timestamp) MappingImpl_UServ_TimestampTimestamp
+	ToSpanner(*timestamp.Timestamp) SpannerScanValuer
 	SpannerScan(*spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }
@@ -1900,10 +1906,7 @@ type DefaultMappingImpl_UServ_SliceStringParam struct{}
 func (this *DefaultMappingImpl_UServ_SliceStringParam) ToProto(**SliceStringParam) error {
 	return nil
 }
-func (this *DefaultMappingImpl_UServ_SliceStringParam) Empty() MappingImpl_UServ_SliceStringParam {
-	return this
-}
-func (this *DefaultMappingImpl_UServ_SliceStringParam) ToSpanner(*SliceStringParam) MappingImpl_UServ_SliceStringParam {
+func (this *DefaultMappingImpl_UServ_SliceStringParam) ToSpanner(*SliceStringParam) SpannerScanValuer {
 	return this
 }
 func (this *DefaultMappingImpl_UServ_SliceStringParam) SpannerScan(*spanner.GenericColumnValue) error {
@@ -1915,8 +1918,7 @@ func (this *DefaultMappingImpl_UServ_SliceStringParam) SpannerValue() (interface
 
 type MappingImpl_UServ_SliceStringParam interface {
 	ToProto(**SliceStringParam) error
-	Empty() MappingImpl_UServ_SliceStringParam
-	ToSpanner(*SliceStringParam) MappingImpl_UServ_SliceStringParam
+	ToSpanner(*SliceStringParam) SpannerScanValuer
 	SpannerScan(*spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }

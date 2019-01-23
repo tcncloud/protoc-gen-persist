@@ -72,46 +72,49 @@ type scanable interface {
 	Columns() ([]string, error)
 }
 
-// Amazing_Queries holds all the queries found the proto service option as methods
-type Amazing_Queries struct {
-	opts Amazing_Opts
+// Queries_Amazing holds all the queries found the proto service option as methods
+type Queries_Amazing struct {
+	opts Opts_Amazing
 }
 
-// AmazingPersistQueries returns all the known 'SQL' queires for the 'Amazing' service.
-func AmazingPersistQueries(opts ...Amazing_Opts) *Amazing_Queries {
-	var myOpts Amazing_Opts
+// QueriesAmazing returns all the known 'SQL' queires for the 'Amazing' service.
+// If no opts are provided default implementations are used.
+func QueriesAmazing(opts ...Opts_Amazing) *Queries_Amazing {
+	var myOpts Opts_Amazing
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = AmazingOpts(nil, nil)
+		myOpts = OptsAmazing(&DefaultHooks_Amazing{}, &DefaultTypeMappings_Amazing{})
 	}
-	return &Amazing_Queries{
+	return &Queries_Amazing{
 		opts: myOpts,
 	}
 }
 
-// SelectByIdQuery returns a new struct wrapping the current Amazing_Opts
-// that will perform 'Amazing' services 'select_by_id' on the database
-// when executed
-func (this *Amazing_Queries) SelectById(ctx context.Context, db Runnable) *Amazing_SelectByIdQuery {
-	return &Amazing_SelectByIdQuery{
+// SelectById returns a struct that will perform the 'select_by_id' query.
+// When Execute is called, it will use the following fields:
+// [id start_time]
+func (this *Queries_Amazing) SelectById(ctx context.Context, db Runnable) *Query_Amazing_SelectById {
+	return &Query_Amazing_SelectById{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type Amazing_SelectByIdQuery struct {
-	opts Amazing_Opts
+// Query_Amazing_SelectById (future doc string needed)
+type Query_Amazing_SelectById struct {
+	opts Opts_Amazing
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *Amazing_SelectByIdQuery) QueryInTypeUser()  {}
-func (this *Amazing_SelectByIdQuery) QueryOutTypeUser() {}
+func (this *Query_Amazing_SelectById) QueryInType_PartialTable()  {}
+func (this *Query_Amazing_SelectById) QueryOutType_ExampleTable() {}
 
-// Executes the query with parameters retrieved from x
-func (this *Amazing_SelectByIdQuery) Execute(x Amazing_SelectByIdIn) *Amazing_SelectByIdIter {
+// Executes the query 'select_by_id' with parameters retrieved from x.
+// Fields used: [id start_time]
+func (this *Query_Amazing_SelectById) Execute(x In_Amazing_SelectById) *Iter_Amazing_SelectById {
 	var setupErr error
 	params := []interface{}{
 		func() (out interface{}) {
@@ -124,7 +127,7 @@ func (this *Amazing_SelectByIdQuery) Execute(x Amazing_SelectByIdIn) *Amazing_Se
 			return
 		}(),
 	}
-	result := &Amazing_SelectByIdIter{
+	result := &Iter_Amazing_SelectById{
 		tm:  this.opts.MAPPINGS,
 		ctx: this.ctx,
 	}
@@ -136,28 +139,30 @@ func (this *Amazing_SelectByIdQuery) Execute(x Amazing_SelectByIdIn) *Amazing_Se
 	return result
 }
 
-// SelectByNameQuery returns a new struct wrapping the current Amazing_Opts
-// that will perform 'Amazing' services 'select_by_name' on the database
-// when executed
-func (this *Amazing_Queries) SelectByName(ctx context.Context, db Runnable) *Amazing_SelectByNameQuery {
-	return &Amazing_SelectByNameQuery{
+// SelectByName returns a struct that will perform the 'select_by_name' query.
+// When Execute is called, it will use the following fields:
+// [name]
+func (this *Queries_Amazing) SelectByName(ctx context.Context, db Runnable) *Query_Amazing_SelectByName {
+	return &Query_Amazing_SelectByName{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type Amazing_SelectByNameQuery struct {
-	opts Amazing_Opts
+// Query_Amazing_SelectByName (future doc string needed)
+type Query_Amazing_SelectByName struct {
+	opts Opts_Amazing
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *Amazing_SelectByNameQuery) QueryInTypeUser()  {}
-func (this *Amazing_SelectByNameQuery) QueryOutTypeUser() {}
+func (this *Query_Amazing_SelectByName) QueryInType_Name()          {}
+func (this *Query_Amazing_SelectByName) QueryOutType_ExampleTable() {}
 
-// Executes the query with parameters retrieved from x
-func (this *Amazing_SelectByNameQuery) Execute(x Amazing_SelectByNameIn) *Amazing_SelectByNameIter {
+// Executes the query 'select_by_name' with parameters retrieved from x.
+// Fields used: [name]
+func (this *Query_Amazing_SelectByName) Execute(x In_Amazing_SelectByName) *Iter_Amazing_SelectByName {
 	var setupErr error
 	params := []interface{}{
 		func() (out interface{}) {
@@ -165,7 +170,7 @@ func (this *Amazing_SelectByNameQuery) Execute(x Amazing_SelectByNameIn) *Amazin
 			return
 		}(),
 	}
-	result := &Amazing_SelectByNameIter{
+	result := &Iter_Amazing_SelectByName{
 		tm:  this.opts.MAPPINGS,
 		ctx: this.ctx,
 	}
@@ -177,28 +182,30 @@ func (this *Amazing_SelectByNameQuery) Execute(x Amazing_SelectByNameIn) *Amazin
 	return result
 }
 
-// InsertQuery returns a new struct wrapping the current Amazing_Opts
-// that will perform 'Amazing' services 'insert' on the database
-// when executed
-func (this *Amazing_Queries) Insert(ctx context.Context, db Runnable) *Amazing_InsertQuery {
-	return &Amazing_InsertQuery{
+// Insert returns a struct that will perform the 'insert' query.
+// When Execute is called, it will use the following fields:
+// [id start_time name]
+func (this *Queries_Amazing) Insert(ctx context.Context, db Runnable) *Query_Amazing_Insert {
+	return &Query_Amazing_Insert{
 		opts: this.opts,
 		ctx:  ctx,
 		db:   db,
 	}
 }
 
-type Amazing_InsertQuery struct {
-	opts Amazing_Opts
+// Query_Amazing_Insert (future doc string needed)
+type Query_Amazing_Insert struct {
+	opts Opts_Amazing
 	db   Runnable
 	ctx  context.Context
 }
 
-func (this *Amazing_InsertQuery) QueryInTypeUser()  {}
-func (this *Amazing_InsertQuery) QueryOutTypeUser() {}
+func (this *Query_Amazing_Insert) QueryInType_ExampleTable() {}
+func (this *Query_Amazing_Insert) QueryOutType_Empty()       {}
 
-// Executes the query with parameters retrieved from x
-func (this *Amazing_InsertQuery) Execute(x Amazing_InsertIn) *Amazing_InsertIter {
+// Executes the query 'insert' with parameters retrieved from x.
+// Fields used: [id start_time name]
+func (this *Query_Amazing_Insert) Execute(x In_Amazing_Insert) *Iter_Amazing_Insert {
 	var setupErr error
 	params := []interface{}{
 		func() (out interface{}) {
@@ -215,7 +222,7 @@ func (this *Amazing_InsertQuery) Execute(x Amazing_InsertIn) *Amazing_InsertIter
 			return
 		}(),
 	}
-	result := &Amazing_InsertIter{
+	result := &Iter_Amazing_Insert{
 		tm:  this.opts.MAPPINGS,
 		ctx: this.ctx,
 	}
@@ -227,21 +234,21 @@ func (this *Amazing_InsertQuery) Execute(x Amazing_InsertIn) *Amazing_InsertIter
 	return result
 }
 
-type Amazing_SelectByIdIter struct {
+type Iter_Amazing_SelectById struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     Amazing_TypeMappings
+	tm     TypeMappings_Amazing
 	ctx    context.Context
 }
 
-func (this *Amazing_SelectByIdIter) IterOutTypeTestExampleTable() {}
-func (this *Amazing_SelectByIdIter) IterInTypeTestPartialTable()  {}
+func (this *Iter_Amazing_SelectById) IterOutTypeTestExampleTable() {}
+func (this *Iter_Amazing_SelectById) IterInTypeTestPartialTable()  {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *Amazing_SelectByIdIter) Each(fun func(*Amazing_SelectByIdRow) error) error {
+func (this *Iter_Amazing_SelectById) Each(fun func(*Row_Amazing_SelectById) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -257,10 +264,10 @@ func (this *Amazing_SelectByIdIter) Each(fun func(*Amazing_SelectByIdRow) error)
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *Amazing_SelectByIdIter) One() *Amazing_SelectByIdRow {
+func (this *Iter_Amazing_SelectById) One() *Row_Amazing_SelectById {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &Amazing_SelectByIdRow{err: first.err}
+		return &Row_Amazing_SelectById{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -268,13 +275,13 @@ func (this *Amazing_SelectByIdIter) One() *Amazing_SelectByIdRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Amazing_SelectByIdRow{err: fmt.Errorf("expected exactly 1 result from query 'SelectById' found %s", amount)}
+		return &Row_Amazing_SelectById{err: fmt.Errorf("expected exactly 1 result from query 'SelectById' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *Amazing_SelectByIdIter) Zero() error {
+func (this *Iter_Amazing_SelectById) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -286,17 +293,17 @@ func (this *Amazing_SelectByIdIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *Amazing_SelectByIdIter) Next() (*Amazing_SelectByIdRow, bool) {
+func (this *Iter_Amazing_SelectById) Next() (*Row_Amazing_SelectById, bool) {
 	if this.rows == nil || this.err == io.EOF {
 		return nil, false
 	} else if this.err != nil {
 		err := this.err
 		this.err = io.EOF
-		return &Amazing_SelectByIdRow{err: err}, true
+		return &Row_Amazing_SelectById{err: err}, true
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {
-		return &Amazing_SelectByIdRow{err: err}, true
+		return &Row_Amazing_SelectById{err: err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -310,7 +317,7 @@ func (this *Amazing_SelectByIdIter) Next() (*Amazing_SelectByIdRow, bool) {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &Amazing_SelectByIdRow{err: this.err}, true
+		return &Row_Amazing_SelectById{err: this.err}, true
 	}
 	res := &test.ExampleTable{}
 	for i, col := range cols {
@@ -319,34 +326,34 @@ func (this *Amazing_SelectByIdIter) Next() (*Amazing_SelectByIdRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &Amazing_SelectByIdRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
+				return &Row_Amazing_SelectById{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "start_time":
-			var converted = this.tm.TimestampTimestamp().Empty()
+			var converted = this.tm.TimestampTimestamp()
 			if err := converted.Scan(*scanned[i].i); err != nil {
-				return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test.ExampleTable.StartTime: %v", err)}, true
+				return &Row_Amazing_SelectById{err: fmt.Errorf("could not convert mapped db column start_time to type on test.ExampleTable.StartTime: %v", err)}, true
 			}
 			if err := converted.ToProto(&res.StartTime); err != nil {
-				return &Amazing_SelectByIdRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test.ExampleTable.StartTime: %v", err)}, true
+				return &Row_Amazing_SelectById{err: fmt.Errorf("could not convert mapped db column start_timeto type on test.ExampleTable.StartTime: %v", err)}, true
 			}
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &Amazing_SelectByIdRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
+				return &Row_Amazing_SelectById{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 
 		default:
-			return &Amazing_SelectByIdRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
+			return &Row_Amazing_SelectById{err: fmt.Errorf("unsupported column in output: %s", col)}, true
 		}
 	}
-	return &Amazing_SelectByIdRow{item: res}, true
+	return &Row_Amazing_SelectById{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *Amazing_SelectByIdIter) Slice() []*Amazing_SelectByIdRow {
-	var results []*Amazing_SelectByIdRow
+func (this *Iter_Amazing_SelectById) Slice() []*Row_Amazing_SelectById {
+	var results []*Row_Amazing_SelectById
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -358,7 +365,7 @@ func (this *Amazing_SelectByIdIter) Slice() []*Amazing_SelectByIdRow {
 }
 
 // returns the known columns for this result
-func (r *Amazing_SelectByIdIter) Columns() ([]string, error) {
+func (r *Iter_Amazing_SelectById) Columns() ([]string, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -368,21 +375,21 @@ func (r *Amazing_SelectByIdIter) Columns() ([]string, error) {
 	return nil, nil
 }
 
-type Amazing_SelectByNameIter struct {
+type Iter_Amazing_SelectByName struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     Amazing_TypeMappings
+	tm     TypeMappings_Amazing
 	ctx    context.Context
 }
 
-func (this *Amazing_SelectByNameIter) IterOutTypeTestExampleTable() {}
-func (this *Amazing_SelectByNameIter) IterInTypeTestName()          {}
+func (this *Iter_Amazing_SelectByName) IterOutTypeTestExampleTable() {}
+func (this *Iter_Amazing_SelectByName) IterInTypeTestName()          {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *Amazing_SelectByNameIter) Each(fun func(*Amazing_SelectByNameRow) error) error {
+func (this *Iter_Amazing_SelectByName) Each(fun func(*Row_Amazing_SelectByName) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -398,10 +405,10 @@ func (this *Amazing_SelectByNameIter) Each(fun func(*Amazing_SelectByNameRow) er
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *Amazing_SelectByNameIter) One() *Amazing_SelectByNameRow {
+func (this *Iter_Amazing_SelectByName) One() *Row_Amazing_SelectByName {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &Amazing_SelectByNameRow{err: first.err}
+		return &Row_Amazing_SelectByName{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -409,13 +416,13 @@ func (this *Amazing_SelectByNameIter) One() *Amazing_SelectByNameRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Amazing_SelectByNameRow{err: fmt.Errorf("expected exactly 1 result from query 'SelectByName' found %s", amount)}
+		return &Row_Amazing_SelectByName{err: fmt.Errorf("expected exactly 1 result from query 'SelectByName' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *Amazing_SelectByNameIter) Zero() error {
+func (this *Iter_Amazing_SelectByName) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -427,17 +434,17 @@ func (this *Amazing_SelectByNameIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *Amazing_SelectByNameIter) Next() (*Amazing_SelectByNameRow, bool) {
+func (this *Iter_Amazing_SelectByName) Next() (*Row_Amazing_SelectByName, bool) {
 	if this.rows == nil || this.err == io.EOF {
 		return nil, false
 	} else if this.err != nil {
 		err := this.err
 		this.err = io.EOF
-		return &Amazing_SelectByNameRow{err: err}, true
+		return &Row_Amazing_SelectByName{err: err}, true
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {
-		return &Amazing_SelectByNameRow{err: err}, true
+		return &Row_Amazing_SelectByName{err: err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -451,7 +458,7 @@ func (this *Amazing_SelectByNameIter) Next() (*Amazing_SelectByNameRow, bool) {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &Amazing_SelectByNameRow{err: this.err}, true
+		return &Row_Amazing_SelectByName{err: this.err}, true
 	}
 	res := &test.ExampleTable{}
 	for i, col := range cols {
@@ -460,34 +467,34 @@ func (this *Amazing_SelectByNameIter) Next() (*Amazing_SelectByNameRow, bool) {
 		case "id":
 			r, ok := (*scanned[i].i).(int64)
 			if !ok {
-				return &Amazing_SelectByNameRow{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
+				return &Row_Amazing_SelectByName{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
 			res.Id = r
 		case "start_time":
-			var converted = this.tm.TimestampTimestamp().Empty()
+			var converted = this.tm.TimestampTimestamp()
 			if err := converted.Scan(*scanned[i].i); err != nil {
-				return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_time to type on test.ExampleTable.StartTime: %v", err)}, true
+				return &Row_Amazing_SelectByName{err: fmt.Errorf("could not convert mapped db column start_time to type on test.ExampleTable.StartTime: %v", err)}, true
 			}
 			if err := converted.ToProto(&res.StartTime); err != nil {
-				return &Amazing_SelectByNameRow{err: fmt.Errorf("could not convert mapped db column start_timeto type on test.ExampleTable.StartTime: %v", err)}, true
+				return &Row_Amazing_SelectByName{err: fmt.Errorf("could not convert mapped db column start_timeto type on test.ExampleTable.StartTime: %v", err)}, true
 			}
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
-				return &Amazing_SelectByNameRow{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
+				return &Row_Amazing_SelectByName{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
 
 		default:
-			return &Amazing_SelectByNameRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
+			return &Row_Amazing_SelectByName{err: fmt.Errorf("unsupported column in output: %s", col)}, true
 		}
 	}
-	return &Amazing_SelectByNameRow{item: res}, true
+	return &Row_Amazing_SelectByName{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *Amazing_SelectByNameIter) Slice() []*Amazing_SelectByNameRow {
-	var results []*Amazing_SelectByNameRow
+func (this *Iter_Amazing_SelectByName) Slice() []*Row_Amazing_SelectByName {
+	var results []*Row_Amazing_SelectByName
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -499,7 +506,7 @@ func (this *Amazing_SelectByNameIter) Slice() []*Amazing_SelectByNameRow {
 }
 
 // returns the known columns for this result
-func (r *Amazing_SelectByNameIter) Columns() ([]string, error) {
+func (r *Iter_Amazing_SelectByName) Columns() ([]string, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -509,21 +516,21 @@ func (r *Amazing_SelectByNameIter) Columns() ([]string, error) {
 	return nil, nil
 }
 
-type Amazing_InsertIter struct {
+type Iter_Amazing_Insert struct {
 	result sql.Result
 	rows   *sql.Rows
 	err    error
-	tm     Amazing_TypeMappings
+	tm     TypeMappings_Amazing
 	ctx    context.Context
 }
 
-func (this *Amazing_InsertIter) IterOutTypeEmpty()           {}
-func (this *Amazing_InsertIter) IterInTypeTestExampleTable() {}
+func (this *Iter_Amazing_Insert) IterOutTypeEmpty()           {}
+func (this *Iter_Amazing_Insert) IterInTypeTestExampleTable() {}
 
 // Each performs 'fun' on each row in the result set.
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
-func (this *Amazing_InsertIter) Each(fun func(*Amazing_InsertRow) error) error {
+func (this *Iter_Amazing_Insert) Each(fun func(*Row_Amazing_Insert) error) error {
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -539,10 +546,10 @@ func (this *Amazing_InsertIter) Each(fun func(*Amazing_InsertRow) error) error {
 }
 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
-func (this *Amazing_InsertIter) One() *Amazing_InsertRow {
+func (this *Iter_Amazing_Insert) One() *Row_Amazing_Insert {
 	first, hasFirst := this.Next()
 	if first != nil && first.err != nil {
-		return &Amazing_InsertRow{err: first.err}
+		return &Row_Amazing_Insert{err: first.err}
 	}
 	_, hasSecond := this.Next()
 	if !hasFirst || hasSecond {
@@ -550,13 +557,13 @@ func (this *Amazing_InsertIter) One() *Amazing_InsertRow {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Amazing_InsertRow{err: fmt.Errorf("expected exactly 1 result from query 'Insert' found %s", amount)}
+		return &Row_Amazing_Insert{err: fmt.Errorf("expected exactly 1 result from query 'Insert' found %s", amount)}
 	}
 	return first
 }
 
 // Zero returns an error if there were any rows in the result
-func (this *Amazing_InsertIter) Zero() error {
+func (this *Iter_Amazing_Insert) Zero() error {
 	row, ok := this.Next()
 	if row != nil && row.err != nil {
 		return row.err
@@ -568,17 +575,17 @@ func (this *Amazing_InsertIter) Zero() error {
 }
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
-func (this *Amazing_InsertIter) Next() (*Amazing_InsertRow, bool) {
+func (this *Iter_Amazing_Insert) Next() (*Row_Amazing_Insert, bool) {
 	if this.rows == nil || this.err == io.EOF {
 		return nil, false
 	} else if this.err != nil {
 		err := this.err
 		this.err = io.EOF
-		return &Amazing_InsertRow{err: err}, true
+		return &Row_Amazing_Insert{err: err}, true
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {
-		return &Amazing_InsertRow{err: err}, true
+		return &Row_Amazing_Insert{err: err}, true
 	}
 	if !this.rows.Next() {
 		if this.err = this.rows.Err(); this.err == nil {
@@ -592,7 +599,7 @@ func (this *Amazing_InsertIter) Next() (*Amazing_InsertRow, bool) {
 		toScan[i] = &scanned[i]
 	}
 	if this.err = this.rows.Scan(toScan...); this.err != nil {
-		return &Amazing_InsertRow{err: this.err}, true
+		return &Row_Amazing_Insert{err: this.err}, true
 	}
 	res := &Empty{}
 	for i, col := range cols {
@@ -600,15 +607,15 @@ func (this *Amazing_InsertIter) Next() (*Amazing_InsertRow, bool) {
 		switch col {
 
 		default:
-			return &Amazing_InsertRow{err: fmt.Errorf("unsupported column in output: %s", col)}, true
+			return &Row_Amazing_Insert{err: fmt.Errorf("unsupported column in output: %s", col)}, true
 		}
 	}
-	return &Amazing_InsertRow{item: res}, true
+	return &Row_Amazing_Insert{item: res}, true
 }
 
 // Slice returns all rows found in the iterator as a Slice.
-func (this *Amazing_InsertIter) Slice() []*Amazing_InsertRow {
-	var results []*Amazing_InsertRow
+func (this *Iter_Amazing_Insert) Slice() []*Row_Amazing_Insert {
+	var results []*Row_Amazing_Insert
 	for {
 		if i, ok := this.Next(); ok {
 			results = append(results, i)
@@ -620,7 +627,7 @@ func (this *Amazing_InsertIter) Slice() []*Amazing_InsertRow {
 }
 
 // returns the known columns for this result
-func (r *Amazing_InsertIter) Columns() ([]string, error) {
+func (r *Iter_Amazing_Insert) Columns() ([]string, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -630,27 +637,27 @@ func (r *Amazing_InsertIter) Columns() ([]string, error) {
 	return nil, nil
 }
 
-type Amazing_SelectByIdIn interface {
+type In_Amazing_SelectById interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 }
-type Amazing_SelectByIdOut interface {
+type Out_Amazing_SelectById interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type Amazing_SelectByIdRow struct {
-	item Amazing_SelectByIdOut
+type Row_Amazing_SelectById struct {
+	item Out_Amazing_SelectById
 	err  error
 }
 
-func newAmazing_SelectByIdRow(item Amazing_SelectByIdOut, err error) *Amazing_SelectByIdRow {
-	return &Amazing_SelectByIdRow{item, err}
+func newRowAmazingSelectById(item Out_Amazing_SelectById, err error) *Row_Amazing_SelectById {
+	return &Row_Amazing_SelectById{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *Amazing_SelectByIdRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_Amazing_SelectById) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -691,7 +698,7 @@ func (this *Amazing_SelectByIdRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *Amazing_SelectByIdRow) TestExampleTable() (*test.ExampleTable, error) {
+func (this *Row_Amazing_SelectById) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -702,7 +709,7 @@ func (this *Amazing_SelectByIdRow) TestExampleTable() (*test.ExampleTable, error
 	}, nil
 }
 
-func (this *Amazing_SelectByIdRow) Proto() (*test.ExampleTable, error) {
+func (this *Row_Amazing_SelectById) Proto() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -713,26 +720,26 @@ func (this *Amazing_SelectByIdRow) Proto() (*test.ExampleTable, error) {
 	}, nil
 }
 
-type Amazing_SelectByNameIn interface {
+type In_Amazing_SelectByName interface {
 	GetName() string
 }
-type Amazing_SelectByNameOut interface {
+type Out_Amazing_SelectByName interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type Amazing_SelectByNameRow struct {
-	item Amazing_SelectByNameOut
+type Row_Amazing_SelectByName struct {
+	item Out_Amazing_SelectByName
 	err  error
 }
 
-func newAmazing_SelectByNameRow(item Amazing_SelectByNameOut, err error) *Amazing_SelectByNameRow {
-	return &Amazing_SelectByNameRow{item, err}
+func newRowAmazingSelectByName(item Out_Amazing_SelectByName, err error) *Row_Amazing_SelectByName {
+	return &Row_Amazing_SelectByName{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *Amazing_SelectByNameRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_Amazing_SelectByName) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -773,7 +780,7 @@ func (this *Amazing_SelectByNameRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *Amazing_SelectByNameRow) TestExampleTable() (*test.ExampleTable, error) {
+func (this *Row_Amazing_SelectByName) TestExampleTable() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -784,7 +791,7 @@ func (this *Amazing_SelectByNameRow) TestExampleTable() (*test.ExampleTable, err
 	}, nil
 }
 
-func (this *Amazing_SelectByNameRow) Proto() (*test.ExampleTable, error) {
+func (this *Row_Amazing_SelectByName) Proto() (*test.ExampleTable, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
@@ -795,25 +802,25 @@ func (this *Amazing_SelectByNameRow) Proto() (*test.ExampleTable, error) {
 	}, nil
 }
 
-type Amazing_InsertIn interface {
+type In_Amazing_Insert interface {
 	GetId() int64
 	GetStartTime() *timestamp.Timestamp
 	GetName() string
 }
-type Amazing_InsertOut interface {
+type Out_Amazing_Insert interface {
 }
-type Amazing_InsertRow struct {
-	item Amazing_InsertOut
+type Row_Amazing_Insert struct {
+	item Out_Amazing_Insert
 	err  error
 }
 
-func newAmazing_InsertRow(item Amazing_InsertOut, err error) *Amazing_InsertRow {
-	return &Amazing_InsertRow{item, err}
+func newRowAmazingInsert(item Out_Amazing_Insert, err error) *Row_Amazing_Insert {
+	return &Row_Amazing_Insert{item, err}
 }
 
 // Unwrap takes an address to a proto.Message as its only parameter
 // Unwrap can only set into output protos of that match method return types + the out option on the query itself
-func (this *Amazing_InsertRow) Unwrap(pointerToMsg proto.Message) error {
+func (this *Row_Amazing_Insert) Unwrap(pointerToMsg proto.Message) error {
 	if this.err != nil {
 		return this.err
 	}
@@ -848,33 +855,33 @@ func (this *Amazing_InsertRow) Unwrap(pointerToMsg proto.Message) error {
 
 	return nil
 }
-func (this *Amazing_InsertRow) Empty() (*Empty, error) {
+func (this *Row_Amazing_Insert) Empty() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
-func (this *Amazing_InsertRow) TestNumRows() (*test.NumRows, error) {
+func (this *Row_Amazing_Insert) TestNumRows() (*test.NumRows, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &test.NumRows{}, nil
 }
-func (this *Amazing_InsertRow) TestIds() (*test.Ids, error) {
+func (this *Row_Amazing_Insert) TestIds() (*test.Ids, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &test.Ids{}, nil
 }
 
-func (this *Amazing_InsertRow) Proto() (*Empty, error) {
+func (this *Row_Amazing_Insert) Proto() (*Empty, error) {
 	if this.err != nil {
 		return nil, this.err
 	}
 	return &Empty{}, nil
 }
 
-type Amazing_Hooks interface {
+type Hooks_Amazing interface {
 	UniarySelectWithHooksBeforeHook(context.Context, *test.PartialTable) (*test.ExampleTable, error)
 	ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error)
 	ClientStreamWithHookBeforeHook(context.Context, *test.ExampleTable) (*test.Ids, error)
@@ -882,70 +889,67 @@ type Amazing_Hooks interface {
 	ServerStreamWithHooksAfterHook(context.Context, *test.Name, *test.ExampleTable) error
 	ClientStreamWithHookAfterHook(context.Context, *test.ExampleTable, *test.Ids) error
 }
-type Amazing_DefaultHooks struct{}
+type DefaultHooks_Amazing struct{}
 
-func (*Amazing_DefaultHooks) UniarySelectWithHooksBeforeHook(context.Context, *test.PartialTable) (*test.ExampleTable, error) {
+func (*DefaultHooks_Amazing) UniarySelectWithHooksBeforeHook(context.Context, *test.PartialTable) (*test.ExampleTable, error) {
 	return nil, nil
 }
-func (*Amazing_DefaultHooks) ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error) {
+func (*DefaultHooks_Amazing) ServerStreamWithHooksBeforeHook(context.Context, *test.Name) (*test.ExampleTable, error) {
 	return nil, nil
 }
-func (*Amazing_DefaultHooks) ClientStreamWithHookBeforeHook(context.Context, *test.ExampleTable) (*test.Ids, error) {
+func (*DefaultHooks_Amazing) ClientStreamWithHookBeforeHook(context.Context, *test.ExampleTable) (*test.Ids, error) {
 	return nil, nil
 }
-func (*Amazing_DefaultHooks) UniarySelectWithHooksAfterHook(context.Context, *test.PartialTable, *test.ExampleTable) error {
+func (*DefaultHooks_Amazing) UniarySelectWithHooksAfterHook(context.Context, *test.PartialTable, *test.ExampleTable) error {
 	return nil
 }
-func (*Amazing_DefaultHooks) ServerStreamWithHooksAfterHook(context.Context, *test.Name, *test.ExampleTable) error {
+func (*DefaultHooks_Amazing) ServerStreamWithHooksAfterHook(context.Context, *test.Name, *test.ExampleTable) error {
 	return nil
 }
-func (*Amazing_DefaultHooks) ClientStreamWithHookAfterHook(context.Context, *test.ExampleTable, *test.Ids) error {
+func (*DefaultHooks_Amazing) ClientStreamWithHookAfterHook(context.Context, *test.ExampleTable, *test.Ids) error {
 	return nil
 }
 
-type Amazing_TypeMappings interface {
-	TimestampTimestamp() AmazingTimestampTimestampMappingImpl
+type TypeMappings_Amazing interface {
+	TimestampTimestamp() MappingImpl_Amazing_TimestampTimestamp
 }
-type Amazing_DefaultTypeMappings struct{}
+type DefaultTypeMappings_Amazing struct{}
 
-func (this *Amazing_DefaultTypeMappings) TimestampTimestamp() AmazingTimestampTimestampMappingImpl {
-	return &Amazing_DefaultTimestampTimestampMappingImpl{}
+func (this *DefaultTypeMappings_Amazing) TimestampTimestamp() MappingImpl_Amazing_TimestampTimestamp {
+	return &DefaultMappingImpl_Amazing_TimestampTimestamp{}
 }
 
-type Amazing_DefaultTimestampTimestampMappingImpl struct{}
+type DefaultMappingImpl_Amazing_TimestampTimestamp struct{}
 
-func (this *Amazing_DefaultTimestampTimestampMappingImpl) ToProto(**timestamp.Timestamp) error {
+func (this *DefaultMappingImpl_Amazing_TimestampTimestamp) ToProto(**timestamp.Timestamp) error {
 	return nil
 }
-func (this *Amazing_DefaultTimestampTimestampMappingImpl) Empty() AmazingTimestampTimestampMappingImpl {
+func (this *DefaultMappingImpl_Amazing_TimestampTimestamp) ToSql(*timestamp.Timestamp) sql.Scanner {
 	return this
 }
-func (this *Amazing_DefaultTimestampTimestampMappingImpl) ToSql(*timestamp.Timestamp) sql.Scanner {
-	return this
-}
-func (this *Amazing_DefaultTimestampTimestampMappingImpl) Scan(interface{}) error {
+func (this *DefaultMappingImpl_Amazing_TimestampTimestamp) Scan(interface{}) error {
 	return nil
 }
-func (this *Amazing_DefaultTimestampTimestampMappingImpl) Value() (driver.Value, error) {
+func (this *DefaultMappingImpl_Amazing_TimestampTimestamp) Value() (driver.Value, error) {
 	return "DEFAULT_TYPE_MAPPING_VALUE", nil
 }
 
-type AmazingTimestampTimestampMappingImpl interface {
+type MappingImpl_Amazing_TimestampTimestamp interface {
 	ToProto(**timestamp.Timestamp) error
-	Empty() AmazingTimestampTimestampMappingImpl
 	ToSql(*timestamp.Timestamp) sql.Scanner
 	sql.Scanner
 	driver.Valuer
 }
-type Amazing_Opts struct {
-	MAPPINGS Amazing_TypeMappings
-	HOOKS    Amazing_Hooks
+
+type Opts_Amazing struct {
+	MAPPINGS TypeMappings_Amazing
+	HOOKS    Hooks_Amazing
 }
 
-func AmazingOpts(hooks Amazing_Hooks, mappings Amazing_TypeMappings) Amazing_Opts {
-	opts := Amazing_Opts{
-		HOOKS:    &Amazing_DefaultHooks{},
-		MAPPINGS: &Amazing_DefaultTypeMappings{},
+func OptsAmazing(hooks Hooks_Amazing, mappings TypeMappings_Amazing) Opts_Amazing {
+	opts := Opts_Amazing{
+		HOOKS:    &DefaultHooks_Amazing{},
+		MAPPINGS: &DefaultTypeMappings_Amazing{},
 	}
 	if hooks != nil {
 		opts.HOOKS = hooks
@@ -956,42 +960,42 @@ func AmazingOpts(hooks Amazing_Hooks, mappings Amazing_TypeMappings) Amazing_Opt
 	return opts
 }
 
-type Amazing_Impl struct {
-	opts     *Amazing_Opts
-	QUERIES  *Amazing_Queries
-	HANDLERS RestOfAmazingHandlers
+type Impl_Amazing struct {
+	opts     *Opts_Amazing
+	QUERIES  *Queries_Amazing
+	HANDLERS RestOfHandlers_Amazing
 	DB       *sql.DB
 }
 
-func AmazingPersistImpl(db *sql.DB, handlers RestOfAmazingHandlers, opts ...Amazing_Opts) *Amazing_Impl {
-	var myOpts Amazing_Opts
+func ImplAmazing(db *sql.DB, handlers RestOfHandlers_Amazing, opts ...Opts_Amazing) *Impl_Amazing {
+	var myOpts Opts_Amazing
 	if len(opts) > 0 {
 		myOpts = opts[0]
 	} else {
-		myOpts = AmazingOpts(nil, nil)
+		myOpts = OptsAmazing(&DefaultHooks_Amazing{}, &DefaultTypeMappings_Amazing{})
 	}
-	return &Amazing_Impl{
+	return &Impl_Amazing{
 		opts:     &myOpts,
-		QUERIES:  AmazingPersistQueries(myOpts),
+		QUERIES:  QueriesAmazing(myOpts),
 		DB:       db,
 		HANDLERS: handlers,
 	}
 }
 
-type RestOfAmazingHandlers interface {
+type RestOfHandlers_Amazing interface {
 	UnImplementedPersistMethod(context.Context, *test.ExampleTable) (*test.ExampleTable, error)
 	NoGenerationForBadReturnTypes(context.Context, *test.ExampleTable) (*BadReturn, error)
 }
 
-func (this *Amazing_Impl) UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
+func (this *Impl_Amazing) UnImplementedPersistMethod(ctx context.Context, req *test.ExampleTable) (*test.ExampleTable, error) {
 	return this.HANDLERS.UnImplementedPersistMethod(ctx, req)
 }
 
-func (this *Amazing_Impl) NoGenerationForBadReturnTypes(ctx context.Context, req *test.ExampleTable) (*BadReturn, error) {
+func (this *Impl_Amazing) NoGenerationForBadReturnTypes(ctx context.Context, req *test.ExampleTable) (*BadReturn, error) {
 	return this.HANDLERS.NoGenerationForBadReturnTypes(ctx, req)
 }
 
-func (this *Amazing_Impl) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
+func (this *Impl_Amazing) UniarySelect(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	query := this.QUERIES.SelectById(ctx, this.DB)
 
 	result := query.Execute(req)
@@ -1003,14 +1007,16 @@ func (this *Amazing_Impl) UniarySelect(ctx context.Context, req *test.PartialTab
 	return res, nil
 }
 
-func (this *Amazing_Impl) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
+func (this *Impl_Amazing) UniarySelectWithHooks(ctx context.Context, req *test.PartialTable) (*test.ExampleTable, error) {
 	query := this.QUERIES.SelectById(ctx, this.DB)
 
-	beforeRes, err := this.opts.HOOKS.UniarySelectWithHooksBeforeHook(ctx, req)
-	if err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
-	} else if beforeRes != nil {
-		return beforeRes, nil
+	{
+		beforeRes, err := this.opts.HOOKS.UniarySelectWithHooksBeforeHook(ctx, req)
+		if err != nil {
+			return nil, gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+		} else if beforeRes != nil {
+			return beforeRes, nil
+		}
 	}
 
 	result := query.Execute(req)
@@ -1019,14 +1025,16 @@ func (this *Amazing_Impl) UniarySelectWithHooks(ctx context.Context, req *test.P
 		return nil, err
 	}
 
-	if err := this.opts.HOOKS.UniarySelectWithHooksAfterHook(ctx, req, res); err != nil {
-		return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+	{
+		if err := this.opts.HOOKS.UniarySelectWithHooksAfterHook(ctx, req, res); err != nil {
+			return nil, gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+		}
 	}
 
 	return res, nil
 }
 
-func (this *Amazing_Impl) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
+func (this *Impl_Amazing) ServerStream(req *test.Name, stream Amazing_ServerStreamServer) error {
 	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -1036,11 +1044,11 @@ func (this *Amazing_Impl) ServerStream(req *test.Name, stream Amazing_ServerStre
 	}
 	return nil
 }
-func (this *Amazing_Impl) ServerStreamTx(req *test.Name, stream Amazing_ServerStreamServer, tx PersistTx) error {
+func (this *Impl_Amazing) ServerStreamTx(req *test.Name, stream Amazing_ServerStreamServer, tx PersistTx) error {
 	ctx := stream.Context()
 	query := this.QUERIES.SelectByName(ctx, tx)
 	iter := query.Execute(req)
-	return iter.Each(func(row *Amazing_SelectByNameRow) error {
+	return iter.Each(func(row *Row_Amazing_SelectByName) error {
 		res, err := row.TestExampleTable()
 		if err != nil {
 			return err
@@ -1049,7 +1057,7 @@ func (this *Amazing_Impl) ServerStreamTx(req *test.Name, stream Amazing_ServerSt
 	})
 }
 
-func (this *Amazing_Impl) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
+func (this *Impl_Amazing) ServerStreamWithHooks(req *test.Name, stream Amazing_ServerStreamWithHooksServer) error {
 	tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -1059,11 +1067,11 @@ func (this *Amazing_Impl) ServerStreamWithHooks(req *test.Name, stream Amazing_S
 	}
 	return nil
 }
-func (this *Amazing_Impl) ServerStreamWithHooksTx(req *test.Name, stream Amazing_ServerStreamWithHooksServer, tx PersistTx) error {
+func (this *Impl_Amazing) ServerStreamWithHooksTx(req *test.Name, stream Amazing_ServerStreamWithHooksServer, tx PersistTx) error {
 	ctx := stream.Context()
 	query := this.QUERIES.SelectByName(ctx, tx)
 	iter := query.Execute(req)
-	return iter.Each(func(row *Amazing_SelectByNameRow) error {
+	return iter.Each(func(row *Row_Amazing_SelectByName) error {
 		res, err := row.TestExampleTable()
 		if err != nil {
 			return err
@@ -1072,7 +1080,7 @@ func (this *Amazing_Impl) ServerStreamWithHooksTx(req *test.Name, stream Amazing
 	})
 }
 
-func (this *Amazing_Impl) ClientStream(stream Amazing_ClientStreamServer) error {
+func (this *Impl_Amazing) ClientStream(stream Amazing_ClientStreamServer) error {
 	tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -1082,7 +1090,7 @@ func (this *Amazing_Impl) ClientStream(stream Amazing_ClientStreamServer) error 
 	}
 	return nil
 }
-func (this *Amazing_Impl) ClientStreamTx(stream Amazing_ClientStreamServer, tx PersistTx) error {
+func (this *Impl_Amazing) ClientStreamTx(stream Amazing_ClientStreamServer, tx PersistTx) error {
 	query := this.QUERIES.Insert(stream.Context(), tx)
 	var first *test.ExampleTable
 	for {
@@ -1114,7 +1122,7 @@ func (this *Amazing_Impl) ClientStreamTx(stream Amazing_ClientStreamServer, tx P
 	return nil
 }
 
-func (this *Amazing_Impl) ClientStreamWithHook(stream Amazing_ClientStreamWithHookServer) error {
+func (this *Impl_Amazing) ClientStreamWithHook(stream Amazing_ClientStreamWithHookServer) error {
 	tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
 	if err != nil {
 		return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
@@ -1124,7 +1132,7 @@ func (this *Amazing_Impl) ClientStreamWithHook(stream Amazing_ClientStreamWithHo
 	}
 	return nil
 }
-func (this *Amazing_Impl) ClientStreamWithHookTx(stream Amazing_ClientStreamWithHookServer, tx PersistTx) error {
+func (this *Impl_Amazing) ClientStreamWithHookTx(stream Amazing_ClientStreamWithHookServer, tx PersistTx) error {
 	query := this.QUERIES.Insert(stream.Context(), tx)
 	var first *test.ExampleTable
 	for {
@@ -1138,11 +1146,13 @@ func (this *Amazing_Impl) ClientStreamWithHookTx(stream Amazing_ClientStreamWith
 			first = req
 		}
 
-		beforeRes, err := this.opts.HOOKS.ClientStreamWithHookBeforeHook(stream.Context(), req)
-		if err != nil {
-			return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
-		} else if beforeRes != nil {
-			continue
+		{
+			beforeRes, err := this.opts.HOOKS.ClientStreamWithHookBeforeHook(stream.Context(), req)
+			if err != nil {
+				return gstatus.Errorf(codes.Unknown, "error in before hook: %v", err)
+			} else if beforeRes != nil {
+				continue
+			}
 		}
 
 		result := query.Execute(req)
@@ -1157,8 +1167,10 @@ func (this *Amazing_Impl) ClientStreamWithHookTx(stream Amazing_ClientStreamWith
 	}
 	res := &test.Ids{}
 
-	if err := this.opts.HOOKS.ClientStreamWithHookAfterHook(stream.Context(), first, res); err != nil {
-		return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+	{
+		if err := this.opts.HOOKS.ClientStreamWithHookAfterHook(stream.Context(), first, res); err != nil {
+			return gstatus.Errorf(codes.Unknown, "error in after hook: %v", err)
+		}
 	}
 
 	if err := stream.SendAndClose(res); err != nil {

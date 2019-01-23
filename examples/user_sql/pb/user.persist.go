@@ -2109,9 +2109,6 @@ type DefaultMappingImpl_UServ_TimestampTimestamp struct{}
 func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToProto(**timestamp.Timestamp) error {
 	return nil
 }
-func (this *DefaultMappingImpl_UServ_TimestampTimestamp) Empty() MappingImpl_UServ_TimestampTimestamp {
-	return this
-}
 func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToSql(*timestamp.Timestamp) sql.Scanner {
 	return this
 }
@@ -2124,7 +2121,6 @@ func (this *DefaultMappingImpl_UServ_TimestampTimestamp) Value() (driver.Value, 
 
 type MappingImpl_UServ_TimestampTimestamp interface {
 	ToProto(**timestamp.Timestamp) error
-	Empty() MappingImpl_UServ_TimestampTimestamp
 	ToSql(*timestamp.Timestamp) sql.Scanner
 	sql.Scanner
 	driver.Valuer
@@ -2139,9 +2135,6 @@ type DefaultMappingImpl_UServ_SliceStringParam struct{}
 func (this *DefaultMappingImpl_UServ_SliceStringParam) ToProto(**SliceStringParam) error {
 	return nil
 }
-func (this *DefaultMappingImpl_UServ_SliceStringParam) Empty() MappingImpl_UServ_SliceStringParam {
-	return this
-}
 func (this *DefaultMappingImpl_UServ_SliceStringParam) ToSql(*SliceStringParam) sql.Scanner {
 	return this
 }
@@ -2154,7 +2147,6 @@ func (this *DefaultMappingImpl_UServ_SliceStringParam) Value() (driver.Value, er
 
 type MappingImpl_UServ_SliceStringParam interface {
 	ToProto(**SliceStringParam) error
-	Empty() MappingImpl_UServ_SliceStringParam
 	ToSql(*SliceStringParam) sql.Scanner
 	sql.Scanner
 	driver.Valuer

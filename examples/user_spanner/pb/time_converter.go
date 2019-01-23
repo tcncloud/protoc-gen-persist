@@ -40,6 +40,12 @@ type TimeString struct {
 	t *timestamp.Timestamp
 }
 
+type SpannerValuer interface {
+	SpannerValue() (interface{}, error),
+}
+type SpannerScanner interface {
+	SpannerScan(*spanner.GenericColumnValue) error,
+}
 func (ts TimeString) ToSpanner(t *timestamp.Timestamp) MappingImpl_UServ_TimestampTimestamp {
 	ts.t = t
 	return &ts
