@@ -609,6 +609,11 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 		p.Q(titled, "() MappingImpl_", sName, "_", titled, "\n")
 	}
 	p.Q("}\n")
+	m := Matcher(s)
+	m.EachTM(func(tm *TypeMappingProtoOpts) {
+		p.Q(`
+		`)
+	})
 	p.Q(`type DefaultTypeMappings_`, sName, ` struct{}
     `)
 
@@ -622,9 +627,6 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToProto(**`, name, `) error {
             return nil
-        }
-        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) Empty() MappingImpl_`, sName, `_`, titled, ` {
-            return this
         }
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToSql(*`, name, `) sql.Scanner {
             return this
@@ -658,9 +660,6 @@ func WriteTypeMappings(p *Printer, s *Service) error {
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToProto(**`, name, `) error {
             return nil
         }
-        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) Empty() MappingImpl_`, sName, `_`, titled, ` {
-            return this
-		}
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToSpanner(*`, name, `) MappingImpl_`, sName, `_`, titled, ` {
             return this
         }
@@ -785,7 +784,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			m.EachTM(func(opt *TypeMappingProtoOpts) {
 				_, titled := getGoNamesForTypeMapping(opt.tm, s.File)
 				cases[fName(f)] = P(`case "`, fName(f), `":
-                    var converted = this.tm.`, titled, `().Empty()
+                    var converted = this.tm.`, titled, `()
                     if err := converted.Scan(*scanned[i].i); err != nil {
                         return &Row_`, sName, `_`, camelQ(q), `{err: fmt.Errorf("could not convert mapped db column `, fName(f), ` to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
                     }
@@ -800,7 +799,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			m.EachTM(func(opt *TypeMappingProtoOpts) {
 				_, titled := getGoNamesForTypeMapping(opt.tm, s.File)
 				cases[fName(f)] = P(`case "`, fName(f), `":
-                    var converted = this.tm.`, titled, `().Empty()
+                    var converted = this.tm.`, titled, `()
                     if err := converted.Scan(*scanned[i].i); err != nil {
                         return &Row_`, sName, `_`, camelQ(q), `{err: fmt.Errorf("could not convert mapped db column `, fName(f), ` to type on `, outName(q), `.`, camelF(f), `: %v", err)}, true
                     }
@@ -976,7 +975,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                             return &Row_`+sName+`_`+camelQ(q)+`{err: fmt.Errorf("failed to convert db column `+name+` to spanner.GenericColumnValue")}, true
                         }
 
-                        convert_`+name+` := this.tm.`+titled+`().Empty()
+                        convert_`+name+` := this.tm.`+titled+`()
                         if err := convert_`+name+`.SpannerScan(&`+name+`_col); err != nil {
                             return &Row_`+sName+`_`+camelQ(q)+`{err: fmt.Errorf("SpannerScan failed for `+name+`")}, true
                         }
