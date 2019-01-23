@@ -10,25 +10,13 @@ import (
 	spanner "cloud.google.com/go/spanner"
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	persist "github.com/tcncloud/protoc-gen-persist/persist"
 	context "golang.org/x/net/context"
 	iterator "google.golang.org/api/iterator"
 	codes "google.golang.org/grpc/codes"
 	gstatus "google.golang.org/grpc/status"
 )
 
-type PersistTx interface {
-	Runnable
-}
-type SpannerScanner interface {
-	SpannerScan(*spanner.GenericColumnValue) error
-}
-type SpannerValuer interface {
-	SpannerValue() (interface{}, error)
-}
-type SpannerScanValuer interface {
-	SpannerScanner
-	SpannerValuer
-}
 type Result interface {
 	LastInsertId() (int64, error)
 	RowsAffected() (int64, error)
@@ -45,10 +33,6 @@ func (sr *SpannerResult) LastInsertId() (int64, error) {
 func (sr *SpannerResult) RowsAffected() (int64, error) {
 	// Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
 	return sr.iter.RowCount, nil
-}
-
-type Runnable interface {
-	QueryWithStats(context.Context, spanner.Statement) *spanner.RowIterator
 }
 
 // Queries_UServ holds all the queries found the proto service option as methods
@@ -73,7 +57,7 @@ func QueriesUServ(opts ...Opts_UServ) *Queries_UServ {
 // CreateUsersTable returns a struct that will perform the 'create_users_table' query.
 // When Execute is called, it will use the following fields:
 // []
-func (this *Queries_UServ) CreateUsersTable(ctx context.Context, db Runnable) *Query_UServ_CreateUsersTable {
+func (this *Queries_UServ) CreateUsersTable(ctx context.Context, db persist.SpannerRunnable) *Query_UServ_CreateUsersTable {
 	return &Query_UServ_CreateUsersTable{
 		opts: this.opts,
 		ctx:  ctx,
@@ -84,7 +68,7 @@ func (this *Queries_UServ) CreateUsersTable(ctx context.Context, db Runnable) *Q
 // Query_UServ_CreateUsersTable (future doc string needed)
 type Query_UServ_CreateUsersTable struct {
 	opts Opts_UServ
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -121,7 +105,7 @@ func (this *Query_UServ_CreateUsersTable) Execute(x In_UServ_CreateUsersTable) *
 // InsertUsers returns a struct that will perform the 'insert_users' query.
 // When Execute is called, it will use the following fields:
 // [id name friends created_on]
-func (this *Queries_UServ) InsertUsers(ctx context.Context, db Runnable) *Query_UServ_InsertUsers {
+func (this *Queries_UServ) InsertUsers(ctx context.Context, db persist.SpannerRunnable) *Query_UServ_InsertUsers {
 	return &Query_UServ_InsertUsers{
 		opts: this.opts,
 		ctx:  ctx,
@@ -132,7 +116,7 @@ func (this *Queries_UServ) InsertUsers(ctx context.Context, db Runnable) *Query_
 // Query_UServ_InsertUsers (future doc string needed)
 type Query_UServ_InsertUsers struct {
 	opts Opts_UServ
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -181,7 +165,7 @@ func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ
 // GetAllUsers returns a struct that will perform the 'get_all_users' query.
 // When Execute is called, it will use the following fields:
 // []
-func (this *Queries_UServ) GetAllUsers(ctx context.Context, db Runnable) *Query_UServ_GetAllUsers {
+func (this *Queries_UServ) GetAllUsers(ctx context.Context, db persist.SpannerRunnable) *Query_UServ_GetAllUsers {
 	return &Query_UServ_GetAllUsers{
 		opts: this.opts,
 		ctx:  ctx,
@@ -192,7 +176,7 @@ func (this *Queries_UServ) GetAllUsers(ctx context.Context, db Runnable) *Query_
 // Query_UServ_GetAllUsers (future doc string needed)
 type Query_UServ_GetAllUsers struct {
 	opts Opts_UServ
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -229,7 +213,7 @@ func (this *Query_UServ_GetAllUsers) Execute(x In_UServ_GetAllUsers) *Iter_UServ
 // SelectUserById returns a struct that will perform the 'select_user_by_id' query.
 // When Execute is called, it will use the following fields:
 // [id]
-func (this *Queries_UServ) SelectUserById(ctx context.Context, db Runnable) *Query_UServ_SelectUserById {
+func (this *Queries_UServ) SelectUserById(ctx context.Context, db persist.SpannerRunnable) *Query_UServ_SelectUserById {
 	return &Query_UServ_SelectUserById{
 		opts: this.opts,
 		ctx:  ctx,
@@ -240,7 +224,7 @@ func (this *Queries_UServ) SelectUserById(ctx context.Context, db Runnable) *Que
 // Query_UServ_SelectUserById (future doc string needed)
 type Query_UServ_SelectUserById struct {
 	opts Opts_UServ
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -277,7 +261,7 @@ func (this *Query_UServ_SelectUserById) Execute(x In_UServ_SelectUserById) *Iter
 // UpdateUserName returns a struct that will perform the 'update_user_name' query.
 // When Execute is called, it will use the following fields:
 // [name id]
-func (this *Queries_UServ) UpdateUserName(ctx context.Context, db Runnable) *Query_UServ_UpdateUserName {
+func (this *Queries_UServ) UpdateUserName(ctx context.Context, db persist.SpannerRunnable) *Query_UServ_UpdateUserName {
 	return &Query_UServ_UpdateUserName{
 		opts: this.opts,
 		ctx:  ctx,
@@ -288,7 +272,7 @@ func (this *Queries_UServ) UpdateUserName(ctx context.Context, db Runnable) *Que
 // Query_UServ_UpdateUserName (future doc string needed)
 type Query_UServ_UpdateUserName struct {
 	opts Opts_UServ
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -326,7 +310,7 @@ func (this *Query_UServ_UpdateUserName) Execute(x In_UServ_UpdateUserName) *Iter
 // UpdateNameToFoo returns a struct that will perform the 'update_name_to_foo' query.
 // When Execute is called, it will use the following fields:
 // [id]
-func (this *Queries_UServ) UpdateNameToFoo(ctx context.Context, db Runnable) *Query_UServ_UpdateNameToFoo {
+func (this *Queries_UServ) UpdateNameToFoo(ctx context.Context, db persist.SpannerRunnable) *Query_UServ_UpdateNameToFoo {
 	return &Query_UServ_UpdateNameToFoo{
 		opts: this.opts,
 		ctx:  ctx,
@@ -337,7 +321,7 @@ func (this *Queries_UServ) UpdateNameToFoo(ctx context.Context, db Runnable) *Qu
 // Query_UServ_UpdateNameToFoo (future doc string needed)
 type Query_UServ_UpdateNameToFoo struct {
 	opts Opts_UServ
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -374,7 +358,7 @@ func (this *Query_UServ_UpdateNameToFoo) Execute(x In_UServ_UpdateNameToFoo) *It
 // GetFriends returns a struct that will perform the 'get_friends' query.
 // When Execute is called, it will use the following fields:
 // [names]
-func (this *Queries_UServ) GetFriends(ctx context.Context, db Runnable) *Query_UServ_GetFriends {
+func (this *Queries_UServ) GetFriends(ctx context.Context, db persist.SpannerRunnable) *Query_UServ_GetFriends {
 	return &Query_UServ_GetFriends{
 		opts: this.opts,
 		ctx:  ctx,
@@ -385,7 +369,7 @@ func (this *Queries_UServ) GetFriends(ctx context.Context, db Runnable) *Query_U
 // Query_UServ_GetFriends (future doc string needed)
 type Query_UServ_GetFriends struct {
 	opts Opts_UServ
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -427,7 +411,7 @@ func (this *Query_UServ_GetFriends) Execute(x In_UServ_GetFriends) *Iter_UServ_G
 // Drop returns a struct that will perform the 'drop' query.
 // When Execute is called, it will use the following fields:
 // []
-func (this *Queries_UServ) Drop(ctx context.Context, db Runnable) *Query_UServ_Drop {
+func (this *Queries_UServ) Drop(ctx context.Context, db persist.SpannerRunnable) *Query_UServ_Drop {
 	return &Query_UServ_Drop{
 		opts: this.opts,
 		ctx:  ctx,
@@ -438,7 +422,7 @@ func (this *Queries_UServ) Drop(ctx context.Context, db Runnable) *Query_UServ_D
 // Query_UServ_Drop (future doc string needed)
 type Query_UServ_Drop struct {
 	opts Opts_UServ
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -1880,7 +1864,7 @@ type DefaultMappingImpl_UServ_TimestampTimestamp struct{}
 func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToProto(**timestamp.Timestamp) error {
 	return nil
 }
-func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToSpanner(*timestamp.Timestamp) SpannerScanValuer {
+func (this *DefaultMappingImpl_UServ_TimestampTimestamp) ToSpanner(*timestamp.Timestamp) persist.SpannerScanValuer {
 	return this
 }
 func (this *DefaultMappingImpl_UServ_TimestampTimestamp) SpannerScan(*spanner.GenericColumnValue) error {
@@ -1892,7 +1876,7 @@ func (this *DefaultMappingImpl_UServ_TimestampTimestamp) SpannerValue() (interfa
 
 type MappingImpl_UServ_TimestampTimestamp interface {
 	ToProto(**timestamp.Timestamp) error
-	ToSpanner(*timestamp.Timestamp) SpannerScanValuer
+	ToSpanner(*timestamp.Timestamp) persist.SpannerScanValuer
 	SpannerScan(*spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }
@@ -1906,7 +1890,7 @@ type DefaultMappingImpl_UServ_SliceStringParam struct{}
 func (this *DefaultMappingImpl_UServ_SliceStringParam) ToProto(**SliceStringParam) error {
 	return nil
 }
-func (this *DefaultMappingImpl_UServ_SliceStringParam) ToSpanner(*SliceStringParam) SpannerScanValuer {
+func (this *DefaultMappingImpl_UServ_SliceStringParam) ToSpanner(*SliceStringParam) persist.SpannerScanValuer {
 	return this
 }
 func (this *DefaultMappingImpl_UServ_SliceStringParam) SpannerScan(*spanner.GenericColumnValue) error {
@@ -1918,7 +1902,7 @@ func (this *DefaultMappingImpl_UServ_SliceStringParam) SpannerValue() (interface
 
 type MappingImpl_UServ_SliceStringParam interface {
 	ToProto(**SliceStringParam) error
-	ToSpanner(*SliceStringParam) SpannerScanValuer
+	ToSpanner(*SliceStringParam) persist.SpannerScanValuer
 	SpannerScan(*spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }
@@ -2056,7 +2040,7 @@ func (this *Impl_UServ) GetAllUsers(req *Empty, stream UServ_GetAllUsersServer) 
 	}
 	return nil
 }
-func (this *Impl_UServ) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer, tx PersistTx) error {
+func (this *Impl_UServ) GetAllUsersTx(req *Empty, stream UServ_GetAllUsersServer, tx persist.SpannerRunnable) error {
 	ctx := stream.Context()
 	query := this.QUERIES.GetAllUsers(ctx, tx)
 	iter := query.Execute(req)
@@ -2102,7 +2086,7 @@ func (this *Impl_UServ) GetFriends(req *FriendsReq, stream UServ_GetFriendsServe
 	}
 	return nil
 }
-func (this *Impl_UServ) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsServer, tx PersistTx) error {
+func (this *Impl_UServ) GetFriendsTx(req *FriendsReq, stream UServ_GetFriendsServer, tx persist.SpannerRunnable) error {
 	ctx := stream.Context()
 	query := this.QUERIES.GetFriends(ctx, tx)
 	iter := query.Execute(req)

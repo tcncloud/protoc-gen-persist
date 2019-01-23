@@ -34,19 +34,14 @@ import (
 	"cloud.google.com/go/spanner"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
 type TimeString struct {
 	t *timestamp.Timestamp
 }
 
-type SpannerValuer interface {
-	SpannerValue() (interface{}, error),
-}
-type SpannerScanner interface {
-	SpannerScan(*spanner.GenericColumnValue) error,
-}
-func (ts TimeString) ToSpanner(t *timestamp.Timestamp) MappingImpl_UServ_TimestampTimestamp {
+func (ts TimeString) ToSpanner(t *timestamp.Timestamp) persist.SpannerScanValuer {
 	ts.t = t
 	return &ts
 }
@@ -75,15 +70,12 @@ func (t *TimeString) SpannerScan(src *spanner.GenericColumnValue) error {
 func (t *TimeString) SpannerValue() (interface{}, error) {
 	return ptypes.TimestampString(t.t), nil
 }
-func (t TimeString) Empty() MappingImpl_UServ_TimestampTimestamp {
-	return new(TimeString)
-}
 
 type SliceStringConverter struct {
 	v *SliceStringParam
 }
 
-func (s *SliceStringConverter) ToSpanner(v *SliceStringParam) MappingImpl_UServ_SliceStringParam {
+func (s *SliceStringConverter) ToSpanner(v *SliceStringParam) persist.SpannerScanValuer {
 	s.v = v
 	return s
 }
@@ -105,10 +97,6 @@ func (s *SliceStringConverter) SpannerScan(src *spanner.GenericColumnValue) erro
 
 func (s *SliceStringConverter) SpannerValue() (interface{}, error) {
 	return s.v.GetSlice(), nil
-}
-
-func (s *SliceStringConverter) Empty() MappingImpl_UServ_SliceStringParam {
-	return new(SliceStringConverter)
 }
 
 var inc int64

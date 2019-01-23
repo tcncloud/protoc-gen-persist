@@ -10,6 +10,7 @@ import (
 	spanner "cloud.google.com/go/spanner"
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	persist "github.com/tcncloud/protoc-gen-persist/persist"
 	test "github.com/tcncloud/protoc-gen-persist/tests/test"
 	context "golang.org/x/net/context"
 	iterator "google.golang.org/api/iterator"
@@ -17,19 +18,6 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-type PersistTx interface {
-	Runnable
-}
-type SpannerScanner interface {
-	SpannerScan(*spanner.GenericColumnValue) error
-}
-type SpannerValuer interface {
-	SpannerValue() (interface{}, error)
-}
-type SpannerScanValuer interface {
-	SpannerScanner
-	SpannerValuer
-}
 type Result interface {
 	LastInsertId() (int64, error)
 	RowsAffected() (int64, error)
@@ -46,10 +34,6 @@ func (sr *SpannerResult) LastInsertId() (int64, error) {
 func (sr *SpannerResult) RowsAffected() (int64, error) {
 	// Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
 	return sr.iter.RowCount, nil
-}
-
-type Runnable interface {
-	QueryWithStats(context.Context, spanner.Statement) *spanner.RowIterator
 }
 
 // Queries_ExtraSrv holds all the queries found the proto service option as methods
@@ -74,7 +58,7 @@ func QueriesExtraSrv(opts ...Opts_ExtraSrv) *Queries_ExtraSrv {
 // Extra returns a struct that will perform the 'extra' query.
 // When Execute is called, it will use the following fields:
 // []
-func (this *Queries_ExtraSrv) Extra(ctx context.Context, db Runnable) *Query_ExtraSrv_Extra {
+func (this *Queries_ExtraSrv) Extra(ctx context.Context, db persist.SpannerRunnable) *Query_ExtraSrv_Extra {
 	return &Query_ExtraSrv_Extra{
 		opts: this.opts,
 		ctx:  ctx,
@@ -85,7 +69,7 @@ func (this *Queries_ExtraSrv) Extra(ctx context.Context, db Runnable) *Query_Ext
 // Query_ExtraSrv_Extra (future doc string needed)
 type Query_ExtraSrv_Extra struct {
 	opts Opts_ExtraSrv
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -474,7 +458,7 @@ func QueriesMySpanner(opts ...Opts_MySpanner) *Queries_MySpanner {
 // Insert returns a struct that will perform the 'insert' query.
 // When Execute is called, it will use the following fields:
 // [id start_time]
-func (this *Queries_MySpanner) Insert(ctx context.Context, db Runnable) *Query_MySpanner_Insert {
+func (this *Queries_MySpanner) Insert(ctx context.Context, db persist.SpannerRunnable) *Query_MySpanner_Insert {
 	return &Query_MySpanner_Insert{
 		opts: this.opts,
 		ctx:  ctx,
@@ -485,7 +469,7 @@ func (this *Queries_MySpanner) Insert(ctx context.Context, db Runnable) *Query_M
 // Query_MySpanner_Insert (future doc string needed)
 type Query_MySpanner_Insert struct {
 	opts Opts_MySpanner
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -527,7 +511,7 @@ func (this *Query_MySpanner_Insert) Execute(x In_MySpanner_Insert) *Iter_MySpann
 // Select returns a struct that will perform the 'select' query.
 // When Execute is called, it will use the following fields:
 // [id name]
-func (this *Queries_MySpanner) Select(ctx context.Context, db Runnable) *Query_MySpanner_Select {
+func (this *Queries_MySpanner) Select(ctx context.Context, db persist.SpannerRunnable) *Query_MySpanner_Select {
 	return &Query_MySpanner_Select{
 		opts: this.opts,
 		ctx:  ctx,
@@ -538,7 +522,7 @@ func (this *Queries_MySpanner) Select(ctx context.Context, db Runnable) *Query_M
 // Query_MySpanner_Select (future doc string needed)
 type Query_MySpanner_Select struct {
 	opts Opts_MySpanner
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -576,7 +560,7 @@ func (this *Query_MySpanner_Select) Execute(x In_MySpanner_Select) *Iter_MySpann
 // SelectIndex returns a struct that will perform the 'select_index' query.
 // When Execute is called, it will use the following fields:
 // [id name]
-func (this *Queries_MySpanner) SelectIndex(ctx context.Context, db Runnable) *Query_MySpanner_SelectIndex {
+func (this *Queries_MySpanner) SelectIndex(ctx context.Context, db persist.SpannerRunnable) *Query_MySpanner_SelectIndex {
 	return &Query_MySpanner_SelectIndex{
 		opts: this.opts,
 		ctx:  ctx,
@@ -587,7 +571,7 @@ func (this *Queries_MySpanner) SelectIndex(ctx context.Context, db Runnable) *Qu
 // Query_MySpanner_SelectIndex (future doc string needed)
 type Query_MySpanner_SelectIndex struct {
 	opts Opts_MySpanner
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -625,7 +609,7 @@ func (this *Query_MySpanner_SelectIndex) Execute(x In_MySpanner_SelectIndex) *It
 // Update returns a struct that will perform the 'update' query.
 // When Execute is called, it will use the following fields:
 // [start_time id]
-func (this *Queries_MySpanner) Update(ctx context.Context, db Runnable) *Query_MySpanner_Update {
+func (this *Queries_MySpanner) Update(ctx context.Context, db persist.SpannerRunnable) *Query_MySpanner_Update {
 	return &Query_MySpanner_Update{
 		opts: this.opts,
 		ctx:  ctx,
@@ -636,7 +620,7 @@ func (this *Queries_MySpanner) Update(ctx context.Context, db Runnable) *Query_M
 // Query_MySpanner_Update (future doc string needed)
 type Query_MySpanner_Update struct {
 	opts Opts_MySpanner
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -679,7 +663,7 @@ func (this *Query_MySpanner_Update) Execute(x In_MySpanner_Update) *Iter_MySpann
 // Delete returns a struct that will perform the 'delete' query.
 // When Execute is called, it will use the following fields:
 // [start_id end_id]
-func (this *Queries_MySpanner) Delete(ctx context.Context, db Runnable) *Query_MySpanner_Delete {
+func (this *Queries_MySpanner) Delete(ctx context.Context, db persist.SpannerRunnable) *Query_MySpanner_Delete {
 	return &Query_MySpanner_Delete{
 		opts: this.opts,
 		ctx:  ctx,
@@ -690,7 +674,7 @@ func (this *Queries_MySpanner) Delete(ctx context.Context, db Runnable) *Query_M
 // Query_MySpanner_Delete (future doc string needed)
 type Query_MySpanner_Delete struct {
 	opts Opts_MySpanner
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -728,7 +712,7 @@ func (this *Query_MySpanner_Delete) Execute(x In_MySpanner_Delete) *Iter_MySpann
 // SelectAll returns a struct that will perform the 'select_all' query.
 // When Execute is called, it will use the following fields:
 // []
-func (this *Queries_MySpanner) SelectAll(ctx context.Context, db Runnable) *Query_MySpanner_SelectAll {
+func (this *Queries_MySpanner) SelectAll(ctx context.Context, db persist.SpannerRunnable) *Query_MySpanner_SelectAll {
 	return &Query_MySpanner_SelectAll{
 		opts: this.opts,
 		ctx:  ctx,
@@ -739,7 +723,7 @@ func (this *Queries_MySpanner) SelectAll(ctx context.Context, db Runnable) *Quer
 // Query_MySpanner_SelectAll (future doc string needed)
 type Query_MySpanner_SelectAll struct {
 	opts Opts_MySpanner
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -776,7 +760,7 @@ func (this *Query_MySpanner_SelectAll) Execute(x In_MySpanner_SelectAll) *Iter_M
 // Insert_3 returns a struct that will perform the 'insert_3' query.
 // When Execute is called, it will use the following fields:
 // [id start_time]
-func (this *Queries_MySpanner) Insert_3(ctx context.Context, db Runnable) *Query_MySpanner_Insert_3 {
+func (this *Queries_MySpanner) Insert_3(ctx context.Context, db persist.SpannerRunnable) *Query_MySpanner_Insert_3 {
 	return &Query_MySpanner_Insert_3{
 		opts: this.opts,
 		ctx:  ctx,
@@ -787,7 +771,7 @@ func (this *Queries_MySpanner) Insert_3(ctx context.Context, db Runnable) *Query
 // Query_MySpanner_Insert_3 (future doc string needed)
 type Query_MySpanner_Insert_3 struct {
 	opts Opts_MySpanner
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -829,7 +813,7 @@ func (this *Query_MySpanner_Insert_3) Execute(x In_MySpanner_Insert_3) *Iter_MyS
 // DeleteId returns a struct that will perform the 'delete_id' query.
 // When Execute is called, it will use the following fields:
 // [id]
-func (this *Queries_MySpanner) DeleteId(ctx context.Context, db Runnable) *Query_MySpanner_DeleteId {
+func (this *Queries_MySpanner) DeleteId(ctx context.Context, db persist.SpannerRunnable) *Query_MySpanner_DeleteId {
 	return &Query_MySpanner_DeleteId{
 		opts: this.opts,
 		ctx:  ctx,
@@ -840,7 +824,7 @@ func (this *Queries_MySpanner) DeleteId(ctx context.Context, db Runnable) *Query
 // Query_MySpanner_DeleteId (future doc string needed)
 type Query_MySpanner_DeleteId struct {
 	opts Opts_MySpanner
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -877,7 +861,7 @@ func (this *Query_MySpanner_DeleteId) Execute(x In_MySpanner_DeleteId) *Iter_MyS
 // SetNameAsdf returns a struct that will perform the 'set_name_asdf' query.
 // When Execute is called, it will use the following fields:
 // [id]
-func (this *Queries_MySpanner) SetNameAsdf(ctx context.Context, db Runnable) *Query_MySpanner_SetNameAsdf {
+func (this *Queries_MySpanner) SetNameAsdf(ctx context.Context, db persist.SpannerRunnable) *Query_MySpanner_SetNameAsdf {
 	return &Query_MySpanner_SetNameAsdf{
 		opts: this.opts,
 		ctx:  ctx,
@@ -888,7 +872,7 @@ func (this *Queries_MySpanner) SetNameAsdf(ctx context.Context, db Runnable) *Qu
 // Query_MySpanner_SetNameAsdf (future doc string needed)
 type Query_MySpanner_SetNameAsdf struct {
 	opts Opts_MySpanner
-	db   Runnable
+	db   persist.SpannerRunnable
 	ctx  context.Context
 }
 
@@ -2420,7 +2404,7 @@ type DefaultMappingImpl_MySpanner_TimestampTimestamp struct{}
 func (this *DefaultMappingImpl_MySpanner_TimestampTimestamp) ToProto(**timestamp.Timestamp) error {
 	return nil
 }
-func (this *DefaultMappingImpl_MySpanner_TimestampTimestamp) ToSpanner(*timestamp.Timestamp) SpannerScanValuer {
+func (this *DefaultMappingImpl_MySpanner_TimestampTimestamp) ToSpanner(*timestamp.Timestamp) persist.SpannerScanValuer {
 	return this
 }
 func (this *DefaultMappingImpl_MySpanner_TimestampTimestamp) SpannerScan(*spanner.GenericColumnValue) error {
@@ -2432,7 +2416,7 @@ func (this *DefaultMappingImpl_MySpanner_TimestampTimestamp) SpannerValue() (int
 
 type MappingImpl_MySpanner_TimestampTimestamp interface {
 	ToProto(**timestamp.Timestamp) error
-	ToSpanner(*timestamp.Timestamp) SpannerScanValuer
+	ToSpanner(*timestamp.Timestamp) persist.SpannerScanValuer
 	SpannerScan(*spanner.GenericColumnValue) error
 	SpannerValue() (interface{}, error)
 }
@@ -2556,7 +2540,7 @@ func (this *Impl_MySpanner) ServerStream(req *test.Name, stream MySpanner_Server
 	}
 	return nil
 }
-func (this *Impl_MySpanner) ServerStreamTx(req *test.Name, stream MySpanner_ServerStreamServer, tx PersistTx) error {
+func (this *Impl_MySpanner) ServerStreamTx(req *test.Name, stream MySpanner_ServerStreamServer, tx persist.SpannerRunnable) error {
 	ctx := stream.Context()
 	query := this.QUERIES.SelectAll(ctx, tx)
 	iter := query.Execute(req)
@@ -2686,7 +2670,7 @@ func (this *Impl_MySpanner) ServerStreamWithHooks(req *test.Name, stream MySpann
 	}
 	return nil
 }
-func (this *Impl_MySpanner) ServerStreamWithHooksTx(req *test.Name, stream MySpanner_ServerStreamWithHooksServer, tx PersistTx) error {
+func (this *Impl_MySpanner) ServerStreamWithHooksTx(req *test.Name, stream MySpanner_ServerStreamWithHooksServer, tx persist.SpannerRunnable) error {
 	ctx := stream.Context()
 	query := this.QUERIES.SelectAll(ctx, tx)
 	iter := query.Execute(req)

@@ -11,24 +11,19 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	persist "github.com/tcncloud/protoc-gen-persist/persist"
 	test "github.com/tcncloud/protoc-gen-persist/tests/test"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
 	gstatus "google.golang.org/grpc/status"
 )
 
-type PersistTx interface {
-	Commit() error
-	Rollback() error
-	Runnable
-}
-
-func NopPersistTx(r Runnable) (PersistTx, error) {
+func NopPersistTx(r persist.Runnable) (persist.PersistTx, error) {
 	return &ignoreTx{r}, nil
 }
 
 type ignoreTx struct {
-	r Runnable
+	r persist.Runnable
 }
 
 func (this *ignoreTx) Commit() error   { return nil }
@@ -45,16 +40,16 @@ type Runnable interface {
 	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 }
 
-func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
 	return db.BeginTx(ctx, nil)
 }
-func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
 	return NopPersistTx(db)
 }
-func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
 	return NopPersistTx(db)
 }
-func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
 	return NopPersistTx(db)
 }
 
@@ -94,7 +89,7 @@ func QueriesTestservice1(opts ...Opts_Testservice1) *Queries_Testservice1 {
 // UnaryExample1 returns a struct that will perform the 'unary_example1' query.
 // When Execute is called, it will use the following fields:
 // [table_id]
-func (this *Queries_Testservice1) UnaryExample1(ctx context.Context, db Runnable) *Query_Testservice1_UnaryExample1 {
+func (this *Queries_Testservice1) UnaryExample1(ctx context.Context, db persist.Runnable) *Query_Testservice1_UnaryExample1 {
 	return &Query_Testservice1_UnaryExample1{
 		opts: this.opts,
 		ctx:  ctx,
@@ -105,7 +100,7 @@ func (this *Queries_Testservice1) UnaryExample1(ctx context.Context, db Runnable
 // Query_Testservice1_UnaryExample1 (future doc string needed)
 type Query_Testservice1_UnaryExample1 struct {
 	opts Opts_Testservice1
-	db   Runnable
+	db   persist.Runnable
 	ctx  context.Context
 }
 
@@ -137,7 +132,7 @@ func (this *Query_Testservice1_UnaryExample1) Execute(x In_Testservice1_UnaryExa
 // UnaryExample2 returns a struct that will perform the 'unary_example2' query.
 // When Execute is called, it will use the following fields:
 // [id]
-func (this *Queries_Testservice1) UnaryExample2(ctx context.Context, db Runnable) *Query_Testservice1_UnaryExample2 {
+func (this *Queries_Testservice1) UnaryExample2(ctx context.Context, db persist.Runnable) *Query_Testservice1_UnaryExample2 {
 	return &Query_Testservice1_UnaryExample2{
 		opts: this.opts,
 		ctx:  ctx,
@@ -148,7 +143,7 @@ func (this *Queries_Testservice1) UnaryExample2(ctx context.Context, db Runnable
 // Query_Testservice1_UnaryExample2 (future doc string needed)
 type Query_Testservice1_UnaryExample2 struct {
 	opts Opts_Testservice1
-	db   Runnable
+	db   persist.Runnable
 	ctx  context.Context
 }
 
@@ -180,7 +175,7 @@ func (this *Query_Testservice1_UnaryExample2) Execute(x In_Testservice1_UnaryExa
 // ServerStreamSelect returns a struct that will perform the 'server_stream_select' query.
 // When Execute is called, it will use the following fields:
 // [table_id]
-func (this *Queries_Testservice1) ServerStreamSelect(ctx context.Context, db Runnable) *Query_Testservice1_ServerStreamSelect {
+func (this *Queries_Testservice1) ServerStreamSelect(ctx context.Context, db persist.Runnable) *Query_Testservice1_ServerStreamSelect {
 	return &Query_Testservice1_ServerStreamSelect{
 		opts: this.opts,
 		ctx:  ctx,
@@ -191,7 +186,7 @@ func (this *Queries_Testservice1) ServerStreamSelect(ctx context.Context, db Run
 // Query_Testservice1_ServerStreamSelect (future doc string needed)
 type Query_Testservice1_ServerStreamSelect struct {
 	opts Opts_Testservice1
-	db   Runnable
+	db   persist.Runnable
 	ctx  context.Context
 }
 
@@ -223,7 +218,7 @@ func (this *Query_Testservice1_ServerStreamSelect) Execute(x In_Testservice1_Ser
 // ClientStreamingExample returns a struct that will perform the 'client_streaming_example' query.
 // When Execute is called, it will use the following fields:
 // [table_id]
-func (this *Queries_Testservice1) ClientStreamingExample(ctx context.Context, db Runnable) *Query_Testservice1_ClientStreamingExample {
+func (this *Queries_Testservice1) ClientStreamingExample(ctx context.Context, db persist.Runnable) *Query_Testservice1_ClientStreamingExample {
 	return &Query_Testservice1_ClientStreamingExample{
 		opts: this.opts,
 		ctx:  ctx,
@@ -234,7 +229,7 @@ func (this *Queries_Testservice1) ClientStreamingExample(ctx context.Context, db
 // Query_Testservice1_ClientStreamingExample (future doc string needed)
 type Query_Testservice1_ClientStreamingExample struct {
 	opts Opts_Testservice1
-	db   Runnable
+	db   persist.Runnable
 	ctx  context.Context
 }
 
@@ -1595,7 +1590,7 @@ func (this *Impl_Testservice1) ServerStreamSelect(req *ExampleTable1, stream Tes
 	}
 	return nil
 }
-func (this *Impl_Testservice1) ServerStreamSelectTx(req *ExampleTable1, stream Testservice1_ServerStreamSelectServer, tx PersistTx) error {
+func (this *Impl_Testservice1) ServerStreamSelectTx(req *ExampleTable1, stream Testservice1_ServerStreamSelectServer, tx persist.PersistTx) error {
 	ctx := stream.Context()
 	query := this.QUERIES.ServerStreamSelect(ctx, tx)
 	iter := query.Execute(req)
@@ -1618,7 +1613,7 @@ func (this *Impl_Testservice1) ClientStreamingExample(stream Testservice1_Client
 	}
 	return nil
 }
-func (this *Impl_Testservice1) ClientStreamingExampleTx(stream Testservice1_ClientStreamingExampleServer, tx PersistTx) error {
+func (this *Impl_Testservice1) ClientStreamingExampleTx(stream Testservice1_ClientStreamingExampleServer, tx persist.PersistTx) error {
 	query := this.QUERIES.ClientStreamingExample(stream.Context(), tx)
 	var first *ExampleTable1
 	for {

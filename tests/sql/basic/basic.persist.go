@@ -11,24 +11,19 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	persist "github.com/tcncloud/protoc-gen-persist/persist"
 	test "github.com/tcncloud/protoc-gen-persist/tests/test"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
 	gstatus "google.golang.org/grpc/status"
 )
 
-type PersistTx interface {
-	Commit() error
-	Rollback() error
-	Runnable
-}
-
-func NopPersistTx(r Runnable) (PersistTx, error) {
+func NopPersistTx(r persist.Runnable) (persist.PersistTx, error) {
 	return &ignoreTx{r}, nil
 }
 
 type ignoreTx struct {
-	r Runnable
+	r persist.Runnable
 }
 
 func (this *ignoreTx) Commit() error   { return nil }
@@ -45,16 +40,16 @@ type Runnable interface {
 	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 }
 
-func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
 	return db.BeginTx(ctx, nil)
 }
-func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
 	return NopPersistTx(db)
 }
-func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
 	return NopPersistTx(db)
 }
-func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
 	return NopPersistTx(db)
 }
 
@@ -94,7 +89,7 @@ func QueriesAmazing(opts ...Opts_Amazing) *Queries_Amazing {
 // SelectById returns a struct that will perform the 'select_by_id' query.
 // When Execute is called, it will use the following fields:
 // [id start_time]
-func (this *Queries_Amazing) SelectById(ctx context.Context, db Runnable) *Query_Amazing_SelectById {
+func (this *Queries_Amazing) SelectById(ctx context.Context, db persist.Runnable) *Query_Amazing_SelectById {
 	return &Query_Amazing_SelectById{
 		opts: this.opts,
 		ctx:  ctx,
@@ -105,7 +100,7 @@ func (this *Queries_Amazing) SelectById(ctx context.Context, db Runnable) *Query
 // Query_Amazing_SelectById (future doc string needed)
 type Query_Amazing_SelectById struct {
 	opts Opts_Amazing
-	db   Runnable
+	db   persist.Runnable
 	ctx  context.Context
 }
 
@@ -142,7 +137,7 @@ func (this *Query_Amazing_SelectById) Execute(x In_Amazing_SelectById) *Iter_Ama
 // SelectByName returns a struct that will perform the 'select_by_name' query.
 // When Execute is called, it will use the following fields:
 // [name]
-func (this *Queries_Amazing) SelectByName(ctx context.Context, db Runnable) *Query_Amazing_SelectByName {
+func (this *Queries_Amazing) SelectByName(ctx context.Context, db persist.Runnable) *Query_Amazing_SelectByName {
 	return &Query_Amazing_SelectByName{
 		opts: this.opts,
 		ctx:  ctx,
@@ -153,7 +148,7 @@ func (this *Queries_Amazing) SelectByName(ctx context.Context, db Runnable) *Que
 // Query_Amazing_SelectByName (future doc string needed)
 type Query_Amazing_SelectByName struct {
 	opts Opts_Amazing
-	db   Runnable
+	db   persist.Runnable
 	ctx  context.Context
 }
 
@@ -185,7 +180,7 @@ func (this *Query_Amazing_SelectByName) Execute(x In_Amazing_SelectByName) *Iter
 // Insert returns a struct that will perform the 'insert' query.
 // When Execute is called, it will use the following fields:
 // [id start_time name]
-func (this *Queries_Amazing) Insert(ctx context.Context, db Runnable) *Query_Amazing_Insert {
+func (this *Queries_Amazing) Insert(ctx context.Context, db persist.Runnable) *Query_Amazing_Insert {
 	return &Query_Amazing_Insert{
 		opts: this.opts,
 		ctx:  ctx,
@@ -196,7 +191,7 @@ func (this *Queries_Amazing) Insert(ctx context.Context, db Runnable) *Query_Ama
 // Query_Amazing_Insert (future doc string needed)
 type Query_Amazing_Insert struct {
 	opts Opts_Amazing
-	db   Runnable
+	db   persist.Runnable
 	ctx  context.Context
 }
 
@@ -1044,7 +1039,7 @@ func (this *Impl_Amazing) ServerStream(req *test.Name, stream Amazing_ServerStre
 	}
 	return nil
 }
-func (this *Impl_Amazing) ServerStreamTx(req *test.Name, stream Amazing_ServerStreamServer, tx PersistTx) error {
+func (this *Impl_Amazing) ServerStreamTx(req *test.Name, stream Amazing_ServerStreamServer, tx persist.PersistTx) error {
 	ctx := stream.Context()
 	query := this.QUERIES.SelectByName(ctx, tx)
 	iter := query.Execute(req)
@@ -1067,7 +1062,7 @@ func (this *Impl_Amazing) ServerStreamWithHooks(req *test.Name, stream Amazing_S
 	}
 	return nil
 }
-func (this *Impl_Amazing) ServerStreamWithHooksTx(req *test.Name, stream Amazing_ServerStreamWithHooksServer, tx PersistTx) error {
+func (this *Impl_Amazing) ServerStreamWithHooksTx(req *test.Name, stream Amazing_ServerStreamWithHooksServer, tx persist.PersistTx) error {
 	ctx := stream.Context()
 	query := this.QUERIES.SelectByName(ctx, tx)
 	iter := query.Execute(req)
@@ -1090,7 +1085,7 @@ func (this *Impl_Amazing) ClientStream(stream Amazing_ClientStreamServer) error 
 	}
 	return nil
 }
-func (this *Impl_Amazing) ClientStreamTx(stream Amazing_ClientStreamServer, tx PersistTx) error {
+func (this *Impl_Amazing) ClientStreamTx(stream Amazing_ClientStreamServer, tx persist.PersistTx) error {
 	query := this.QUERIES.Insert(stream.Context(), tx)
 	var first *test.ExampleTable
 	for {
@@ -1132,7 +1127,7 @@ func (this *Impl_Amazing) ClientStreamWithHook(stream Amazing_ClientStreamWithHo
 	}
 	return nil
 }
-func (this *Impl_Amazing) ClientStreamWithHookTx(stream Amazing_ClientStreamWithHookServer, tx PersistTx) error {
+func (this *Impl_Amazing) ClientStreamWithHookTx(stream Amazing_ClientStreamWithHookServer, tx persist.PersistTx) error {
 	query := this.QUERIES.Insert(stream.Context(), tx)
 	var first *test.ExampleTable
 	for {
