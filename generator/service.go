@@ -236,6 +236,14 @@ func WriteQueries(p *Printer, s *Service) error {
 	qout := func(q *QueryProtoOpts) string {
 		return q.outMsg.GetGoName()
 	}
+	runnable := func() string {
+		if s.IsSQL() {
+			return `persist.Runnable`
+		} else if s.IsSpanner() {
+			return `persist.SpannerRunnable`
+		}
+		return ``
+	}
 
 	createNextParamMarker := func(pmStrat string) func(string) string {
 		var count int
@@ -375,7 +383,7 @@ func Queries`, sName, `(opts ... Opts_`, sName, `) * Queries_`, sName, ` {
 // `, camelQ(q), ` returns a struct that will perform the '`, qname(q), `' query.
 // When Execute is called, it will use the following fields:
 // `, qFieldDoc(q), `
-func (this *Queries_`, sName, `) `, camelQ(q), `(ctx context.Context, db Runnable) *Query_`, sName, `_`, camelQ(q), ` {
+func (this *Queries_`, sName, `) `, camelQ(q), `(ctx context.Context, db `, runnable(), `) *Query_`, sName, `_`, camelQ(q), ` {
     return &Query_`, sName, `_`, camelQ(q), `{
         opts: this.opts,
         ctx: ctx,
@@ -386,7 +394,7 @@ func (this *Queries_`, sName, `) `, camelQ(q), `(ctx context.Context, db Runnabl
 // Query_`, sName, `_`, camelQ(q), ` (future doc string needed) 
 type Query_`, sName, `_`, camelQ(q), ` struct {
     opts Opts_`, sName, `
-    db Runnable
+    db `, runnable(), `
     ctx context.Context
 }
 
@@ -496,7 +504,7 @@ func (this *Query_`, sName, `_`, camelQ(q), `) Execute(x In_`, sName, `_`, camel
 // `, camelQ(q), ` returns a struct that will perform the '`, qname(q), `' query.
 // When Execute is called, it will use the following fields:
 // `, qFieldDoc(q), `
-func (this *Queries_`, sName, `) `, camelQ(q), `(ctx context.Context, db Runnable) *Query_`, sName, `_`, camelQ(q), ` {
+func (this *Queries_`, sName, `) `, camelQ(q), `(ctx context.Context, db `, runnable(), `) *Query_`, sName, `_`, camelQ(q), ` {
     return &Query_`, sName, `_`, camelQ(q), `{
         opts: this.opts,
         ctx: ctx,
@@ -507,7 +515,7 @@ func (this *Queries_`, sName, `) `, camelQ(q), `(ctx context.Context, db Runnabl
 // Query_`, sName, `_`, camelQ(q), ` (future doc string needed) 
 type Query_`, sName, `_`, camelQ(q), ` struct {
     opts Opts_`, sName, `
-    db Runnable
+    db `, runnable(), `
     ctx context.Context
 }
 
@@ -659,7 +667,7 @@ func WriteTypeMappings(p *Printer, s *Service) error {
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToProto(**`, name, `) error {
             return nil
         }
-        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToSpanner(*`, name, `) SpannerScanValuer {
+        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToSpanner(*`, name, `) persist.SpannerScanValuer {
             return this
         }
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) SpannerScan(*spanner.GenericColumnValue) error {
@@ -671,7 +679,7 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 
 		type MappingImpl_`, sName, `_`, titled, ` interface{
 			ToProto(**`, name, `) error
-            ToSpanner(*`, name, `) SpannerScanValuer 
+            ToSpanner(*`, name, `) persist.SpannerScanValuer 
             SpannerScan(*spanner.GenericColumnValue) error
 			SpannerValue() (interface{}, error)
 		}
@@ -1518,6 +1526,7 @@ func WriteImports(p *Printer, f *FileStruct) error {
 		}
 	}
 	p.P("%s \"%s\"\n", "proto", "github.com/golang/protobuf/proto")
+	p.Q("persist ", "\"github.com/tcncloud/protoc-gen-persist/persist\"\n")
 
 	if hasSpanner {
 		p.P("%s \"%s\"\n", "iterator", "google.golang.org/api/iterator")
@@ -1527,18 +1536,13 @@ func WriteImports(p *Printer, f *FileStruct) error {
 
 	if hasSQL {
 		p.Q(`
-type PersistTx interface {
-    Commit() error
-    Rollback() error
-    Runnable
-}
 
-func NopPersistTx(r Runnable) (PersistTx, error) {
+func NopPersistTx(r persist.Runnable) (persist.PersistTx, error) {
     return &ignoreTx{r}, nil
 }
 
 type ignoreTx struct {
-    r Runnable
+    r persist.Runnable
 }
 
 func (this *ignoreTx) Commit() error   { return nil }
@@ -1555,16 +1559,16 @@ type Runnable interface {
     ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 }
 
-func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
     return db.BeginTx(ctx, nil)
 }
-func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
     return NopPersistTx(db)
 }
-func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
     return NopPersistTx(db)
 }
-func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (PersistTx, error) {
+func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
     return NopPersistTx(db)
 }
 
@@ -1585,20 +1589,6 @@ type scanable interface {
         `)
 	} else if hasSpanner {
 		p.Q(`
-type PersistTx interface {
-    Runnable
-}
-type SpannerScanner interface {
-	SpannerScan(*spanner.GenericColumnValue) error
-}
-type SpannerValuer interface {
-	SpannerValue() (interface{}, error)
-}
-type SpannerScanValuer interface {
-	SpannerScanner
-	SpannerValuer
-}
-
 type Result interface {
     LastInsertId() (int64, error)
     RowsAffected() (int64, error)
@@ -1617,9 +1607,6 @@ func (sr *SpannerResult) RowsAffected() (int64, error) {
     return sr.iter.RowCount, nil
 }
 
-type Runnable interface {
-  QueryWithStats(context.Context, spanner.Statement) *spanner.RowIterator
-}
 
         `)
 	}

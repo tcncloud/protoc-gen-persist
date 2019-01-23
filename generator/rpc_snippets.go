@@ -18,6 +18,7 @@ type handlerParams struct {
 	Request        string
 	Response       string
 	RespMethodCall string
+	Tx             string
 	ZeroResponse   bool
 	Before         bool
 	After          bool
@@ -110,7 +111,7 @@ func (this *Impl_{{.Service}}) {{.Method}}(stream {{.Service}}_{{.Method}}Server
     return nil
 }
 
-func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
+func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx persist.PersistTx) error {
     query := this.QUERIES.{{camelCase .Query}}(stream.Context(), tx)
     var first *{{.Request}}
     for {
@@ -332,7 +333,7 @@ func (this *Impl_{{.Service}}) {{.Method}}(req *{{.Request}}, stream {{.Service}
     return nil
 }
 
-func (this *Impl_{{.Service}}) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
+func (this *Impl_{{.Service}}) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx persist.PersistTx) error {
     ctx := stream.Context()
     query := this.QUERIES.{{camelCase .Query}}(ctx, tx)
 
@@ -355,7 +356,7 @@ func (this *Impl_{{.Service}}) {{.Method}}(req *{{.Request}}, stream {{.Service}
     return nil
 }
 
-func (this *Impl_{{.Service}}) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx PersistTx) error {
+func (this *Impl_{{.Service}}) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx persist.SpannerRunnable) error {
     ctx := stream.Context()
     query := this.QUERIES.{{camelCase .Query}}(ctx, tx)
 
