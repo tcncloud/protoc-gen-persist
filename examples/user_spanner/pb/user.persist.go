@@ -724,7 +724,7 @@ func (this *Iter_UServ_GetAllUsers) Next() (*Row_UServ_GetAllUsers, bool) {
 	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
 		return &Row_UServ_GetAllUsers{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
 	}
-	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	convert_created_on := this.tm.TimestampTimestamp()
 	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
 		return &Row_UServ_GetAllUsers{err: fmt.Errorf("SpannerScan failed for created_on")}, true
 	}
@@ -846,7 +846,7 @@ func (this *Iter_UServ_SelectUserById) Next() (*Row_UServ_SelectUserById, bool) 
 	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
 		return &Row_UServ_SelectUserById{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
 	}
-	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	convert_created_on := this.tm.TimestampTimestamp()
 	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
 		return &Row_UServ_SelectUserById{err: fmt.Errorf("SpannerScan failed for created_on")}, true
 	}
@@ -968,7 +968,7 @@ func (this *Iter_UServ_UpdateUserName) Next() (*Row_UServ_UpdateUserName, bool) 
 	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
 		return &Row_UServ_UpdateUserName{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
 	}
-	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	convert_created_on := this.tm.TimestampTimestamp()
 	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
 		return &Row_UServ_UpdateUserName{err: fmt.Errorf("SpannerScan failed for created_on")}, true
 	}
@@ -1175,7 +1175,7 @@ func (this *Iter_UServ_GetFriends) Next() (*Row_UServ_GetFriends, bool) {
 	if err := row.ColumnByName("created_on", &created_on_col); err != nil {
 		return &Row_UServ_GetFriends{err: fmt.Errorf("failed to convert db column created_on to spanner.GenericColumnValue")}, true
 	}
-	convert_created_on := this.tm.TimestampTimestamp().Empty()
+	convert_created_on := this.tm.TimestampTimestamp()
 	if err := convert_created_on.SpannerScan(&created_on_col); err != nil {
 		return &Row_UServ_GetFriends{err: fmt.Errorf("SpannerScan failed for created_on")}, true
 	}
@@ -1858,6 +1858,7 @@ type TypeMappings_UServ interface {
 	TimestampTimestamp() MappingImpl_UServ_TimestampTimestamp
 	SliceStringParam() MappingImpl_UServ_SliceStringParam
 }
+
 type DefaultTypeMappings_UServ struct{}
 
 func (this *DefaultTypeMappings_UServ) TimestampTimestamp() MappingImpl_UServ_TimestampTimestamp {
