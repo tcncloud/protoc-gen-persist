@@ -639,7 +639,6 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 		}
 		type MappingImpl_`, sName, `_`, titled, ` interface {
 			ToProto(**`, name, `) error
-			Empty() MappingImpl_`, sName, `_`, titled, `
 			ToSql(*`, name, `) sql.Scanner
 			sql.Scanner
 			driver.Valuer
@@ -660,7 +659,7 @@ func WriteTypeMappings(p *Printer, s *Service) error {
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToProto(**`, name, `) error {
             return nil
         }
-        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToSpanner(*`, name, `) MappingImpl_`, sName, `_`, titled, ` {
+        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToSpanner(*`, name, `) SpannerScanValuer {
             return this
         }
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) SpannerScan(*spanner.GenericColumnValue) error {
@@ -672,8 +671,7 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 
 		type MappingImpl_`, sName, `_`, titled, ` interface{
 			ToProto(**`, name, `) error
-			Empty() MappingImpl_`, sName, `_`, titled, `
-            ToSpanner(*`, name, `) MappingImpl_`, sName, `_`, titled, `
+            ToSpanner(*`, name, `) SpannerScanValuer 
             SpannerScan(*spanner.GenericColumnValue) error
 			SpannerValue() (interface{}, error)
 		}
@@ -1589,6 +1587,16 @@ type scanable interface {
 		p.Q(`
 type PersistTx interface {
     Runnable
+}
+type SpannerScanner interface {
+	SpannerScan(*spanner.GenericColumnValue) error
+}
+type SpannerValuer interface {
+	SpannerValue() (interface{}, error)
+}
+type SpannerScanValuer interface {
+	SpannerScanner
+	SpannerValuer
 }
 
 type Result interface {
