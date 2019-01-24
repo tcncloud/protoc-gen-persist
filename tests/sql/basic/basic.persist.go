@@ -278,7 +278,7 @@ func (this *Iter_Amazing_SelectById) One() *Row_Amazing_SelectById {
 // Zero returns an error if there were any rows in the result
 func (this *Iter_Amazing_SelectById) Zero() error {
 	row, ok := this.Next()
-	if row != nil && row.err != nil {
+	if row != nil && row.err != nil && row.err != io.EOF {
 		return row.err
 	}
 	if ok {
@@ -289,12 +289,14 @@ func (this *Iter_Amazing_SelectById) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Amazing_SelectById) Next() (*Row_Amazing_SelectById, bool) {
-	if this.rows == nil || this.err == io.EOF {
-		return nil, false
-	} else if this.err != nil {
+	if this.err != io.EOF && this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Amazing_SelectById{err: err}, true
+	}
+	if this.rows == nil {
+		this.err = io.EOF
+		return nil, false
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {
@@ -419,7 +421,7 @@ func (this *Iter_Amazing_SelectByName) One() *Row_Amazing_SelectByName {
 // Zero returns an error if there were any rows in the result
 func (this *Iter_Amazing_SelectByName) Zero() error {
 	row, ok := this.Next()
-	if row != nil && row.err != nil {
+	if row != nil && row.err != nil && row.err != io.EOF {
 		return row.err
 	}
 	if ok {
@@ -430,12 +432,14 @@ func (this *Iter_Amazing_SelectByName) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Amazing_SelectByName) Next() (*Row_Amazing_SelectByName, bool) {
-	if this.rows == nil || this.err == io.EOF {
-		return nil, false
-	} else if this.err != nil {
+	if this.err != io.EOF && this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Amazing_SelectByName{err: err}, true
+	}
+	if this.rows == nil {
+		this.err = io.EOF
+		return nil, false
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {
@@ -560,7 +564,7 @@ func (this *Iter_Amazing_Insert) One() *Row_Amazing_Insert {
 // Zero returns an error if there were any rows in the result
 func (this *Iter_Amazing_Insert) Zero() error {
 	row, ok := this.Next()
-	if row != nil && row.err != nil {
+	if row != nil && row.err != nil && row.err != io.EOF {
 		return row.err
 	}
 	if ok {
@@ -571,12 +575,14 @@ func (this *Iter_Amazing_Insert) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Amazing_Insert) Next() (*Row_Amazing_Insert, bool) {
-	if this.rows == nil || this.err == io.EOF {
-		return nil, false
-	} else if this.err != nil {
+	if this.err != io.EOF && this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Amazing_Insert{err: err}, true
+	}
+	if this.rows == nil {
+		this.err = io.EOF
+		return nil, false
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {

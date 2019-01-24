@@ -307,7 +307,7 @@ func (this *Iter_Testservice1_UnaryExample1) One() *Row_Testservice1_UnaryExampl
 // Zero returns an error if there were any rows in the result
 func (this *Iter_Testservice1_UnaryExample1) Zero() error {
 	row, ok := this.Next()
-	if row != nil && row.err != nil {
+	if row != nil && row.err != nil && row.err != io.EOF {
 		return row.err
 	}
 	if ok {
@@ -318,12 +318,14 @@ func (this *Iter_Testservice1_UnaryExample1) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Testservice1_UnaryExample1) Next() (*Row_Testservice1_UnaryExample1, bool) {
-	if this.rows == nil || this.err == io.EOF {
-		return nil, false
-	} else if this.err != nil {
+	if this.err != io.EOF && this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Testservice1_UnaryExample1{err: err}, true
+	}
+	if this.rows == nil {
+		this.err = io.EOF
+		return nil, false
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {
@@ -516,7 +518,7 @@ func (this *Iter_Testservice1_UnaryExample2) One() *Row_Testservice1_UnaryExampl
 // Zero returns an error if there were any rows in the result
 func (this *Iter_Testservice1_UnaryExample2) Zero() error {
 	row, ok := this.Next()
-	if row != nil && row.err != nil {
+	if row != nil && row.err != nil && row.err != io.EOF {
 		return row.err
 	}
 	if ok {
@@ -527,12 +529,14 @@ func (this *Iter_Testservice1_UnaryExample2) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Testservice1_UnaryExample2) Next() (*Row_Testservice1_UnaryExample2, bool) {
-	if this.rows == nil || this.err == io.EOF {
-		return nil, false
-	} else if this.err != nil {
+	if this.err != io.EOF && this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Testservice1_UnaryExample2{err: err}, true
+	}
+	if this.rows == nil {
+		this.err = io.EOF
+		return nil, false
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {
@@ -725,7 +729,7 @@ func (this *Iter_Testservice1_ServerStreamSelect) One() *Row_Testservice1_Server
 // Zero returns an error if there were any rows in the result
 func (this *Iter_Testservice1_ServerStreamSelect) Zero() error {
 	row, ok := this.Next()
-	if row != nil && row.err != nil {
+	if row != nil && row.err != nil && row.err != io.EOF {
 		return row.err
 	}
 	if ok {
@@ -736,12 +740,14 @@ func (this *Iter_Testservice1_ServerStreamSelect) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Testservice1_ServerStreamSelect) Next() (*Row_Testservice1_ServerStreamSelect, bool) {
-	if this.rows == nil || this.err == io.EOF {
-		return nil, false
-	} else if this.err != nil {
+	if this.err != io.EOF && this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Testservice1_ServerStreamSelect{err: err}, true
+	}
+	if this.rows == nil {
+		this.err = io.EOF
+		return nil, false
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {
@@ -934,7 +940,7 @@ func (this *Iter_Testservice1_ClientStreamingExample) One() *Row_Testservice1_Cl
 // Zero returns an error if there were any rows in the result
 func (this *Iter_Testservice1_ClientStreamingExample) Zero() error {
 	row, ok := this.Next()
-	if row != nil && row.err != nil {
+	if row != nil && row.err != nil && row.err != io.EOF {
 		return row.err
 	}
 	if ok {
@@ -945,12 +951,14 @@ func (this *Iter_Testservice1_ClientStreamingExample) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Testservice1_ClientStreamingExample) Next() (*Row_Testservice1_ClientStreamingExample, bool) {
-	if this.rows == nil || this.err == io.EOF {
-		return nil, false
-	} else if this.err != nil {
+	if this.err != io.EOF && this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Testservice1_ClientStreamingExample{err: err}, true
+	}
+	if this.rows == nil {
+		this.err = io.EOF
+		return nil, false
 	}
 	cols, err := this.rows.Columns()
 	if err != nil {
