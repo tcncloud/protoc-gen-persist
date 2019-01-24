@@ -261,7 +261,7 @@ func (this *Iter_Amazing_SelectById) Each(fun func(*Row_Amazing_SelectById) erro
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Amazing_SelectById) One() *Row_Amazing_SelectById {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Amazing_SelectById{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -404,7 +404,7 @@ func (this *Iter_Amazing_SelectByName) Each(fun func(*Row_Amazing_SelectByName) 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Amazing_SelectByName) One() *Row_Amazing_SelectByName {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Amazing_SelectByName{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -547,7 +547,7 @@ func (this *Iter_Amazing_Insert) Each(fun func(*Row_Amazing_Insert) error) error
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Amazing_Insert) One() *Row_Amazing_Insert {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Amazing_Insert{err: first.err}
 	}
 	_, hasSecond := this.Next()

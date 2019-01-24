@@ -468,7 +468,7 @@ func (this *Iter_UServ_CreateUsersTable) Each(fun func(*Row_UServ_CreateUsersTab
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_CreateUsersTable) One() *Row_UServ_CreateUsersTable {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_CreateUsersTable{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -591,7 +591,7 @@ func (this *Iter_UServ_InsertUsers) Each(fun func(*Row_UServ_InsertUsers) error)
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_InsertUsers) One() *Row_UServ_InsertUsers {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_InsertUsers{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -714,7 +714,7 @@ func (this *Iter_UServ_GetAllUsers) Each(fun func(*Row_UServ_GetAllUsers) error)
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_GetAllUsers) One() *Row_UServ_GetAllUsers {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_GetAllUsers{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -867,7 +867,7 @@ func (this *Iter_UServ_SelectUserById) Each(fun func(*Row_UServ_SelectUserById) 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_SelectUserById) One() *Row_UServ_SelectUserById {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_SelectUserById{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -1020,7 +1020,7 @@ func (this *Iter_UServ_UpdateUserName) Each(fun func(*Row_UServ_UpdateUserName) 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_UpdateUserName) One() *Row_UServ_UpdateUserName {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_UpdateUserName{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -1173,7 +1173,7 @@ func (this *Iter_UServ_UpdateNameToFoo) Each(fun func(*Row_UServ_UpdateNameToFoo
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_UpdateNameToFoo) One() *Row_UServ_UpdateNameToFoo {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_UpdateNameToFoo{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -1296,7 +1296,7 @@ func (this *Iter_UServ_GetFriends) Each(fun func(*Row_UServ_GetFriends) error) e
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_GetFriends) One() *Row_UServ_GetFriends {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_GetFriends{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -1449,7 +1449,7 @@ func (this *Iter_UServ_Drop) Each(fun func(*Row_UServ_Drop) error) error {
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_Drop) One() *Row_UServ_Drop {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_Drop{err: first.err}
 	}
 	_, hasSecond := this.Next()

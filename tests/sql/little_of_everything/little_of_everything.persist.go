@@ -290,7 +290,7 @@ func (this *Iter_Testservice1_UnaryExample1) Each(fun func(*Row_Testservice1_Una
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Testservice1_UnaryExample1) One() *Row_Testservice1_UnaryExample1 {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Testservice1_UnaryExample1{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -501,7 +501,7 @@ func (this *Iter_Testservice1_UnaryExample2) Each(fun func(*Row_Testservice1_Una
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Testservice1_UnaryExample2) One() *Row_Testservice1_UnaryExample2 {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Testservice1_UnaryExample2{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -712,7 +712,7 @@ func (this *Iter_Testservice1_ServerStreamSelect) Each(fun func(*Row_Testservice
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Testservice1_ServerStreamSelect) One() *Row_Testservice1_ServerStreamSelect {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Testservice1_ServerStreamSelect{err: first.err}
 	}
 	_, hasSecond := this.Next()
@@ -923,7 +923,7 @@ func (this *Iter_Testservice1_ClientStreamingExample) Each(fun func(*Row_Testser
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Testservice1_ClientStreamingExample) One() *Row_Testservice1_ClientStreamingExample {
 	first, hasFirst := this.Next()
-	if first != nil && first.err != nil {
+	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Testservice1_ClientStreamingExample{err: first.err}
 	}
 	_, hasSecond := this.Next()
