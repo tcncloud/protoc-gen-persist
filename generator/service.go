@@ -866,7 +866,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
         // One returns the sole row, or ensures an error if there was not one result when this row is converted
         func (this *Iter_`, sName, `_`, camelQ(q), `) One() *Row_`, sName, `_`, camelQ(q), ` {
             first, hasFirst := this.Next()
-            if first != nil && first.err != nil {
+            if first != nil && first.err != nil && first.err != io.EOF {
                 return &Row_`, sName, `_`, camelQ(q), `{err: first.err}
             }
 
