@@ -306,6 +306,8 @@ func (this *Iter_Amazing_SelectById) Next() (*Row_Amazing_SelectById, bool) {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_Amazing_SelectById{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -449,6 +451,8 @@ func (this *Iter_Amazing_SelectByName) Next() (*Row_Amazing_SelectByName, bool) 
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_Amazing_SelectByName{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -592,6 +596,8 @@ func (this *Iter_Amazing_Insert) Next() (*Row_Amazing_Insert, bool) {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_Amazing_Insert{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))

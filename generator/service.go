@@ -912,7 +912,9 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                 if this.err = this.rows.Err(); this.err == nil {
                     this.err = io.EOF
                     return nil, false
-                }
+                } else if this.err != nil {
+					return &Row_`, sName, `_`, camelQ(q), `{err: err}, true
+				}
             }
             toScan := make([]interface{}, len(cols))
             scanned := make([]alwaysScanner, len(cols))

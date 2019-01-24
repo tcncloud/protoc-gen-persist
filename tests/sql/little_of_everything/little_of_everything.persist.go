@@ -335,6 +335,8 @@ func (this *Iter_Testservice1_UnaryExample1) Next() (*Row_Testservice1_UnaryExam
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_Testservice1_UnaryExample1{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -546,6 +548,8 @@ func (this *Iter_Testservice1_UnaryExample2) Next() (*Row_Testservice1_UnaryExam
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_Testservice1_UnaryExample2{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -757,6 +761,8 @@ func (this *Iter_Testservice1_ServerStreamSelect) Next() (*Row_Testservice1_Serv
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_Testservice1_ServerStreamSelect{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -968,6 +974,8 @@ func (this *Iter_Testservice1_ClientStreamingExample) Next() (*Row_Testservice1_
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_Testservice1_ClientStreamingExample{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))

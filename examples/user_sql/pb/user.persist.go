@@ -513,6 +513,8 @@ func (this *Iter_UServ_CreateUsersTable) Next() (*Row_UServ_CreateUsersTable, bo
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_UServ_CreateUsersTable{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -636,6 +638,8 @@ func (this *Iter_UServ_InsertUsers) Next() (*Row_UServ_InsertUsers, bool) {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_UServ_InsertUsers{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -759,6 +763,8 @@ func (this *Iter_UServ_GetAllUsers) Next() (*Row_UServ_GetAllUsers, bool) {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_UServ_GetAllUsers{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -912,6 +918,8 @@ func (this *Iter_UServ_SelectUserById) Next() (*Row_UServ_SelectUserById, bool) 
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_UServ_SelectUserById{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -1065,6 +1073,8 @@ func (this *Iter_UServ_UpdateUserName) Next() (*Row_UServ_UpdateUserName, bool) 
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_UServ_UpdateUserName{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -1218,6 +1228,8 @@ func (this *Iter_UServ_UpdateNameToFoo) Next() (*Row_UServ_UpdateNameToFoo, bool
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_UServ_UpdateNameToFoo{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -1341,6 +1353,8 @@ func (this *Iter_UServ_GetFriends) Next() (*Row_UServ_GetFriends, bool) {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_UServ_GetFriends{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
@@ -1494,6 +1508,8 @@ func (this *Iter_UServ_Drop) Next() (*Row_UServ_Drop, bool) {
 		if this.err = this.rows.Err(); this.err == nil {
 			this.err = io.EOF
 			return nil, false
+		} else if this.err != nil {
+			return &Row_UServ_Drop{err: err}, true
 		}
 	}
 	toScan := make([]interface{}, len(cols))
