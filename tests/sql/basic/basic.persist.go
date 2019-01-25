@@ -327,7 +327,7 @@ func (this *Iter_Amazing_SelectById) Next() (*Row_Amazing_SelectById, bool) {
 			if !ok {
 				return &Row_Amazing_SelectById{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
-			res.Id = r
+			res.Id = int64(r)
 		case "start_time":
 			var converted = this.tm.TimestampTimestamp()
 			if err := converted.Scan(*scanned[i].i); err != nil {
@@ -472,7 +472,7 @@ func (this *Iter_Amazing_SelectByName) Next() (*Row_Amazing_SelectByName, bool) 
 			if !ok {
 				return &Row_Amazing_SelectByName{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
-			res.Id = r
+			res.Id = int64(r)
 		case "start_time":
 			var converted = this.tm.TimestampTimestamp()
 			if err := converted.Scan(*scanned[i].i); err != nil {

@@ -352,11 +352,11 @@ func (this *Iter_Testservice1_UnaryExample1) Next() (*Row_Testservice1_UnaryExam
 		_ = i
 		switch col {
 		case "table_id":
-			r, ok := (*scanned[i].i).(int32)
+			r, ok := (*scanned[i].i).(int64)
 			if !ok {
 				return &Row_Testservice1_UnaryExample1{err: fmt.Errorf("cant convert db column table_id to protobuf go type ")}, true
 			}
-			res.TableId = r
+			res.TableId = int32(r)
 		case "key":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
@@ -565,11 +565,11 @@ func (this *Iter_Testservice1_UnaryExample2) Next() (*Row_Testservice1_UnaryExam
 		_ = i
 		switch col {
 		case "table_id":
-			r, ok := (*scanned[i].i).(int32)
+			r, ok := (*scanned[i].i).(int64)
 			if !ok {
 				return &Row_Testservice1_UnaryExample2{err: fmt.Errorf("cant convert db column table_id to protobuf go type ")}, true
 			}
-			res.TableId = r
+			res.TableId = int32(r)
 		case "key":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
@@ -778,11 +778,11 @@ func (this *Iter_Testservice1_ServerStreamSelect) Next() (*Row_Testservice1_Serv
 		_ = i
 		switch col {
 		case "table_id":
-			r, ok := (*scanned[i].i).(int32)
+			r, ok := (*scanned[i].i).(int64)
 			if !ok {
 				return &Row_Testservice1_ServerStreamSelect{err: fmt.Errorf("cant convert db column table_id to protobuf go type ")}, true
 			}
-			res.TableId = r
+			res.TableId = int32(r)
 		case "key":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
