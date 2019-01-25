@@ -500,7 +500,10 @@ func (this *Iter_UServ_CreateUsersTable) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_UServ_CreateUsersTable) Next() (*Row_UServ_CreateUsersTable, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_UServ_CreateUsersTable{err: err}, true
@@ -625,7 +628,10 @@ func (this *Iter_UServ_InsertUsers) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_UServ_InsertUsers) Next() (*Row_UServ_InsertUsers, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_UServ_InsertUsers{err: err}, true
@@ -750,7 +756,10 @@ func (this *Iter_UServ_GetAllUsers) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_UServ_GetAllUsers) Next() (*Row_UServ_GetAllUsers, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_UServ_GetAllUsers{err: err}, true
@@ -911,7 +920,10 @@ func (this *Iter_UServ_SelectUserById) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_UServ_SelectUserById) Next() (*Row_UServ_SelectUserById, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_UServ_SelectUserById{err: err}, true
@@ -1072,7 +1084,10 @@ func (this *Iter_UServ_UpdateUserName) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_UServ_UpdateUserName) Next() (*Row_UServ_UpdateUserName, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_UServ_UpdateUserName{err: err}, true
@@ -1233,7 +1248,10 @@ func (this *Iter_UServ_UpdateNameToFoo) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_UServ_UpdateNameToFoo) Next() (*Row_UServ_UpdateNameToFoo, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_UServ_UpdateNameToFoo{err: err}, true
@@ -1358,7 +1376,10 @@ func (this *Iter_UServ_GetFriends) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_UServ_GetFriends) Next() (*Row_UServ_GetFriends, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_UServ_GetFriends{err: err}, true
@@ -1519,7 +1540,10 @@ func (this *Iter_UServ_Drop) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_UServ_Drop) Next() (*Row_UServ_Drop, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_UServ_Drop{err: err}, true

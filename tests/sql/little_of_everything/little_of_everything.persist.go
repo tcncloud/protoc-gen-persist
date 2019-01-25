@@ -318,7 +318,10 @@ func (this *Iter_Testservice1_UnaryExample1) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Testservice1_UnaryExample1) Next() (*Row_Testservice1_UnaryExample1, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Testservice1_UnaryExample1{err: err}, true
@@ -531,7 +534,10 @@ func (this *Iter_Testservice1_UnaryExample2) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Testservice1_UnaryExample2) Next() (*Row_Testservice1_UnaryExample2, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Testservice1_UnaryExample2{err: err}, true
@@ -744,7 +750,10 @@ func (this *Iter_Testservice1_ServerStreamSelect) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Testservice1_ServerStreamSelect) Next() (*Row_Testservice1_ServerStreamSelect, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Testservice1_ServerStreamSelect{err: err}, true
@@ -957,7 +966,10 @@ func (this *Iter_Testservice1_ClientStreamingExample) Zero() error {
 
 // Next returns the next scanned row out of the database, or (nil, false) if there are no more rows
 func (this *Iter_Testservice1_ClientStreamingExample) Next() (*Row_Testservice1_ClientStreamingExample, bool) {
-	if this.err != io.EOF && this.err != nil {
+	if this.err == io.EOF {
+		return nil, false
+	}
+	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
 		return &Row_Testservice1_ClientStreamingExample{err: err}, true
