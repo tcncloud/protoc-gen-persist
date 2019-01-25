@@ -43,12 +43,14 @@ message User {
     string name = 2;
     Friends friends = 3;
     google.protobuf.Timestamp created_on = 4;
+    int32 id2 = 5;
 }
 message InsertUserReq {
     int64 id = 1;
     string name = 2;
     Friends friends = 3;
     google.protobuf.Timestamp created_on = 4;
+    int32 id2 = 5;
 }
 
 message Friends {
@@ -80,24 +82,24 @@ service UServ {
         queries: [{
             name: "create_users_table",
             query: ["CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA,",
-                    "created_on VARCHAR(50))"],
+                    "created_on VARCHAR(50), id2 SMALLINT)"],
             pm_strategy: "$",
             in: ".pb.Empty",
             out: ".pb.Empty",
         }, {
             name: "insert_users",
-            query: ["INSERT INTO users (id, name, friends, created_on) VALUES (@id, @name, @friends, @created_on)"],
+            query: ["INSERT INTO users (id, name, friends, created_on, id2) VALUES (@id, @name, @friends, @created_on, @id2)"],
             pm_strategy: "$",
             in: ".pb.User",
             out: ".pb.Empty",
         }, {
             name: "get_all_users",
-            query: ["SELECT id, name, friends, created_on FROM users"],
+            query: ["SELECT id, name, friends, created_on, id2 FROM users"],
             in: ".pb.Empty",
             out: ".pb.User",
         }, {
             name: "select_user_by_id",
-            query: ["SELECT id, name, friends, created_on FROM users WHERE id = @id"],
+            query: ["SELECT id, name, friends, created_on, id2 FROM users WHERE id = @id"],
             pm_strategy: "$",
             in: ".pb.User",
             out: ".pb.User",
@@ -115,7 +117,7 @@ service UServ {
             in: ".pb.User",
             out: ".pb.Empty",
         }, {
-            query: ["SELECT id, name, friends, created_on FROM users WHERE name = ANY(@names)"],
+            query: ["SELECT id, name, friends, created_on, id2 FROM users WHERE name = ANY(@names)"],
             pm_strategy: "$",
             name: "get_friends",
             in: ".pb.FriendsReq",

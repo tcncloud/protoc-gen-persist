@@ -119,13 +119,13 @@ func (this *Query_UServ_CreateUsersTable) Execute(x In_UServ_CreateUsersTable) *
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50))", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50), id2 SMALLINT)", params...)
 	return result
 }
 
 // InsertUsers returns a struct that will perform the 'insert_users' query.
 // When Execute is called, it will use the following fields:
-// [id name friends created_on]
+// [id name friends created_on id2]
 func (this *Queries_UServ) InsertUsers(ctx context.Context, db persist.Runnable) *Query_UServ_InsertUsers {
 	return &Query_UServ_InsertUsers{
 		opts: this.opts,
@@ -145,7 +145,7 @@ func (this *Query_UServ_InsertUsers) QueryInType_User()   {}
 func (this *Query_UServ_InsertUsers) QueryOutType_Empty() {}
 
 // Executes the query 'insert_users' with parameters retrieved from x.
-// Fields used: [id name friends created_on]
+// Fields used: [id name friends created_on id2]
 func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ_InsertUsers {
 	var setupErr error
 	params := []interface{}{
@@ -170,6 +170,10 @@ func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ
 			out = mapper.ToSql(x.GetCreatedOn())
 			return
 		}(),
+		func() (out interface{}) {
+			out = x.GetId2()
+			return
+		}(),
 	}
 	result := &Iter_UServ_InsertUsers{
 		tm:  this.opts.MAPPINGS,
@@ -179,7 +183,7 @@ func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on) VALUES ($1, $2, $3, $4)", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on, id2) VALUES ($1, $2, $3, $4, $5)", params...)
 	return result
 }
 
@@ -217,7 +221,7 @@ func (this *Query_UServ_GetAllUsers) Execute(x In_UServ_GetAllUsers) *Iter_UServ
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users", params...)
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on, id2 FROM users", params...)
 	return result
 }
 
@@ -260,7 +264,7 @@ func (this *Query_UServ_SelectUserById) Execute(x In_UServ_SelectUserById) *Iter
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users WHERE id = $1", params...)
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on, id2 FROM users WHERE id = $1", params...)
 	return result
 }
 
@@ -394,7 +398,7 @@ func (this *Query_UServ_GetFriends) Execute(x In_UServ_GetFriends) *Iter_UServ_G
 		result.err = setupErr
 		return result
 	}
-	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on FROM users WHERE name = ANY($1)", params...)
+	result.rows, result.err = this.db.QueryContext(this.ctx, "SELECT id, name, friends, created_on, id2 FROM users WHERE name = ANY($1)", params...)
 	return result
 }
 
@@ -784,7 +788,7 @@ func (this *Iter_UServ_GetAllUsers) Next() (*Row_UServ_GetAllUsers, bool) {
 			if !ok {
 				return &Row_UServ_GetAllUsers{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
-			res.Id = r
+			res.Id = int64(r)
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
@@ -809,6 +813,12 @@ func (this *Iter_UServ_GetAllUsers) Next() (*Row_UServ_GetAllUsers, bool) {
 			if err := converted.ToProto(&res.CreatedOn); err != nil {
 				return &Row_UServ_GetAllUsers{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
 			}
+		case "id2":
+			r, ok := (*scanned[i].i).(int64)
+			if !ok {
+				return &Row_UServ_GetAllUsers{err: fmt.Errorf("cant convert db column id2 to protobuf go type ")}, true
+			}
+			res.Id2 = int32(r)
 
 		default:
 			return &Row_UServ_GetAllUsers{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -939,7 +949,7 @@ func (this *Iter_UServ_SelectUserById) Next() (*Row_UServ_SelectUserById, bool) 
 			if !ok {
 				return &Row_UServ_SelectUserById{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
-			res.Id = r
+			res.Id = int64(r)
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
@@ -964,6 +974,12 @@ func (this *Iter_UServ_SelectUserById) Next() (*Row_UServ_SelectUserById, bool) 
 			if err := converted.ToProto(&res.CreatedOn); err != nil {
 				return &Row_UServ_SelectUserById{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
 			}
+		case "id2":
+			r, ok := (*scanned[i].i).(int64)
+			if !ok {
+				return &Row_UServ_SelectUserById{err: fmt.Errorf("cant convert db column id2 to protobuf go type ")}, true
+			}
+			res.Id2 = int32(r)
 
 		default:
 			return &Row_UServ_SelectUserById{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -1094,7 +1110,7 @@ func (this *Iter_UServ_UpdateUserName) Next() (*Row_UServ_UpdateUserName, bool) 
 			if !ok {
 				return &Row_UServ_UpdateUserName{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
-			res.Id = r
+			res.Id = int64(r)
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
@@ -1119,6 +1135,12 @@ func (this *Iter_UServ_UpdateUserName) Next() (*Row_UServ_UpdateUserName, bool) 
 			if err := converted.ToProto(&res.CreatedOn); err != nil {
 				return &Row_UServ_UpdateUserName{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
 			}
+		case "id2":
+			r, ok := (*scanned[i].i).(int64)
+			if !ok {
+				return &Row_UServ_UpdateUserName{err: fmt.Errorf("cant convert db column id2 to protobuf go type ")}, true
+			}
+			res.Id2 = int32(r)
 
 		default:
 			return &Row_UServ_UpdateUserName{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -1374,7 +1396,7 @@ func (this *Iter_UServ_GetFriends) Next() (*Row_UServ_GetFriends, bool) {
 			if !ok {
 				return &Row_UServ_GetFriends{err: fmt.Errorf("cant convert db column id to protobuf go type ")}, true
 			}
-			res.Id = r
+			res.Id = int64(r)
 		case "name":
 			r, ok := (*scanned[i].i).(string)
 			if !ok {
@@ -1399,6 +1421,12 @@ func (this *Iter_UServ_GetFriends) Next() (*Row_UServ_GetFriends, bool) {
 			if err := converted.ToProto(&res.CreatedOn); err != nil {
 				return &Row_UServ_GetFriends{err: fmt.Errorf("could not convert mapped db column created_onto type on User.CreatedOn: %v", err)}, true
 			}
+		case "id2":
+			r, ok := (*scanned[i].i).(int64)
+			if !ok {
+				return &Row_UServ_GetFriends{err: fmt.Errorf("cant convert db column id2 to protobuf go type ")}, true
+			}
+			res.Id2 = int32(r)
 
 		default:
 			return &Row_UServ_GetFriends{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -1616,6 +1644,7 @@ type In_UServ_InsertUsers interface {
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+	GetId2() int32
 }
 type Out_UServ_InsertUsers interface {
 }
@@ -1683,6 +1712,7 @@ type Out_UServ_GetAllUsers interface {
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+	GetId2() int32
 }
 type Row_UServ_GetAllUsers struct {
 	item Out_UServ_GetAllUsers
@@ -1709,6 +1739,7 @@ func (this *Row_UServ_GetAllUsers) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
+		o.Id2 = res.Id2
 		return nil
 	}
 
@@ -1722,6 +1753,7 @@ func (this *Row_UServ_GetAllUsers) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
+		o.Id2 = res.Id2
 		return nil
 	}
 
@@ -1736,6 +1768,7 @@ func (this *Row_UServ_GetAllUsers) User() (*User, error) {
 		Name:      this.item.GetName(),
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
+		Id2:       this.item.GetId2(),
 	}, nil
 }
 
@@ -1748,6 +1781,7 @@ func (this *Row_UServ_GetAllUsers) Proto() (*User, error) {
 		Name:      this.item.GetName(),
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
+		Id2:       this.item.GetId2(),
 	}, nil
 }
 
@@ -1756,12 +1790,14 @@ type In_UServ_SelectUserById interface {
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+	GetId2() int32
 }
 type Out_UServ_SelectUserById interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+	GetId2() int32
 }
 type Row_UServ_SelectUserById struct {
 	item Out_UServ_SelectUserById
@@ -1788,6 +1824,7 @@ func (this *Row_UServ_SelectUserById) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
+		o.Id2 = res.Id2
 		return nil
 	}
 
@@ -1801,6 +1838,7 @@ func (this *Row_UServ_SelectUserById) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
+		o.Id2 = res.Id2
 		return nil
 	}
 
@@ -1815,6 +1853,7 @@ func (this *Row_UServ_SelectUserById) User() (*User, error) {
 		Name:      this.item.GetName(),
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
+		Id2:       this.item.GetId2(),
 	}, nil
 }
 
@@ -1827,6 +1866,7 @@ func (this *Row_UServ_SelectUserById) Proto() (*User, error) {
 		Name:      this.item.GetName(),
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
+		Id2:       this.item.GetId2(),
 	}, nil
 }
 
@@ -1835,12 +1875,14 @@ type In_UServ_UpdateUserName interface {
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+	GetId2() int32
 }
 type Out_UServ_UpdateUserName interface {
 	GetId() int64
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+	GetId2() int32
 }
 type Row_UServ_UpdateUserName struct {
 	item Out_UServ_UpdateUserName
@@ -1867,6 +1909,7 @@ func (this *Row_UServ_UpdateUserName) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
+		o.Id2 = res.Id2
 		return nil
 	}
 
@@ -1880,6 +1923,7 @@ func (this *Row_UServ_UpdateUserName) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
+		o.Id2 = res.Id2
 		return nil
 	}
 
@@ -1894,6 +1938,7 @@ func (this *Row_UServ_UpdateUserName) User() (*User, error) {
 		Name:      this.item.GetName(),
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
+		Id2:       this.item.GetId2(),
 	}, nil
 }
 
@@ -1906,6 +1951,7 @@ func (this *Row_UServ_UpdateUserName) Proto() (*User, error) {
 		Name:      this.item.GetName(),
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
+		Id2:       this.item.GetId2(),
 	}, nil
 }
 
@@ -1914,6 +1960,7 @@ type In_UServ_UpdateNameToFoo interface {
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+	GetId2() int32
 }
 type Out_UServ_UpdateNameToFoo interface {
 }
@@ -1976,6 +2023,7 @@ type Out_UServ_GetFriends interface {
 	GetName() string
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
+	GetId2() int32
 }
 type Row_UServ_GetFriends struct {
 	item Out_UServ_GetFriends
@@ -2002,6 +2050,7 @@ func (this *Row_UServ_GetFriends) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
+		o.Id2 = res.Id2
 		return nil
 	}
 
@@ -2015,6 +2064,7 @@ func (this *Row_UServ_GetFriends) Unwrap(pointerToMsg proto.Message) error {
 		o.Name = res.Name
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
+		o.Id2 = res.Id2
 		return nil
 	}
 
@@ -2029,6 +2079,7 @@ func (this *Row_UServ_GetFriends) User() (*User, error) {
 		Name:      this.item.GetName(),
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
+		Id2:       this.item.GetId2(),
 	}, nil
 }
 
@@ -2041,6 +2092,7 @@ func (this *Row_UServ_GetFriends) Proto() (*User, error) {
 		Name:      this.item.GetName(),
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
+		Id2:       this.item.GetId2(),
 	}, nil
 }
 

@@ -187,24 +187,28 @@ var users = []*pb.User{
 		Name:      "foo",
 		Friends:   &pb.Friends{Names: []string{"bar", "baz"}},
 		CreatedOn: mustNow(),
+		Id2: 35,
 	},
 	&pb.User{
 		Id:        -1,
 		Name:      "bar",
 		Friends:   &pb.Friends{Names: []string{"foo", "baz"}},
 		CreatedOn: mustNow(),
+		Id2: 35,
 	},
 	&pb.User{
 		Id:        -1,
 		Name:      "baz",
 		Friends:   &pb.Friends{Names: []string{"foo", "bar"}},
 		CreatedOn: mustNow(),
+		Id2: 35,
 	},
 	&pb.User{
 		Id:        -1,
 		Name:      "zed",
 		Friends:   &pb.Friends{},
 		CreatedOn: mustNow(),
+		Id2: 35,
 	},
 }
 
