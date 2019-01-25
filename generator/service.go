@@ -785,6 +785,21 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			str := s.AllStructs.GetStructByProtoName(f.GetTypeName())
 			return str != nil && str.EnumDesc != nil
 		})
+		// ints as int64
+		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
+			typ, err := defaultMapping(f, s.File)
+			// SET OUT ERR
+			if err != nil {
+				outErr = err
+			}
+			cases[f.GetName()] = P(`case "`, fName(f), `":
+            r, ok := (*scanned[i].i).(int64)
+            if !ok {
+                return &Row_`, sName, `_`, camelQ(q), `{err: fmt.Errorf("cant convert db column `, fName(f), ` to protobuf go type `, f.GetTypeName(), `")}, true
+            }
+            res.`, camelF(f), `= `, typ, `(r)
+            `)
+		}, m.MatchQuery(opt), m.QueryFieldScannedAsInt64)
 		// mapping case
 		m.EachQueryOut(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
 			m.EachTM(func(opt *TypeMappingProtoOpts) {
