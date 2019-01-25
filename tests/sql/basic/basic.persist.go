@@ -270,7 +270,7 @@ func (this *Iter_Amazing_SelectById) One() *Row_Amazing_SelectById {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_Amazing_SelectById{err: fmt.Errorf("expected exactly 1 result from query 'SelectById' found %s", amount)}
+		return &Row_Amazing_SelectById{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'SelectById' found %s", amount)}}
 	}
 	return first
 }
@@ -418,7 +418,7 @@ func (this *Iter_Amazing_SelectByName) One() *Row_Amazing_SelectByName {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_Amazing_SelectByName{err: fmt.Errorf("expected exactly 1 result from query 'SelectByName' found %s", amount)}
+		return &Row_Amazing_SelectByName{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'SelectByName' found %s", amount)}}
 	}
 	return first
 }
@@ -566,7 +566,7 @@ func (this *Iter_Amazing_Insert) One() *Row_Amazing_Insert {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_Amazing_Insert{err: fmt.Errorf("expected exactly 1 result from query 'Insert' found %s", amount)}
+		return &Row_Amazing_Insert{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'Insert' found %s", amount)}}
 	}
 	return first
 }

@@ -299,7 +299,7 @@ func (this *Iter_Testservice1_UnaryExample1) One() *Row_Testservice1_UnaryExampl
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_Testservice1_UnaryExample1{err: fmt.Errorf("expected exactly 1 result from query 'UnaryExample1' found %s", amount)}
+		return &Row_Testservice1_UnaryExample1{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'UnaryExample1' found %s", amount)}}
 	}
 	return first
 }
@@ -515,7 +515,7 @@ func (this *Iter_Testservice1_UnaryExample2) One() *Row_Testservice1_UnaryExampl
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_Testservice1_UnaryExample2{err: fmt.Errorf("expected exactly 1 result from query 'UnaryExample2' found %s", amount)}
+		return &Row_Testservice1_UnaryExample2{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'UnaryExample2' found %s", amount)}}
 	}
 	return first
 }
@@ -731,7 +731,7 @@ func (this *Iter_Testservice1_ServerStreamSelect) One() *Row_Testservice1_Server
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_Testservice1_ServerStreamSelect{err: fmt.Errorf("expected exactly 1 result from query 'ServerStreamSelect' found %s", amount)}
+		return &Row_Testservice1_ServerStreamSelect{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'ServerStreamSelect' found %s", amount)}}
 	}
 	return first
 }
@@ -947,7 +947,7 @@ func (this *Iter_Testservice1_ClientStreamingExample) One() *Row_Testservice1_Cl
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_Testservice1_ClientStreamingExample{err: fmt.Errorf("expected exactly 1 result from query 'ClientStreamingExample' found %s", amount)}
+		return &Row_Testservice1_ClientStreamingExample{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'ClientStreamingExample' found %s", amount)}}
 	}
 	return first
 }

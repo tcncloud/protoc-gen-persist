@@ -891,7 +891,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                 if hasSecond {
                     amount = "multiple"
                 }
-                return &Row_`, sName, `_`, camelQ(q), `{err: fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}
+                return &Row_`, sName, `_`, camelQ(q), `{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}}
             }
             return first
         }

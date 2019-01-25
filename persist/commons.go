@@ -29,3 +29,10 @@ type SpannerScanValuer interface {
 	SpannerScanner
 	SpannerValuer
 }
+type NotFound struct {
+	Msg string
+}
+
+func (n NotFound) Error() string {
+	return n.Msg
+}

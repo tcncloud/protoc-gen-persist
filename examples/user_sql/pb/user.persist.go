@@ -481,7 +481,7 @@ func (this *Iter_UServ_CreateUsersTable) One() *Row_UServ_CreateUsersTable {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_UServ_CreateUsersTable{err: fmt.Errorf("expected exactly 1 result from query 'CreateUsersTable' found %s", amount)}
+		return &Row_UServ_CreateUsersTable{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'CreateUsersTable' found %s", amount)}}
 	}
 	return first
 }
@@ -609,7 +609,7 @@ func (this *Iter_UServ_InsertUsers) One() *Row_UServ_InsertUsers {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_UServ_InsertUsers{err: fmt.Errorf("expected exactly 1 result from query 'InsertUsers' found %s", amount)}
+		return &Row_UServ_InsertUsers{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'InsertUsers' found %s", amount)}}
 	}
 	return first
 }
@@ -737,7 +737,7 @@ func (this *Iter_UServ_GetAllUsers) One() *Row_UServ_GetAllUsers {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_UServ_GetAllUsers{err: fmt.Errorf("expected exactly 1 result from query 'GetAllUsers' found %s", amount)}
+		return &Row_UServ_GetAllUsers{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'GetAllUsers' found %s", amount)}}
 	}
 	return first
 }
@@ -901,7 +901,7 @@ func (this *Iter_UServ_SelectUserById) One() *Row_UServ_SelectUserById {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_UServ_SelectUserById{err: fmt.Errorf("expected exactly 1 result from query 'SelectUserById' found %s", amount)}
+		return &Row_UServ_SelectUserById{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'SelectUserById' found %s", amount)}}
 	}
 	return first
 }
@@ -1065,7 +1065,7 @@ func (this *Iter_UServ_UpdateUserName) One() *Row_UServ_UpdateUserName {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_UServ_UpdateUserName{err: fmt.Errorf("expected exactly 1 result from query 'UpdateUserName' found %s", amount)}
+		return &Row_UServ_UpdateUserName{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'UpdateUserName' found %s", amount)}}
 	}
 	return first
 }
@@ -1229,7 +1229,7 @@ func (this *Iter_UServ_UpdateNameToFoo) One() *Row_UServ_UpdateNameToFoo {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_UServ_UpdateNameToFoo{err: fmt.Errorf("expected exactly 1 result from query 'UpdateNameToFoo' found %s", amount)}
+		return &Row_UServ_UpdateNameToFoo{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'UpdateNameToFoo' found %s", amount)}}
 	}
 	return first
 }
@@ -1357,7 +1357,7 @@ func (this *Iter_UServ_GetFriends) One() *Row_UServ_GetFriends {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_UServ_GetFriends{err: fmt.Errorf("expected exactly 1 result from query 'GetFriends' found %s", amount)}
+		return &Row_UServ_GetFriends{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'GetFriends' found %s", amount)}}
 	}
 	return first
 }
@@ -1521,7 +1521,7 @@ func (this *Iter_UServ_Drop) One() *Row_UServ_Drop {
 		if hasSecond {
 			amount = "multiple"
 		}
-		return &Row_UServ_Drop{err: fmt.Errorf("expected exactly 1 result from query 'Drop' found %s", amount)}
+		return &Row_UServ_Drop{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query 'Drop' found %s", amount)}}
 	}
 	return first
 }
