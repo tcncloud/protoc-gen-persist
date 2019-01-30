@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "myenum.go",
+        "time.go",
+    ],
+    importpath = "github.com/tcncloud/protoc-gen-persist/tests/mytime",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//tests/test:go_default_library",
+        "@com_google_cloud_go//spanner:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
+    ],
+)
