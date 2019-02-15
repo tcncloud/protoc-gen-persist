@@ -24,10 +24,10 @@ jobs:
             mkdir ./artifacts
             GOOS=linux
             GOARCH=amd64
-            make gen
+            make 
             tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-state state/options.proto
             GOOS=darwin
-            make gen
+            make 
             tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-state state/options.proto
             VERSION=${CIRCLE_TAG}
             echo ${VERSION}
