@@ -1,0 +1,51 @@
+version: 2.1
+
+executors:
+  exec:
+    docker:
+      - image: tcncloud/golang-node:3
+
+jobs:
+  build:
+    executor: exec
+    steps:
+      - checkout
+      - run: |
+          make
+  github-release:
+    executor: exec
+    steps:
+      - checkout
+      - run:
+          name: "Publish Release on Github"
+          command: |
+            go get github.com/tcnksm/ghr
+            make
+            mkdir ./artifacts
+            GOOS=linux
+            GOARCH=amd64
+            make gen
+            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-state state/options.proto
+            GOOS=darwin
+            make gen
+            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-state state/options.proto
+            VERSION=${CIRCLE_TAG}
+            echo ${VERSION}
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace  ${VERSION} ./artifacts/ 
+
+workflows:
+  version: 2.1
+  main:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+$/
+      - github-release:
+          requires:
+            - build
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v\d+\.\d+\.\d+$/ 
