@@ -25,10 +25,10 @@ jobs:
             GOOS=linux
             GOARCH=amd64
             make 
-            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-state state/options.proto
+            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-persist persist/options.proto
             GOOS=darwin
             make 
-            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-state state/options.proto
+            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-persist persist/options.proto
             VERSION=${CIRCLE_TAG}
             echo ${VERSION}
             ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace  ${VERSION} ./artifacts/ 
