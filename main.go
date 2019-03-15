@@ -36,7 +36,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/generator"
 )
@@ -61,7 +61,10 @@ func main() {
 	if err := proto.Unmarshal(data, &req); err != nil {
 		logrus.Fatal("Error parsing data!")
 	}
+
 	g := generator.NewGenerator(&req)
+
+	g.CommandLineParameters(g.OriginalRequest.GetParameter())
 	err = g.Process()
 	if err != nil {
 		logrus.Fatalf("error processing generator: %s", err)

@@ -98,13 +98,17 @@ func (f *FileStruct) GetPersistPackageOption() string {
 	return ""
 }
 
-func (f *FileStruct) GetImplFileName() string {
+func (f *FileStruct) GetImplFileName(sourceRelative bool) string {
 	_, file := filepath.Split(f.Desc.GetName())
-	return strings.Join([]string{
-		f.GetImplDir(),
-		string(os.PathSeparator),
-		strings.Replace(file, ".proto", ".persist.go", -1),
-	}, "")
+	if sourceRelative {
+		return strings.Replace(file, ".proto", "persist.go", -1)
+	} else {
+		return strings.Join([]string{
+			f.GetImplDir(),
+			string(os.PathSeparator),
+			strings.Replace(file, ".proto", ".persist.go", -1),
+		}, "")
+	}
 }
 
 func (f *FileStruct) GetImplDir() string {
@@ -300,7 +304,7 @@ func (f *FileStruct) ProcessImports() {
 }
 
 type persistFile struct {
-	filename  string
+	// filename  string
 	path      string
 	importStr string
 }

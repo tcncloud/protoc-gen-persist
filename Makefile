@@ -29,33 +29,33 @@
 
 
 PROTO_FILES:= persist/options.proto tests/example1.proto
-PROTOC_DIR?=/usr/local
 
+PROTOC:=$(shell which protoc)
+PROTOC_DIR:=$(PROTOC:/bin/protoc=)
 PROTOC_INCLUDE:=$(PROTOC_DIR)/include
 
-PROTOC:=$(PROTOC_DIR)/bin/protoc
 
 all: build
 
 generate: deps proto-persist proto-examples
 
 proto-persist:
-	$(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	$(PROTOC) -I$(PROTOC_INCLUDE) -I. \
 		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:. \
 		persist/*.proto
 
 proto-examples:
-	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+	 $(PROTOC) -I$(PROTOC_INCLUDE) -I.  \
+	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor,paths=source_relative:. \
 	 	tests/spanner/basic/*.proto
-	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. \
+	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor,paths=source_relative:. \
 	 	tests/sql/little_of_everything/*.proto
-	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+	 $(PROTOC) -I$(PROTOC_INCLUDE) -I.  \
+	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor,paths=source_relative:. \
 	 	tests/sql/basic/*.proto
-	 $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
-	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:$$GOPATH/src \
+	 $(PROTOC) -I$(PROTOC_INCLUDE) -I.  \
+	 	--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor,paths=source_relative:. \
 	 	tests/test/*.proto
 
 build: generate
@@ -70,13 +70,13 @@ test: deps build
 
 test-compile:
 	go build
-	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I.  \
 	 	--plugin=./protoc-gen-persist \
 	 	--persist_out=persist_root=tests/sql/little_of_everything:.  tests/sql/little_of_everything/*.proto
-	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I.  \
 	 	--plugin=./protoc-gen-persist \
 	 	--persist_out=persist_root=tests/sql/basic:.  tests/sql/basic/*.proto
-	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I. -I$$GOPATH/src \
+	DEBUG=false $(PROTOC) -I$(PROTOC_INCLUDE) -I.  \
 		--plugin=./protoc-gen-persist \
 		--persist_out=persist_root=tests/spanner/basic:.  tests/spanner/basic/*.proto
 	cd ./tests/sql/little_of_everything && go build

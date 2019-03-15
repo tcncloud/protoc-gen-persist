@@ -131,7 +131,7 @@ func (s *Services) AddService(pkg string, desc *desc.ServiceDescriptorProto, all
 		AllStructs: allStructs,
 		File:       file,
 	}
-	logrus.Debugf("created a service: %s", ret)
+	logrus.Debugf("created a service: %s", ret.Desc.GetName())
 	*s = append(*s, ret)
 	return ret
 }

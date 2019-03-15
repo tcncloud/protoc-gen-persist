@@ -203,7 +203,7 @@ func (s *StructList) Append(struc *Struct) {
 func (s *StructList) GetStructByFieldDesc(fld *desc.FieldDescriptorProto) *Struct {
 	for _, str := range *s {
 		if str.GetProtoName() == fld.GetName() {
-			logrus.Debugf("the struct name matches. Struct: %s  fld: %s", str.GetProtoName, fld.GetName())
+			logrus.Debugf("the struct name matches. Struct: %s  fld: %s", str.GetProtoName(), fld.GetName())
 			return str
 		}
 	}

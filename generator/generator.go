@@ -31,9 +31,10 @@ package generator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,6 +47,8 @@ type Generator struct {
 	AllStructures   *StructList // all structures present in the files
 	Files           *FileList
 	Response        *plugin_go.CodeGeneratorResponse
+	SourceRelative  bool
+	ImportPaths     bool
 }
 
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
@@ -54,8 +57,31 @@ func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret.AllStructures = NewStructList()
 	ret.Files = NewFileList()
 	ret.Response = new(plugin_go.CodeGeneratorResponse)
+	ret.SourceRelative = false
+	ret.ImportPaths = false
 
 	return ret
+}
+
+func (g *Generator) CommandLineParameters(parameter string) error {
+	// parameter := g.OriginalRequest.GetParameter()
+	for _, p := range strings.Split(parameter, ",") {
+		logrus.WithField("p", p).Info("...")
+		if strings.Contains(p, "=") {
+			cmd := strings.Split(p, "=")
+			switch cmd[0] {
+			case "paths":
+				if cmd[1] == "source_relative" {
+					g.SourceRelative = true
+					g.ImportPaths = false
+				} else {
+					g.SourceRelative = false
+					g.ImportPaths = true
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
@@ -71,7 +97,7 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 			}
 			ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
 				Content: proto.String(string(FormatCode(fileStruct.GetFileName(), fileContents))),
-				Name:    proto.String(fileStruct.GetImplFileName()),
+				Name:    proto.String(fileStruct.GetImplFileName(g.SourceRelative)),
 			})
 		}
 	}
