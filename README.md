@@ -1,5 +1,5 @@
 # protoc-gen-persist
-
+[![CircleCI](https://circleci.com/gh/tcncloud/protoc-gen-persist.svg?style=svg)](https://circleci.com/gh/tcncloud/protoc-gen-persist)
 [![Build Status](https://www.travis-ci.org/tcncloud/protoc-gen-persist.svg?branch=master)](https://www.travis-ci.org/tcncloud/protoc-gen-persist)
 
 Protobuf plugin that generate a persistence layer backed by SQL or Spanner database
