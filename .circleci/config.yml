@@ -3,7 +3,7 @@ version: 2.1
 executors:
   exec:
     docker:
-      - image: tcncloud/golang-node:3
+      - image: tcncloud/golang-node:4
 
 jobs:
   build:
