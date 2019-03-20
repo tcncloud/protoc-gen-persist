@@ -101,7 +101,7 @@ func (f *FileStruct) GetPersistPackageOption() string {
 func (f *FileStruct) GetImplFileName(sourceRelative bool) string {
 	_, file := filepath.Split(f.Desc.GetName())
 	if sourceRelative {
-		return strings.Replace(file, ".proto", "persist.go", -1)
+		return strings.Replace(file, ".proto", ".persist.go", -1)
 	} else {
 		return strings.Join([]string{
 			f.GetImplDir(),
@@ -331,7 +331,7 @@ func (f *FileStruct) Process() error {
 }
 func (f *FileStruct) NeedImport(pkg string) bool {
 	if f.NotSameAsMyPackage(pkg) &&
-		(f.Opts.PersistLibRoot != pkg) &&
+		// (f.Opts.PersistLibRoot != pkg) &&
 		pkg != "" {
 		return true
 	}

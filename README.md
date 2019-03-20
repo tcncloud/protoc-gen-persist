@@ -18,6 +18,12 @@ documentation for the project can be found [Here](docs/index.md)
 The documentation goes over the persist options, how to structure your proto file,
 custom type mapping to/from the database, and spanner query parsing
 
+## Version 4.0.0
+Starting with this version we changed the command line parameters.
+On the `--plugin_out` option you can add `path=source_relative` to make sure that all the generated files will be created on the current directory.
+The default behaviour (don't specify the `path=source_relative`) will generate the files in the same directory with the source files or in a directory computed from the  (persist.pkg) or go_package option.
+
+
 ## Version 3.0.0
 - Complete rework of the plugin (check the [examples](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples) directory for more info)
 

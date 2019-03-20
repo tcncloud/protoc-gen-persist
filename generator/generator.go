@@ -48,7 +48,7 @@ type Generator struct {
 	Files           *FileList
 	Response        *plugin_go.CodeGeneratorResponse
 	SourceRelative  bool
-	ImportPaths     bool
+	// ImportPaths     bool
 }
 
 func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
@@ -58,13 +58,13 @@ func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 	ret.Files = NewFileList()
 	ret.Response = new(plugin_go.CodeGeneratorResponse)
 	ret.SourceRelative = false
-	ret.ImportPaths = false
 
 	return ret
 }
 
 func (g *Generator) CommandLineParameters(parameter string) error {
 	// parameter := g.OriginalRequest.GetParameter()
+	logrus.WithField("command line params", parameter).Info("command line parameters")
 	for _, p := range strings.Split(parameter, ",") {
 		logrus.WithField("p", p).Info("...")
 		if strings.Contains(p, "=") {
@@ -73,10 +73,8 @@ func (g *Generator) CommandLineParameters(parameter string) error {
 			case "paths":
 				if cmd[1] == "source_relative" {
 					g.SourceRelative = true
-					g.ImportPaths = false
 				} else {
 					g.SourceRelative = false
-					g.ImportPaths = true
 				}
 			}
 		}
