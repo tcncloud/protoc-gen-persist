@@ -30,11 +30,18 @@ message Fish {
     double cost = 2;
     string species = 3;
 }
+message FishTank {
+    repeated Fish fishes = 1;
+}
+message DogIds {
+    repeated string values = 1;
+}
+
 message Owner {
     string id = 1;
     repeated Cat cats = 2;
-    repeated Fish fishes = 3;
-    repeated string dog_ids = 4;
+    FishTank aquarium = 3;
+    DogIds dog_ids = 4;
     double money = 5;
 }
 
@@ -59,7 +66,8 @@ PRIMARY KEY (id));`,
 
 CREATE TABLE people (
     id TEXT NOT NULL,
-    cats BYTEA NOT NULL
+    aquarium BYTEA NOT NULL,
+    dog_ids TEXT[],
 PRIMARY KEY (id));`,
 */
 
@@ -76,38 +84,54 @@ service PetShop{
     }
     rpc PetDog(Dog) returns (Empty);
     option (persist.service_type) = SQL;
+    option (persist.mapping) = {
+        types: [
+            {
+                proto_type_name: ".test.DogIds",
+                proto_type: TYPE_MESSAGE
+            }
+        ]
+    };
     option (persist.ql) = {
-    queries: [
-        {
-        name: "GetCatByName",
-        query: [
-            "SELECT",
-                "name,",
-                "age,",
-                "cost",
-            "FROM cats",
-            "WHERE",
-                "name = @cat_name"
-        ],
-        pm_strategy: "$",
-        in: ".test.CatName",
-        out: ".test.Cat",
-        },
-        {
-        name: "InsertFish",
-        query: [
-            "INSERT INTO fish(",
-                "species,",
-                "cost",
-            ") VALUES(",
-                "@species,",
-                "@cost",
-            ")"
-        ],
-        pm_strategy: "$",
-        in: ".test.Fish",
-        out: ".test.Empty",
-        }
+        queries: [
+            {
+                name: "GetCatByName",
+                query: [
+                    "SELECT",
+                        "name,",
+                        "age,",
+                        "cost",
+                    "FROM cats",
+                    "WHERE",
+                        "name = @cat_name"
+                ],
+                pm_strategy: "$",
+                in: ".test.CatName",
+                out: ".test.Cat",
+            },
+            {
+                name: "InsertFish",
+                query: [
+                    "INSERT INTO fish(",
+                        "species,",
+                        "cost",
+                    ") VALUES(",
+                        "@species,",
+                        "@cost",
+                    ")"
+                ],
+                pm_strategy: "$",
+                in: ".test.Fish",
+                out: ".test.Empty",
+            },
+            {
+                name: "GetAllOwners",
+                query: [ "SELECT id, aquarium, dog_ids FROM dog_and_fish_owners" ],
+                pm_strategy: "$",
+                in: ".test.Empty",
+                out: ".test.Owner",
+            }
         ];
+
     };
 }
