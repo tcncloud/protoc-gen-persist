@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package test;
+
+// make sure you have this.  Explaining it is out of scope of this example
+import "persist/options.proto"; 
+
+
+message Empty {}
+message AnimalCount{
+    int64 dogs = 1;
+    int64 cats = 2;
+    int64 fishes = 3;
+}
+
+message Dog {
+    string id = 1;
+    double age = 2;
+    double cost = 3;
+    string name = 4;
+}
+message Cat {
+    string id = 1;
+    double age = 2;
+    double cost = 3;
+    string name = 4;
+}
+message Fish {
+    string id = 1;
+    double cost = 2;
+    string species = 3;
+}
+message Owner {
+    string id = 1;
+    repeated Cat cats = 2;
+    repeated Fish fishes = 3;
+    repeated string dog_ids = 4;
+    double money = 5;
+}
+
+message CatName {
+    string cat_name = 1;
+}
+
+/* Tables **dont** have to, but **could** look like
+CREATE TABLE cats (
+	id TEXT NOT NULL,
+	age TEXT NOT NULL,
+	cost TEXT NOT NULL,
+    name TEXT NOT NULL,
+PRIMARY KEY (id));`,
+
+CREATE TABLE dogs (
+	id TEXT NOT NULL,
+	age TEXT NOT NULL,
+	cost TEXT NOT NULL,
+    name TEXT NOT NULL,
+PRIMARY KEY (id));`,
+
+CREATE TABLE people (
+    id TEXT NOT NULL,
+    cats BYTEA NOT NULL
+PRIMARY KEY (id));`,
+*/
+
+service PetShop{
+    rpc GetCatByName(CatName) returns (Cat){
+        option (persist.opts) = {
+            query: "GetCatByName"
+        };
+    }
+    rpc ShipFish(stream Fish) returns (Empty) {
+        option (persist.opts) = {
+            query: "InsertFish"
+        };
+    }
+    rpc PetDog(Dog) returns (Empty);
+    option (persist.service_type) = SQL;
+    option (persist.ql) = {
+    queries: [
+        {
+        name: "GetCatByName",
+        query: [
+            "SELECT",
+                "name,",
+                "age,",
+                "cost",
+            "FROM cats",
+            "WHERE",
+                "name = @cat_name"
+        ],
+        pm_strategy: "$",
+        in: ".test.CatName",
+        out: ".test.Cat",
+        },
+        {
+        name: "InsertFish",
+        query: [
+            "INSERT INTO fish(",
+                "species,",
+                "cost",
+            ") VALUES(",
+                "@species,",
+                "@cost",
+            ")"
+        ],
+        pm_strategy: "$",
+        in: ".test.Fish",
+        out: ".test.Empty",
+        }
+        ];
+    };
+}

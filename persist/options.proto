@@ -46,9 +46,6 @@ extend google.protobuf.MethodOptions {
 extend google.protobuf.ServiceOptions {
     optional QueryOpts ql = 560000;
     optional TypeMapping mapping = 560001;
-
-    // persistence option, right now it has only one option, SQL
-    // more options will be added when new query languages will be supported
     optional PersistenceOptions service_type = 560002;
 }
 
@@ -93,6 +90,8 @@ message QLImpl {
     // but additional rows returned from the query that do NOT exist on
     // the out message will be ignored.
     optional string out= 5;
+    // iterator.Unwrap() will support the common fields between these types, and "out"
+    // repeated string out_aliases = 6;
     // QUESTIONS:
     // can we do anything special if:
     // - if in and out are the same type,
