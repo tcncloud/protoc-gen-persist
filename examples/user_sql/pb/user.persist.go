@@ -455,6 +455,7 @@ func (this *Iter_UServ_CreateUsersTable) IterInTypeEmpty()  {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_UServ_CreateUsersTable) Each(fun func(*Row_UServ_CreateUsersTable) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -472,6 +473,7 @@ func (this *Iter_UServ_CreateUsersTable) Each(fun func(*Row_UServ_CreateUsersTab
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_CreateUsersTable) One() *Row_UServ_CreateUsersTable {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_CreateUsersTable{err: first.err}
 	}
@@ -506,6 +508,9 @@ func (this *Iter_UServ_CreateUsersTable) Next() (*Row_UServ_CreateUsersTable, bo
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_UServ_CreateUsersTable{err: err}, true
 	}
 	if this.rows == nil {
@@ -583,6 +588,7 @@ func (this *Iter_UServ_InsertUsers) IterInTypeUser()   {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_UServ_InsertUsers) Each(fun func(*Row_UServ_InsertUsers) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -600,6 +606,7 @@ func (this *Iter_UServ_InsertUsers) Each(fun func(*Row_UServ_InsertUsers) error)
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_InsertUsers) One() *Row_UServ_InsertUsers {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_InsertUsers{err: first.err}
 	}
@@ -634,6 +641,9 @@ func (this *Iter_UServ_InsertUsers) Next() (*Row_UServ_InsertUsers, bool) {
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_UServ_InsertUsers{err: err}, true
 	}
 	if this.rows == nil {
@@ -711,6 +721,7 @@ func (this *Iter_UServ_GetAllUsers) IterInTypeEmpty() {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_UServ_GetAllUsers) Each(fun func(*Row_UServ_GetAllUsers) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -728,6 +739,7 @@ func (this *Iter_UServ_GetAllUsers) Each(fun func(*Row_UServ_GetAllUsers) error)
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_GetAllUsers) One() *Row_UServ_GetAllUsers {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_GetAllUsers{err: first.err}
 	}
@@ -762,6 +774,9 @@ func (this *Iter_UServ_GetAllUsers) Next() (*Row_UServ_GetAllUsers, bool) {
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_UServ_GetAllUsers{err: err}, true
 	}
 	if this.rows == nil {
@@ -875,6 +890,7 @@ func (this *Iter_UServ_SelectUserById) IterInTypeUser()  {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_UServ_SelectUserById) Each(fun func(*Row_UServ_SelectUserById) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -892,6 +908,7 @@ func (this *Iter_UServ_SelectUserById) Each(fun func(*Row_UServ_SelectUserById) 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_SelectUserById) One() *Row_UServ_SelectUserById {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_SelectUserById{err: first.err}
 	}
@@ -926,6 +943,9 @@ func (this *Iter_UServ_SelectUserById) Next() (*Row_UServ_SelectUserById, bool) 
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_UServ_SelectUserById{err: err}, true
 	}
 	if this.rows == nil {
@@ -1039,6 +1059,7 @@ func (this *Iter_UServ_UpdateUserName) IterInTypeUser()  {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_UServ_UpdateUserName) Each(fun func(*Row_UServ_UpdateUserName) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1056,6 +1077,7 @@ func (this *Iter_UServ_UpdateUserName) Each(fun func(*Row_UServ_UpdateUserName) 
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_UpdateUserName) One() *Row_UServ_UpdateUserName {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_UpdateUserName{err: first.err}
 	}
@@ -1090,6 +1112,9 @@ func (this *Iter_UServ_UpdateUserName) Next() (*Row_UServ_UpdateUserName, bool) 
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_UServ_UpdateUserName{err: err}, true
 	}
 	if this.rows == nil {
@@ -1203,6 +1228,7 @@ func (this *Iter_UServ_UpdateNameToFoo) IterInTypeUser()   {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_UServ_UpdateNameToFoo) Each(fun func(*Row_UServ_UpdateNameToFoo) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1220,6 +1246,7 @@ func (this *Iter_UServ_UpdateNameToFoo) Each(fun func(*Row_UServ_UpdateNameToFoo
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_UpdateNameToFoo) One() *Row_UServ_UpdateNameToFoo {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_UpdateNameToFoo{err: first.err}
 	}
@@ -1254,6 +1281,9 @@ func (this *Iter_UServ_UpdateNameToFoo) Next() (*Row_UServ_UpdateNameToFoo, bool
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_UServ_UpdateNameToFoo{err: err}, true
 	}
 	if this.rows == nil {
@@ -1331,6 +1361,7 @@ func (this *Iter_UServ_GetFriends) IterInTypeFriendsReq() {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_UServ_GetFriends) Each(fun func(*Row_UServ_GetFriends) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1348,6 +1379,7 @@ func (this *Iter_UServ_GetFriends) Each(fun func(*Row_UServ_GetFriends) error) e
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_GetFriends) One() *Row_UServ_GetFriends {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_GetFriends{err: first.err}
 	}
@@ -1382,6 +1414,9 @@ func (this *Iter_UServ_GetFriends) Next() (*Row_UServ_GetFriends, bool) {
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_UServ_GetFriends{err: err}, true
 	}
 	if this.rows == nil {
@@ -1495,6 +1530,7 @@ func (this *Iter_UServ_Drop) IterInTypeEmpty()  {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_UServ_Drop) Each(fun func(*Row_UServ_Drop) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -1512,6 +1548,7 @@ func (this *Iter_UServ_Drop) Each(fun func(*Row_UServ_Drop) error) error {
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_UServ_Drop) One() *Row_UServ_Drop {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_UServ_Drop{err: first.err}
 	}
@@ -1546,6 +1583,9 @@ func (this *Iter_UServ_Drop) Next() (*Row_UServ_Drop, bool) {
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_UServ_Drop{err: err}, true
 	}
 	if this.rows == nil {
