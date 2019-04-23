@@ -864,6 +864,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
         // Each respects the context passed to it.
         // It will stop iteration, and returns this.ctx.Err() if encountered.
         func (this *Iter_`, sName, `_`, camelQ(q), `) Each(fun func(*Row_`, sName, `_`, camelQ(q), `) error) error {
+			defer this.rows.Close()
             for {
                 select {
                 case <-this.ctx.Done():
@@ -880,7 +881,8 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
         // One returns the sole row, or ensures an error if there was not one result when this row is converted
         func (this *Iter_`, sName, `_`, camelQ(q), `) One() *Row_`, sName, `_`, camelQ(q), ` {
-            first, hasFirst := this.Next()
+			first, hasFirst := this.Next()
+			defer this.rows.Close()
             if first != nil && first.err != nil && first.err != io.EOF {
                 return &Row_`, sName, `_`, camelQ(q), `{err: first.err}
             }
@@ -915,7 +917,10 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 			}
 			if this.err != nil {
                 err := this.err
-                this.err = io.EOF
+				this.err = io.EOF
+				if this.rows != nil {
+					this.rows.Close()
+				}
                 return &Row_`, sName, `_`, camelQ(q), `{err: err}, true
 			}
             if this.rows == nil {
