@@ -25,7 +25,7 @@ The default behaviour (don't specify the `path=source_relative`) will generate t
 
 
 ## Version 3.0.0
-- Complete rework of the plugin (check the [examples](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples) directory for more info)
+- Complete rework of the plugin (check the [docs](docs/index.md), and [examples](https://github.com/tcncloud/protoc-gen-persist/tree/master/examples) directory for more info)
 
 ## Version 2.0.0
 - new method for generating before and after hooks. See #82 (@iamneal)

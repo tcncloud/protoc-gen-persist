@@ -273,6 +273,7 @@ func (this *Iter_Testservice1_UnaryExample1) IterInTypeExampleTable1()  {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_Testservice1_UnaryExample1) Each(fun func(*Row_Testservice1_UnaryExample1) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -290,6 +291,7 @@ func (this *Iter_Testservice1_UnaryExample1) Each(fun func(*Row_Testservice1_Una
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Testservice1_UnaryExample1) One() *Row_Testservice1_UnaryExample1 {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Testservice1_UnaryExample1{err: first.err}
 	}
@@ -324,6 +326,9 @@ func (this *Iter_Testservice1_UnaryExample1) Next() (*Row_Testservice1_UnaryExam
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_Testservice1_UnaryExample1{err: err}, true
 	}
 	if this.rows == nil {
@@ -489,6 +494,7 @@ func (this *Iter_Testservice1_UnaryExample2) IterInTypeTestTest()       {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_Testservice1_UnaryExample2) Each(fun func(*Row_Testservice1_UnaryExample2) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -506,6 +512,7 @@ func (this *Iter_Testservice1_UnaryExample2) Each(fun func(*Row_Testservice1_Una
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Testservice1_UnaryExample2) One() *Row_Testservice1_UnaryExample2 {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Testservice1_UnaryExample2{err: first.err}
 	}
@@ -540,6 +547,9 @@ func (this *Iter_Testservice1_UnaryExample2) Next() (*Row_Testservice1_UnaryExam
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_Testservice1_UnaryExample2{err: err}, true
 	}
 	if this.rows == nil {
@@ -705,6 +715,7 @@ func (this *Iter_Testservice1_ServerStreamSelect) IterInTypeExampleTable1()  {}
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_Testservice1_ServerStreamSelect) Each(fun func(*Row_Testservice1_ServerStreamSelect) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -722,6 +733,7 @@ func (this *Iter_Testservice1_ServerStreamSelect) Each(fun func(*Row_Testservice
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Testservice1_ServerStreamSelect) One() *Row_Testservice1_ServerStreamSelect {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Testservice1_ServerStreamSelect{err: first.err}
 	}
@@ -756,6 +768,9 @@ func (this *Iter_Testservice1_ServerStreamSelect) Next() (*Row_Testservice1_Serv
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_Testservice1_ServerStreamSelect{err: err}, true
 	}
 	if this.rows == nil {
@@ -921,6 +936,7 @@ func (this *Iter_Testservice1_ClientStreamingExample) IterInTypeExampleTable1() 
 // Each respects the context passed to it.
 // It will stop iteration, and returns this.ctx.Err() if encountered.
 func (this *Iter_Testservice1_ClientStreamingExample) Each(fun func(*Row_Testservice1_ClientStreamingExample) error) error {
+	defer this.rows.Close()
 	for {
 		select {
 		case <-this.ctx.Done():
@@ -938,6 +954,7 @@ func (this *Iter_Testservice1_ClientStreamingExample) Each(fun func(*Row_Testser
 // One returns the sole row, or ensures an error if there was not one result when this row is converted
 func (this *Iter_Testservice1_ClientStreamingExample) One() *Row_Testservice1_ClientStreamingExample {
 	first, hasFirst := this.Next()
+	defer this.rows.Close()
 	if first != nil && first.err != nil && first.err != io.EOF {
 		return &Row_Testservice1_ClientStreamingExample{err: first.err}
 	}
@@ -972,6 +989,9 @@ func (this *Iter_Testservice1_ClientStreamingExample) Next() (*Row_Testservice1_
 	if this.err != nil {
 		err := this.err
 		this.err = io.EOF
+		if this.rows != nil {
+			this.rows.Close()
+		}
 		return &Row_Testservice1_ClientStreamingExample{err: err}, true
 	}
 	if this.rows == nil {
