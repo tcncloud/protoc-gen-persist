@@ -44,6 +44,7 @@ in different packages
  * [Jamie Whahlin](https://github.com/jwahlin)
  * [Michael Sorenson](https://github.com/michael-the-grey)
  * [Colton Morris](https://github.com/coltonmorris)
+ * Spencer Beard
 
 
 ## License
