@@ -327,6 +327,7 @@ func (f *FileStruct) Process() error {
 	for _, s := range f.Desc.GetService() {
 		f.ServiceList.AddService(f.GetPackageName(), s, f.AllStructures, f)
 	}
+	f.SanatizeImports()
 	return nil
 }
 func (f *FileStruct) NeedImport(pkg string) bool {
