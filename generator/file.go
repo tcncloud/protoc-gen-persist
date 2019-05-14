@@ -359,12 +359,12 @@ func (f *FileStruct) GetGoTypeName(typ string) string {
 		return ""
 	}
 	if imp := f.ImportList.GetGoNameByStruct(str); imp != nil {
-		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debug("STRUCT imp not nil")
+		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debugf("struct FOUND for typ: %s", typ)
 		if f.NotSameAsMyPackage(imp.GoImportPath) {
 			return imp.GoPackageName + "." + str.GetGoName()
 		}
 	} else {
-		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debug("STRUCT import is nil")
+		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debugf("import NOT found for struct typ: %s", typ)
 	}
 	return str.GetGoName()
 }
