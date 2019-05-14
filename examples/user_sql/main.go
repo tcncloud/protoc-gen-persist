@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/golang/protobuf/ptypes/timestamp"
 	_ "github.com/lib/pq"
 	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
 	"google.golang.org/grpc"
@@ -119,4 +120,8 @@ func (d *RestOfImpl) UpdateAllNames(req *pb.Empty, stream pb.UServ_UpdateAllName
 		}
 		return stream.Send(res)
 	})
+}
+
+func (d *RestOfImpl) EEEE(ctx context.Context, req *timestamp.Timestamp) (*pb.Empty, error) {
+	return nil, fmt.Errorf("unimplemented")
 }

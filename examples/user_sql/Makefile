@@ -31,9 +31,10 @@ all: gen build
 
 gen:
 	cd ../../ && go build
-	protoc -I. -I../../ -I/usr/local/include -I./pb -I$$GOPATH/src \
+	protoc --go_out=plugins=grpc,paths=source_relative:. ./pb/imports/*.proto
+	protoc -I. -I../../ -I/usr/local/include -I./pb -I./pb/imports -I$$GOPATH/src \
 		--plugin=../../protoc-gen-persist \
-		--go_out=plugins=grpc:. \
+		--go_out=plugins=grpc,paths=source_relative:. \
 		--persist_out=persist_root=github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb:. \
 		./pb/*.proto
 

@@ -11,6 +11,7 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	imports "github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb/imports"
 	persist "github.com/tcncloud/protoc-gen-persist/persist"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
@@ -1750,6 +1751,24 @@ func (this *Row_UServ_CreateUsersTable) Unwrap(pointerToMsg proto.Message) error
 
 		return nil
 	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
+	if o, ok := (pointerToMsg).(*Empty); ok {
+		if o == nil {
+			return fmt.Errorf("must initialize *Empty before giving to Unwrap()")
+		}
+		res, _ := this.Empty()
+		_ = res
+
+		return nil
+	}
 
 	return nil
 }
@@ -2401,8 +2420,13 @@ func ImplUServ(db *sql.DB, handlers RestOfHandlers_UServ, opts ...Opts_UServ) *I
 }
 
 type RestOfHandlers_UServ interface {
+	EEEE(context.Context, *timestamp.Timestamp) (*Empty, error)
 	UpdateUserNames(UServ_UpdateUserNamesServer) error
 	UpdateAllNames(*Empty, UServ_UpdateAllNamesServer) error
+}
+
+func (this *Impl_UServ) EEEE(ctx context.Context, req *timestamp.Timestamp) (*Empty, error) {
+	return this.HANDLERS.EEEE(ctx, req)
 }
 
 func (this *Impl_UServ) UpdateUserNames(stream UServ_UpdateUserNamesServer) error {
@@ -2414,6 +2438,36 @@ func (this *Impl_UServ) UpdateAllNames(req *Empty, stream UServ_UpdateAllNamesSe
 }
 
 func (this *Impl_UServ) CreateTable(ctx context.Context, req *Empty) (*Empty, error) {
+	query := this.QUERIES.CreateUsersTable(ctx, this.DB)
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (this *Impl_UServ) TTTT(ctx context.Context, req *timestamp.Timestamp) (*Empty, error) {
+	query := this.QUERIES.CreateUsersTable(ctx, this.DB)
+
+	result := query.Execute(req)
+
+	err := result.Zero()
+	res := &Empty{}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (this *Impl_UServ) IIII(ctx context.Context, req *imports.Imported) (*Empty, error) {
 	query := this.QUERIES.CreateUsersTable(ctx, this.DB)
 
 	result := query.Execute(req)

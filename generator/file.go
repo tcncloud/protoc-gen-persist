@@ -237,7 +237,11 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 			}
 		}
 	} else {
-		logrus.WithField("all structures", f.AllStructures).Fatalf("Can't find structure %s!", name)
+		all := []string{}
+		for _, v := range *f.AllStructures {
+			all = append(all, v.GetProtoName())
+		}
+		logrus.WithField("all structures", all).Fatalf("Can't find structure %s!", name)
 	}
 }
 
@@ -327,6 +331,7 @@ func (f *FileStruct) Process() error {
 	for _, s := range f.Desc.GetService() {
 		f.ServiceList.AddService(f.GetPackageName(), s, f.AllStructures, f)
 	}
+	f.ProcessImports()
 	return nil
 }
 func (f *FileStruct) NeedImport(pkg string) bool {
@@ -354,9 +359,12 @@ func (f *FileStruct) GetGoTypeName(typ string) string {
 		return ""
 	}
 	if imp := f.ImportList.GetGoNameByStruct(str); imp != nil {
+		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debug("STRUCT imp not nil")
 		if f.NotSameAsMyPackage(imp.GoImportPath) {
 			return imp.GoPackageName + "." + str.GetGoName()
 		}
+	} else {
+		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debug("STRUCT import is nil")
 	}
 	return str.GetGoName()
 }

@@ -37,6 +37,7 @@ package pb;
 
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
+import "imports/imported.proto";
 
 message User {
     int64 id = 1;
@@ -130,6 +131,17 @@ service UServ {
         }]
     };
     rpc CreateTable(Empty) returns (Empty) {
+        option (persist.opts) = {
+            query: "create_users_table",
+        };
+    };
+    rpc TTTT(google.protobuf.Timestamp) returns (Empty) {
+        option (persist.opts) = {
+            query: "create_users_table",
+        };
+    };
+    rpc EEEE(google.protobuf.Timestamp) returns (Empty);
+    rpc IIII(imports.Imported) returns (Empty) {
         option (persist.opts) = {
             query: "create_users_table",
         };
