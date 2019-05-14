@@ -233,7 +233,10 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 	if typ != nil {
 		for _, file := range *typ.GetImportedFiles() {
 			if f.GetPackageName() != file.GetPackageName() {
+				logrus.WithField("file", f.GetFileName()).Debugf("ADDING import %s '%s'", file.GetGoPackage(), file.GetGoPath())
 				f.ImportList.GetOrAddImport(file.GetGoPackage(), file.GetGoPath())
+			} else {
+				logrus.WithField("file", f.GetFileName()).WithField("pkg", f.GetPackageName()).Debugf("packages match. NOT creating import for type: %s", name)
 			}
 		}
 	} else {
@@ -247,6 +250,7 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 
 func (f *FileStruct) ProcessImports() {
 	importsForStructName := func(name string) {
+		logrus.WithField("file", f.GetFileName).Debug("getting imports for: %s", name)
 		// first get imports for this struct
 		f.ProcessImportsForType(name)
 

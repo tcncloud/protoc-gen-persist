@@ -29,6 +29,8 @@
 
 package generator
 
+import "github.com/sirupsen/logrus"
+
 type Import struct {
 	GoPackageName string
 	GoImportPath  string
@@ -66,6 +68,7 @@ func (il *Imports) GetOrAddImport(goPkg, goPath string) string {
 		}
 	}
 	for il.Exist(goPkg) {
+		logrus.Fatalf("import %s already exists", goPkg)
 		goPkg = "_" + goPkg
 	}
 	if goPath != "" {
