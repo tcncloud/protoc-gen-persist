@@ -94,7 +94,7 @@ func (f *FileStruct) GetPersistPackageOption() string {
 		}
 		return *pkg.(*string)
 	}
-	logrus.WithField("File Options", f.Desc.GetOptions()).Debug("file options")
+	// logrus.WithField("File Options", f.Desc.GetOptions()).Debug("file options")
 	return ""
 }
 
@@ -278,9 +278,9 @@ func (f *FileStruct) ProcessImports() {
 
 	}
 	for _, srv := range *f.ServiceList {
-		if !srv.IsSQL() && !srv.IsSpanner() {
-			continue
-		}
+		// if !srv.IsSQL() && !srv.IsSpanner() {
+		// 	continue
+		// }
 		if srv.IsSpanner() {
 			f.ImportList.GetOrAddImport("spanner", "cloud.google.com/go/spanner")
 		}
@@ -357,6 +357,7 @@ func (f *FileStruct) GetGoTypeName(typ string) string {
 	str := f.AllStructures.GetStructByProtoName(typ)
 	if str == nil {
 		return ""
+
 	}
 	if imp := f.ImportList.GetGoNameByStruct(str); imp != nil {
 		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debug("STRUCT imp not nil")
@@ -364,7 +365,7 @@ func (f *FileStruct) GetGoTypeName(typ string) string {
 			return imp.GoPackageName + "." + str.GetGoName()
 		}
 	} else {
-		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debug("STRUCT import is nil")
+		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).WithField("import list", f.ImportList).Debug("STRUCT import is nil")
 	}
 	return str.GetGoName()
 }
