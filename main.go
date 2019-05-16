@@ -30,8 +30,10 @@
 package main
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
+	"runtime/pprof"
 
 	"fmt"
 
@@ -41,13 +43,32 @@ import (
 	"github.com/tcncloud/protoc-gen-persist/generator"
 )
 
+var profiler io.WriteCloser
+
 func init() {
+	var err error
 	if os.Getenv("DEBUG") == "true" {
 		logrus.SetLevel(logrus.DebugLevel)
+	}
+	if p := os.Getenv("PROFILE"); p != "" {
+		logrus.Info("using profiler ", p)
+		profiler, err = os.Create(p)
+		if err != nil {
+			logrus.WithError(err).Fatal("could not create file for cpu profiling")
+		}
 	}
 }
 
 func main() {
+	if profiler != nil {
+		defer profiler.Close()
+		if err := pprof.StartCPUProfile(profiler); err != nil {
+			logrus.WithError(err).Fatal("could not start cpu profile")
+		}
+	}
+
+	defer pprof.StopCPUProfile()
+
 	if len(os.Args) > 1 {
 		fmt.Println("This executable is meant to be used by protoc!\nGo to http://github.com/tcncloud/protoc-gen-persist for more info")
 		os.Exit(-1)

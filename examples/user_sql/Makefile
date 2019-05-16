@@ -37,6 +37,16 @@ gen:
 		--go_out=plugins=grpc,paths=source_relative:. \
 		--persist_out=persist_root=github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb:. \
 		./pb/*.proto
+profile:
+	cd ../../ && go build
+	rm -f persist.prof
+	protoc --go_out=plugins=grpc,paths=source_relative:. ./pb/imports/*.proto
+	PROFILE=./persist.prof protoc -I. -I../../ -I/usr/local/include -I./pb -I./pb/imports -I$$GOPATH/src \
+		--plugin=../../protoc-gen-persist \
+		--go_out=plugins=grpc,paths=source_relative:. \
+		--persist_out=persist_root=github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb:. \
+		./pb/*.proto
+	go tool pprof -text -symbolize=demangle=full persist.prof
 
 build:
 	go build
