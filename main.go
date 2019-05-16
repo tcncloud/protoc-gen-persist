@@ -65,9 +65,8 @@ func main() {
 		if err := pprof.StartCPUProfile(profiler); err != nil {
 			logrus.WithError(err).Fatal("could not start cpu profile")
 		}
+		defer pprof.StopCPUProfile()
 	}
-
-	defer pprof.StopCPUProfile()
 
 	if len(os.Args) > 1 {
 		fmt.Println("This executable is meant to be used by protoc!\nGo to http://github.com/tcncloud/protoc-gen-persist for more info")
