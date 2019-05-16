@@ -23,10 +23,10 @@ jobs:
             make
             mkdir ./artifacts
             GOOS=linux GOARCH=amd64 go build
-            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-persist persist/options.proto
+            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-linux-amd64.tar.gz protoc-gen-persist persist/options.proto
             rm protoc-gen-persist
             GOOS=darwin GOARCH=amd64 go build 
-            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-persist persist/options.proto
+            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-darwin-amd64.tar.gz protoc-gen-persist persist/options.proto
             VERSION=${CIRCLE_TAG}
             ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace  ${VERSION} ./artifacts/ 
 
