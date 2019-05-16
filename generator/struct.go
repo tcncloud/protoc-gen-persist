@@ -34,7 +34,6 @@ import (
 
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	gen "github.com/golang/protobuf/protoc-gen-go/generator"
-	"github.com/sirupsen/logrus"
 )
 
 type GenericDescriptor interface {
@@ -148,11 +147,11 @@ func (s *StructList) GetStructByName(name string) *Struct {
 	return nil
 }
 func (s *StructList) GetStructByProtoName(name string) *Struct {
-	all := []string{}
-	for _, v := range *s {
-		all = append(all, v.GetProtoName())
-	}
-	logrus.WithField("name", name).WithField("all", all).Trace("finding name")
+	// all := []string{}
+	// for _, v := range *s {
+	// 	all = append(all, v.GetProtoName())
+	// }
+	// logrus.WithField("name", name).WithField("all", all).Trace("finding name")
 	for _, str := range *s {
 		if str.GetProtoName() == name {
 			return str
@@ -161,7 +160,7 @@ func (s *StructList) GetStructByProtoName(name string) *Struct {
 		} else if str.GetGoName() == name {
 			return str
 		}
-		logrus.WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Tracef("NOT FOUND %s", name)
+		// logrus.WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Tracef("NOT FOUND %s", name)
 	}
 	return nil
 }
@@ -214,7 +213,7 @@ func (s *StructList) Append(struc *Struct) {
 func (s *StructList) GetStructByFieldDesc(fld *desc.FieldDescriptorProto) *Struct {
 	for _, str := range *s {
 		if str.GetProtoName() == fld.GetName() {
-			logrus.Debugf("the struct name matches. Struct: %s  fld: %s", str.GetProtoName(), fld.GetName())
+			// logrus.Debugf("the struct name matches. Struct: %s  fld: %s", str.GetProtoName(), fld.GetName())
 			return str
 		}
 	}

@@ -36,7 +36,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	"github.com/sirupsen/logrus"
+
+	// "github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
@@ -89,7 +90,7 @@ func (f *FileStruct) GetPersistPackageOption() string {
 	if proto.HasExtension(f.Desc.GetOptions(), persist.E_Pkg) {
 		pkg, err := proto.GetExtension(f.Desc.GetOptions(), persist.E_Pkg)
 		if err != nil {
-			logrus.WithError(err).Debug("Error")
+			// logrus.WithError(err).Debug("Error")
 			return ""
 		}
 		return *pkg.(*string)
@@ -126,7 +127,7 @@ func (f *FileStruct) GetImplDir() string {
 		// we need to split by ";"
 		p := strings.Split(pkg, ";")
 		if len(p) > 2 {
-			logrus.WithField("persist package", pkg).Panic("Invalid persist package")
+			// logrus.WithField("persist package", pkg).Panic("Invalid persist package")
 		}
 		return p[0]
 	}
@@ -150,7 +151,7 @@ func (f *FileStruct) GetImplPackage() string {
 		// we need to split by ";"
 		p := strings.Split(pkg, ";")
 		if len(p) > 2 {
-			logrus.WithField("persist package", pkg).Panic("Invalid persist package")
+			// logrus.WithField("persist package", pkg).Panic("Invalid persist package")
 		}
 		return p[len(p)-1]
 	}
@@ -241,11 +242,12 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 		for _, v := range *f.AllStructures {
 			all = append(all, v.GetProtoName())
 		}
-		logrus.WithField("all structures", all).Fatalf("Can't find structure %s!", name)
+		// logrus.WithField("all structures", all).Fatalf("Can't find structure %s!", name)
 	}
 }
 
 func (f *FileStruct) ProcessImports() {
+	// logrus.Debugf("ProcessImports() for %s", f.GetOrigName())
 	importsForStructName := func(name string) {
 		// first get imports for this struct
 		f.ProcessImportsForType(name)
@@ -314,9 +316,9 @@ type persistFile struct {
 }
 
 func (f *FileStruct) Process() error {
-	logrus.WithFields(logrus.Fields{
-		"GetFileName()": f.GetFileName(),
-	}).Debug("processing file")
+	// logrus.WithFields(logrus.Fields{
+	// "GetFileName()": f.GetFileName(),
+	// }).Debug("processing file")
 	// collect file defined messages
 	for _, m := range f.Desc.GetMessageType() {
 		s := f.AllStructures.AddMessage(m, nil, f.GetPackageName(), f)
@@ -360,12 +362,12 @@ func (f *FileStruct) GetGoTypeName(typ string) string {
 
 	}
 	if imp := f.ImportList.GetGoNameByStruct(str); imp != nil {
-		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debug("STRUCT imp not nil")
+		// logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Debug("STRUCT imp not nil")
 		if f.NotSameAsMyPackage(imp.GoImportPath) {
 			return imp.GoPackageName + "." + str.GetGoName()
 		}
 	} else {
-		logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).WithField("import list", f.ImportList).Debug("STRUCT import is nil")
+		// logrus.WithField("pkg", str.Package).WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).WithField("import list", f.ImportList).Debug("STRUCT import is nil")
 	}
 	return str.GetGoName()
 }
@@ -373,27 +375,27 @@ func (f *FileStruct) GetGoTypeName(typ string) string {
 func (f *FileStruct) Generate() ([]byte, error) {
 	p := &Printer{}
 	for _, s := range *f.ServiceList {
-		logrus.WithField("service", s.Desc.GetName()).Debug("writing queries")
+		// logrus.WithField("service", s.Desc.GetName()).Debug("writing queries")
 		if err := WriteQueries(p, s); err != nil {
 			return nil, err
 		}
-		logrus.WithField("service", s.Desc.GetName()).Debug("writing iters")
+		// logrus.WithField("service", s.Desc.GetName()).Debug("writing iters")
 		if err := WriteIters(p, s); err != nil {
 			return nil, err
 		}
-		logrus.WithField("service", s.Desc.GetName()).Debug("writing rows")
+		// logrus.WithField("service", s.Desc.GetName()).Debug("writing rows")
 		if err := WriteRows(p, s); err != nil {
 			return nil, err
 		}
-		logrus.WithField("service", s.Desc.GetName()).Debug("writing hooks")
+		// logrus.WithField("service", s.Desc.GetName()).Debug("writing hooks")
 		if err := WriteHooks(p, s); err != nil {
 			return nil, err
 		}
-		logrus.WithField("service", s.Desc.GetName()).Debug("writing type mappings")
+		// logrus.WithField("service", s.Desc.GetName()).Debug("writing type mappings")
 		if err := WriteTypeMappings(p, s); err != nil {
 			return nil, err
 		}
-		logrus.WithField("service", s.Desc.GetName()).Debug("writing type handlers")
+		// logrus.WithField("service", s.Desc.GetName()).Debug("writing type handlers")
 		if err := WriteHandlers(p, s); err != nil {
 			return nil, err
 		}

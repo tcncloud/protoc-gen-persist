@@ -35,7 +35,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/sirupsen/logrus"
+	// "github.com/sirupsen/logrus"
 )
 
 type GeneratorStruct interface {
@@ -64,9 +64,9 @@ func NewGenerator(request *plugin_go.CodeGeneratorRequest) *Generator {
 
 func (g *Generator) CommandLineParameters(parameter string) error {
 	// parameter := g.OriginalRequest.GetParameter()
-	logrus.WithField("command line params", parameter).Info("command line parameters")
+	// logrus.WithField("command line params", parameter).Info("command line parameters")
 	for _, p := range strings.Split(parameter, ",") {
-		logrus.WithField("p", p).Info("...")
+		// logrus.WithField("p", p).Info("...")
 		if strings.Contains(p, "=") {
 			cmd := strings.Split(p, "=")
 			switch cmd[0] {
@@ -84,7 +84,7 @@ func (g *Generator) CommandLineParameters(parameter string) error {
 
 func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 	ret := g.Response
-	logrus.Debugf("going over %d files\n", len(*g.Files))
+	// logrus.Debugf("going over %d files\n", len(*g.Files))
 	for _, fileStruct := range *g.Files {
 		// format file Content
 
@@ -104,7 +104,7 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 }
 
 func (g *Generator) Process() error {
-	logrus.Debug("processing the generator")
+	// logrus.Debug("processing the generator")
 	for _, file := range g.OriginalRequest.ProtoFile {
 		dep := func() bool {
 			for _, fileName := range g.OriginalRequest.FileToGenerate {
@@ -114,10 +114,10 @@ func (g *Generator) Process() error {
 			}
 			return true
 		}()
-		logrus.WithFields(logrus.Fields{
-			"fileName":    file.GetName(),
-			"dependency?": dep,
-		}).Debug("about to get or create this file")
+		// logrus.WithFields(logrus.Fields{
+		// 	"fileName":    file.GetName(),
+		// 	"dependency?": dep,
+		// }).Debug("about to get or create this file")
 		params := ParseCommandLine(g.OriginalRequest.GetParameter())
 		f := g.Files.GetOrCreateFile(file, g.AllStructures, dep, params)
 		if err := f.Process(); err != nil {

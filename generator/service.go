@@ -37,7 +37,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
-	"github.com/sirupsen/logrus"
+
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
@@ -131,7 +131,7 @@ func (s *Services) AddService(pkg string, desc *desc.ServiceDescriptorProto, all
 		AllStructs: allStructs,
 		File:       file,
 	}
-	logrus.Debugf("created a service: %s", ret.Desc.GetName())
+	// logrus.Debugf("created a service: %s", ret.Desc.GetName())
 	*s = append(*s, ret)
 	return ret
 }
