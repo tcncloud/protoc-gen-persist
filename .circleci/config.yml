@@ -22,16 +22,12 @@ jobs:
             go get github.com/tcnksm/ghr
             make
             mkdir ./artifacts
-            GOOS=linux
-            GOARCH=amd64
-            make 
+            GOOS=linux GOARCH=amd64 make 
             tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-persist persist/options.proto
             rm protoc-gen-persist
-            GOOS=darwin
-            make 
+            GOOS=darwin GOARCH=amd64 make 
             tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-persist persist/options.proto
             VERSION=${CIRCLE_TAG}
-            echo ${VERSION}
             ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace  ${VERSION} ./artifacts/ 
 
 workflows:
