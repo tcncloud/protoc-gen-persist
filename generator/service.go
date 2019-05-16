@@ -296,7 +296,8 @@ func WriteQueries(p *Printer, s *Service) error {
 	}
 	qFieldDoc := func(q *QueryProtoOpts) string {
 		_, res := queryAndFields(q)
-		return P(res)
+
+		return fmt.Sprintf("%v", res)
 	}
 
 	p.Q("// Queries_", sName, " holds all the queries found the proto service option as methods\n")
