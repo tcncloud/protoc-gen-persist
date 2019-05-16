@@ -37,7 +37,6 @@ import (
 	"text/template"
 
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	"github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 
 	"golang.org/x/tools/imports"
@@ -91,7 +90,7 @@ func FormatCode(filename string, buffer []byte) []byte {
 	tmp := reduceEmptyLines.ReplaceAll(buffer, []byte{'\n'})
 	buf, err := imports.Process(filename, tmp, nil)
 	if err != nil {
-		logrus.WithError(err).Errorf("Error processing file %s", filename)
+		// logrus.WithError(err).Errorf("Error processing file %s", filename)
 		return tmp
 	}
 	return buf
