@@ -26,6 +26,7 @@ jobs:
             GOARCH=amd64
             make 
             tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-persist persist/options.proto
+            rm protoc-gen-persist
             GOOS=darwin
             make 
             tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-${GOOS}-${GOARCH}.tar.gz protoc-gen-persist persist/options.proto
