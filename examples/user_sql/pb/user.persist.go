@@ -839,8 +839,13 @@ func (this *Iter_UServ_GetAllUsers) Next() (*Row_UServ_GetAllUsers, bool) {
 			}
 			res.Id = int64(r)
 		case "name":
-			r, ok := (*scanned[i].i).(string)
-			if !ok {
+			var r string
+			switch v := (*scanned[i].i).(type) {
+			case string:
+				r = v
+			case []byte:
+				r = string(v)
+			default:
 				return &Row_UServ_GetAllUsers{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
@@ -1016,8 +1021,13 @@ func (this *Iter_UServ_SelectUserById) Next() (*Row_UServ_SelectUserById, bool) 
 			}
 			res.Id = int64(r)
 		case "name":
-			r, ok := (*scanned[i].i).(string)
-			if !ok {
+			var r string
+			switch v := (*scanned[i].i).(type) {
+			case string:
+				r = v
+			case []byte:
+				r = string(v)
+			default:
 				return &Row_UServ_SelectUserById{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
@@ -1193,8 +1203,13 @@ func (this *Iter_UServ_UpdateUserName) Next() (*Row_UServ_UpdateUserName, bool) 
 			}
 			res.Id = int64(r)
 		case "name":
-			r, ok := (*scanned[i].i).(string)
-			if !ok {
+			var r string
+			switch v := (*scanned[i].i).(type) {
+			case string:
+				r = v
+			case []byte:
+				r = string(v)
+			default:
 				return &Row_UServ_UpdateUserName{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
@@ -1511,8 +1526,13 @@ func (this *Iter_UServ_GetFriends) Next() (*Row_UServ_GetFriends, bool) {
 			}
 			res.Id = int64(r)
 		case "name":
-			r, ok := (*scanned[i].i).(string)
-			if !ok {
+			var r string
+			switch v := (*scanned[i].i).(type) {
+			case string:
+				r = v
+			case []byte:
+				r = string(v)
+			default:
 				return &Row_UServ_GetFriends{err: fmt.Errorf("cant convert db column name to protobuf go type ")}, true
 			}
 			res.Name = r
