@@ -66,6 +66,9 @@ func (m *MappingImpl) TimestampTimestamp() pb.MappingImpl_UServ_TimestampTimesta
 func (m *MappingImpl) SliceStringParam() pb.MappingImpl_UServ_SliceStringParam {
 	return &pb.SliceStringConverter{}
 }
+func (m *MappingImpl) Int64Slice() pb.MappingImpl_UServ_Int64Slice {
+	return &pb.Int64SliceConverter{}
+}
 
 // Type Aliasing to remove redundency
 type Queries = pb.Queries_UServ

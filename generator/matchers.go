@@ -28,13 +28,17 @@ func (Match) BidiStreaming(mopt *MethodProtoOpts) bool {
 func (Match) Unary(mopt *MethodProtoOpts) bool {
 	return !mopt.method.GetClientStreaming() && !mopt.method.GetServerStreaming()
 }
+
 func (m Match) QueryFieldIsMapped(field *desc.FieldDescriptorProto, q *QueryProtoOpts) bool {
 	var out bool
 	m.EachTM(func(opts *TypeMappingProtoOpts) {
 		if field.GetLabel() != opts.tm.GetProtoLabel() {
 			return
-		} else if field.GetTypeName() != opts.tm.GetProtoTypeName() {
-			return
+		}
+		if opts.tm.GetProtoType() == desc.FieldDescriptorProto_TYPE_MESSAGE {
+			if field.GetTypeName() != opts.tm.GetProtoTypeName() {
+				return
+			}
 		} else if field.GetType() != opts.tm.GetProtoType() {
 			return
 		}
@@ -139,12 +143,23 @@ func (Match) MatchQueryInField(f *desc.FieldDescriptorProto) func(*desc.FieldDes
 	}
 }
 func (Match) MatchTypeMapping(f *desc.FieldDescriptorProto) func(*TypeMappingProtoOpts) bool {
+	// fieldIsMappedSpecifically := GetFieldMappedProtoOption(f)
 	return func(opt *TypeMappingProtoOpts) bool {
+		// if fieldIsMappedSpecifically {
+		// 	return true
+		// }
 		tm := opt.tm
 		ptn := tm.GetProtoTypeName()
-		return tm.GetProtoType() == f.GetType() &&
-			tm.GetProtoLabel() == f.GetLabel() &&
-			ptn == f.GetTypeName() || ("."+ptn) == f.GetTypeName()
+
+		typesEqual := tm.GetProtoType() == f.GetType()
+		labelsEqual := tm.GetProtoLabel() == f.GetLabel()
+		typeNamesEqual := ptn == f.GetTypeName() || ("."+ptn) == f.GetTypeName()
+		notMsg := tm.GetProtoType() != desc.FieldDescriptorProto_TYPE_MESSAGE
+
+		if notMsg {
+			return typesEqual && labelsEqual
+		}
+		return typeNamesEqual && labelsEqual
 	}
 
 }

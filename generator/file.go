@@ -247,20 +247,22 @@ func (f *FileStruct) ProcessImportsForType(name string) {
 }
 
 func (f *FileStruct) ProcessImports() {
-	// logrus.Debugf("ProcessImports() for %s", f.GetOrigName())
 	importsForStructName := func(name string) {
 		// first get imports for this struct
 		f.ProcessImportsForType(name)
 
 		// make sure every field is check if it needs an import as well
+		// logrus.Debugf("allstructs: %v", f.AllStructures)
 		str := f.AllStructures.GetStructByProtoName(name)
-		for _, mp := range str.MsgDesc.GetField() {
-			if mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE ||
-				mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM {
+		if str != nil {
+			for _, mp := range str.MsgDesc.GetField() {
+				if mp.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE ||
+					mp.GetType() == descriptor.FieldDescriptorProto_TYPE_ENUM {
 
-				// if the type is mapped, we do not need this struct imported
-				// instead we need the mapped type to be imported
-				f.ProcessImportsForType(mp.GetTypeName())
+					// if the type is mapped, we do not need this struct imported
+					// instead we need the mapped type to be imported
+					f.ProcessImportsForType(mp.GetTypeName())
+				}
 			}
 		}
 	}

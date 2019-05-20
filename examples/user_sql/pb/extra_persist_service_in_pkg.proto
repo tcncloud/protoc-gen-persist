@@ -38,8 +38,9 @@ package pb;
 import "persist/options.proto";
 import "google/protobuf/timestamp.proto";
 import "imports/imported.proto";
+import "pb/user.proto";
 
-message User {
+message EUser {
     int64 id = 1;
     string name = 2;
     Friends friends = 3;
@@ -48,30 +49,8 @@ message User {
     repeated int64 counts = 7;
 
 }
-message InsertUserReq {
-    int64 id = 1;
-    string name = 2;
-    Friends friends = 3;
-    google.protobuf.Timestamp created_on = 4;
-    int32 id2 = 5;
-    repeated int64 counts = 7;
-}
 
-message Friends {
-    repeated string names = 1;
-}
-
-message SliceStringParam {
-    repeated string slice = 1;
-}
-message FriendsReq {
-    SliceStringParam names = 2;
-}
-
-message Empty{}
-message Empty2{}
-
-service UServ {
+service ExtraServ {
     option (persist.service_type) = SQL;
     option (persist.mapping) = {
         types: [{
@@ -87,108 +66,57 @@ service UServ {
     };
     option (persist.ql) = {
         queries: [{
-            name: "create_users_table",
+            name: "extra_create_users_table",
             query: ["CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA,",
                     "created_on VARCHAR(50), id2 SMALLINT, counts []BIGINT)"],
             pm_strategy: "$",
             in: ".pb.Empty",
             out: ".pb.Empty",
         }, {
-            name: "insert_users",
-            query: ["INSERT INTO users (id, name, friends, created_on, id2, counts) VALUES (@id, @name, @friends, @created_on, @counts)"],
-            pm_strategy: "$",
-            in: ".pb.User",
-            out: ".pb.Empty",
-        }, {
-            name: "get_all_users",
+            name: "extra_get_all_users",
             query: ["SELECT id, name, friends, created_on, id2 FROM users"],
             in: ".pb.Empty",
             out: ".pb.User",
         }, {
-            name: "select_user_by_id",
+            name: "extra_select_user_by_id",
             query: ["SELECT id, name, friends, created_on, id2 FROM users WHERE id = @id"],
             pm_strategy: "$",
             in: ".pb.User",
             out: ".pb.User",
         }, {
-            name: "update_user_name",
+            name: "extra_update_user_name",
             query: ["Update users set name = @name WHERE id = @id ",
                     "RETURNING id, name, friends, created_on"],
             pm_strategy: "$",
             in: ".pb.User",
             out: ".pb.User",
-        }, {
-            name: "update_name_to_foo",
-            query: ["Update users set name = 'foo' WHERE id = @id"],
-            pm_strategy: "$",
-            in: ".pb.User",
-            out: ".pb.Empty",
-        }, {
-            query: ["SELECT id, name, friends, created_on, id2 FROM users WHERE name = ANY(@names)"],
-            pm_strategy: "$",
-            name: "get_friends",
-            in: ".pb.FriendsReq",
-            out: ".pb.User",
-        },{
-            query: ["drop table users"],
-            name: "drop"
-            in: ".pb.Empty",
-            out: ".pb.Empty",
         }]
     };
     rpc CreateTable(Empty) returns (Empty) {
         option (persist.opts) = {
-            query: "create_users_table",
+            query: "extra_create_users_table",
         };
     };
     rpc TTTT(google.protobuf.Timestamp) returns (Empty) {
         option (persist.opts) = {
-            query: "create_users_table",
+            query: "extra_create_users_table",
         };
     };
     rpc EEEE(google.protobuf.Timestamp) returns (Empty);
     rpc IIII(imports.Imported) returns (Empty) {
         option (persist.opts) = {
-            query: "create_users_table",
-        };
-    };
-    rpc InsertUsers(stream User) returns (Empty2) {
-        option (persist.opts) = {
-            query: "insert_users",
-            before: true,
-            after: true,
+            query: "extra_create_users_table",
         };
     };
     rpc GetAllUsers(Empty) returns (stream User) {
         option (persist.opts) = {
-            query: "get_all_users",
+            query: "extra_get_all_users",
             after: true,
             before: true,
         };
     };
     rpc SelectUserById(User) returns (User) {
-        option (persist.opts) = { query: "select_user_by_id", };
-    };
-    rpc UpdateUserNames(stream User) returns (stream User) {
-        option (persist.opts) = {
-            query: "update_user_name",
-        };
-    };
-    rpc UpdateNameToFoo(User) returns (Empty) {
-        option (persist.opts) = {
-            query: "update_name_to_foo",
-        };
+        option (persist.opts) = { query: "extra_select_user_by_id", };
     };
     rpc UpdateAllNames(Empty) returns (stream User) {};
-
-    rpc GetFriends(FriendsReq) returns(stream User) {
-        option (persist.opts) = {
-            query: "get_friends",
-        };
-    };
-    rpc DropTable(Empty) returns (Empty) {
-        option (persist.opts) = {
-            query: "drop",
-        };
-    };
 }

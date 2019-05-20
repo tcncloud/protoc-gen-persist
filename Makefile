@@ -41,7 +41,7 @@ generate: deps proto-persist proto-examples
 
 proto-persist:
 	$(PROTOC) -I$(PROTOC_INCLUDE) -I. \
-		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor:. \
+		--go_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor,paths=source_relative:. \
 		persist/*.proto
 
 proto-examples:

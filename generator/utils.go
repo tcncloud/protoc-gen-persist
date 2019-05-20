@@ -95,15 +95,31 @@ func FormatCode(filename string, buffer []byte) []byte {
 	}
 	return buf
 }
-
 func getGoNamesForTypeMapping(tm *persist.TypeMapping_TypeDescriptor, file *FileStruct) (string, string) {
+	titledName := ""
 	name := file.GetGoTypeName(tm.GetProtoTypeName())
-	nameParts := strings.Split(name, ".")
-	for i, v := range nameParts {
-		nameParts[i] = strings.Title(v)
+	if tm.GetProtoType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
+		nameParts := strings.Split(name, ".")
+		for i, v := range nameParts {
+			nameParts[i] = strings.Title(v)
+		}
+		titledName = strings.Join(nameParts, "")
+	} else if typ := tm.GetProtoType(); typ != descriptor.FieldDescriptorProto_TYPE_GROUP &&
+		typ != descriptor.FieldDescriptorProto_TYPE_ENUM {
+		name, _ = defaultMapping(TmAsField{tm}, file)
+		titledName = strings.Title(name)
+		// we never want the slice parts
+		titledName = strings.Map(func(r rune) rune {
+			if r == ']' || r == '[' {
+				return -1
+			}
+			return r
+		}, titledName)
 	}
-	titled := strings.Join(nameParts, "")
-	return name, titled
+	if tm.GetProtoLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+		titledName += "Slice"
+	}
+	return name, titledName
 }
 
 func needsExtraStar(tm *persist.TypeMapping_TypeDescriptor) (bool, string) {
@@ -116,7 +132,24 @@ func needsExtraStar(tm *persist.TypeMapping_TypeDescriptor) (bool, string) {
 func convertedMsgTypeByProtoName(protoName string, f *FileStruct) string {
 	return f.GetGoTypeName(protoName)
 }
-func defaultMapping(typ *descriptor.FieldDescriptorProto, file *FileStruct) (string, error) {
+
+// TmAsField (TypeMappingAsField) Implements GetLabel and GetType, returning results from their GetProto equivalents
+type TmAsField struct {
+	tm *persist.TypeMapping_TypeDescriptor
+}
+
+func (t TmAsField) GetLabel() descriptor.FieldDescriptorProto_Label { return t.tm.GetProtoLabel() }
+func (t TmAsField) GetType() descriptor.FieldDescriptorProto_Type   { return t.tm.GetProtoType() }
+func (t TmAsField) GetTypeName() string                             { return t.tm.GetProtoTypeName() }
+
+type HasLabelAndType interface {
+	GetLabel() descriptor.FieldDescriptorProto_Label
+	GetType() descriptor.FieldDescriptorProto_Type
+	GetTypeName() string
+}
+
+// usualy typ is a *descriptor.FieldDescriptorProto, but it also could be a *TmAsField
+func defaultMapping(typ HasLabelAndType, file *FileStruct) (string, error) {
 	switch typ.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_GROUP:
 		return "__unsupported__type__", fmt.Errorf("one of is unsupported")
