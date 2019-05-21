@@ -49,6 +49,8 @@ type Struct struct {
 	File             *FileStruct // for determine go import path and go package
 	EnumDesc         *desc.EnumDescriptorProto
 	MsgDesc          *desc.DescriptorProto
+	ProtoName        string
+	GoName           string
 }
 
 func (s *Struct) GetGoPath() string {
@@ -80,27 +82,17 @@ func (s *Struct) GetFieldType(field string) *desc.FieldDescriptorProto {
 	return nil
 }
 func (s *Struct) GetGoName() string {
-	if s.IsMessage {
-		if s.IsInnerType {
-			return s.ParentDescriptor.GetGoName() + "_" + gen.CamelCase(s.MsgDesc.GetName())
-		} else {
-			return gen.CamelCase(s.MsgDesc.GetName())
-		}
-	} else {
-		if s.IsInnerType {
-			return s.ParentDescriptor.GetGoName() + "_" + gen.CamelCase(s.EnumDesc.GetName())
-		} else {
-			return gen.CamelCase(s.EnumDesc.GetName())
-		}
-	}
+	return s.GoName
+
 }
 
 func (s *Struct) GetProtoName() string {
-	if s.ParentDescriptor == nil {
-		return "." + s.File.Desc.GetPackage() + "." + s.Descriptor.GetName()
-	} else {
-		return s.ParentDescriptor.GetProtoName() + "." + s.Descriptor.GetName()
-	}
+	return s.ProtoName
+	// if s.ParentDescriptor == nil {
+	// 	return "." + s.File.Desc.GetPackage() + "." + s.Descriptor.GetName()
+	// } else {
+	// 	return s.ParentDescriptor.GetProtoName() + "." + s.Descriptor.GetName()
+	// }
 }
 
 func (s *Struct) GetImportedFiles() *FileList {
@@ -177,6 +169,25 @@ func (s *StructList) AddEnum(enum *desc.EnumDescriptorProto, parent *Struct, pkg
 		File:             file,
 	}
 
+	if str.ParentDescriptor == nil {
+		str.ProtoName = "." + str.File.Desc.GetPackage() + "." + str.Descriptor.GetName()
+	} else {
+		str.ProtoName = str.ParentDescriptor.GetProtoName() + "." + str.Descriptor.GetName()
+	}
+	if str.IsMessage {
+		if str.IsInnerType {
+			str.GoName = str.ParentDescriptor.GetGoName() + "_" + gen.CamelCase(str.MsgDesc.GetName())
+		} else {
+			str.GoName = gen.CamelCase(str.MsgDesc.GetName())
+		}
+	} else {
+		if str.IsInnerType {
+			str.GoName = str.ParentDescriptor.GetGoName() + "_" + gen.CamelCase(str.EnumDesc.GetName())
+		} else {
+			str.GoName = gen.CamelCase(str.EnumDesc.GetName())
+		}
+	}
+
 	*s = append(*s, str)
 	str.File.ProcessImportsForType(str.GetGoName())
 
@@ -195,6 +206,24 @@ func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, p
 		File:             file,
 	}
 
+	if str.ParentDescriptor == nil {
+		str.ProtoName = "." + str.File.Desc.GetPackage() + "." + str.Descriptor.GetName()
+	} else {
+		str.ProtoName = str.ParentDescriptor.GetProtoName() + "." + str.Descriptor.GetName()
+	}
+	if str.IsMessage {
+		if str.IsInnerType {
+			str.GoName = str.ParentDescriptor.GetGoName() + "_" + gen.CamelCase(str.MsgDesc.GetName())
+		} else {
+			str.GoName = gen.CamelCase(str.MsgDesc.GetName())
+		}
+	} else {
+		if str.IsInnerType {
+			str.GoName = str.ParentDescriptor.GetGoName() + "_" + gen.CamelCase(str.EnumDesc.GetName())
+		} else {
+			str.GoName = gen.CamelCase(str.EnumDesc.GetName())
+		}
+	}
 	*s = append(*s, str)
 	for _, innerMessage := range message.GetNestedType() {
 		s.AddMessage(innerMessage, str, pkg, file)

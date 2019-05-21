@@ -131,9 +131,9 @@ func (g *Generator) Process() error {
 			return err
 		}
 	}
-	for _, f := range *g.Files {
-		f.ProcessImports()
-	}
+	//for _, f := range *g.Files {
+	//	f.ProcessImports()
+	//}
 
 	return nil
 }
