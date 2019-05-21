@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	cloud.google.com/go v0.37.1
+	github.com/BenLubar/memoize v0.0.0-20151117215343-6fdb23a94b24 // indirect
 	github.com/golang/protobuf v1.3.1
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0

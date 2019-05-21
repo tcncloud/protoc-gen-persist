@@ -36,6 +36,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/BenLubar/memoize"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/tcncloud/protoc-gen-persist/persist"
 
@@ -72,7 +73,7 @@ func GetGoPath(url string) string {
 // dir
 // package
 // dir
-func GetGoPackage(url string) string {
+var getGoPackage = memoize.Memoize(func(url string) string {
 	switch {
 	case strings.Contains(url, ";"):
 		idx := strings.LastIndex(url, ";")
@@ -83,7 +84,8 @@ func GetGoPackage(url string) string {
 	default:
 		return url
 	}
-}
+})
+var GetGoPackage = getGoPackage.(func(string) string)
 
 func FormatCode(filename string, buffer []byte) []byte {
 	// reduce the empty lines
@@ -96,15 +98,33 @@ func FormatCode(filename string, buffer []byte) []byte {
 	return buf
 }
 
-func getGoNamesForTypeMapping(tm *persist.TypeMapping_TypeDescriptor, file *FileStruct) (string, string) {
+var _getGoNamesForTypeMapping = memoize.Memoize(func(tm *persist.TypeMapping_TypeDescriptor, file *FileStruct) (string, string) {
+	titledName := ""
 	name := file.GetGoTypeName(tm.GetProtoTypeName())
-	nameParts := strings.Split(name, ".")
-	for i, v := range nameParts {
-		nameParts[i] = strings.Title(v)
+	if tm.GetProtoType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
+		nameParts := strings.Split(name, ".")
+		for i, v := range nameParts {
+			nameParts[i] = strings.Title(v)
+		}
+		titledName = strings.Join(nameParts, "")
+	} else if typ := tm.GetProtoType(); typ != descriptor.FieldDescriptorProto_TYPE_GROUP &&
+		typ != descriptor.FieldDescriptorProto_TYPE_ENUM {
+		name, _ = defaultMapping(TmAsField{tm}, file)
+		titledName = strings.Title(name)
+		// we never want the slice parts
+		titledName = strings.Map(func(r rune) rune {
+			if r == ']' || r == '[' {
+				return -1
+			}
+			return r
+		}, titledName)
 	}
-	titled := strings.Join(nameParts, "")
-	return name, titled
-}
+	if tm.GetProtoLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+		titledName += "Slice"
+	}
+	return name, titledName
+})
+var getGoNamesForTypeMapping = _getGoNamesForTypeMapping.(func(*persist.TypeMapping_TypeDescriptor, *FileStruct) (string, string))
 
 func needsExtraStar(tm *persist.TypeMapping_TypeDescriptor) (bool, string) {
 	if tm.GetProtoType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
@@ -116,7 +136,24 @@ func needsExtraStar(tm *persist.TypeMapping_TypeDescriptor) (bool, string) {
 func convertedMsgTypeByProtoName(protoName string, f *FileStruct) string {
 	return f.GetGoTypeName(protoName)
 }
-func defaultMapping(typ *descriptor.FieldDescriptorProto, file *FileStruct) (string, error) {
+
+// TmAsField (TypeMappingAsField) Implements GetLabel and GetType, returning results from their GetProto equivalents
+type TmAsField struct {
+	tm *persist.TypeMapping_TypeDescriptor
+}
+
+func (t TmAsField) GetLabel() descriptor.FieldDescriptorProto_Label { return t.tm.GetProtoLabel() }
+func (t TmAsField) GetType() descriptor.FieldDescriptorProto_Type   { return t.tm.GetProtoType() }
+func (t TmAsField) GetTypeName() string                             { return t.tm.GetProtoTypeName() }
+
+type HasLabelAndType interface {
+	GetLabel() descriptor.FieldDescriptorProto_Label
+	GetType() descriptor.FieldDescriptorProto_Type
+	GetTypeName() string
+}
+
+// usualy typ is a *descriptor.FieldDescriptorProto, but it also could be a *TmAsField
+var _defaultMapping = memoize.Memoize(func(typ HasLabelAndType, file *FileStruct) (string, error) {
 	switch typ.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_GROUP:
 		return "__unsupported__type__", fmt.Errorf("one of is unsupported")
@@ -229,7 +266,8 @@ func defaultMapping(typ *descriptor.FieldDescriptorProto, file *FileStruct) (str
 		}
 	}
 	return "__type__", fmt.Errorf("unknown type")
-}
+})
+var defaultMapping = _defaultMapping.(func(HasLabelAndType, *FileStruct) (string, error))
 
 type Printer struct {
 	str string
