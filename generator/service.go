@@ -41,6 +41,18 @@ import (
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
+// returns if this field was marked as always needing a type mapping
+func GetFieldMappedProtoOption(field *desc.FieldDescriptorProto) bool {
+	if field.GetOptions() != nil && proto.HasExtension(field.Options, persist.E_MappedField) {
+		ext, err := proto.GetExtension(field.Options, persist.E_MappedField)
+		if err == nil {
+			return *ext.(*bool)
+		}
+
+	}
+	return false
+}
+
 type Service struct {
 	Desc       *desc.ServiceDescriptorProto
 	Package    string // protobuf package
@@ -170,6 +182,51 @@ func NewQueryProtoOpts(qopt *persist.QLImpl, all *StructList) (*QueryProtoOpts, 
 	}, nil
 }
 
+// message TypeMapping {
+//     message TypeDescriptor {
+//         // if this is not setup the proto_type must be one of the built-in types
+//         optional string proto_type_name =1;
+//         // If proto_type_name is set, this need not be set.  If both this and proto_type_name
+//         // are set, this must be one of TYPE_ENUM, TYPE_MESSAGE
+//         // TYPE_GROUP is not supported
+
+// const (
+// 	// 0 is reserved for errors.
+// 	// Order is weird for historical reasons.
+// 	FieldDescriptorProto_TYPE_DOUBLE FieldDescriptorProto_Type = 1
+// 	FieldDescriptorProto_TYPE_FLOAT  FieldDescriptorProto_Type = 2
+// 	// Not ZigZag encoded.  Negative numbers take 10 bytes.  Use TYPE_SINT64 if
+// 	// negative values are likely.
+// 	FieldDescriptorProto_TYPE_INT64  FieldDescriptorProto_Type = 3
+// 	FieldDescriptorProto_TYPE_UINT64 FieldDescriptorProto_Type = 4
+// 	// Not ZigZag encoded.  Negative numbers take 10 bytes.  Use TYPE_SINT32 if
+// 	// negative values are likely.
+// 	FieldDescriptorProto_TYPE_INT32   FieldDescriptorProto_Type = 5
+// 	FieldDescriptorProto_TYPE_FIXED64 FieldDescriptorProto_Type = 6
+// 	FieldDescriptorProto_TYPE_FIXED32 FieldDescriptorProto_Type = 7
+// 	FieldDescriptorProto_TYPE_BOOL    FieldDescriptorProto_Type = 8
+// 	FieldDescriptorProto_TYPE_STRING  FieldDescriptorProto_Type = 9
+// 	// Tag-delimited aggregate.
+// 	// Group type is deprecated and not supported in proto3. However, Proto3
+// 	// implementations should still be able to parse the group wire format and
+// 	// treat group fields as unknown fields.
+// 	FieldDescriptorProto_TYPE_GROUP   FieldDescriptorProto_Type = 10
+// 	FieldDescriptorProto_TYPE_MESSAGE FieldDescriptorProto_Type = 11
+// 	// New in version 2.
+// 	FieldDescriptorProto_TYPE_BYTES    FieldDescriptorProto_Type = 12
+// 	FieldDescriptorProto_TYPE_UINT32   FieldDescriptorProto_Type = 13
+// 	FieldDescriptorProto_TYPE_ENUM     FieldDescriptorProto_Type = 14
+// 	FieldDescriptorProto_TYPE_SFIXED32 FieldDescriptorProto_Type = 15
+// 	FieldDescriptorProto_TYPE_SFIXED64 FieldDescriptorProto_Type = 16
+// 	FieldDescriptorProto_TYPE_SINT32   FieldDescriptorProto_Type = 17
+// 	FieldDescriptorProto_TYPE_SINT64   FieldDescriptorProto_Type = 18
+// )
+//         optional google.protobuf.FieldDescriptorProto.Type proto_type= 2;
+//         // if proto_label is not setup we consider any option except LABAEL_REPEATED
+//         optional google.protobuf.FieldDescriptorProto.Label proto_label = 3;
+//     }
+//     repeated TypeDescriptor types = 1;
+// }
 type TypeMappingProtoOpts struct {
 	tm *persist.TypeMapping_TypeDescriptor
 }
@@ -426,81 +483,55 @@ func (this *Query_`, sName, `_`, camelQ(q), `) Execute(x In_`, sName, `_`, camel
 	}
 
 	if s.IsSpanner() {
+		// each field name will have how to fetch its value, as go code here
+		// populated by "populateParams"
 
-		populateParams := func(q *QueryProtoOpts) string {
-			orig := strings.Join(q.query.GetQuery(), " ")
-			result := make([]string, 0)
+		populateParams := func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) string {
+			var param string
+			var typeMappingName string
+			m.EachTM(func(opts *TypeMappingProtoOpts) {
+				_, titled := getGoNamesForTypeMapping(opts.tm, s.File)
+				typeMappingName = titled
+			}, m.MatchTypeMapping(f))
 
-			r := regexp.MustCompile("@[a-zA-Z0-9_]*")
-			potentialFieldNames := r.FindAllString(orig, -1)
-			mappedField := make(map[string]string)
-			fieldsMap := make(map[string]desc.FieldDescriptorProto_Type)
-			repeatedMap := make(map[string]desc.FieldDescriptorProto_Label)
-
-			for _, v := range q.inFields {
-				m.EachTM(func(opts *TypeMappingProtoOpts) {
-					if v.GetLabel() != opts.tm.GetProtoLabel() {
-						return
-					} else if v.GetTypeName() != opts.tm.GetProtoTypeName() {
-						return
-					} else if v.GetType() != opts.tm.GetProtoType() {
-						return
-					}
-					_, titled := getGoNamesForTypeMapping(opts.tm, s.File)
-					mappedField[v.GetName()] = titled
-				})
-
-				fieldsMap[v.GetName()] = v.GetType()
-				repeatedMap[v.GetName()] = v.GetLabel()
-			}
-
-			for _, pf := range potentialFieldNames {
-				start := strings.Index(orig, pf)
-				stop := start + len(pf)
-				fieldType, ok := fieldsMap[pf[1:]]
-				if ok { // it was a field, mark it
-					key := pf[1:]
-					mappingType, isMapped := mappedField[key]
-					label := repeatedMap[key]
-					if isMapped {
-						result = append(result,
-							key+`, err := this.opts.MAPPINGS.`+mappingType+`().ToSpanner(x.Get`+_gen.CamelCase(key)+`()).SpannerValue()
-                            if err != nil {
-                                return nil, err
-                            }
-                            result["`+key+`"] = `+key+`
-                            `,
-						)
-					} else if label == desc.FieldDescriptorProto_LABEL_REPEATED && fieldType == desc.FieldDescriptorProto_TYPE_MESSAGE {
-						result = append(result, `
-							`+key+` := make([][]byte, 0)
-							for _, tmp := range x.Get`+_gen.CamelCase(key)+`() {
-								bytes, err := proto.Marshal(tmp)
-								if err != nil {
-									return nil, err
-								}
-								`+key+` = append(`+key+`, bytes)
-							}
-							result["`+key+`"] = `+key+`
-						`)
-					} else if fieldType == desc.FieldDescriptorProto_TYPE_MESSAGE {
-						result = append(result, `
-                        `+key+`, err := proto.Marshal(x.Get`+_gen.CamelCase(key)+`())
-                        if err != nil {
-                            return nil, err
-                        }
-                         result["`+key+`"] = `+key)
-					} else {
-						result = append(result, `result["`+key+`"] = x.Get`+_gen.CamelCase(key)+`()`)
-					}
+			camFieldName := _gen.CamelCase(f.GetName())
+			fName := f.GetName()
+			// default
+			param = `result["` + camFieldName + `"] = x.Get` + camFieldName + `()`
+			// messages
+			if f.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE {
+				param = camFieldName + `, err := proto.Marshal(x.Get` + camFieldName + `())
+				if err != nil {
+					return nil, err
 				}
-				orig = orig[stop:]
+				result["` + fName + `"] = ` + camFieldName
 			}
+			// repeated messages
+			if f.GetLabel() == desc.FieldDescriptorProto_LABEL_REPEATED &&
+				f.GetType() == desc.FieldDescriptorProto_TYPE_MESSAGE {
+				param = camFieldName + ` := make([][]byte, 0)
+				for _, tmp := range x.Get` + camFieldName + `() {
+					bytes, err := proto.Marshal(tmp)
+					if err != nil {
+						return nil, err
+					}
+					` + camFieldName + ` = append(` + camFieldName + `, bytes)
+				}
+				result["` + fName + `"] = ` + camFieldName
 
-			return strings.Join(result, "\n")
+			}
+			// case type mapping
+			if m.QueryFieldIsMapped(f, q) && !GetFieldMappedProtoOption(f) {
+				param = camFieldName + `, err := this.opts.MAPPINGS.` + typeMappingName + `().ToSpanner(x.Get` + camFieldName + `()).SpannerValue()
+				if err != nil {
+					return nil, err
+				}
+				result["` + fName + `"] = ` + camFieldName
+			}
+			return param
 		}
 
-		m.EachQuery(func(q *QueryProtoOpts) {
+		m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
 			p.Q(`
 // `, camelQ(q), ` returns a struct that will perform the '`, qname(q), `' query.
 // When Execute is called, it will use the following fields:
@@ -534,7 +565,7 @@ func (this *Query_`, sName, `_`, camelQ(q), `) Execute(x In_`, sName, `_`, camel
     }
     params, err  := func() (map[string]interface{}, error) {
         result := make(map[string]interface{})
-        `, populateParams(q), `
+        `, populateParams(f, q), `
         return result, nil
     }()
     if err != nil {
@@ -618,26 +649,26 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 		p.Q(titled, "() MappingImpl_", sName, "_", titled, "\n")
 	}
 	p.Q("}\n")
-	m := Matcher(s)
-	m.EachTM(func(tm *TypeMappingProtoOpts) {
-		p.Q(`
-		`)
-	})
 	p.Q(`type DefaultTypeMappings_`, sName, ` struct{}
-    `)
-
+	`)
 	if s.IsSQL() {
 		for _, tm := range tms {
 			name, titled := getGoNamesForTypeMapping(tm, s.File)
+			// we only need a pointer if its not a repeated type
+			var needsStar string
+			if tm.GetProtoLabel() != desc.FieldDescriptorProto_LABEL_REPEATED {
+				needsStar = "*"
+			}
+
 			p.Q(`func (this *DefaultTypeMappings_`, sName, `) `, titled, `() MappingImpl_`, sName, `_`, titled, ` {
             return &DefaultMappingImpl_`, sName, `_`, titled, `{}
         }
         type DefaultMappingImpl_`, sName, `_`, titled, ` struct{}
 
-        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToProto(**`, name, `) error {
+        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToProto(*`, needsStar, name, `) error {
             return nil
         }
-        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToSql(*`, name, `) sql.Scanner {
+        func (this *DefaultMappingImpl_`, sName, `_`, titled, `) ToSql(`, needsStar, name, `) sql.Scanner {
             return this
         }
         func (this *DefaultMappingImpl_`, sName, `_`, titled, `) Scan(interface{}) error {
@@ -647,8 +678,8 @@ func WriteTypeMappings(p *Printer, s *Service) error {
             return "DEFAULT_TYPE_MAPPING_VALUE", nil
 		}
 		type MappingImpl_`, sName, `_`, titled, ` interface {
-			ToProto(**`, name, `) error
-			ToSql(*`, name, `) sql.Scanner
+			ToProto(*`, needsStar, name, `) error
+			ToSql(`, needsStar, name, `) sql.Scanner
 			sql.Scanner
 			driver.Valuer
 		}
@@ -659,6 +690,10 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 	if s.IsSpanner() {
 		for _, tm := range tms {
 			name, titled := getGoNamesForTypeMapping(tm, s.File)
+			var needsStar string
+			if tm.GetProtoLabel() != desc.FieldDescriptorProto_LABEL_REPEATED {
+				needsStar = "*"
+			}
 
 			p.Q(`func (this *DefaultTypeMappings_`, sName, `) `, titled, `() MappingImpl_`, sName, `_`, titled, ` {
             return &DefaultMappingImpl_`, sName, `_`, titled, `{}
@@ -679,7 +714,7 @@ func WriteTypeMappings(p *Printer, s *Service) error {
 		}
 
 		type MappingImpl_`, sName, `_`, titled, ` interface{
-			ToProto(**`, name, `) error
+			ToProto(*`, needsStar, name, `) error
             ToSpanner(*`, name, `) persist.SpannerScanValuer 
             SpannerScan(*spanner.GenericColumnValue) error
 			SpannerValue() (interface{}, error)
@@ -998,7 +1033,6 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
 	// Spanner Iterators
 	if s.IsSpanner() {
-
 		rowToProto := func(q *QueryProtoOpts) string {
 			acc := make([]string, 0)
 			names := make([]string, 0)
@@ -1008,6 +1042,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 				goType := mustDefaultMapping(field)
 
 				if m.QueryFieldIsMapped(field, q) {
+					// TODO support field mappings
 					m.EachTM(func(opt *TypeMappingProtoOpts) {
 						_, titled := getGoNamesForTypeMapping(opt.tm, s.File)
 						acc = append(acc, `
@@ -1188,7 +1223,7 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 		return _gen.CamelCase(f.GetName())
 	}
 	methOutName := func(opt *MethodProtoOpts) string {
-		return convertedMsgTypeByProtoName(opt.method.GetOutputType(), s.File)
+		return s.File.GetGoTypeName(opt.method.GetOutputType())
 	}
 	methOutNamePkg := func(opt *MethodProtoOpts) string {
 		return _gen.CamelCase(strings.Map(func(r rune) rune {
@@ -1196,20 +1231,18 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 				return -1
 			}
 			return r
-		}, convertedMsgTypeByProtoName(opt.method.GetOutputType(), s.File)))
+		}, s.File.GetGoTypeName(opt.method.GetOutputType())))
 	}
-	_ = methOutNamePkg
 	outNamePkg := func(opt *QueryProtoOpts) string {
 		return _gen.CamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}
 			return r
-		}, convertedMsgTypeByProtoName(opt.outMsg.GetProtoName(), s.File)))
+		}, s.File.GetGoTypeName(opt.outMsg.GetProtoName())))
 	}
-	_ = outNamePkg
 	outName := func(opt *QueryProtoOpts) string {
-		return convertedMsgTypeByProtoName(opt.outMsg.GetProtoName(), s.File)
+		return s.File.GetGoTypeName(opt.outMsg.GetProtoName())
 	}
 	// remove the err checks from this one method
 	mustDefaultMapping := func(f *desc.FieldDescriptorProto) string {
@@ -1536,13 +1569,8 @@ func (this *Impl_`, serviceName, `) `, method, `(stream `, serviceName, `_`, met
 
 // BUG:: ONLY WORKS WITH sql.DB, needs to work with spanner
 func WriteImports(p *Printer, f *FileStruct) error {
-	hasSQL := false
 	hasSpanner := false
 	for _, service := range *f.ServiceList {
-		if service.IsSQL() {
-			hasSQL = true
-		}
-
 		if service.IsSpanner() {
 			hasSpanner = true
 		}
@@ -1569,81 +1597,86 @@ func WriteImports(p *Printer, f *FileStruct) error {
 	}
 
 	p.P(")\n")
+	return nil
+}
+func WritePackageLevelDeclarations(p *Printer, files *FileList) error {
+	hasSQL := false
+	hasSpanner := false
+	for _, f := range *files {
+		for _, service := range *f.ServiceList {
+			if service.IsSQL() {
+				hasSQL = true
+			}
 
+			if service.IsSpanner() {
+				hasSpanner = true
+			}
+		}
+	}
 	if hasSQL {
 		p.Q(`
+			type ignoreTx struct {
+				r persist.Runnable
+			}
+			func (this *ignoreTx) Commit() error   { return nil }
+			func (this *ignoreTx) Rollback() error { return nil }
+			func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
+				return this.r.QueryContext(ctx, x, ys...)
+			}
+			func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
+				return this.r.ExecContext(ctx, x, ys...)
+			}
+			func NopPersistTx(r persist.Runnable) (persist.PersistTx, error) {
+				return &ignoreTx{r}, nil
+			}
 
-func NopPersistTx(r persist.Runnable) (persist.PersistTx, error) {
-    return &ignoreTx{r}, nil
-}
+			func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+				return db.BeginTx(ctx, nil)
+			}
+			func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+				return NopPersistTx(db)
+			}
+			func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+				return NopPersistTx(db)
+			}
+			func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+				return NopPersistTx(db)
+			}
 
-type ignoreTx struct {
-    r persist.Runnable
-}
+			type alwaysScanner struct {
+				i *interface{}
+			}
 
-func (this *ignoreTx) Commit() error   { return nil }
-func (this *ignoreTx) Rollback() error { return nil }
-func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
-    return this.r.QueryContext(ctx, x, ys...)
-}
-func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
-    return this.r.ExecContext(ctx, x, ys...)
-}
+			func (s *alwaysScanner) Scan(src interface{}) error {
+				s.i = &src
+				return nil
+			}
 
-type Runnable interface {
-    QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-    ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-}
+			type scanable interface {
+				Scan(...interface{}) error
+				Columns() ([]string, error)
+			}
 
-func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
-    return db.BeginTx(ctx, nil)
-}
-func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
-    return NopPersistTx(db)
-}
-func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
-    return NopPersistTx(db)
-}
-func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
-    return NopPersistTx(db)
-}
-
-type alwaysScanner struct {
-    i *interface{}
-}
-
-func (s *alwaysScanner) Scan(src interface{}) error {
-    s.i = &src
-    return nil
-}
-
-type scanable interface {
-    Scan(...interface{}) error
-    Columns() ([]string, error)
-}
-
-        `)
+		`)
 	} else if hasSpanner {
 		p.Q(`
-type Result interface {
-    LastInsertId() (int64, error)
-    RowsAffected() (int64, error)
-}
-type SpannerResult struct {
-    // TODO shouldn't be an iter
-    iter *spanner.RowIterator
-}
+			type Result interface {
+				LastInsertId() (int64, error)
+				RowsAffected() (int64, error)
+			}
+			type SpannerResult struct {
+				// TODO shouldn't be an iter
+				iter *spanner.RowIterator
+			}
 
-func (sr *SpannerResult) LastInsertId() (int64, error) {
-    // sr.iter.QueryStats or sr.iter.QueryPlan
-    return -1, nil
-}
-func (sr *SpannerResult) RowsAffected() (int64, error) {
-    // Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
-    return sr.iter.RowCount, nil
-}
-
-
+			func (sr *SpannerResult) LastInsertId() (int64, error) {
+				// sr.iter.QueryStats or sr.iter.QueryPlan
+				return -1, nil
+			}
+			func (sr *SpannerResult) RowsAffected() (int64, error) {
+				// Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
+				return sr.iter.RowCount, nil
+			}
         `)
 	}
 	return nil

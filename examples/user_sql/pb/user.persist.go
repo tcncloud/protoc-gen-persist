@@ -18,55 +18,6 @@ import (
 	gstatus "google.golang.org/grpc/status"
 )
 
-func NopPersistTx(r persist.Runnable) (persist.PersistTx, error) {
-	return &ignoreTx{r}, nil
-}
-
-type ignoreTx struct {
-	r persist.Runnable
-}
-
-func (this *ignoreTx) Commit() error   { return nil }
-func (this *ignoreTx) Rollback() error { return nil }
-func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
-	return this.r.QueryContext(ctx, x, ys...)
-}
-func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
-	return this.r.ExecContext(ctx, x, ys...)
-}
-
-type Runnable interface {
-	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-}
-
-func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
-	return db.BeginTx(ctx, nil)
-}
-func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
-	return NopPersistTx(db)
-}
-func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
-	return NopPersistTx(db)
-}
-func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
-	return NopPersistTx(db)
-}
-
-type alwaysScanner struct {
-	i *interface{}
-}
-
-func (s *alwaysScanner) Scan(src interface{}) error {
-	s.i = &src
-	return nil
-}
-
-type scanable interface {
-	Scan(...interface{}) error
-	Columns() ([]string, error)
-}
-
 // Queries_UServ holds all the queries found the proto service option as methods
 type Queries_UServ struct {
 	opts Opts_UServ
@@ -120,13 +71,13 @@ func (this *Query_UServ_CreateUsersTable) Execute(x In_UServ_CreateUsersTable) *
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50), id2 SMALLINT)", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50), id2 SMALLINT, counts []BIGINT)", params...)
 	return result
 }
 
 // InsertUsers returns a struct that will perform the 'insert_users' query.
 // When Execute is called, it will use the following fields:
-// [id name friends created_on id2]
+// [id name friends created_on counts]
 func (this *Queries_UServ) InsertUsers(ctx context.Context, db persist.Runnable) *Query_UServ_InsertUsers {
 	return &Query_UServ_InsertUsers{
 		opts: this.opts,
@@ -146,7 +97,7 @@ func (this *Query_UServ_InsertUsers) QueryInType_User()   {}
 func (this *Query_UServ_InsertUsers) QueryOutType_Empty() {}
 
 // Executes the query 'insert_users' with parameters retrieved from x.
-// Fields used: [id name friends created_on id2]
+// Fields used: [id name friends created_on counts]
 func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ_InsertUsers {
 	var setupErr error
 	params := []interface{}{
@@ -172,7 +123,8 @@ func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ
 			return
 		}(),
 		func() (out interface{}) {
-			out = x.GetId2()
+			mapper := this.opts.MAPPINGS.Int64Slice()
+			out = mapper.ToSql(x.GetCounts())
 			return
 		}(),
 	}
@@ -184,7 +136,7 @@ func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on, id2) VALUES ($1, $2, $3, $4, $5)", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on, id2, counts) VALUES ($1, $2, $3, $4, $5)", params...)
 	return result
 }
 
@@ -868,6 +820,14 @@ func (this *Iter_UServ_GetAllUsers) Next() (*Row_UServ_GetAllUsers, bool) {
 				return &Row_UServ_GetAllUsers{err: fmt.Errorf("cant convert db column id2 to protobuf go type ")}, true
 			}
 			res.Id2 = int32(r)
+		case "counts":
+			var converted = this.tm.Int64Slice()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Row_UServ_GetAllUsers{err: fmt.Errorf("could not convert mapped db column counts to type on User.Counts: %v", err)}, true
+			}
+			if err := converted.ToProto(&res.Counts); err != nil {
+				return &Row_UServ_GetAllUsers{err: fmt.Errorf("could not convert mapped db column countsto type on User.Counts: %v", err)}, true
+			}
 
 		default:
 			return &Row_UServ_GetAllUsers{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -1045,6 +1005,14 @@ func (this *Iter_UServ_SelectUserById) Next() (*Row_UServ_SelectUserById, bool) 
 				return &Row_UServ_SelectUserById{err: fmt.Errorf("cant convert db column id2 to protobuf go type ")}, true
 			}
 			res.Id2 = int32(r)
+		case "counts":
+			var converted = this.tm.Int64Slice()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Row_UServ_SelectUserById{err: fmt.Errorf("could not convert mapped db column counts to type on User.Counts: %v", err)}, true
+			}
+			if err := converted.ToProto(&res.Counts); err != nil {
+				return &Row_UServ_SelectUserById{err: fmt.Errorf("could not convert mapped db column countsto type on User.Counts: %v", err)}, true
+			}
 
 		default:
 			return &Row_UServ_SelectUserById{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -1222,6 +1190,14 @@ func (this *Iter_UServ_UpdateUserName) Next() (*Row_UServ_UpdateUserName, bool) 
 				return &Row_UServ_UpdateUserName{err: fmt.Errorf("cant convert db column id2 to protobuf go type ")}, true
 			}
 			res.Id2 = int32(r)
+		case "counts":
+			var converted = this.tm.Int64Slice()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Row_UServ_UpdateUserName{err: fmt.Errorf("could not convert mapped db column counts to type on User.Counts: %v", err)}, true
+			}
+			if err := converted.ToProto(&res.Counts); err != nil {
+				return &Row_UServ_UpdateUserName{err: fmt.Errorf("could not convert mapped db column countsto type on User.Counts: %v", err)}, true
+			}
 
 		default:
 			return &Row_UServ_UpdateUserName{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -1540,6 +1516,14 @@ func (this *Iter_UServ_GetFriends) Next() (*Row_UServ_GetFriends, bool) {
 				return &Row_UServ_GetFriends{err: fmt.Errorf("cant convert db column id2 to protobuf go type ")}, true
 			}
 			res.Id2 = int32(r)
+		case "counts":
+			var converted = this.tm.Int64Slice()
+			if err := converted.Scan(*scanned[i].i); err != nil {
+				return &Row_UServ_GetFriends{err: fmt.Errorf("could not convert mapped db column counts to type on User.Counts: %v", err)}, true
+			}
+			if err := converted.ToProto(&res.Counts); err != nil {
+				return &Row_UServ_GetFriends{err: fmt.Errorf("could not convert mapped db column countsto type on User.Counts: %v", err)}, true
+			}
 
 		default:
 			return &Row_UServ_GetFriends{err: fmt.Errorf("unsupported column in output: %s", col)}, true
@@ -1792,6 +1776,7 @@ type In_UServ_InsertUsers interface {
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 	GetId2() int32
+	GetCounts() []int64
 }
 type Out_UServ_InsertUsers interface {
 }
@@ -1860,6 +1845,7 @@ type Out_UServ_GetAllUsers interface {
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 	GetId2() int32
+	GetCounts() []int64
 }
 type Row_UServ_GetAllUsers struct {
 	item Out_UServ_GetAllUsers
@@ -1887,6 +1873,7 @@ func (this *Row_UServ_GetAllUsers) Unwrap(pointerToMsg proto.Message) error {
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
 		o.Id2 = res.Id2
+		o.Counts = res.Counts
 		return nil
 	}
 
@@ -1901,6 +1888,7 @@ func (this *Row_UServ_GetAllUsers) Unwrap(pointerToMsg proto.Message) error {
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
 		o.Id2 = res.Id2
+		o.Counts = res.Counts
 		return nil
 	}
 
@@ -1916,6 +1904,7 @@ func (this *Row_UServ_GetAllUsers) User() (*User, error) {
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
 		Id2:       this.item.GetId2(),
+		Counts:    this.item.GetCounts(),
 	}, nil
 }
 
@@ -1929,6 +1918,7 @@ func (this *Row_UServ_GetAllUsers) Proto() (*User, error) {
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
 		Id2:       this.item.GetId2(),
+		Counts:    this.item.GetCounts(),
 	}, nil
 }
 
@@ -1938,6 +1928,7 @@ type In_UServ_SelectUserById interface {
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 	GetId2() int32
+	GetCounts() []int64
 }
 type Out_UServ_SelectUserById interface {
 	GetId() int64
@@ -1945,6 +1936,7 @@ type Out_UServ_SelectUserById interface {
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 	GetId2() int32
+	GetCounts() []int64
 }
 type Row_UServ_SelectUserById struct {
 	item Out_UServ_SelectUserById
@@ -1972,6 +1964,7 @@ func (this *Row_UServ_SelectUserById) Unwrap(pointerToMsg proto.Message) error {
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
 		o.Id2 = res.Id2
+		o.Counts = res.Counts
 		return nil
 	}
 
@@ -1986,6 +1979,7 @@ func (this *Row_UServ_SelectUserById) Unwrap(pointerToMsg proto.Message) error {
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
 		o.Id2 = res.Id2
+		o.Counts = res.Counts
 		return nil
 	}
 
@@ -2001,6 +1995,7 @@ func (this *Row_UServ_SelectUserById) User() (*User, error) {
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
 		Id2:       this.item.GetId2(),
+		Counts:    this.item.GetCounts(),
 	}, nil
 }
 
@@ -2014,6 +2009,7 @@ func (this *Row_UServ_SelectUserById) Proto() (*User, error) {
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
 		Id2:       this.item.GetId2(),
+		Counts:    this.item.GetCounts(),
 	}, nil
 }
 
@@ -2023,6 +2019,7 @@ type In_UServ_UpdateUserName interface {
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 	GetId2() int32
+	GetCounts() []int64
 }
 type Out_UServ_UpdateUserName interface {
 	GetId() int64
@@ -2030,6 +2027,7 @@ type Out_UServ_UpdateUserName interface {
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 	GetId2() int32
+	GetCounts() []int64
 }
 type Row_UServ_UpdateUserName struct {
 	item Out_UServ_UpdateUserName
@@ -2057,6 +2055,7 @@ func (this *Row_UServ_UpdateUserName) Unwrap(pointerToMsg proto.Message) error {
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
 		o.Id2 = res.Id2
+		o.Counts = res.Counts
 		return nil
 	}
 
@@ -2071,6 +2070,7 @@ func (this *Row_UServ_UpdateUserName) Unwrap(pointerToMsg proto.Message) error {
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
 		o.Id2 = res.Id2
+		o.Counts = res.Counts
 		return nil
 	}
 
@@ -2086,6 +2086,7 @@ func (this *Row_UServ_UpdateUserName) User() (*User, error) {
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
 		Id2:       this.item.GetId2(),
+		Counts:    this.item.GetCounts(),
 	}, nil
 }
 
@@ -2099,6 +2100,7 @@ func (this *Row_UServ_UpdateUserName) Proto() (*User, error) {
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
 		Id2:       this.item.GetId2(),
+		Counts:    this.item.GetCounts(),
 	}, nil
 }
 
@@ -2108,6 +2110,7 @@ type In_UServ_UpdateNameToFoo interface {
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 	GetId2() int32
+	GetCounts() []int64
 }
 type Out_UServ_UpdateNameToFoo interface {
 }
@@ -2171,6 +2174,7 @@ type Out_UServ_GetFriends interface {
 	GetFriends() *Friends
 	GetCreatedOn() *timestamp.Timestamp
 	GetId2() int32
+	GetCounts() []int64
 }
 type Row_UServ_GetFriends struct {
 	item Out_UServ_GetFriends
@@ -2198,6 +2202,7 @@ func (this *Row_UServ_GetFriends) Unwrap(pointerToMsg proto.Message) error {
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
 		o.Id2 = res.Id2
+		o.Counts = res.Counts
 		return nil
 	}
 
@@ -2212,6 +2217,7 @@ func (this *Row_UServ_GetFriends) Unwrap(pointerToMsg proto.Message) error {
 		o.Friends = res.Friends
 		o.CreatedOn = res.CreatedOn
 		o.Id2 = res.Id2
+		o.Counts = res.Counts
 		return nil
 	}
 
@@ -2227,6 +2233,7 @@ func (this *Row_UServ_GetFriends) User() (*User, error) {
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
 		Id2:       this.item.GetId2(),
+		Counts:    this.item.GetCounts(),
 	}, nil
 }
 
@@ -2240,6 +2247,7 @@ func (this *Row_UServ_GetFriends) Proto() (*User, error) {
 		Friends:   this.item.GetFriends(),
 		CreatedOn: this.item.GetCreatedOn(),
 		Id2:       this.item.GetId2(),
+		Counts:    this.item.GetCounts(),
 	}, nil
 }
 
@@ -2322,8 +2330,8 @@ func (*DefaultHooks_UServ) GetAllUsersAfterHook(context.Context, *Empty, *User) 
 type TypeMappings_UServ interface {
 	TimestampTimestamp() MappingImpl_UServ_TimestampTimestamp
 	SliceStringParam() MappingImpl_UServ_SliceStringParam
+	Int64Slice() MappingImpl_UServ_Int64Slice
 }
-
 type DefaultTypeMappings_UServ struct{}
 
 func (this *DefaultTypeMappings_UServ) TimestampTimestamp() MappingImpl_UServ_TimestampTimestamp {
@@ -2374,6 +2382,32 @@ func (this *DefaultMappingImpl_UServ_SliceStringParam) Value() (driver.Value, er
 type MappingImpl_UServ_SliceStringParam interface {
 	ToProto(**SliceStringParam) error
 	ToSql(*SliceStringParam) sql.Scanner
+	sql.Scanner
+	driver.Valuer
+}
+
+func (this *DefaultTypeMappings_UServ) Int64Slice() MappingImpl_UServ_Int64Slice {
+	return &DefaultMappingImpl_UServ_Int64Slice{}
+}
+
+type DefaultMappingImpl_UServ_Int64Slice struct{}
+
+func (this *DefaultMappingImpl_UServ_Int64Slice) ToProto(*[]int64) error {
+	return nil
+}
+func (this *DefaultMappingImpl_UServ_Int64Slice) ToSql([]int64) sql.Scanner {
+	return this
+}
+func (this *DefaultMappingImpl_UServ_Int64Slice) Scan(interface{}) error {
+	return nil
+}
+func (this *DefaultMappingImpl_UServ_Int64Slice) Value() (driver.Value, error) {
+	return "DEFAULT_TYPE_MAPPING_VALUE", nil
+}
+
+type MappingImpl_UServ_Int64Slice interface {
+	ToProto(*[]int64) error
+	ToSql([]int64) sql.Scanner
 	sql.Scanner
 	driver.Valuer
 }
@@ -2625,4 +2659,46 @@ func (this *Impl_UServ) DropTable(ctx context.Context, req *Empty) (*Empty, erro
 	}
 
 	return res, nil
+}
+
+type ignoreTx struct {
+	r persist.Runnable
+}
+
+func (this *ignoreTx) Commit() error   { return nil }
+func (this *ignoreTx) Rollback() error { return nil }
+func (this *ignoreTx) QueryContext(ctx context.Context, x string, ys ...interface{}) (*sql.Rows, error) {
+	return this.r.QueryContext(ctx, x, ys...)
+}
+func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
+	return this.r.ExecContext(ctx, x, ys...)
+}
+func NopPersistTx(r persist.Runnable) (persist.PersistTx, error) {
+	return &ignoreTx{r}, nil
+}
+func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+	return db.BeginTx(ctx, nil)
+}
+func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+	return NopPersistTx(db)
+}
+func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+	return NopPersistTx(db)
+}
+func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+	return NopPersistTx(db)
+}
+
+type alwaysScanner struct {
+	i *interface{}
+}
+
+func (s *alwaysScanner) Scan(src interface{}) error {
+	s.i = &src
+	return nil
+}
+
+type scanable interface {
+	Scan(...interface{}) error
+	Columns() ([]string, error)
 }

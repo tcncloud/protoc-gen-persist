@@ -85,6 +85,7 @@ func (g *Generator) CommandLineParameters(parameter string) error {
 func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 	ret := g.Response
 	// logrus.Debugf("going over %d files\n", len(*g.Files))
+	var writePkgLevel bool
 	for _, fileStruct := range *g.Files {
 		// format file Content
 
@@ -92,6 +93,12 @@ func (g *Generator) GetResponse() (*plugin_go.CodeGeneratorResponse, error) {
 			fileContents, err := fileStruct.Generate()
 			if err != nil {
 				return nil, fmt.Errorf("error generating the file struct: %s", err)
+			}
+			if !writePkgLevel {
+				p := &Printer{}
+				WritePackageLevelDeclarations(p, g.Files)
+				fileContents = append(fileContents, []byte(p.String())...)
+				writePkgLevel = true
 			}
 			ret.File = append(ret.File, &plugin_go.CodeGeneratorResponse_File{
 				Content: proto.String(string(FormatCode(fileStruct.GetFileName(), fileContents))),

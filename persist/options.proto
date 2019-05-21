@@ -49,6 +49,10 @@ extend google.protobuf.ServiceOptions {
     optional PersistenceOptions service_type = 560002;
 }
 
+extend google.protobuf.FieldOptions {
+    optional bool mapped_field = 560006;
+}
+
 enum PersistenceOptions {
     // SQL Query
     SQL = 0;

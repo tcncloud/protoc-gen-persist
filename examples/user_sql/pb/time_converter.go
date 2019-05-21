@@ -106,6 +106,30 @@ func (s *SliceStringConverter) Empty() MappingImpl_UServ_SliceStringParam {
 	return new(SliceStringConverter)
 }
 
+type Int64SliceConverter struct {
+	v []int64
+}
+
+func (s *Int64SliceConverter) Scan(src interface{}) error {
+	var in pq.Int64Array
+	if err := in.Scan(src); err != nil {
+		return err
+	}
+	s.v = []int64(in)
+	return nil
+}
+func (s *Int64SliceConverter) Value() (driver.Value, error) {
+	return pq.Int64Array(s.v).Value()
+}
+func (s *Int64SliceConverter) ToSql(v []int64) sql.Scanner {
+	s.v = v
+	return s
+}
+func (s *Int64SliceConverter) ToProto(req *[]int64) error {
+	*req = s.v
+	return nil
+}
+
 var inc int64
 
 func IncId(u *User) ([]*User, error) {
