@@ -1648,7 +1648,18 @@ func WritePackageLevelDeclarations(p *Printer, files *FileList) error {
 			}
 
 			func (s *alwaysScanner) Scan(src interface{}) error {
-				s.i = &src
+				// From database.sql.Scanner:
+				// Reference types such as []byte are only valid until the next call to Scan
+				// and should not be retained. Their underlying memory is owned by the driver.
+				// If retention is necessary, copy their values before the next call to Scan.
+				switch t := src.(type) {
+				case []byte:
+					var tmp interface{} = make([]byte, len(t))
+					copy(tmp.([]byte), t)
+					s.i = &tmp
+				default:
+					s.i = &t
+				}
 				return nil
 			}
 

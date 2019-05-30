@@ -71,13 +71,13 @@ func (this *Query_UServ_CreateUsersTable) Execute(x In_UServ_CreateUsersTable) *
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50), id2 SMALLINT, counts []BIGINT)", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA, created_on VARCHAR(50), id2 SMALLINT, counts BIGINT[])", params...)
 	return result
 }
 
 // InsertUsers returns a struct that will perform the 'insert_users' query.
 // When Execute is called, it will use the following fields:
-// [id name friends created_on counts]
+// [id name friends created_on id2 counts]
 func (this *Queries_UServ) InsertUsers(ctx context.Context, db persist.Runnable) *Query_UServ_InsertUsers {
 	return &Query_UServ_InsertUsers{
 		opts: this.opts,
@@ -97,7 +97,7 @@ func (this *Query_UServ_InsertUsers) QueryInType_User()   {}
 func (this *Query_UServ_InsertUsers) QueryOutType_Empty() {}
 
 // Executes the query 'insert_users' with parameters retrieved from x.
-// Fields used: [id name friends created_on counts]
+// Fields used: [id name friends created_on id2 counts]
 func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ_InsertUsers {
 	var setupErr error
 	params := []interface{}{
@@ -123,6 +123,10 @@ func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ
 			return
 		}(),
 		func() (out interface{}) {
+			out = x.GetId2()
+			return
+		}(),
+		func() (out interface{}) {
 			mapper := this.opts.MAPPINGS.Int64Slice()
 			out = mapper.ToSql(x.GetCounts())
 			return
@@ -136,7 +140,7 @@ func (this *Query_UServ_InsertUsers) Execute(x In_UServ_InsertUsers) *Iter_UServ
 		result.err = setupErr
 		return result
 	}
-	result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on, id2, counts) VALUES ($1, $2, $3, $4, $5)", params...)
+	result.result, result.err = this.db.ExecContext(this.ctx, "INSERT INTO users (id, name, friends, created_on, id2, counts) VALUES ($1, $2, $3, $4, $5, $6)", params...)
 	return result
 }
 
@@ -2694,7 +2698,18 @@ type alwaysScanner struct {
 }
 
 func (s *alwaysScanner) Scan(src interface{}) error {
-	s.i = &src
+	// From database.sql.Scanner:
+	// Reference types such as []byte are only valid until the next call to Scan
+	// and should not be retained. Their underlying memory is owned by the driver.
+	// If retention is necessary, copy their values before the next call to Scan.
+	switch t := src.(type) {
+	case []byte:
+		var tmp interface{} = make([]byte, len(t))
+		copy(tmp.([]byte), t)
+		s.i = &tmp
+	default:
+		s.i = &t
+	}
 	return nil
 }
 
