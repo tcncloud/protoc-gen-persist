@@ -89,13 +89,13 @@ service UServ {
         queries: [{
             name: "create_users_table",
             query: ["CREATE TABLE users(id integer PRIMARY KEY, name VARCHAR(50), friends BYTEA,",
-                    "created_on VARCHAR(50), id2 SMALLINT, counts []BIGINT)"],
+                    "created_on VARCHAR(50), id2 SMALLINT, counts BIGINT[])"],
             pm_strategy: "$",
             in: ".pb.Empty",
             out: ".pb.Empty",
         }, {
             name: "insert_users",
-            query: ["INSERT INTO users (id, name, friends, created_on, id2, counts) VALUES (@id, @name, @friends, @created_on, @counts)"],
+            query: ["INSERT INTO users (id, name, friends, created_on, id2, counts) VALUES (@id, @name, @friends, @created_on, @id2, @counts)"],
             pm_strategy: "$",
             in: ".pb.User",
             out: ".pb.Empty",
