@@ -139,11 +139,13 @@ func (s *StructList) GetStructByName(name string) *Struct {
 	return nil
 }
 func compareProtoName(name string, protoname string) bool {
-	if protoname[0] == '.' {
-		return protoname[1:] == name
-	} else {
-		return protoname == name
+	if strings.Compare(name, protoname)  == 0 {
+		return true
 	}
+	if strings.Contains(protoname, name) == true {
+		return true
+	}
+	return false
 }
 func (s *StructList) GetStructByProtoName(name string) *Struct {
 	// all := []string{}
