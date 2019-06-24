@@ -8,6 +8,12 @@
 [please]
 version = 13.8.2
 
+[build]
+path = /usr/local/bin
+path = /usr/bin
+path = /bin
+path = /usr/local/go/bin
+
 [parse]
 BuiltinPleasings = False
 
