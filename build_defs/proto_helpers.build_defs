@@ -1,0 +1,48 @@
+
+go_grpc = proto_language(
+    language = 'go',
+    extensions = ['.pb.go','.persist.go'],
+    func = lambda name, srcs, deps, test_only: go_library(
+        name = name,
+        srcs = srcs,
+        out = _parent_rule(name) + '.a',
+        deps = deps,
+        test_only = test_only,
+    ),
+    protoc_flags = [
+        '--go_out=paths=source_relative:$TMP_DIR', 
+        '--plugin=protoc-gen-go=$TOOLS_GO',
+        '--persist_out=paths=source_relative:$TMP_DIR', 
+        '--plugin=protoc-gen-persist=$TOOLS_PROTOC_PERSIST_PLUGIN',
+    ],
+    tools = {
+        'go':[CONFIG.PROTOC_GO_PLUGIN],
+        'protoc_persist_plugin': ['//:protoc-gen-persist'],
+    },
+    deps = [
+        CONFIG.PROTO_GO_DEP, 
+        CONFIG.GRPC_GO_DEP,
+        '//persist',
+    ],
+    pre_build = _go_path_mapping(True),
+)
+
+go_proto =  proto_language(
+    language = 'go',
+    extensions = ['.pb.go'],
+    func = lambda name, srcs, deps, test_only: go_library(
+        name = name,
+        srcs = srcs,
+        out = _parent_rule(name) + '.a',
+        deps = deps,
+        test_only = test_only,
+    ),
+    protoc_flags = ['--go_out=paths=source_relative:$TMP_DIR', '--plugin=protoc-gen-go=$TOOLS_GO'],
+    tools = {
+        'go':[CONFIG.PROTOC_GO_PLUGIN],
+    },
+    deps = [CONFIG.PROTO_GO_DEP],
+    pre_build = _go_path_mapping(False),
+)
+
+
