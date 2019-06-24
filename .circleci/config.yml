@@ -21,7 +21,7 @@ jobs:
       - run:
           name: "Publish Release on Github"
           command: |
-            apt update -y && apt install -y xz-utils/
+            apt update -y && apt install -y xz-utils
             GOOS="darwin" GOARCH="amd64" go install -i std
             ./pleasew build -p
             go get github.com/tcnksm/ghr
