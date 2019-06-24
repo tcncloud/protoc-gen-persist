@@ -1,0 +1,22 @@
+go_library(
+    name = 'generator',
+    srcs = [
+        'file.go',
+        'generator.go',
+        'import.go',
+        'matchers.go',
+        'persist_opts.go',
+        'rpc_snippets.go',
+        'service.go',
+        'struct.go',
+        'utils.go',
+    ],
+    deps = [
+        '//third_party/go:protobuf',
+        '//persist:persist',
+        '//third_party/go:tools',
+    ],
+    visibility = [
+        'PUBLIC',
+    ]
+)

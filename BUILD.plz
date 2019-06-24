@@ -1,0 +1,14 @@
+
+
+go_binary(
+    name = 'protoc-gen-persist',
+    srcs = [
+        'main.go',
+    ],
+    deps = [
+        '//generator',
+        '//third_party/go:protobuf',
+        '//third_party/go:logrus',
+        '//third_party/go:sys',
+    ]
+)

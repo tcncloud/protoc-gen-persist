@@ -51,6 +51,9 @@ type Struct struct {
 	MsgDesc          *desc.DescriptorProto
 	ProtoName        string
 	GoName           string
+
+	// private fileds
+	messageFieldDesc []*desc.FieldDescriptorProto
 }
 
 func (s *Struct) GetGoPath() string {
@@ -111,17 +114,12 @@ func (s *Struct) GetImportedFiles() *FileList {
 // GetFieldDescriptors returns a slice of FieldDescriptors that exist
 // on this message.  If this is not a message, it returns empty slice, false
 func (s *Struct) GetFieldDescriptorsIfMessage() ([]*desc.FieldDescriptorProto, bool) {
-	ret := make([]*desc.FieldDescriptorProto, 0)
+	// ret := make([]*desc.FieldDescriptorProto, 0)
 	if s == nil || !s.IsMessage {
-		return ret, false
+		return s.messageFieldDesc, false
 	}
 
-	for _, f := range s.MsgDesc.GetField() {
-		if f.OneofIndex == nil {
-			ret = append(ret, f)
-		}
-	}
-	return ret, true
+	return s.messageFieldDesc, true
 }
 
 type StructList []*Struct
@@ -144,11 +142,20 @@ func compareProtoName(name string, protoname string) bool {
 	}
 	return (name == protoname) || (name == protoname[1:] && protoname[0] == '.')
 }
+
+var cache map[string]*Struct = make(map[string]*Struct)
+
 func (s *StructList) GetStructByProtoName(name string) *Struct {
+	if str, ok := cache[name]; ok {
+		return str
+	}
+
 	for _, str := range *s {
 		if compareProtoName(name, str.GetProtoName()) {
+			cache[name] = str
 			return str
 		} else if str.GetGoName() == name {
+			cache[name] = str
 			return str
 		}
 		// logrus.WithField("protoName", str.GetProtoName()).WithField("goName", str.GetGoName()).Tracef("NOT FOUND %s", name)
@@ -166,6 +173,7 @@ func (s *StructList) AddEnum(enum *desc.EnumDescriptorProto, parent *Struct, pkg
 		MsgDesc:          nil,
 		EnumDesc:         enum,
 		File:             file,
+		messageFieldDesc: make([]*desc.FieldDescriptorProto, 0),
 	}
 
 	if str.ParentDescriptor == nil {
@@ -203,6 +211,7 @@ func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, p
 		MsgDesc:          message,
 		EnumDesc:         nil,
 		File:             file,
+		messageFieldDesc: make([]*desc.FieldDescriptorProto, 0),
 	}
 
 	if str.ParentDescriptor == nil {
@@ -231,6 +240,12 @@ func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, p
 		s.AddEnum(innerEnum, str, pkg, file)
 	}
 	str.File.ProcessImportsForType(str.GetGoName())
+
+	for _, f := range str.MsgDesc.GetField() {
+		if f.OneofIndex == nil {
+			str.messageFieldDesc = append(str.messageFieldDesc, f)
+		}
+	}
 	return str
 }
 

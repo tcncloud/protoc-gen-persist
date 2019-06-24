@@ -47,3 +47,6 @@ protoc-gen-persist*
 
 bazel*
 .vscode
+
+# Please output directory
+plz-out

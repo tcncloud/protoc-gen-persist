@@ -1,0 +1,14 @@
+package(default_visibility = ['PUBLIC'])
+
+
+proto_library(
+    name = 'persist',
+    srcs = ['options.proto'],
+    deps = [
+        '//third_party/proto:protobuf-defaults',
+    ],
+    protoc_flags =[
+        '-I third_party/proto/include',
+        '-I .',
+    ],
+)

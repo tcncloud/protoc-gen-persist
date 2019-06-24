@@ -1,0 +1,20 @@
+package(default_visibility=['PUBLIC'])
+
+protoc_binary(
+    name = 'protoc',
+    version = '3.7.1',
+)
+
+
+genrule(
+    name = 'protobuf-defaults',
+    srcs = [':_protoc#download'],
+    cmd = [
+        '$TOOL x $SRCS',
+    ],
+    outs = [
+        'include/google/protobuf',
+    ],
+    tools = [CONFIG.JARCAT_TOOL],
+)
+    
