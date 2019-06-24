@@ -11,6 +11,7 @@ jobs:
     steps:
       - checkout
       - run: |
+          apt update -y && apt install -y xz-utils
           ./pleasew build
   github-release:
     executor: exec
@@ -19,6 +20,7 @@ jobs:
       - run:
           name: "Publish Release on Github"
           command: |
+            apt update -y && apt install -y xz-utils/
             GOOS="darwin" GOARCH="amd64" go install -i std
             ./pleasew build
             go get github.com/tcnksm/ghr
