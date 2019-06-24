@@ -1,4 +1,4 @@
-
+subinclude('///pleasings//proto')
 go_grpc = proto_language(
     language = 'go',
     extensions = ['.pb.go','.persist.go'],
