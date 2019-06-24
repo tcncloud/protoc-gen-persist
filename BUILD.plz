@@ -1,12 +1,4 @@
 
-
-github_repo(
-    name = 'pleasings',
-    repo = 'namtzigla/pleasings',
-    revision = 'edeb3be6f7c807d3d6094839d3039f2ad664a3ed',
-    #revision = '4c50d095622c13fc00bbef2d7fe7cf47b09f6296',
-)
-
 go_binary(
     name = 'protoc-gen-persist',
     srcs = [
