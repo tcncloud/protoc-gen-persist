@@ -139,22 +139,14 @@ func (s *StructList) GetStructByName(name string) *Struct {
 	return nil
 }
 func compareProtoName(name string, protoname string) bool {
-	if strings.Compare(name, protoname)  == 0 {
-		return true
+	if len(name) == 0 || len(protoname) == 0 {
+		return false
 	}
-	if strings.Contains(protoname, name) == true {
-		return true
-	}
-	return false
+	return (name == protoname) || (name == protoname[1:] && protoname[0] == '.')
 }
 func (s *StructList) GetStructByProtoName(name string) *Struct {
-	// all := []string{}
-	// for _, v := range *s {
-	// 	all = append(all, v.GetProtoName())
-	// }
-	// logrus.WithField("name", name).WithField("all", all).Trace("finding name")
 	for _, str := range *s {
-		if compareProtoName(name,str.GetProtoName()){
+		if compareProtoName(name, str.GetProtoName()) {
 			return str
 		} else if str.GetGoName() == name {
 			return str
