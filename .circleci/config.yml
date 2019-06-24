@@ -12,6 +12,7 @@ jobs:
       - checkout
       - run: |
           apt update -y && apt install -y xz-utils
+          GOOS="darwin" GOARCH="amd64" go install -i std
           ./pleasew build -p 
   github-release:
     executor: exec
