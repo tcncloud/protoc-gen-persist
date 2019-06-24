@@ -1,9 +1,13 @@
 package(default_visibility = ['PUBLIC'])
 
+filegroup(
+    name = 'srcs',
+    srcs = ['options.proto'],
+)
 
 proto_library(
     name = 'persist',
-    srcs = ['options.proto'],
+    srcs = [':srcs'],
     deps = [
         '//third_party/proto:protobuf-defaults',
     ],

@@ -3,7 +3,7 @@ version: 2.1
 executors:
   exec:
     docker:
-      - image: tcncloud/golang-node:4
+      - image: golang:latest 
 
 jobs:
   build:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - checkout
       - run: |
-          make
+          ./pleasew build
   github-release:
     executor: exec
     steps:
@@ -19,15 +19,12 @@ jobs:
       - run:
           name: "Publish Release on Github"
           command: |
+            GOOS="darwin" GOARCH="amd64" go install -i std
+            ./pleasew build
             go get github.com/tcnksm/ghr
-            make
-            mkdir ./artifacts
-            GOOS=linux GOARCH=amd64 go build
-            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-linux-amd64.tar.gz protoc-gen-persist persist/options.proto
-            rm protoc-gen-persist
-            GOOS=darwin GOARCH=amd64 go build 
-            tar czvf ./artifacts/protoc-gen-persist-${CIRCLE_TAG}-darwin-amd64.tar.gz protoc-gen-persist persist/options.proto
-            VERSION=${CIRCLE_TAG}
+            mkdir artifacts
+            cp $(./pleasew query output //:protoc-gen-persist-linux-amd64) artifacts/protoc-gen-persist-${CIRCLE_TAG}-linux-amd64.tar.gz
+            cp $(./pleasew query output //:protoc-gen-persist-darwin-amd64) artifacts/protoc-gen-persist-${CIRCLE_TAG}-darwin-amd64.tar.gz
             ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace  ${VERSION} ./artifacts/ 
 
 workflows:

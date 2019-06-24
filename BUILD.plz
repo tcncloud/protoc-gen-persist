@@ -12,3 +12,21 @@ go_binary(
         '//third_party/go:sys',
     ]
 )
+
+
+tarball(
+    name = 'protoc-gen-persist-linux-amd64',
+    out = 'protoc-gen-persist-linux-amd64.tar.gz',
+    srcs = [
+        '///linux_amd64//:protoc-gen-persist',
+        '//persist:srcs',
+    ],
+)
+
+tarball(
+    name = 'protoc-gen-persist-darwin-amd64',
+    srcs = [
+        '///darwin_amd64//:protoc-gen-persist',
+        '//persist:srcs',
+    ],
+)
