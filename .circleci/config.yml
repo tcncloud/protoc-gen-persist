@@ -12,7 +12,7 @@ jobs:
       - checkout
       - run: |
           apt update -y && apt install -y xz-utils
-          ./pleasew build
+          ./pleasew build -p 
   github-release:
     executor: exec
     steps:
@@ -22,7 +22,7 @@ jobs:
           command: |
             apt update -y && apt install -y xz-utils/
             GOOS="darwin" GOARCH="amd64" go install -i std
-            ./pleasew build
+            ./pleasew build -p
             go get github.com/tcnksm/ghr
             mkdir artifacts
             cp $(./pleasew query output //:protoc-gen-persist-linux-amd64) artifacts/protoc-gen-persist-${CIRCLE_TAG}-linux-amd64.tar.gz
