@@ -6,7 +6,7 @@ package test
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "github.com/tcncloud/protoc-gen-persist/persist"
+import _ "github.com/tcncloud/protoc-gen-persist/v4/persist"
 
 import (
 	context "golang.org/x/net/context"

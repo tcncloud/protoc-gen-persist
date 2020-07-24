@@ -6,7 +6,7 @@ import (
 	"net"
 
 	"cloud.google.com/go/spanner"
-	"github.com/tcncloud/protoc-gen-persist/examples/user_spanner/pb"
+	"github.com/tcncloud/protoc-gen-persist/v4/examples/user_spanner/pb"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )

@@ -9,8 +9,8 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_ "github.com/golang/protobuf/ptypes/timestamp"
-	_ "github.com/tcncloud/protoc-gen-persist/persist"
-	test "github.com/tcncloud/protoc-gen-persist/tests/test"
+	_ "github.com/tcncloud/protoc-gen-persist/v4/persist"
+	test "github.com/tcncloud/protoc-gen-persist/v4/tests/test"
 	grpc "google.golang.org/grpc"
 	math "math"
 )

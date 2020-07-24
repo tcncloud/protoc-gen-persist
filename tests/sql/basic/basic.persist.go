@@ -11,8 +11,8 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	persist "github.com/tcncloud/protoc-gen-persist/persist"
-	test "github.com/tcncloud/protoc-gen-persist/tests/test"
+	persist "github.com/tcncloud/protoc-gen-persist/v4/persist"
+	test "github.com/tcncloud/protoc-gen-persist/v4/tests/test"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
 	gstatus "google.golang.org/grpc/status"

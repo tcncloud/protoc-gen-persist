@@ -25,4 +25,4 @@ protoctool = //third_party/proto:protoc
 grpcjavaplugin = //third_party/java:protoc-gen-grpc-java
 
 [go]
-importpath = github.com/tcncloud/protoc-gen-persist
+importpath = github.com/tcncloud/protoc-gen-persist/v4

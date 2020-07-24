@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/tcncloud/protoc-gen-persist/examples/user_sql"
+	. "github.com/tcncloud/protoc-gen-persist/v4/examples/user_sql"
 
 	"fmt"
 	"io"
@@ -16,7 +16,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
+	"github.com/tcncloud/protoc-gen-persist/v4/examples/user_sql/pb"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )

@@ -34,7 +34,7 @@ import (
 	"cloud.google.com/go/spanner"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/tcncloud/protoc-gen-persist/persist"
+	"github.com/tcncloud/protoc-gen-persist/v4/persist"
 )
 
 type TimeString struct {

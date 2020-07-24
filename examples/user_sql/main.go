@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	_ "github.com/lib/pq"
-	"github.com/tcncloud/protoc-gen-persist/examples/user_sql/pb"
+	"github.com/tcncloud/protoc-gen-persist/v4/examples/user_sql/pb"
 	"google.golang.org/grpc"
 )
 

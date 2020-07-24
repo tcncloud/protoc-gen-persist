@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	pb "github.com/tcncloud/protoc-gen-persist/docs/test"
+	pb "github.com/tcncloud/protoc-gen-persist/v4/docs/test"
 	"google.golang.org/grpc"
 )
 
