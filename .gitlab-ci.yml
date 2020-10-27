@@ -8,7 +8,7 @@ build-linux:
     script:
         - apt update && apt install -y build-essential xz-utils git wget curl 
         - ./pleasew test -p -v 2 ...
-        - ./pleasew build -p -v 2 
+        - ./pleasew build -p -v 2 ...
     artifacts:
         paths:
             - plz-out/bin/protoc-gen-persist
@@ -21,7 +21,7 @@ build-osx:
         - osx
     script:
         - ./pleasew test -p -v 2 ...
-        - ./pleasew build -p -v 2
+        - ./pleasew build -p -v 2 ...
     artifacts:
         paths:
             - plz-out/bin/protoc-gen-persist
