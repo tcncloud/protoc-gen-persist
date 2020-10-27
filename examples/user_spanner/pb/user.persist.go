@@ -10,7 +10,7 @@ import (
 	spanner "cloud.google.com/go/spanner"
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	persist "github.com/tcncloud/protoc-gen-persist/v4/persist"
+	persist "github.com/tcncloud/protoc-gen-persist/persist"
 	context "golang.org/x/net/context"
 	iterator "google.golang.org/api/iterator"
 	codes "google.golang.org/grpc/codes"

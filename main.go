@@ -40,7 +40,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/sirupsen/logrus"
-	"github.com/tcncloud/protoc-gen-persist/v4/generator"
+	"github.com/tcncloud/protoc-gen-persist/generator"
 )
 
 var profiler io.WriteCloser

@@ -38,7 +38,7 @@ import (
 	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
 
-	"github.com/tcncloud/protoc-gen-persist/v4/persist"
+	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
 // returns if this field was marked as always needing a type mapping
@@ -1590,7 +1590,7 @@ func WriteImports(p *Printer, f *FileStruct) error {
 		}
 	}
 	p.P("%s \"%s\"\n", "proto", "github.com/golang/protobuf/proto")
-	p.Q("persist ", "\"github.com/tcncloud/protoc-gen-persist/v4/persist\"\n")
+	p.Q("persist ", "\"github.com/tcncloud/protoc-gen-persist/persist\"\n")
 	p.Q("lib \"github.com/tcncloud/protoc-gen-persist/lib\"\n")
 
 	if hasSpanner {

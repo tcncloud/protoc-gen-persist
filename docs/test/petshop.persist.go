@@ -10,7 +10,7 @@ import (
 	io "io"
 
 	proto "github.com/golang/protobuf/proto"
-	persist "github.com/tcncloud/protoc-gen-persist/v4/persist"
+	persist "github.com/tcncloud/protoc-gen-persist/persist"
 	context "golang.org/x/net/context"
 	codes "google.golang.org/grpc/codes"
 	gstatus "google.golang.org/grpc/status"

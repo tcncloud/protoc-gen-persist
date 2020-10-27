@@ -8,8 +8,8 @@ import (
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	imports "github.com/tcncloud/protoc-gen-persist/v4/examples/user_sql/pb/imports"
-	_ "github.com/tcncloud/protoc-gen-persist/v4/persist"
+	imports "github.com/tcncloud/protoc-gen-persistexamples/user_sql/pb/imports"
+	_ "github.com/tcncloud/protoc-gen-persist/persist"
 	grpc "google.golang.org/grpc"
 	math "math"
 )

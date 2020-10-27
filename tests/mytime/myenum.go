@@ -4,7 +4,7 @@ import (
 	"cloud.google.com/go/spanner"
 	"database/sql/driver"
 	"fmt"
-	"github.com/tcncloud/protoc-gen-persist/v4/tests/test"
+	"github.com/tcncloud/protoc-gen-persisttests/test"
 )
 
 type MyEnum struct {

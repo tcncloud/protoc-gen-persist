@@ -38,7 +38,7 @@ import (
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 
 	// "github.com/sirupsen/logrus"
-	"github.com/tcncloud/protoc-gen-persist/v4/persist"
+	"github.com/tcncloud/protoc-gen-persist/persist"
 )
 
 type FileStruct struct {

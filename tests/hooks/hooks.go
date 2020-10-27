@@ -4,7 +4,7 @@ package hooks
 
 import (
 	"fmt"
-	pb "github.com/tcncloud/protoc-gen-persist/v4/tests/test"
+	pb "github.com/tcncloud/protoc-gen-persisttests/test"
 )
 
 var cache map[int64]*pb.ExampleTable
