@@ -1,6 +1,7 @@
 
 go_binary(
     name = 'protoc-gen-persist',
+    out = f'protoc-gen-persist-{CONFIG.OS}-{CONFIG.ARCH}',
     srcs = [
         'main.go',
     ],
@@ -12,13 +13,3 @@ go_binary(
     ]
 )
 
-version = git_branch(True)
-
-tarball(
-    name = 'protoc-gen-persist-tar',
-    out = f'protoc-gen-persist-{CONFIG.OS}-{CONFIG.ARCH}-{version}.tar.gz',
-    srcs = [
-        ':protoc-gen-persist',
-        '//persist:srcs',
-    ],
-)

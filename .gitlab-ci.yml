@@ -11,8 +11,7 @@ build-linux:
         - ./pleasew build -p -v 2 ...
     artifacts:
         paths:
-            - plz-out/bin/protoc-gen-persist
-            - plz-out/gen/protoc-gen-persist*.tar.tz
+            - plz-out/bin/protoc-gen-persist-linux-amd64
         expire_in: 30mins
 
 build-osx:
@@ -24,8 +23,7 @@ build-osx:
         - ./pleasew build -p -v 2 ...
     artifacts:
         paths:
-            - plz-out/bin/protoc-gen-persist
-            - plz-out/gen/protoc-gen-persist*.tar.gz
+            - plz-out/bin/protoc-gen-persist-darwin-amd64
         expire_in: 30mins
 
 deploy:
