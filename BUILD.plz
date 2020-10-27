@@ -12,7 +12,7 @@ go_binary(
     ]
 )
 
-version = git_branch(short=True)
+version = git_branch(True)
 
 tarball(
     name = 'protoc-gen-persist-tar',
