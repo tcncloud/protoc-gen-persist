@@ -12,7 +12,7 @@ build-linux:
     artifacts:
         paths:
             - plz-out/bin/protoc-gen-persist
-            - plz-out/gen
+            - plz-out/gen/protoc-gen-persist*.tar
         expire_in: 30mins
 
 build-osx:
@@ -25,7 +25,7 @@ build-osx:
     artifacts:
         paths:
             - plz-out/bin/protoc-gen-persist
-            - plz-out/gen
+            - plz-out/gen/protoc-gen-persist*.tar
         expire_in: 30mins
 
 deploy:
