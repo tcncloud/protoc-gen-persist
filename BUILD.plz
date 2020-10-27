@@ -12,12 +12,7 @@ go_binary(
     ]
 )
 
-show=git_show("%D")
-version = ''
-if show.find("tag: ")>0:
-    version = show.split("tag: ")[1]
-else: 
-    version=show.split(" ")[2]
+version = git_branch(short=True)
 
 tarball(
     name = 'protoc-gen-persist-tar',
