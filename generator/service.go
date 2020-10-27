@@ -295,9 +295,9 @@ func WriteQueries(p *Printer, s *Service) error {
 	}
 	runnable := func() string {
 		if s.IsSQL() {
-			return `persist.Runnable`
+			return `lib.Runnable`
 		} else if s.IsSpanner() {
-			return `persist.SpannerRunnable`
+			return `lib.SpannerRunnable`
 		}
 		return ``
 	}
@@ -1591,6 +1591,7 @@ func WriteImports(p *Printer, f *FileStruct) error {
 	}
 	p.P("%s \"%s\"\n", "proto", "github.com/golang/protobuf/proto")
 	p.Q("persist ", "\"github.com/tcncloud/protoc-gen-persist/v4/persist\"\n")
+	p.Q("lib \"github.com/tcncloud/protoc-gen-persist/lib\"\n")
 
 	if hasSpanner {
 		p.P("%s \"%s\"\n", "iterator", "google.golang.org/api/iterator")
