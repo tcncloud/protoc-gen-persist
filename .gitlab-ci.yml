@@ -6,7 +6,7 @@ build-linux:
     stage: build
     image: ubuntu:20.04 
     script:
-        - apt update && apt install -y xz-utils git wget curl 
+        - apt update && apt install -y build-essentials xz-utils git wget curl 
         - ./pleasew test -p -v 2 ...
         - ./pleasew build -p -v 2 ...
     artifacts:
@@ -39,11 +39,11 @@ deploy:
         - curl -Lo - https://github.com/tcnksm/ghr/releases/download/v0.13.0/ghr_v0.13.0_linux_amd64.tar.gz | tar zxf -
         - mv ghr_v0.13.0_linux_amd64/ghr .
         - mkdir artifacts
-        - cp plz-out/bin/protoc-gen-persist artifacts
+        - cp plz-out/bin/protoc-gen-persist-linux-amd64 artifacts/protoc-gen-persist
         - cd artifacts
-        - tar cjvf protoc-gen-persist-${CI_COMMIT_TAG}-linux-amd64.tar.gz wollemi
-        - cp ../plz-out/bin/darwin_amd64/protoc-gen-persist .
-        - tar cjvf protoc-gen-persist-${CI_COMMIT_TAG}-darwin-amd64.tar.gz wollemi
+        - tar cjvf protoc-gen-persist-${CI_COMMIT_TAG}-linux-amd64.tar.gz protoc-gen-persist 
+        - cp ../plz-out/bin/protoc-gen-persist-darwin-amd64 protoc-gen-persist
+        - tar cjvf protoc-gen-persist-${CI_COMMIT_TAG}-darwin-amd64.tar.gz protoc-gen-persist 
         - rm protoc-gen-persist
         - cd ..
         - ./ghr -t ${GITHUB_TOKEN} -u tcncloud -r protoc-gen-persist -c ${CI_COMMIT_SHA} -replace  ${CI_COMMIT_TAG} ./artifacts/ 
