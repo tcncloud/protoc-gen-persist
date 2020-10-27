@@ -6,7 +6,7 @@ build-linux:
     stage: build
     image: ubuntu:20.04 
     script:
-        - apt update && apt install -y build-essentials xz-utils git wget curl 
+        - apt update && apt install -y build-essential xz-utils git wget curl 
         - ./pleasew test -p -v 2 ...
         - ./pleasew build -p -v 2 ...
     artifacts:
