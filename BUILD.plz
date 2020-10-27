@@ -12,20 +12,18 @@ go_binary(
     ]
 )
 
+show=git_show("%D")
+version = ''
+if show.find("tag: ")>0:
+    version = show.split("tag: ")[1]
+else: 
+    version=show.split(" ")[2]
 
 tarball(
-    name = 'protoc-gen-persist-linux-amd64',
-    out = 'protoc-gen-persist-linux-amd64.tar.gz',
+    name = 'protoc-gen-persist-tar',
+    out = f'protoc-gen-persist-{CONFIG.OS}-{CONFIG.ARCH}-{version}.tar.gz',
     srcs = [
-        '///linux_amd64//:protoc-gen-persist',
-        '//persist:srcs',
-    ],
-)
-
-tarball(
-    name = 'protoc-gen-persist-darwin-amd64',
-    srcs = [
-        '///darwin_amd64//:protoc-gen-persist',
+        ':protoc-gen-persist',
         '//persist:srcs',
     ],
 )
