@@ -1,24 +1,39 @@
 stages:
     - build
     - deploy
-build:
+
+build-linux:
     stage: build
     image: ubuntu:20.04 
     script:
         - apt update && apt install -y build-essential xz-utils git wget curl 
         - ./pleasew test -p -v 2 ...
-        - ./pleasew build -p -v 2 //:protoc-gen-persist
-        - ./pleasew build -a darwin_amd64 -p -v 2 //:protoc-gen-persist
+        - ./pleasew build -p -v 2 
     artifacts:
         paths:
             - plz-out/bin/protoc-gen-persist
-            - plz-out/bin/darwin_amd64/protoc-gen-persist
+            - plz-out/gen
         expire_in: 30mins
+
+build-osx:
+    stage: build
+    tags:
+        - osx
+    script:
+        - ./pleasew test -p -v 2 ...
+        - ./pleasew build -p -v 2
+    artifacts:
+        paths:
+            - plz-out/bin/protoc-gen-persist
+            - plz-out/gen
+        expire_in: 30mins
+
 deploy:
     stage: deploy
     image: ubuntu:20.04
     dependencies:
-        - build
+        - build-linux
+        - build-osx
     only:
         - tags
     script:
