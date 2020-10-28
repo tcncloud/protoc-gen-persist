@@ -1617,7 +1617,7 @@ func WritePackageLevelDeclarations(p *Printer, files *FileList) error {
 	if hasSQL {
 		p.Q(`
 			type ignoreTx struct {
-				r persist.Runnable
+				r lib.Runnable
 			}
 			func (this *ignoreTx) Commit() error   { return nil }
 			func (this *ignoreTx) Rollback() error { return nil }
@@ -1627,20 +1627,20 @@ func WritePackageLevelDeclarations(p *Printer, files *FileList) error {
 			func (this *ignoreTx) ExecContext(ctx context.Context, x string, ys ...interface{}) (sql.Result, error) {
 				return this.r.ExecContext(ctx, x, ys...)
 			}
-			func NopPersistTx(r persist.Runnable) (persist.PersistTx, error) {
+			func NopPersistTx(r lib.Runnable) (lib.PersistTx, error) {
 				return &ignoreTx{r}, nil
 			}
 
-			func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+			func DefaultClientStreamingPersistTx(ctx context.Context, db *sql.DB) (lib.PersistTx, error) {
 				return db.BeginTx(ctx, nil)
 			}
-			func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+			func DefaultServerStreamingPersistTx(ctx context.Context, db *sql.DB) (lib.PersistTx, error) {
 				return NopPersistTx(db)
 			}
-			func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+			func DefaultBidiStreamingPersistTx(ctx context.Context, db *sql.DB) (lib.PersistTx, error) {
 				return NopPersistTx(db)
 			}
-			func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (persist.PersistTx, error) {
+			func DefaultUnaryPersistTx(ctx context.Context, db *sql.DB) (lib.PersistTx, error) {
 				return NopPersistTx(db)
 			}
 
