@@ -111,7 +111,7 @@ func (this *Impl_{{.Service}}) {{.Method}}(stream {{.Service}}_{{.Method}}Server
     return nil
 }
 
-func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx persist.PersistTx) error {
+func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Server, tx lib.PersistTx) error {
     query := this.QUERIES.{{camelCase .Query}}(stream.Context(), tx)
     var first *{{.Request}}
     for {
@@ -333,7 +333,7 @@ func (this *Impl_{{.Service}}) {{.Method}}(req *{{.Request}}, stream {{.Service}
     return nil
 }
 
-func (this *Impl_{{.Service}}) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx persist.PersistTx) error {
+func (this *Impl_{{.Service}}) {{.Method}}Tx(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server, tx lib.PersistTx) error {
     ctx := stream.Context()
     query := this.QUERIES.{{camelCase .Query}}(ctx, tx)
 

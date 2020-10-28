@@ -937,7 +937,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
                 if hasSecond {
                     amount = "multiple"
                 }
-                return &Row_`, sName, `_`, camelQ(q), `{err: persist.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}}
+                return &Row_`, sName, `_`, camelQ(q), `{err: lib.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}}
             }
             return first
         }
@@ -1616,6 +1616,7 @@ func WritePackageLevelDeclarations(p *Printer, files *FileList) error {
 	}
 	if hasSQL {
 		p.Q(`
+			// tom
 			type ignoreTx struct {
 				r lib.Runnable
 			}
@@ -1672,6 +1673,7 @@ func WritePackageLevelDeclarations(p *Printer, files *FileList) error {
 		`)
 	} else if hasSpanner {
 		p.Q(`
+		// doesn't work
 			type Result interface {
 				LastInsertId() (int64, error)
 				RowsAffected() (int64, error)
