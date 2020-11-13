@@ -1,4 +1,4 @@
-module github.com/tcncloud/protoc-gen-persist/v4
+module github.com/tcncloud/protoc-gen-persist/v5
 
 go 1.12
 
