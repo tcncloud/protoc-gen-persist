@@ -6,7 +6,7 @@
 ; Or you can uncomment the following to pin everyone to a particular version;
 ; when you change it all users will automatically get updated.
 [please]
-version = 15.7.1
+;version = 16.6.0
 
 [build]
 path = /usr/local/bin
@@ -15,7 +15,7 @@ path = /bin
 path = /usr/local/go/bin
 
 [parse]
-BuiltinPleasings = False
+;BuiltinPleasings = False
 
 [proto]
 language = go
