@@ -934,10 +934,12 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             _, hasSecond := this.Next()
             if !hasFirst || hasSecond {
                 amount := "none"
+                statusCode := codes.NotFound
                 if hasSecond {
                     amount = "multiple"
+                    statusCode = codes.FailedPrecondition
                 }
-                return &Row_`, sName, `_`, camelQ(q), `{err: lib.NotFound{Msg: fmt.Sprintf("expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}}
+                return &Row_`, sName, `_`, camelQ(q), `{err: gstatus.Errorf(statusCode, "expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}
             }
             return first
         }
@@ -1154,10 +1156,12 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
             _, hasSecond := this.Next()
             if !hasFirst || hasSecond {
                 amount := "none"
+                statusCode := codes.NotFound
                 if hasSecond {
                     amount = "multiple"
+                    statusCode = codes.FailedPrecondition
                 }
-                return &Row_`, sName, `_`, camelQ(q), `{err: fmt.Errorf("expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}
+                return &Row_`, sName, `_`, camelQ(q), `{err: gstatus.Errorf(statusCode, "expected exactly 1 result from query '`, camelQ(q), `' found %s", amount)}
             }
             return first
         }
