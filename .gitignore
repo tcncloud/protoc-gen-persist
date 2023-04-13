@@ -50,3 +50,6 @@ bazel*
 
 # Please output directory
 plz-out
+
+# Entries below this point are managed by Please (DO NOT EDIT)
+.plzconfig.local
