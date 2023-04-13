@@ -80,7 +80,12 @@ func (s *Service) GetTypeMapping() *persist.TypeMapping {
 func (s *Service) GetServiceType() *persist.PersistenceOptions {
 	if s.Desc.Options != nil && proto.HasExtension(s.Desc.Options, persist.E_ServiceType) {
 		ext := proto.GetExtension(s.Desc.Options, persist.E_ServiceType)
-		return ext.(*persist.PersistenceOptions)
+		switch e := ext.(type) {
+		case persist.PersistenceOptions:
+			return &e
+		default:
+			return nil
+		}
 	}
 	return nil
 }
