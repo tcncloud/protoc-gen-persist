@@ -36,8 +36,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/tcncloud/protoc-gen-persist/persist"
+	descriptor "google.golang.org/protobuf/types/descriptorpb"
 
 	"golang.org/x/tools/imports"
 )

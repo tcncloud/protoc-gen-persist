@@ -34,9 +34,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
-	desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
-	_gen "github.com/golang/protobuf/protoc-gen-go/generator"
+	_gen "google.golang.org/protobuf/internal/strs"
+	"google.golang.org/protobuf/proto"
+	desc "google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/tcncloud/protoc-gen-persist/persist"
 )
@@ -44,10 +44,8 @@ import (
 // returns if this field was marked as always needing a type mapping
 func GetFieldMappedProtoOption(field *desc.FieldDescriptorProto) bool {
 	if field.GetOptions() != nil && proto.HasExtension(field.Options, persist.E_MappedField) {
-		ext, err := proto.GetExtension(field.Options, persist.E_MappedField)
-		if err == nil {
-			return *ext.(*bool)
-		}
+		ext := proto.GetExtension(field.Options, persist.E_MappedField)
+		return *ext.(*bool)
 
 	}
 	return false
@@ -66,29 +64,23 @@ func (s *Service) GetName() string {
 
 func (s *Service) GetQueriesOption() *persist.QueryOpts {
 	if s.Desc.Options != nil && proto.HasExtension(s.Desc.Options, persist.E_Ql) {
-		ext, err := proto.GetExtension(s.Desc.Options, persist.E_Ql)
-		if err == nil {
-			return ext.(*persist.QueryOpts)
-		}
+		ext := proto.GetExtension(s.Desc.Options, persist.E_Ql)
+		return ext.(*persist.QueryOpts)
 	}
 	return nil
 }
 func (s *Service) GetTypeMapping() *persist.TypeMapping {
 	if s.Desc.Options != nil && proto.HasExtension(s.Desc.Options, persist.E_Mapping) {
-		ext, err := proto.GetExtension(s.Desc.Options, persist.E_Mapping)
-		if err == nil {
-			return ext.(*persist.TypeMapping)
-		}
+		ext := proto.GetExtension(s.Desc.Options, persist.E_Mapping)
+		return ext.(*persist.TypeMapping)
 	}
 	return nil
 }
 
 func (s *Service) GetServiceType() *persist.PersistenceOptions {
 	if s.Desc.Options != nil && proto.HasExtension(s.Desc.Options, persist.E_ServiceType) {
-		ext, err := proto.GetExtension(s.Desc.Options, persist.E_ServiceType)
-		if err == nil {
-			return ext.(*persist.PersistenceOptions)
-		}
+		ext := proto.GetExtension(s.Desc.Options, persist.E_ServiceType)
+		return ext.(*persist.PersistenceOptions)
 	}
 	return nil
 }
@@ -191,42 +183,45 @@ func NewQueryProtoOpts(qopt *persist.QLImpl, all *StructList) (*QueryProtoOpts, 
 //         // TYPE_GROUP is not supported
 
 // const (
-// 	// 0 is reserved for errors.
-// 	// Order is weird for historical reasons.
-// 	FieldDescriptorProto_TYPE_DOUBLE FieldDescriptorProto_Type = 1
-// 	FieldDescriptorProto_TYPE_FLOAT  FieldDescriptorProto_Type = 2
-// 	// Not ZigZag encoded.  Negative numbers take 10 bytes.  Use TYPE_SINT64 if
-// 	// negative values are likely.
-// 	FieldDescriptorProto_TYPE_INT64  FieldDescriptorProto_Type = 3
-// 	FieldDescriptorProto_TYPE_UINT64 FieldDescriptorProto_Type = 4
-// 	// Not ZigZag encoded.  Negative numbers take 10 bytes.  Use TYPE_SINT32 if
-// 	// negative values are likely.
-// 	FieldDescriptorProto_TYPE_INT32   FieldDescriptorProto_Type = 5
-// 	FieldDescriptorProto_TYPE_FIXED64 FieldDescriptorProto_Type = 6
-// 	FieldDescriptorProto_TYPE_FIXED32 FieldDescriptorProto_Type = 7
-// 	FieldDescriptorProto_TYPE_BOOL    FieldDescriptorProto_Type = 8
-// 	FieldDescriptorProto_TYPE_STRING  FieldDescriptorProto_Type = 9
-// 	// Tag-delimited aggregate.
-// 	// Group type is deprecated and not supported in proto3. However, Proto3
-// 	// implementations should still be able to parse the group wire format and
-// 	// treat group fields as unknown fields.
-// 	FieldDescriptorProto_TYPE_GROUP   FieldDescriptorProto_Type = 10
-// 	FieldDescriptorProto_TYPE_MESSAGE FieldDescriptorProto_Type = 11
-// 	// New in version 2.
-// 	FieldDescriptorProto_TYPE_BYTES    FieldDescriptorProto_Type = 12
-// 	FieldDescriptorProto_TYPE_UINT32   FieldDescriptorProto_Type = 13
-// 	FieldDescriptorProto_TYPE_ENUM     FieldDescriptorProto_Type = 14
-// 	FieldDescriptorProto_TYPE_SFIXED32 FieldDescriptorProto_Type = 15
-// 	FieldDescriptorProto_TYPE_SFIXED64 FieldDescriptorProto_Type = 16
-// 	FieldDescriptorProto_TYPE_SINT32   FieldDescriptorProto_Type = 17
-// 	FieldDescriptorProto_TYPE_SINT64   FieldDescriptorProto_Type = 18
+//
+//	// 0 is reserved for errors.
+//	// Order is weird for historical reasons.
+//	FieldDescriptorProto_TYPE_DOUBLE FieldDescriptorProto_Type = 1
+//	FieldDescriptorProto_TYPE_FLOAT  FieldDescriptorProto_Type = 2
+//	// Not ZigZag encoded.  Negative numbers take 10 bytes.  Use TYPE_SINT64 if
+//	// negative values are likely.
+//	FieldDescriptorProto_TYPE_INT64  FieldDescriptorProto_Type = 3
+//	FieldDescriptorProto_TYPE_UINT64 FieldDescriptorProto_Type = 4
+//	// Not ZigZag encoded.  Negative numbers take 10 bytes.  Use TYPE_SINT32 if
+//	// negative values are likely.
+//	FieldDescriptorProto_TYPE_INT32   FieldDescriptorProto_Type = 5
+//	FieldDescriptorProto_TYPE_FIXED64 FieldDescriptorProto_Type = 6
+//	FieldDescriptorProto_TYPE_FIXED32 FieldDescriptorProto_Type = 7
+//	FieldDescriptorProto_TYPE_BOOL    FieldDescriptorProto_Type = 8
+//	FieldDescriptorProto_TYPE_STRING  FieldDescriptorProto_Type = 9
+//	// Tag-delimited aggregate.
+//	// Group type is deprecated and not supported in proto3. However, Proto3
+//	// implementations should still be able to parse the group wire format and
+//	// treat group fields as unknown fields.
+//	FieldDescriptorProto_TYPE_GROUP   FieldDescriptorProto_Type = 10
+//	FieldDescriptorProto_TYPE_MESSAGE FieldDescriptorProto_Type = 11
+//	// New in version 2.
+//	FieldDescriptorProto_TYPE_BYTES    FieldDescriptorProto_Type = 12
+//	FieldDescriptorProto_TYPE_UINT32   FieldDescriptorProto_Type = 13
+//	FieldDescriptorProto_TYPE_ENUM     FieldDescriptorProto_Type = 14
+//	FieldDescriptorProto_TYPE_SFIXED32 FieldDescriptorProto_Type = 15
+//	FieldDescriptorProto_TYPE_SFIXED64 FieldDescriptorProto_Type = 16
+//	FieldDescriptorProto_TYPE_SINT32   FieldDescriptorProto_Type = 17
+//	FieldDescriptorProto_TYPE_SINT64   FieldDescriptorProto_Type = 18
+//
 // )
-//         optional google.protobuf.FieldDescriptorProto.Type proto_type= 2;
-//         // if proto_label is not setup we consider any option except LABAEL_REPEATED
-//         optional google.protobuf.FieldDescriptorProto.Label proto_label = 3;
-//     }
-//     repeated TypeDescriptor types = 1;
-// }
+//
+//	        optional google.protobuf.FieldDescriptorProto.Type proto_type= 2;
+//	        // if proto_label is not setup we consider any option except LABAEL_REPEATED
+//	        optional google.protobuf.FieldDescriptorProto.Label proto_label = 3;
+//	    }
+//	    repeated TypeDescriptor types = 1;
+//	}
 type TypeMappingProtoOpts struct {
 	tm *persist.TypeMapping_TypeDescriptor
 }
@@ -260,10 +255,8 @@ func NewMethodProtoOpts(opt *desc.MethodDescriptorProto, all *StructList) (*Meth
 	var option *persist.MOpts
 
 	if opt.Options != nil && proto.HasExtension(opt.Options, persist.E_Opts) {
-		ext, err := proto.GetExtension(opt.Options, persist.E_Opts)
-		if err == nil {
-			option = ext.(*persist.MOpts)
-		}
+		ext := proto.GetExtension(opt.Options, persist.E_Opts)
+		option = ext.(*persist.MOpts)
 	}
 
 	return &MethodProtoOpts{
@@ -282,7 +275,7 @@ func WriteQueries(p *Printer, s *Service) error {
 	sName := s.GetName()
 
 	camelQ := func(q *QueryProtoOpts) string {
-		return _gen.CamelCase(q.query.GetName())
+		return _gen.GoCamelCase(q.query.GetName())
 	}
 	qname := func(q *QueryProtoOpts) string {
 		return q.query.GetName()
@@ -396,7 +389,7 @@ func Queries`, sName, `(opts ... Opts_`, sName, `) * Queries_`, sName, ` {
 			// basic mappping
 			m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
 				paramStrings[f.GetName()] = P(`func() (out interface{}) {
-                out = x.Get`, _gen.CamelCase(f.GetName()), `()
+                out = x.Get`, _gen.GoCamelCase(f.GetName()), `()
                 return
             }(),
             `)
@@ -405,7 +398,7 @@ func Queries`, sName, `(opts ... Opts_`, sName, `) * Queries_`, sName, ` {
 			// will overwrite paramStrings if the type is a message
 			m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
 				paramStrings[f.GetName()] = P(`func() (out interface{}) {
-                raw, err := proto.Marshal(x.Get`, _gen.CamelCase(f.GetName()), `())
+                raw, err := proto.Marshal(x.Get`, _gen.GoCamelCase(f.GetName()), `())
                 if err != nil {
                     setupErr = err
                 }
@@ -420,7 +413,7 @@ func Queries`, sName, `(opts ... Opts_`, sName, `) * Queries_`, sName, ` {
 					_, titled := getGoNamesForTypeMapping(tm.tm, s.File)
 					paramStrings[f.GetName()] = P(`func() (out interface{}) {
                     mapper := this.opts.MAPPINGS.`, titled, `()
-                    out = mapper.ToSql(x.Get`, _gen.CamelCase(f.GetName()), `())
+                    out = mapper.ToSql(x.Get`, _gen.GoCamelCase(f.GetName()), `())
                     return
                 }(),
                 `)
@@ -494,7 +487,7 @@ func (this *Query_`, sName, `_`, camelQ(q), `) Execute(x In_`, sName, `_`, camel
 				typeMappingName = titled
 			}, m.MatchTypeMapping(f))
 
-			camFieldName := _gen.CamelCase(f.GetName())
+			camFieldName := _gen.GoCamelCase(f.GetName())
 			fName := f.GetName()
 			// default
 			param = `result["` + camFieldName + `"] = x.Get` + camFieldName + `()`
@@ -730,16 +723,16 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	sName := s.GetName()
 	camelQ := func(q *QueryProtoOpts) string {
-		return _gen.CamelCase(q.query.GetName())
+		return _gen.GoCamelCase(q.query.GetName())
 	}
 	fName := func(f *desc.FieldDescriptorProto) string {
 		return f.GetName()
 	}
 	camelF := func(f *desc.FieldDescriptorProto) string {
-		return _gen.CamelCase(f.GetName())
+		return _gen.GoCamelCase(f.GetName())
 	}
 	inNamePkg := func(opt *QueryProtoOpts) string {
-		return _gen.CamelCase(strings.Map(func(r rune) rune {
+		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}
@@ -747,7 +740,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 		}, convertedMsgTypeByProtoName(opt.inMsg.GetProtoName(), s.File)))
 	}
 	outNamePkg := func(opt *QueryProtoOpts) string {
-		return _gen.CamelCase(strings.Map(func(r rune) rune {
+		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}
@@ -1108,7 +1101,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
 			acc = append(acc, `res := &`+outName(q)+`{`)
 			for _, name := range names {
-				acc = append(acc, _gen.CamelCase(name)+": "+name+",")
+				acc = append(acc, _gen.GoCamelCase(name)+": "+name+",")
 			}
 			acc = append(acc, "}")
 
@@ -1221,16 +1214,16 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	sName := s.GetName()
 	camelQ := func(q *QueryProtoOpts) string {
-		return _gen.CamelCase(q.query.GetName())
+		return _gen.GoCamelCase(q.query.GetName())
 	}
 	camelF := func(f *desc.FieldDescriptorProto) string {
-		return _gen.CamelCase(f.GetName())
+		return _gen.GoCamelCase(f.GetName())
 	}
 	methOutName := func(opt *MethodProtoOpts) string {
 		return s.File.GetGoTypeName(opt.method.GetOutputType())
 	}
 	methOutNamePkg := func(opt *MethodProtoOpts) string {
-		return _gen.CamelCase(strings.Map(func(r rune) rune {
+		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}
@@ -1238,7 +1231,7 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 		}, s.File.GetGoTypeName(opt.method.GetOutputType())))
 	}
 	outNamePkg := func(opt *QueryProtoOpts) string {
-		return _gen.CamelCase(strings.Map(func(r rune) rune {
+		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}
@@ -1438,7 +1431,7 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	serviceName := s.GetName()
 	methOutNamePkg := func(opt *MethodProtoOpts) string {
-		return _gen.CamelCase(strings.Map(func(r rune) rune {
+		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}

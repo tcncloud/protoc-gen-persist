@@ -1,6 +1,6 @@
 package generator
 
-import desc "github.com/golang/protobuf/protoc-gen-go/descriptor"
+import desc "google.golang.org/protobuf/types/descriptorpb"
 
 type Match struct {
 	s   *Service

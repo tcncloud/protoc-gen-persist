@@ -2,7 +2,7 @@ package(default_visibility=['PUBLIC'])
 
 protoc_binary(
     name = 'protoc',
-    version = '3.7.1',
+    version = '22.3',
 )
 
 

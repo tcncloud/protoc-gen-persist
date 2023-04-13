@@ -34,8 +34,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"google.golang.org/protobuf/proto"
+	descriptor "google.golang.org/protobuf/types/descriptorpb"
 
 	// "github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/persist"
@@ -88,11 +88,7 @@ func (f *FileStruct) GetPersistPackageOption() string {
 		return ""
 	}
 	if proto.HasExtension(f.Desc.GetOptions(), persist.E_Pkg) {
-		pkg, err := proto.GetExtension(f.Desc.GetOptions(), persist.E_Pkg)
-		if err != nil {
-			// logrus.WithError(err).Debug("Error")
-			return ""
-		}
+		pkg := proto.GetExtension(f.Desc.GetOptions(), persist.E_Pkg)
 		return *pkg.(*string)
 	}
 	// logrus.WithField("File Options", f.Desc.GetOptions()).Debug("file options")

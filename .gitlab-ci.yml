@@ -14,10 +14,10 @@ build-linux:
             - plz-out/bin/protoc-gen-persist-linux-amd64
         expire_in: 30mins
 
-build-osx:
+build-osx-intel:
     stage: build
     tags:
-        - osx
+        - osx-intel
     script:
         - ./pleasew test -p -v 2 ...
         - ./pleasew build -p -v 2 ...
@@ -26,12 +26,25 @@ build-osx:
             - plz-out/bin/protoc-gen-persist-darwin-amd64
         expire_in: 30mins
 
+build-osx-arm64:
+    stage: build
+    tags:
+        - osx-arm64
+    script:
+        - ./pleasew test -p -v 2 ...
+        - ./pleasew build -p -v 2 ...
+    artifacts:
+        paths:
+            - plz-out/bin/protoc-gen-persist-darwin-arm64
+        expire_in: 30mins
+
 deploy:
     stage: deploy
     image: ubuntu:20.04
     dependencies:
         - build-linux
-        - build-osx
+        - build-osx-intel
+        - build-osx-arm64
     only:
         - tags
     script:

@@ -37,10 +37,10 @@ import (
 
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
-	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/sirupsen/logrus"
 	"github.com/tcncloud/protoc-gen-persist/generator"
+	"google.golang.org/protobuf/proto"
+	plugin_go "google.golang.org/protobuf/types/pluginpb"
 )
 
 var profiler io.WriteCloser
