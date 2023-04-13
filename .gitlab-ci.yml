@@ -51,6 +51,7 @@ deploy:
         - apt update && apt install -y curl bzip2
         - curl -Lo - https://github.com/tcnksm/ghr/releases/download/v0.13.0/ghr_v0.13.0_linux_amd64.tar.gz | tar zxf -
         - mv ghr_v0.13.0_linux_amd64/ghr .
+        - ls -lR plz-out/bin
         - mkdir artifacts
         - for i in plz-out/bin/protoc-gen-persist*; do cp $i protoc-gen-persist; tar cjvf artifacts/$(basename $i).tar.gz protoc-gen-persist; done
         - ./ghr -t ${GITHUB_TOKEN} -u tcncloud -r protoc-gen-persist -c ${CI_COMMIT_SHA} -replace  ${CI_COMMIT_TAG} ./artifacts/ 
