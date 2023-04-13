@@ -33,6 +33,7 @@ build-osx-arm64:
     script:
         - ./pleasew -a darwin_arm64 test -p -v 2 ...
         - ./pleasew -a darwin_arm64 build -p -v 2 ...
+        - mv plz-out/bin/darwin_arm64/protoc-gen-persist* plz-out/bin
     artifacts:
         paths:
             - plz-out/bin/protoc-gen-persist*
