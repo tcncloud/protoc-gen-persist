@@ -1601,8 +1601,8 @@ func WriteImports(p *Printer, f *FileStruct) error {
 		}
 	}
 	p.P("%s \"%s\"\n", "proto", "github.com/golang/protobuf/proto")
-	p.Q("persist ", "\"github.com/tcncloud/protoc-gen-persist/persist\"\n")
-	p.Q("lib \"github.com/tcncloud/protoc-gen-persist/lib\"\n")
+	p.Q("persist ", "\"github.com/tcncloud/protoc-gen-persist/v5/persist\"\n")
+	p.Q("lib \"github.com/tcncloud/protoc-gen-persist/v5/lib\"\n")
 
 	if hasSpanner {
 		p.P("%s \"%s\"\n", "iterator", "google.golang.org/api/iterator")
