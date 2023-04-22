@@ -30,15 +30,13 @@
 package generator
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
 	descriptor "google.golang.org/protobuf/types/descriptorpb"
 
-	// "github.com/sirupsen/logrus"
-	"github.com/tcncloud/protoc-gen-persist/persist"
+	"github.com/tcncloud/protoc-gen-persist/v5/persist"
 )
 
 type FileStruct struct {
@@ -97,14 +95,10 @@ func (f *FileStruct) GetPersistPackageOption() string {
 
 func (f *FileStruct) GetImplFileName(sourceRelative bool) string {
 	_, file := filepath.Split(f.Desc.GetName())
-	if sourceRelative {
+	if !sourceRelative {
 		return strings.Replace(file, ".proto", ".persist.go", -1)
 	} else {
-		return strings.Join([]string{
-			f.GetImplDir(),
-			string(os.PathSeparator),
-			strings.Replace(file, ".proto", ".persist.go", -1),
-		}, "")
+		return strings.Replace(f.GetFileName(), ".proto", ".persist.go", -1)
 	}
 }
 

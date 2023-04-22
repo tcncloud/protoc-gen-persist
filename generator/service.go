@@ -34,11 +34,10 @@ import (
 	"regexp"
 	"strings"
 
-	_gen "google.golang.org/protobuf/internal/strs"
 	"google.golang.org/protobuf/proto"
 	desc "google.golang.org/protobuf/types/descriptorpb"
 
-	"github.com/tcncloud/protoc-gen-persist/persist"
+	"github.com/tcncloud/protoc-gen-persist/v5/persist"
 )
 
 // returns if this field was marked as always needing a type mapping
@@ -290,7 +289,7 @@ func WriteQueries(p *Printer, s *Service) error {
 	sName := s.GetName()
 
 	camelQ := func(q *QueryProtoOpts) string {
-		return _gen.GoCamelCase(q.query.GetName())
+		return GoCamelCase(q.query.GetName())
 	}
 	qname := func(q *QueryProtoOpts) string {
 		return q.query.GetName()
@@ -404,7 +403,7 @@ func Queries`, sName, `(opts ... Opts_`, sName, `) * Queries_`, sName, ` {
 			// basic mappping
 			m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
 				paramStrings[f.GetName()] = P(`func() (out interface{}) {
-                out = x.Get`, _gen.GoCamelCase(f.GetName()), `()
+                out = x.Get`, GoCamelCase(f.GetName()), `()
                 return
             }(),
             `)
@@ -413,7 +412,7 @@ func Queries`, sName, `(opts ... Opts_`, sName, `) * Queries_`, sName, ` {
 			// will overwrite paramStrings if the type is a message
 			m.EachQueryIn(func(f *desc.FieldDescriptorProto, q *QueryProtoOpts) {
 				paramStrings[f.GetName()] = P(`func() (out interface{}) {
-                raw, err := proto.Marshal(x.Get`, _gen.GoCamelCase(f.GetName()), `())
+                raw, err := proto.Marshal(x.Get`, GoCamelCase(f.GetName()), `())
                 if err != nil {
                     setupErr = err
                 }
@@ -428,7 +427,7 @@ func Queries`, sName, `(opts ... Opts_`, sName, `) * Queries_`, sName, ` {
 					_, titled := getGoNamesForTypeMapping(tm.tm, s.File)
 					paramStrings[f.GetName()] = P(`func() (out interface{}) {
                     mapper := this.opts.MAPPINGS.`, titled, `()
-                    out = mapper.ToSql(x.Get`, _gen.GoCamelCase(f.GetName()), `())
+                    out = mapper.ToSql(x.Get`, GoCamelCase(f.GetName()), `())
                     return
                 }(),
                 `)
@@ -502,7 +501,7 @@ func (this *Query_`, sName, `_`, camelQ(q), `) Execute(x In_`, sName, `_`, camel
 				typeMappingName = titled
 			}, m.MatchTypeMapping(f))
 
-			camFieldName := _gen.GoCamelCase(f.GetName())
+			camFieldName := GoCamelCase(f.GetName())
 			fName := f.GetName()
 			// default
 			param = `result["` + camFieldName + `"] = x.Get` + camFieldName + `()`
@@ -738,16 +737,16 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	sName := s.GetName()
 	camelQ := func(q *QueryProtoOpts) string {
-		return _gen.GoCamelCase(q.query.GetName())
+		return GoCamelCase(q.query.GetName())
 	}
 	fName := func(f *desc.FieldDescriptorProto) string {
 		return f.GetName()
 	}
 	camelF := func(f *desc.FieldDescriptorProto) string {
-		return _gen.GoCamelCase(f.GetName())
+		return GoCamelCase(f.GetName())
 	}
 	inNamePkg := func(opt *QueryProtoOpts) string {
-		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
+		return GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}
@@ -755,7 +754,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 		}, convertedMsgTypeByProtoName(opt.inMsg.GetProtoName(), s.File)))
 	}
 	outNamePkg := func(opt *QueryProtoOpts) string {
-		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
+		return GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}
@@ -1116,7 +1115,7 @@ func WriteIters(p *Printer, s *Service) (outErr error) {
 
 			acc = append(acc, `res := &`+outName(q)+`{`)
 			for _, name := range names {
-				acc = append(acc, _gen.GoCamelCase(name)+": "+name+",")
+				acc = append(acc, GoCamelCase(name)+": "+name+",")
 			}
 			acc = append(acc, "}")
 
@@ -1229,16 +1228,16 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	sName := s.GetName()
 	camelQ := func(q *QueryProtoOpts) string {
-		return _gen.GoCamelCase(q.query.GetName())
+		return GoCamelCase(q.query.GetName())
 	}
 	camelF := func(f *desc.FieldDescriptorProto) string {
-		return _gen.GoCamelCase(f.GetName())
+		return GoCamelCase(f.GetName())
 	}
 	methOutName := func(opt *MethodProtoOpts) string {
 		return s.File.GetGoTypeName(opt.method.GetOutputType())
 	}
 	methOutNamePkg := func(opt *MethodProtoOpts) string {
-		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
+		return GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}
@@ -1246,7 +1245,7 @@ func WriteRows(p *Printer, s *Service) (outErr error) {
 		}, s.File.GetGoTypeName(opt.method.GetOutputType())))
 	}
 	outNamePkg := func(opt *QueryProtoOpts) string {
-		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
+		return GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}
@@ -1446,7 +1445,7 @@ func WriteHandlers(p *Printer, s *Service) (outErr error) {
 	m := Matcher(s)
 	serviceName := s.GetName()
 	methOutNamePkg := func(opt *MethodProtoOpts) string {
-		return _gen.GoCamelCase(strings.Map(func(r rune) rune {
+		return GoCamelCase(strings.Map(func(r rune) rune {
 			if r == '.' {
 				return -1
 			}

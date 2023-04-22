@@ -1,4 +1,4 @@
-module github.com/namtzigla/protoc-gen-persist
+module github.com/tcncloud/protoc-gen-persist/v5
 
 go 1.20
 
@@ -7,7 +7,6 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.6
 	github.com/sirupsen/logrus v1.9.0
-	github.com/tcncloud/protoc-gen-persist v5.0.5+incompatible
 	golang.org/x/tools v0.8.0
 	google.golang.org/protobuf v1.30.0
 )

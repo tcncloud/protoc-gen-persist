@@ -3,8 +3,6 @@ package generator
 import (
 	"strings"
 	"text/template"
-
-	_gen "google.golang.org/protobuf/internal/strs"
 )
 
 type printerProxy struct {
@@ -235,7 +233,7 @@ func (this *Impl_{{.Service}}) {{.Method}}Tx(stream {{.Service}}_{{.Method}}Serv
 	}
 
 	funcMap := template.FuncMap{
-		"camelCase": _gen.GoCamelCase,
+		"camelCase": GoCamelCase,
 	}
 	t := template.Must(template.New("ClientStreaming").Funcs(funcMap).Parse(clientStreamingFormat))
 	return t.Execute(printerProxy, params)
@@ -304,7 +302,7 @@ func (this *Impl_{{.Service}}) {{.Method}}(ctx context.Context, req *{{.Request}
 }
     `
 	funcMap := template.FuncMap{
-		"camelCase": _gen.GoCamelCase,
+		"camelCase": GoCamelCase,
 		"oneOrZero": OneOrZero,
 	}
 
@@ -371,7 +369,7 @@ func (this *Impl_{{.Service}}) {{.Method}}Tx(req *{{.Request}}, stream {{.Servic
 }
     `
 	funcMap := template.FuncMap{
-		"camelCase": _gen.GoCamelCase,
+		"camelCase": GoCamelCase,
 	}
 
 	var serverFormat string

@@ -32,7 +32,6 @@ package generator
 import (
 	"strings"
 
-	gen "google.golang.org/protobuf/internal/strs"
 	desc "google.golang.org/protobuf/types/descriptorpb"
 )
 
@@ -183,15 +182,15 @@ func (s *StructList) AddEnum(enum *desc.EnumDescriptorProto, parent *Struct, pkg
 	}
 	if str.IsMessage {
 		if str.IsInnerType {
-			str.GoName = str.ParentDescriptor.GetGoName() + "_" + gen.GoCamelCase(str.MsgDesc.GetName())
+			str.GoName = str.ParentDescriptor.GetGoName() + "_" + GoCamelCase(str.MsgDesc.GetName())
 		} else {
-			str.GoName = gen.GoCamelCase(str.MsgDesc.GetName())
+			str.GoName = GoCamelCase(str.MsgDesc.GetName())
 		}
 	} else {
 		if str.IsInnerType {
-			str.GoName = str.ParentDescriptor.GetGoName() + "_" + gen.GoCamelCase(str.EnumDesc.GetName())
+			str.GoName = str.ParentDescriptor.GetGoName() + "_" + GoCamelCase(str.EnumDesc.GetName())
 		} else {
-			str.GoName = gen.GoCamelCase(str.EnumDesc.GetName())
+			str.GoName = GoCamelCase(str.EnumDesc.GetName())
 		}
 	}
 
@@ -221,15 +220,15 @@ func (s *StructList) AddMessage(message *desc.DescriptorProto, parent *Struct, p
 	}
 	if str.IsMessage {
 		if str.IsInnerType {
-			str.GoName = str.ParentDescriptor.GetGoName() + "_" + gen.GoCamelCase(str.MsgDesc.GetName())
+			str.GoName = str.ParentDescriptor.GetGoName() + "_" + GoCamelCase(str.MsgDesc.GetName())
 		} else {
-			str.GoName = gen.GoCamelCase(str.MsgDesc.GetName())
+			str.GoName = GoCamelCase(str.MsgDesc.GetName())
 		}
 	} else {
 		if str.IsInnerType {
-			str.GoName = str.ParentDescriptor.GetGoName() + "_" + gen.GoCamelCase(str.EnumDesc.GetName())
+			str.GoName = str.ParentDescriptor.GetGoName() + "_" + GoCamelCase(str.EnumDesc.GetName())
 		} else {
-			str.GoName = gen.GoCamelCase(str.EnumDesc.GetName())
+			str.GoName = GoCamelCase(str.EnumDesc.GetName())
 		}
 	}
 	*s = append(*s, str)
